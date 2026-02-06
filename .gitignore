@@ -1,0 +1,6 @@
+.build/
+.DS_Store
+*.xcodeproj
+xcuserdata/
+legacy_poc/
+clawsy_screenshot.png
