@@ -7,6 +7,7 @@ struct ContentView: View {
     
     // Alert States
     @State private var showingScreenshotAlert = false
+    @State private var isScreenshotInteractive = false // New state
     @State private var showingClipboardSendAlert = false
     @State private var showingClipboardReceiveAlert = false
     @State private var pendingClipboardContent = ""
@@ -82,14 +83,43 @@ struct ContentView: View {
             
             // --- Action Grid ---
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                ActionButton(
-                    title: "Screenshot",
-                    icon: "camera.viewfinder",
-                    color: .blue,
-                    isEnabled: network.isConnected
-                ) {
-                    self.showingScreenshotAlert = true
+                // Screenshot Menu (Full vs Interactive)
+                Menu {
+                    Button(action: {
+                        self.isScreenshotInteractive = false
+                        self.showingScreenshotAlert = true
+                    }) {
+                        Label("Full Screen", systemImage: "rectangle.dashed")
+                    }
+                    Button(action: {
+                        self.isScreenshotInteractive = true
+                        self.showingScreenshotAlert = true
+                    }) {
+                        Label("Interactive Area", systemImage: "plus.viewfinder")
+                    }
+                } label: {
+                    // Custom Label mimicking ActionButton style
+                    VStack(spacing: 8) {
+                        Image(systemName: "camera.viewfinder")
+                            .font(.system(size: 24))
+                            .foregroundColor(network.isConnected ? .blue : .secondary)
+                        Text("Screenshot")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(network.isConnected ? .primary : .secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(network.isConnected ? Color.blue.opacity(0.3) : Color.gray.opacity(0.2), lineWidth: 1)
+                    )
                 }
+                .buttonStyle(.plain)
+                .disabled(!network.isConnected)
+                .opacity(network.isConnected ? 1.0 : 0.6)
                 
                 ActionButton(
                     title: "Clipboard",
@@ -133,7 +163,7 @@ struct ContentView: View {
                 network.send(json: ["type": "error", "message": "User denied screenshot"])
             }
             Button("Allow", role: .destructive) {
-                if let b64 = ScreenshotManager.takeScreenshot() {
+                if let b64 = ScreenshotManager.takeScreenshot(interactive: isScreenshotInteractive) {
                     network.send(json: ["type": "screenshot", "data": b64])
                 } else {
                     network.lastMessage = "Failed to capture screen"

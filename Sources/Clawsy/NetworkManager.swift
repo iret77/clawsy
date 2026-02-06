@@ -13,7 +13,7 @@ class NetworkManager: ObservableObject, WebSocketDelegate {
     private var socket: WebSocket?
     
     // Callbacks for UI/Logic
-    var onScreenshotRequested: (() -> Void)?
+    var onScreenshotRequested: ((Bool) -> Void)?
     var onClipboardRequested: (() -> Void)?
     var onClipboardReceived: ((String) -> Void)?
     
@@ -99,7 +99,8 @@ class NetworkManager: ObservableObject, WebSocketDelegate {
         
         switch cmd {
         case "screenshot":
-            onScreenshotRequested?()
+            let interactive = (json["interactive"] as? Bool) ?? false
+            onScreenshotRequested?(interactive)
         case "get_clipboard":
             onClipboardRequested?()
         case "set_clipboard":

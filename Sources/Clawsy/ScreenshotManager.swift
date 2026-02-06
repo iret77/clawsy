@@ -1,28 +1,44 @@
 import Foundation
 import AppKit
-import CoreGraphics
-import UniformTypeIdentifiers
 
 class ScreenshotManager {
     
-    static func takeScreenshot() -> String? {
-        // Create an image from the main display
-        guard let imageRef = CGDisplayCreateImage(CGMainDisplayID()) else {
-            print("Failed to capture screen")
-            return nil
+    static func takeScreenshot(interactive: Bool = false) -> String? {
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("clawsy_snap.png")
+        let path = tempURL.path
+        
+        // Remove existing
+        try? FileManager.default.removeItem(atPath: path)
+        
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+        
+        var args = ["-x"] // No sound
+        
+        if interactive {
+            args.append("-i") // Interactive mode
         }
         
-        let image = NSImage(cgImage: imageRef, size: NSZeroSize)
+        // Add output path
+        args.append(path)
+        task.arguments = args
         
-        // Convert to PNG data
-        guard let tiffData = image.tiffRepresentation,
-              let bitmapImage = NSBitmapImageRep(data: tiffData),
-              let pngData = bitmapImage.representation(using: .png, properties: [:]) else {
-            print("Failed to convert to PNG")
+        do {
+            try task.run()
+            task.waitUntilExit()
+            
+            // Check if file exists (user might have cancelled interactive mode with ESC)
+            if FileManager.default.fileExists(atPath: path) {
+                let data = try Data(contentsOf: tempURL)
+                try? FileManager.default.removeItem(atPath: path) // Cleanup
+                return data.base64EncodedString()
+            } else {
+                print("Screenshot cancelled by user or failed")
+                return nil
+            }
+        } catch {
+            print("Failed to run screencapture: \(error)")
             return nil
         }
-        
-        // Base64 encode
-        return pngData.base64EncodedString()
     }
 }
