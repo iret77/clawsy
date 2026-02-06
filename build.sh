@@ -5,6 +5,9 @@ echo "🧹 Cleaning up..."
 rm -rf .build
 swift package reset
 
+# Generate Icons
+./scripts/generate_icons.sh
+
 echo "🦞 Building Clawsy..."
 
 # Check for swift
