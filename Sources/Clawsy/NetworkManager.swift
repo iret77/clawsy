@@ -3,8 +3,7 @@ import Starscream
 import SwiftUI
 
 // --- Configuration ---
-// In a real app, this would be loaded from UserDefaults or a config file
-let SERVER_URL = "ws://100.67.179.48:8765" // Hardcoded for Sprint 1
+// Loaded from UserDefaults
 // ---------------------
 
 class NetworkManager: ObservableObject, WebSocketDelegate {
@@ -19,7 +18,12 @@ class NetworkManager: ObservableObject, WebSocketDelegate {
     var onClipboardReceived: ((String) -> Void)?
     
     func connect() {
-        guard let url = URL(string: SERVER_URL) else { return }
+        let serverUrl = UserDefaults.standard.string(forKey: "serverUrl") ?? "ws://localhost:8765"
+        guard let url = URL(string: serverUrl) else { 
+            lastMessage = "Invalid URL"
+            return 
+        }
+        
         var request = URLRequest(url: url)
         request.timeoutInterval = 5
         

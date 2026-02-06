@@ -8,6 +8,8 @@ struct ContentView: View {
     @State private var showingClipboardSendAlert = false
     @State private var showingClipboardReceiveAlert = false
     @State private var pendingClipboardContent = ""
+    @State private var showingSettings = false
+    @AppStorage("serverUrl") private var serverUrl = "ws://localhost:8765"
     
     var body: some View {
         VStack(spacing: 20) {
@@ -19,6 +21,23 @@ struct ContentView: View {
                 Circle()
                     .fill(network.isConnected ? Color.green : Color.red)
                     .frame(width: 10, height: 10)
+                
+                Button(action: { showingSettings.toggle() }) {
+                    Image(systemName: "gearshape")
+                }
+                .buttonStyle(.plain)
+                .popover(isPresented: $showingSettings) {
+                    VStack(alignment: .leading) {
+                        Text("Settings").font(.headline)
+                        TextField("Agent URL", text: $serverUrl)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 200)
+                        Text("Restart to apply")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding()
+                }
             }
             .padding(.top)
             
