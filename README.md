@@ -20,12 +20,11 @@
 ## 🛠️ Setup
 
 ### 1. Agent Side (Server)
-Clawsy needs a counterpart running on your OpenClaw agent. Use the `clawsy-server` skill (coming soon to ClawHub) or run the simple Python server:
+Clawsy needs a counterpart running on your OpenClaw agent. Use the local `clawsy-server` skill:
 
 ```bash
-# On your Agent VPS
-pip install websockets
-python3 server.py
+# Start the server (runs in background via skill)
+python3 skills/clawsy-server/scripts/server.py --port 8765
 ```
 
 ### 2. Mac Side (Client)

@@ -13,7 +13,7 @@ struct ClawsyApp: App {
     }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var statusBarItem: NSStatusItem!
     var popover: NSPopover!
     var clipboardWindow: NSWindow?
