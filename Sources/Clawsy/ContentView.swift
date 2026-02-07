@@ -2,21 +2,20 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var network = NetworkManager()
+    @EnvironmentObject var appDelegate: AppDelegate
+    
     @State private var showingSettings = false
     @AppStorage("serverUrl") private var serverUrl = "ws://localhost:8765"
     
-    // Alert States
+    // Alert States (Screenshot only)
     @State private var showingScreenshotAlert = false
-    @State private var isScreenshotInteractive = false // New state
-    @State private var showingClipboardSendAlert = false
-    @State private var showingClipboardReceiveAlert = false
-    @State private var pendingClipboardContent = ""
+    @State private var isScreenshotInteractive = false
     
     var body: some View {
         VStack(spacing: 0) {
             // --- Header ---
             HStack {
-                Image("AppIcon") // Will use system icon if available
+                Image("AppIcon")
                     .resizable()
                     .frame(width: 24, height: 24)
                 
@@ -26,7 +25,6 @@ struct ContentView: View {
                 
                 Spacer()
                 
-                // Settings Button
                 Button(action: { showingSettings.toggle() }) {
                     Image(systemName: "gearshape.fill")
                         .foregroundColor(.secondary)
@@ -41,17 +39,15 @@ struct ContentView: View {
             
             Divider()
             
-            // --- Status & Connection ---
+            // --- Status ---
             VStack(spacing: 12) {
                 HStack {
                     StatusIndicator(isConnected: network.isConnected)
-                    
                     VStack(alignment: .leading, spacing: 2) {
                         Text(network.isConnected ? "Connected" : "Disconnected")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(network.isConnected ? .primary : .secondary)
-                        
                         Text(network.lastMessage.isEmpty ? "Ready to pair" : network.lastMessage)
                             .font(.caption2)
                             .foregroundColor(.secondary)
@@ -59,14 +55,9 @@ struct ContentView: View {
                             .truncationMode(.tail)
                     }
                     Spacer()
-                    
-                    // Connect Toggle
                     Toggle("", isOn: Binding(
                         get: { network.isConnected },
-                        set: { _ in
-                            if network.isConnected { network.disconnect() }
-                            else { network.connect() }
-                        }
+                        set: { _ in if network.isConnected { network.disconnect() } else { network.connect() } }
                     ))
                     .toggleStyle(.switch)
                     .labelsHidden()
@@ -74,16 +65,13 @@ struct ContentView: View {
                 .padding()
                 .background(Color(NSColor.controlBackgroundColor))
                 .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-                )
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(NSColor.separatorColor), lineWidth: 1))
             }
             .padding()
             
-            // --- Action Grid ---
+            // --- Actions ---
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                // Screenshot Menu (Full vs Interactive)
+                // Screenshot Menu
                 Menu {
                     Button(action: {
                         self.isScreenshotInteractive = false
@@ -98,7 +86,6 @@ struct ContentView: View {
                         Label("Interactive Area", systemImage: "plus.viewfinder")
                     }
                 } label: {
-                    // Custom Label mimicking ActionButton style
                     VStack(spacing: 8) {
                         Image(systemName: "camera.viewfinder")
                             .font(.system(size: 24))
@@ -112,22 +99,20 @@ struct ContentView: View {
                     .padding(.vertical, 16)
                     .background(Color(NSColor.controlBackgroundColor))
                     .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(network.isConnected ? Color.blue.opacity(0.3) : Color.gray.opacity(0.2), lineWidth: 1)
-                    )
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(network.isConnected ? Color.blue.opacity(0.3) : Color.gray.opacity(0.2), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
                 .disabled(!network.isConnected)
                 .opacity(network.isConnected ? 1.0 : 0.6)
                 
+                // Clipboard Button (Manual Send)
                 ActionButton(
                     title: "Clipboard",
                     icon: "doc.on.clipboard",
                     color: .orange,
                     isEnabled: network.isConnected
                 ) {
-                    self.showingClipboardSendAlert = true
+                    handleManualClipboardSend()
                 }
             }
             .padding(.horizontal)
@@ -137,7 +122,7 @@ struct ContentView: View {
             
             // --- Footer ---
             HStack {
-                Text("v0.1.0")
+                Text("v0.2.0")
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()
@@ -154,10 +139,9 @@ struct ContentView: View {
         .frame(width: 320, height: 380)
         .onAppear {
             setupCallbacks()
-            // Auto-connect on launch if URL is set
             network.connect()
         }
-        // --- Alerts (Logic remains same, UI improved later) ---
+        // Screenshot Alert (Simple Yes/No)
         .alert("Request: Screenshot", isPresented: $showingScreenshotAlert) {
             Button("Deny", role: .cancel) {
                 network.send(json: ["type": "error", "message": "User denied screenshot"])
@@ -172,72 +156,73 @@ struct ContentView: View {
         } message: {
             Text("CyberClaw is requesting to see your screen. Allow?")
         }
-        .alert("Request: Clipboard Access", isPresented: $showingClipboardSendAlert) {
-            Button("Deny", role: .cancel) {
-                network.send(json: ["type": "error", "message": "User denied clipboard access"])
-            }
-            Button("Allow", role: .destructive) {
-                if let content = ClipboardManager.getClipboardContent() {
-                    network.send(json: ["type": "clipboard", "data": content])
-                } else {
-                    network.lastMessage = "Clipboard empty or not text"
-                }
-            }
-        } message: {
-            Text("CyberClaw is requesting to read your clipboard. Allow?")
+    }
+    
+    // --- Logic ---
+    
+    func handleManualClipboardSend() {
+        guard let content = ClipboardManager.getClipboardContent() else {
+            network.lastMessage = "Clipboard empty"
+            return
         }
-        .alert("Received: Clipboard Content", isPresented: $showingClipboardReceiveAlert) {
-            Button("Ignore", role: .cancel) {}
-            Button("Copy", role: .none) {
-                ClipboardManager.setClipboardContent(pendingClipboardContent)
-                network.send(json: ["type": "ack", "status": "copied"])
-            }
-        } message: {
-            Text("CyberClaw sent text for your clipboard:\n\n\"\(pendingClipboardContent.prefix(100))...\"")
-        }
+        
+        appDelegate.showClipboardRequest(content: content, onConfirm: {
+            // Send to Agent
+            network.send(json: ["type": "clipboard", "data": content])
+        }, onCancel: {
+            // Cancelled
+        })
     }
     
     func setupCallbacks() {
-        network.onScreenshotRequested = {
+        network.onScreenshotRequested = { interactive in
+            self.isScreenshotInteractive = interactive
             self.showingScreenshotAlert = true
             NSApp.activate(ignoringOtherApps: true)
         }
+        
         network.onClipboardRequested = {
-            self.showingClipboardSendAlert = true
-            NSApp.activate(ignoringOtherApps: true)
+            // Read Clipboard -> Show Window
+            if let content = ClipboardManager.getClipboardContent() {
+                appDelegate.showClipboardRequest(content: content, onConfirm: {
+                    network.send(json: ["type": "clipboard", "data": content])
+                }, onCancel: {
+                    network.send(json: ["type": "error", "message": "User denied clipboard access"])
+                })
+            } else {
+                network.send(json: ["type": "error", "message": "Clipboard empty"])
+            }
         }
+        
         network.onClipboardReceived = { content in
-            self.pendingClipboardContent = content
-            self.showingClipboardReceiveAlert = true
-            NSApp.activate(ignoringOtherApps: true)
+            // Show Window -> Write Clipboard
+            appDelegate.showClipboardRequest(content: content, onConfirm: {
+                ClipboardManager.setClipboardContent(content)
+                network.send(json: ["type": "ack", "status": "copied"])
+            }, onCancel: {
+                // Ignore
+            })
         }
     }
 }
 
-// --- Subviews ---
+// --- Subviews (Settings, Status, ActionButton) kept same as before ---
+// ... (I assume they are available in scope or I should copy them if I overwrote the file)
+// Note: Since I'm using 'write', I need to include them.
 
 struct SettingsView: View {
     @Binding var serverUrl: String
-    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Connection Settings")
-                .font(.headline)
-            
+            Text("Connection Settings").font(.headline)
             VStack(alignment: .leading, spacing: 4) {
-                Text("Agent URL")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                Text("Agent URL").font(.caption).foregroundColor(.secondary)
                 TextField("ws://100.x.y.z:8765", text: $serverUrl)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 250)
             }
-            
             Divider()
-            
-            Text("Changes apply on reconnect.")
-                .font(.caption2)
-                .foregroundColor(.secondary)
+            Text("Changes apply on reconnect.").font(.caption2).foregroundColor(.secondary)
         }
         .padding()
     }
@@ -245,13 +230,11 @@ struct SettingsView: View {
 
 struct StatusIndicator: View {
     var isConnected: Bool
-    
     var body: some View {
         ZStack {
             Circle()
                 .fill(isConnected ? Color.green.opacity(0.2) : Color.red.opacity(0.2))
                 .frame(width: 32, height: 32)
-            
             Circle()
                 .fill(isConnected ? Color.green : Color.red)
                 .frame(width: 10, height: 10)
@@ -266,49 +249,22 @@ struct ActionButton: View {
     let color: Color
     let isEnabled: Bool
     let action: () -> Void
-    
     var body: some View {
         Button(action: action) {
             VStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 24))
                     .foregroundColor(isEnabled ? color : .secondary)
-                
-                Text(title)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(isEnabled ? .primary : .secondary)
+                Text(title).font(.caption).fontWeight(.medium).foregroundColor(isEnabled ? .primary : .secondary)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .background(Color(NSColor.controlBackgroundColor))
             .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isEnabled ? color.opacity(0.3) : Color.gray.opacity(0.2), lineWidth: 1)
-            )
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(isEnabled ? color.opacity(0.3) : Color.gray.opacity(0.2), lineWidth: 1))
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1.0 : 0.6)
-    }
-}
-
-// Helper for Visual Effect Blur (Native macOS look)
-struct VisualEffectView: NSViewRepresentable {
-    let material: NSVisualEffectView.Material
-    let blendingMode: NSVisualEffectView.BlendingMode
-    
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let visualEffectView = NSVisualEffectView()
-        visualEffectView.material = material
-        visualEffectView.blendingMode = blendingMode
-        visualEffectView.state = .active
-        return visualEffectView
-    }
-    
-    func updateNSView(_ visualEffectView: NSVisualEffectView, context: Context) {
-        visualEffectView.material = material
-        visualEffectView.blendingMode = blendingMode
     }
 }
