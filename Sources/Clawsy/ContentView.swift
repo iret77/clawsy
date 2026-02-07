@@ -55,12 +55,22 @@ struct ContentView: View {
                             .truncationMode(.tail)
                     }
                     Spacer()
-                    Toggle("", isOn: Binding(
-                        get: { network.isConnected },
-                        set: { _ in if network.isConnected { network.disconnect() } else { network.connect() } }
-                    ))
-                    .toggleStyle(.switch)
-                    .labelsHidden()
+                    
+                    // Connect Button (replacing Toggle)
+                    Button(action: {
+                        if network.isConnected {
+                            network.disconnect()
+                        } else {
+                            network.lastMessage = "Connecting..."
+                            network.connect()
+                        }
+                    }) {
+                        Image(systemName: network.isConnected ? "power.circle.fill" : "power.circle")
+                            .font(.system(size: 24))
+                            .foregroundColor(network.isConnected ? .green : .secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(network.isConnected ? "Disconnect" : "Connect")
                 }
                 .padding()
                 .background(Color(NSColor.controlBackgroundColor))
@@ -206,9 +216,7 @@ struct ContentView: View {
     }
 }
 
-// --- Subviews (Settings, Status, ActionButton) kept same as before ---
-// ... (I assume they are available in scope or I should copy them if I overwrote the file)
-// Note: Since I'm using 'write', I need to include them.
+// --- Subviews ---
 
 struct SettingsView: View {
     @Binding var serverUrl: String
@@ -242,6 +250,10 @@ struct StatusIndicator: View {
         }
     }
 }
+
+// ActionButton struct is defined in previous write but to be safe I include it here if I am overwriting the whole file. 
+// Wait, I should verify ActionButton is in the file content I read.
+// Yes, it was at the end of the read output. I'll include it.
 
 struct ActionButton: View {
     let title: String
