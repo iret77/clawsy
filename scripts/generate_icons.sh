@@ -5,8 +5,9 @@ SOURCE="Assets/Icon.png"
 DEST="Sources/Clawsy/Assets.xcassets/AppIcon.appiconset"
 
 if [ ! -f "$SOURCE" ]; then
-    echo "⚠️  No source icon found at $SOURCE. Skipping icon generation."
-    exit 0
+    echo "❌ Error: No source icon found at $SOURCE"
+    ls -la Assets/
+    exit 1
 fi
 
 if ! command -v sips &> /dev/null; then

@@ -21,6 +21,9 @@ jobs:
 
     - name: Generate Icons
       run: |
+        echo "📂 Current Directory Layout:"
+        ls -R
+        
         chmod +x scripts/generate_icons.sh
         ./scripts/generate_icons.sh
         
