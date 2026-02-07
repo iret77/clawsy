@@ -30,7 +30,11 @@ python3 skills/clawsy-server/scripts/server.py --port 8765
 ### 2. Mac Side (Client)
 1.  Download the latest release from [Releases](https://github.com/iret77/clawsy/releases).
 2.  Drag `Clawsy.app` to your Applications folder.
-3.  Open Clawsy.
+3.  **First Launch:**
+    *   Right-click (or Control-click) on `Clawsy.app`.
+    *   Select **Open**.
+    *   Click **Open** in the dialog.
+    *   *(Why? Clawsy is currently not notarized by Apple because we are a free open source project. This manual step is required only once.)*
 4.  Click the ⚙️ icon and enter your Agent's WebSocket URL (e.g., `ws://100.x.y.z:8765`).
 5.  Click **Connect**.
 
