@@ -1,44 +1,86 @@
 import SwiftUI
+import AppKit
 
 struct ClipboardPreviewWindow: View {
     let content: String
     let onConfirm: () -> Void
     let onCancel: () -> Void
     
+    // Computed property for metadata
+    private var charCount: Int {
+        content.count
+    }
+    
+    // Copy to system clipboard action
+    private func copyToSystem() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(content, forType: .string)
+    }
+    
     var body: some View {
-        VStack(spacing: 20) {
-            // Icon
-            Image(systemName: "doc.on.clipboard")
-                .font(.system(size: 40))
-                .foregroundColor(.blue)
-                .padding(.top, 20)
-            
-            // Title
-            Text("Clipboard Request")
-                .font(.title2)
-                .fontWeight(.bold)
-            
-            // Content Preview
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Content:")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+        VStack(spacing: 0) {
+            // Header Area
+            HStack(alignment: .center, spacing: 16) {
+                Image(systemName: "doc.on.clipboard.fill")
+                    .font(.system(size: 32))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.blue, .purple],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .background(
+                        Circle()
+                            .fill(.white.opacity(0.1))
+                            .frame(width: 56, height: 56)
+                    )
                 
-                ScrollView {
-                    Text(content)
-                        .font(.system(.body, design: .monospaced))
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Clipboard Request")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    
+                    Text("\(charCount) characters")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .monospacedDigit()
                 }
-                .frame(height: 120)
-                .background(Color(NSColor.textBackgroundColor))
-                .cornerRadius(8)
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.2), lineWidth: 1))
+                
+                Spacer()
             }
-            .padding(.horizontal)
+            .padding(24)
+            .background(Color(NSColor.windowBackgroundColor))
             
-            // Actions
+            Divider()
+            
+            // Content Area
+            ScrollView {
+                Text(content)
+                    .font(.system(.body, design: .monospaced))
+                    .lineSpacing(4)
+                    .foregroundColor(.primary)
+                    .padding(20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .background(Color(NSColor.textBackgroundColor))
+            .frame(maxHeight: .infinity)
+            
+            Divider()
+            
+            // Action Bar
             HStack(spacing: 12) {
+                Button(action: {
+                    copyToSystem()
+                }) {
+                    Label("Copy Local", systemImage: "doc.on.doc")
+                }
+                .help("Copy to system clipboard without sending")
+                
+                Spacer()
+                
                 Button("Deny") {
                     onCancel()
                 }
@@ -50,9 +92,21 @@ struct ClipboardPreviewWindow: View {
                 .keyboardShortcut(.return, modifiers: [])
                 .buttonStyle(.borderedProminent)
             }
-            .padding(.bottom, 20)
+            .padding(20)
+            .background(Color(NSColor.windowBackgroundColor))
         }
-        .background(VisualEffectView(material: .hudWindow, blendingMode: .behindWindow))
-        .frame(width: 400, height: 300)
+        .frame(width: 480, height: 380)
+        .background(VisualEffectView(material: .sidebar, blendingMode: .behindWindow))
+    }
+}
+
+// Preview provider for development
+struct ClipboardPreviewWindow_Previews: PreviewProvider {
+    static var previews: some View {
+        ClipboardPreviewWindow(
+            content: "func hello() {\n    print(\"Hello World\")\n}",
+            onConfirm: {},
+            onCancel: {}
+        )
     }
 }
