@@ -24,8 +24,13 @@ jobs:
         chmod +x scripts/generate_icons.sh
         ./scripts/generate_icons.sh
         
-        # Create ICNS from AppIcon.appiconset
-        iconutil -c icns Sources/Clawsy/Assets.xcassets/AppIcon.appiconset -o Clawsy.app/Contents/Resources/AppIcon.icns
+        # iconutil requires folder to end in .iconset
+        # We copy the generated .appiconset content to a temporary .iconset folder
+        mkdir -p TempIcon.iconset
+        cp Sources/Clawsy/Assets.xcassets/AppIcon.appiconset/*.png TempIcon.iconset/
+        
+        # Create ICNS
+        iconutil -c icns TempIcon.iconset -o Clawsy.app/Contents/Resources/AppIcon.icns
 
     - name: Build
       run: |
