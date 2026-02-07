@@ -3,22 +3,23 @@ set -e
 
 echo "🧹 Cleaning up..."
 rm -rf .build
-swift package reset
 
-# Generate Icons
-./scripts/generate_icons.sh
+echo "🎨 Generating Icons..."
+if [ -f "scripts/generate_icons.sh" ]; then
+    chmod +x scripts/generate_icons.sh
+    ./scripts/generate_icons.sh || { echo "❌ Icon generation failed"; exit 1; }
+else
+    echo "⚠️ Icon script missing"
+fi
 
-echo "🦞 Building Clawsy..."
-
+echo "🦞 Building Clawsy (Debug)..."
 # Check for swift
 if ! command -v swift &> /dev/null; then
     echo "❌ Error: 'swift' command not found. Do you have Xcode installed?"
     exit 1
 fi
 
-# Build using Swift Package Manager
-# Configuration: debug (for now, easy dev), release (later for dist)
-swift build -c debug
+swift build -c debug -v
 
 echo "✅ Build successful!"
-echo "🚀 Run with: ./.build/debug/Clawsy"
+echo "🚀 Run with: swift run Clawsy"
