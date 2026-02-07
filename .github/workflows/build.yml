@@ -74,6 +74,9 @@ jobs:
         </dict>
         </plist>
         EOF
+        
+        # Ad-hoc sign the app (to allow Right-click -> Open)
+        codesign --force --deep -s - Clawsy.app
 
     - name: Zip App
       run: zip -r Clawsy.app.zip Clawsy.app
