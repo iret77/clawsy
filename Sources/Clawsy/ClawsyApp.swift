@@ -58,24 +58,30 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         window.isReleasedWhenClosed = false
         window.titlebarAppearsTransparent = true
         window.title = "Clawsy Request"
+        window.level = .floating // Force on top
         
         let view = ClipboardPreviewWindow(
             content: content,
             onConfirm: {
+                print("DEBUG: Window confirmed")
                 onConfirm()
                 window.close()
+                self.clipboardWindow = nil
             },
             onCancel: {
+                print("DEBUG: Window cancelled")
                 onCancel()
                 window.close()
+                self.clipboardWindow = nil
             }
         )
         
         window.contentView = NSHostingView(rootView: view)
+        self.clipboardWindow = window // Retain BEFORE showing
+        
+        print("DEBUG: Showing Clipboard Window")
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        
-        self.clipboardWindow = window
     }
     
     @objc func togglePopover(_ sender: AnyObject?) {
