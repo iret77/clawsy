@@ -4,15 +4,28 @@ set -e
 SOURCE="Assets/Icon.png"
 DEST="Sources/Clawsy/Assets.xcassets/AppIcon.appiconset"
 
+echo "🔍 Debug: Current Dir: $(pwd)"
+echo "🔍 Debug: Checking Source: $SOURCE"
+ls -l "$SOURCE" || echo "❌ Source file listing failed"
+
 if [ ! -f "$SOURCE" ]; then
     echo "❌ Error: No source icon found at $SOURCE"
-    ls -la Assets/
+    echo "📂 Directory listing:"
+    ls -R
     exit 1
 fi
 
+# Create Dest Dir if needed
+mkdir -p "$DEST"
+
 if ! command -v sips &> /dev/null; then
-    echo "⚠️  'sips' command not found (not on macOS?). Skipping icon generation."
-    exit 0
+    echo "⚠️  'sips' command not found. This is expected on Linux, but FATAL on macOS CI."
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "❌ Error: sips missing on macOS!"
+        exit 1
+    else
+        exit 0
+    fi
 fi
 
 echo "🎨 Generating App Icons from $SOURCE..."
