@@ -19,6 +19,14 @@ jobs:
     - name: Set up Xcode
       run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
+    - name: Generate Icons
+      run: |
+        chmod +x scripts/generate_icons.sh
+        ./scripts/generate_icons.sh
+        
+        # Create ICNS from AppIcon.appiconset
+        iconutil -c icns Sources/Clawsy/Assets.xcassets/AppIcon.appiconset -o Clawsy.app/Contents/Resources/AppIcon.icns
+
     - name: Build
       run: |
         # Build for Release
@@ -49,12 +57,11 @@ jobs:
             <string>1</string>
             <key>LSUIElement</key>
             <true/>
+            <key>CFBundleIconFile</key>
+            <string>AppIcon</string>
         </dict>
         </plist>
         EOF
-        
-        # Add Icon (Placeholder if not exists)
-        # TODO: Add .icns copy here if we have one
 
     - name: Zip App
       run: zip -r Clawsy.app.zip Clawsy.app
