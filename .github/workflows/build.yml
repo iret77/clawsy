@@ -24,6 +24,10 @@ jobs:
         echo "📂 Current Directory Layout:"
         ls -R
         
+        # Prepare Output Directory for App Bundle (needed for iconutil output)
+        mkdir -p Clawsy.app/Contents/MacOS
+        mkdir -p Clawsy.app/Contents/Resources
+        
         chmod +x scripts/generate_icons.sh
         ./scripts/generate_icons.sh
         
