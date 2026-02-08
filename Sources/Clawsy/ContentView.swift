@@ -1,15 +1,20 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var network = NetworkManager()
+    // Use V2 Manager
+    @StateObject private var network = NetworkManagerV2()
     @EnvironmentObject var appDelegate: AppDelegate
     
     @State private var showingSettings = false
-    @AppStorage("serverUrl") private var serverUrl = "ws://localhost:8765"
+    
+    // Persistent Configuration
+    @AppStorage("serverUrl") private var serverUrl = "ws://localhost:18789"
+    @AppStorage("serverToken") private var serverToken = ""
     
     // Alert States
     @State private var showingScreenshotAlert = false
     @State private var isScreenshotInteractive = false
+    @State private var pendingRequestId: String? = nil
     
     var body: some View {
         VStack(spacing: 0) {
@@ -24,11 +29,13 @@ struct ContentView: View {
                 // Status Pill
                 HStack(spacing: 6) {
                     Circle()
-                        .fill(network.isConnected ? Color.green : Color.red)
+                        .fill(getStatusColor())
                         .frame(width: 8, height: 8)
-                    Text(network.isConnected ? "Connected" : "Disconnected")
+                    Text(network.connectionStatus)
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
@@ -89,7 +96,7 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
                 .popover(isPresented: $showingSettings) {
-                    SettingsView(serverUrl: $serverUrl)
+                    SettingsView(serverUrl: $serverUrl, serverToken: $serverToken)
                 }
                 
                 Divider().padding(.vertical, 4)
@@ -102,16 +109,22 @@ struct ContentView: View {
             }
             .padding(8)
         }
-        .frame(width: 280) // Standard menu width
+        .frame(width: 300) // Slightly wider for status text
         .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
         .onAppear {
             setupCallbacks()
-            network.connect() // Auto-connect on launch
+            // Auto-connect if configured
+            if !serverUrl.isEmpty && !serverToken.isEmpty {
+                network.configure(url: serverUrl, token: serverToken)
+                network.connect()
+            }
         }
         // Alerts/Popups
         .alert("Allow Screenshot?", isPresented: $showingScreenshotAlert) {
              Button("Deny", role: .cancel) {
-                 network.send(json: ["type": "error", "message": "User denied screenshot"])
+                 if let rid = pendingRequestId {
+                     network.sendError(id: rid, code: -1, message: "User denied screenshot")
+                 }
              }
              Button("Allow", role: .destructive) {
                  takeScreenshot()
@@ -123,38 +136,67 @@ struct ContentView: View {
     
     // --- Actions ---
     
+    func getStatusColor() -> Color {
+        if network.isConnected { return .green }
+        if network.connectionStatus.contains("Connecting") { return .orange }
+        return .red
+    }
+    
     func toggleConnection() {
         if network.isConnected {
             network.disconnect()
         } else {
+            network.configure(url: serverUrl, token: serverToken)
             network.connect()
         }
     }
     
     func requestScreenshot() {
         self.showingScreenshotAlert = true
+        self.pendingRequestId = nil // Manual trigger has no ID
     }
     
     func takeScreenshot() {
         if let b64 = ScreenshotManager.takeScreenshot(interactive: isScreenshotInteractive) {
-            network.send(json: ["type": "screenshot", "data": b64])
+            if let rid = pendingRequestId {
+                // Respond to Request
+                network.sendResponse(id: rid, result: ["format": "png", "base64": b64])
+            } else {
+                // Manual Send (Event) - TODO: Implement manual event sending in V2
+                // For now just log
+                print("Manual screenshot taken")
+            }
         } else {
-            network.lastMessage = "Failed to capture screen"
+            if let rid = pendingRequestId {
+                network.sendError(id: rid, code: -1, message: "Screenshot failed")
+            }
         }
     }
     
     func handleManualClipboardSend() {
-        guard let content = ClipboardManager.getClipboardContent() else { return }
-        network.send(json: ["type": "clipboard", "data": content])
+        // TODO: Implement manual send in V2
     }
     
     func setupCallbacks() {
-        network.onScreenshotRequested = { interactive in
+        network.onScreenshotRequested = { interactive, requestId in
             self.isScreenshotInteractive = interactive
+            self.pendingRequestId = requestId
             self.showingScreenshotAlert = true
             NSApp.activate(ignoringOtherApps: true)
         }
-        // Simplified clipboard logic for UI
+        
+        network.onClipboardReadRequested = { requestId in
+            if let content = ClipboardManager.getClipboardContent() {
+                network.sendResponse(id: requestId, result: ["text": content])
+            } else {
+                network.sendError(id: requestId, code: -1, message: "Clipboard empty or unavailable")
+            }
+        }
+        
+        network.onClipboardWriteRequested = { content, requestId in
+            ClipboardManager.setClipboardContent(content)
+            network.sendResponse(id: requestId, result: ["status": "ok"])
+        }
     }
 }
 
@@ -203,14 +245,24 @@ struct MenuItemRow: View {
 
 struct SettingsView: View {
     @Binding var serverUrl: String
+    @Binding var serverToken: String
+    
     var body: some View {
         Form {
-            TextField("Server URL", text: $serverUrl)
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 200)
+            Section(header: Text("Connection")) {
+                TextField("Gateway URL", text: $serverUrl)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 220)
+                
+                SecureField("Gateway Token", text: $serverToken)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 220)
+            }
+            
             Text("Restart required to apply changes.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .padding(.top, 4)
         }
         .padding()
     }
