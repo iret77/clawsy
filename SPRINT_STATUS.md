@@ -21,8 +21,17 @@
     - [x] Added Development instructions to README.
 
 ## 🚧 In Progress / TODO
-- **Testing**: Need to compile and run on a real Mac (Pending Christian/Node availability).
-- **Distribution**: Need to sign and notarize the app for easy installation.
+- **Protocol V2 (Native Node)**:
+    - [x] Created `HandshakePoC.swift` implementing Ed25519 signing & WebSocket handshake.
+    - [ ] Compile and run `HandshakePoC` on macOS to verify connection.
+    - [ ] Integrate into main `ClawsyApp` structure.
+- **Testing**: Need to compile and run on a real Mac (Pending Christian/Node availability; last check 2026-02-08 12:43 UTC: Offline).
+- **Server**: Verified active on Linux (restarted 2026-02-08 12:43 UTC).
+- **Distribution**: 
+    - [x] Created `scripts/sign.sh` template for signing and notarization.
+    - [ ] Obtain 'Developer ID Application' certificate and Team ID.
+    - [ ] Configure `xcrun notarytool` credentials.
+    - [ ] Run signing script on Mac.
 
 ## 📝 Notes
 - The app is ready for the first alpha build (Release candidate packaged via script).
