@@ -71,6 +71,11 @@ jobs:
             <true/>
             <key>CFBundleIconFile</key>
             <string>AppIcon</string>
+            <key>NSAppTransportSecurity</key>
+            <dict>
+                <key>NSAllowsArbitraryLoads</key>
+                <true/>
+            </dict>
         </dict>
         </plist>
         EOF
