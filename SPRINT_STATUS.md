@@ -18,7 +18,8 @@
 - **Protocol V2 (Native Node)**:
     - [x] Created `HandshakePoC.swift` implementing Ed25519 signing & WebSocket handshake.
     - [x] **New:** Created `NetworkManagerV2.swift` implementing full `node` role (Connect, Challenge, Commands).
-    - [ ] Integrate V2 into `ContentView` (Pending Mac compilation).
+    - [x] Implemented Manual Events (Screenshot/Clipboard push) in `NetworkManagerV2` and `ContentView`.
+    - [ ] Integrate V2 into `ContentView` (Code complete, Pending Mac compilation/Verify).
 
 ## 🚧 In Progress / TODO
 - **Distribution**: 
@@ -26,9 +27,11 @@
     - [ ] Obtain 'Developer ID Application' certificate and Team ID.
     - [ ] Configure `xcrun notarytool` credentials.
     - [ ] Run signing script on Mac.
-- **Testing**: Need to compile and run on a real Mac (Pending Christian/Node availability; last check 2026-02-08 15:45 UTC: Offline).
+- **Testing**: Need to compile and run on a real Mac (Pending Christian/Node availability; last check 2026-02-08 16:42 UTC: Offline).
+- **Cleanup**:
+    - [ ] Deprecate `skills/clawsy-server` (V1 Python Server) in favor of Native Gateway connection.
 
 ## 📝 Notes
 - The app is ready for the first alpha build (Release candidate packaged via script).
-- Server is fully set up as a skill.
+- **Architecture Shift**: Moved to Native Node Protocol (V2). The Python server is now legacy/deprecated.
 - V2 Protocol implementation is code-complete but untested.

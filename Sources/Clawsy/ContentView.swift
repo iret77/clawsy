@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 struct ContentView: View {
     // Use V2 Manager
@@ -8,7 +9,7 @@ struct ContentView: View {
     @State private var showingSettings = false
     
     // Persistent Configuration
-    @AppStorage("serverUrl") private var serverUrl = "ws://localhost:18789"
+    @AppStorage("serverUrl") private var serverUrl = "wss://agenthost.tailb6e490.ts.net"
     @AppStorage("serverToken") private var serverToken = ""
     
     // Alert States
@@ -48,7 +49,7 @@ struct ContentView: View {
             Divider()
             
             // --- Main Actions List ---
-            VStack(spacing: 4) {
+            VStack(spacing: 6) {
                 
                 // Screenshot Group
                 Menu {
@@ -65,18 +66,16 @@ struct ContentView: View {
                         Label("Interactive Area", systemImage: "plus.viewfinder")
                     }
                 } label: {
-                    MenuItemRow(icon: "camera", title: "Screenshot", subtitle: "Capture screen or area")
+                    MenuItemRow(icon: "camera", title: "Screenshot", subtitle: "Capture screen or area", isEnabled: network.isConnected)
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize(horizontal: false, vertical: true)
-                .disabled(!network.isConnected)
 
                 // Clipboard
                 Button(action: handleManualClipboardSend) {
-                    MenuItemRow(icon: "doc.on.clipboard", title: "Send Clipboard", subtitle: "Push current clipboard to agent")
+                    MenuItemRow(icon: "doc.on.clipboard", title: "Send Clipboard", subtitle: "Push current clipboard to agent", isEnabled: network.isConnected)
                 }
                 .buttonStyle(.plain)
-                .disabled(!network.isConnected)
                 
                 Divider().padding(.vertical, 4)
                 
@@ -85,32 +84,43 @@ struct ContentView: View {
                     MenuItemRow(
                         icon: network.isConnected ? "power" : "bolt.slash.fill",
                         title: network.isConnected ? "Disconnect" : "Connect",
-                        color: network.isConnected ? .red : .primary
+                        color: network.isConnected ? .red : .blue,
+                        isEnabled: true
                     )
                 }
                 .buttonStyle(.plain)
 
                 // Settings
                 Button(action: { showingSettings.toggle() }) {
-                    MenuItemRow(icon: "gear", title: "Preferences...")
+                    MenuItemRow(icon: "gearshape.fill", title: "Preferences...", isEnabled: true)
                 }
                 .buttonStyle(.plain)
-                .popover(isPresented: $showingSettings) {
-                    SettingsView(serverUrl: $serverUrl, serverToken: $serverToken)
+                .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
+                    SettingsView(serverUrl: $serverUrl, serverToken: $serverToken, isPresented: $showingSettings)
+                        .frame(width: 380) // Even wider
                 }
                 
                 Divider().padding(.vertical, 4)
                 
+                // Surprise Button (Project X)
+                Button(action: triggerSurprise) {
+                    MenuItemRow(icon: "sparkles", title: "Lobster Mode", subtitle: "Execute Fire Sequence", color: .orange, isEnabled: true)
+                }
+                .buttonStyle(.plain)
+
+                Divider().padding(.vertical, 4)
+                
                 // Quit
                 Button(action: { NSApplication.shared.terminate(nil) }) {
-                    MenuItemRow(icon: "power", title: "Quit Clawsy", color: .secondary)
+                    MenuItemRow(icon: "xmark.circle.fill", title: "Quit Clawsy", color: .secondary, isEnabled: true)
                 }
                 .buttonStyle(.plain)
             }
-            .padding(8)
+            .padding(10)
         }
-        .frame(width: 300) // Slightly wider for status text
-        .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
+        .frame(width: 300)
+        .background(Color(NSColor.windowBackgroundColor)) // More solid background
+        .cornerRadius(12)
         .onAppear {
             setupCallbacks()
             // Auto-connect if configured
@@ -119,6 +129,25 @@ struct ContentView: View {
                 network.connect()
             }
         }
+    }
+    
+    // --- Actions ---
+    
+    func triggerSurprise() {
+        // The surprise: Play a notification and maybe change the icon?
+        let content = UNMutableNotificationContent()
+        content.title = "🦞 LOBSTER MODE ACTIVATED!"
+        content.body = "Fire Sequence initiated. CyberClaw is watching. 2035 is now."
+        content.sound = .default
+        
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+        
+        // Bonus: Send an event to the agent
+        if network.isConnected {
+            network.sendEvent(kind: "surprise", payload: ["msg": "Lobster Mode Triggered"])
+        }
+    }
         // Alerts/Popups
         .alert("Allow Screenshot?", isPresented: $showingScreenshotAlert) {
              Button("Deny", role: .cancel) {
@@ -162,9 +191,9 @@ struct ContentView: View {
                 // Respond to Request
                 network.sendResponse(id: rid, result: ["format": "png", "base64": b64])
             } else {
-                // Manual Send (Event) - TODO: Implement manual event sending in V2
-                // For now just log
-                print("Manual screenshot taken")
+                // Manual Send (Event)
+                network.sendEvent(kind: "screenshot", payload: ["format": "png", "base64": b64])
+                print("Manual screenshot sent")
             }
         } else {
             if let rid = pendingRequestId {
@@ -174,7 +203,9 @@ struct ContentView: View {
     }
     
     func handleManualClipboardSend() {
-        // TODO: Implement manual send in V2
+        if let content = ClipboardManager.getClipboardContent() {
+            network.sendEvent(kind: "clipboard", payload: ["text": content])
+        }
     }
     
     func setupCallbacks() {
@@ -207,6 +238,7 @@ struct MenuItemRow: View {
     var title: String
     var subtitle: String? = nil
     var color: Color = .primary
+    var isEnabled: Bool = true
     
     @State private var isHovering = false
     
@@ -214,30 +246,32 @@ struct MenuItemRow: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 14))
-                .foregroundColor(color)
+                .foregroundColor(isEnabled ? color : color.opacity(0.3))
                 .frame(width: 16)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 13))
-                    .foregroundColor(color)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(isEnabled ? .primary : .primary.opacity(0.4))
                 if let subtitle = subtitle {
                     Text(subtitle)
                         .font(.system(size: 10))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(isEnabled ? .secondary : .secondary.opacity(0.3))
                 }
             }
             
             Spacer()
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
         .contentShape(Rectangle())
-        .background(isHovering ? Color.primary.opacity(0.1) : Color.clear)
-        .cornerRadius(5)
+        .background(isHovering && isEnabled ? Color.primary.opacity(0.08) : Color.clear)
+        .cornerRadius(6)
         .onHover { hover in
-            withAnimation(.easeInOut(duration: 0.1)) {
-                isHovering = hover
+            if isEnabled {
+                withAnimation(.easeInOut(duration: 0.1)) {
+                    isHovering = hover
+                }
             }
         }
     }
@@ -246,25 +280,44 @@ struct MenuItemRow: View {
 struct SettingsView: View {
     @Binding var serverUrl: String
     @Binding var serverToken: String
+    @Binding var isPresented: Bool
     
     var body: some View {
-        Form {
-            Section(header: Text("Connection")) {
-                TextField("Gateway URL", text: $serverUrl)
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Connection Settings")
+                .font(.headline)
+            
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Gateway URL")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                TextField("wss://your-agent.ts.net", text: $serverUrl)
                     .textFieldStyle(.roundedBorder)
-                    .frame(width: 220)
+                    .font(.system(.body, design: .monospaced))
                 
-                SecureField("Gateway Token", text: $serverToken)
+                Text("Gateway Token")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                SecureField("Enter token...", text: $serverToken)
                     .textFieldStyle(.roundedBorder)
-                    .frame(width: 220)
             }
             
-            Text("Restart required to apply changes.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .padding(.top, 4)
+            Divider()
+            
+            HStack {
+                Text("Changes apply after reconnect.")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Button("Done") {
+                    isPresented = false
+                }
+                .keyboardShortcut(.return)
+            }
         }
-        .padding()
+        .padding(20)
     }
 }
 

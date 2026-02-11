@@ -43,12 +43,15 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             return
         }
         
+        connectionStatus = "Connecting..."
+        
         var request = URLRequest(url: url)
-        request.timeoutInterval = 5
+        request.timeoutInterval = 10
+        
+        // Starscream SSL handling
         socket = WebSocket(request: request)
         socket?.delegate = self
         socket?.connect()
-        connectionStatus = "Connecting..."
     }
     
     func disconnect() {
@@ -238,6 +241,23 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             ]
         ]
         send(json: response)
+    }
+    
+    // MARK: - Manual Events
+    
+    func sendEvent(kind: String, payload: Any) {
+        // Wrap in a standard event structure
+        // This assumes the Gateway propagates "node.event" or similar
+        let message: [String: Any] = [
+            "type": "event",
+            "event": "node.event", // Generic node event
+            "payload": [
+                "kind": kind,
+                "data": payload,
+                "ts": Int64(Date().timeIntervalSince1970 * 1000)
+            ]
+        ]
+        send(json: message)
     }
     
     private func send(json: [String: Any]) {
