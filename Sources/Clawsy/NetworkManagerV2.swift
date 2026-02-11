@@ -33,25 +33,61 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     }
     
     func configure(url: String, token: String) {
-        self.gatewayUrl = URL(string: url)
+        var processedUrl = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Auto-fix URL scheme
+        if !processedUrl.contains("://") {
+            if processedUrl.contains(".ts.net") || processedUrl.contains("cloud") {
+                processedUrl = "wss://" + processedUrl
+            } else {
+                processedUrl = "ws://" + processedUrl
+            }
+        }
+        
+        // Ensure path for WebSocket
+        if processedUrl.hasSuffix(".ts.net") {
+            processedUrl += "/"
+        }
+        
+        self.gatewayUrl = URL(string: processedUrl)
         self.authToken = token
+        print("Configured with URL: \(processedUrl)")
     }
-    
+
     func connect() {
-        guard let url = gatewayUrl, let _ = authToken else {
+        guard let url = gatewayUrl, !authToken!.isEmpty else {
             connectionStatus = "Missing Configuration"
             return
         }
         
         connectionStatus = "Connecting..."
-        
+        attemptConnection(to: url)
+    }
+    
+    private func attemptConnection(to url: URL) {
+        print("Attempting connection to \(url.absoluteString)")
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
         
-        // Starscream SSL handling
         socket = WebSocket(request: request)
         socket?.delegate = self
         socket?.connect()
+    }
+    
+    private func runDiagnostics(error: Error?) {
+        let errorDesc = error?.localizedDescription ?? "Unknown error"
+        
+        if errorDesc.contains("not permitted") || errorDesc.contains("App Transport Security") {
+            connectionStatus = "Security Block (Try wss://)"
+        } else if errorDesc.contains("refused") {
+            connectionStatus = "Server Refused (Check Port)"
+        } else if errorDesc.contains("timed out") {
+            connectionStatus = "Timeout (Check Network/IP)"
+        } else if errorDesc.contains("hostname could not be found") {
+            connectionStatus = "DNS Fail (Check URL)"
+        } else {
+            connectionStatus = "Error: \(errorDesc)"
+        }
     }
     
     func disconnect() {
@@ -94,7 +130,8 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
                 self.connectionStatus = "Cancelled"
             case .error(let error):
                 self.isConnected = false
-                self.connectionStatus = "Error: \(error?.localizedDescription ?? "Unknown")"
+                self.runDiagnostics(error: error)
+                print("websocket error: \(error?.localizedDescription ?? "Unknown")")
             case .peerClosed:
                 break
             }
