@@ -97,7 +97,7 @@ struct ContentView: View {
                 .buttonStyle(.plain)
                 .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
                     SettingsView(serverUrl: $serverUrl, serverToken: $serverToken, isPresented: $showingSettings)
-                        .frame(width: 380) // Even wider
+                        .frame(width: 380)
                 }
                 
                 Divider().padding(.vertical, 4)
@@ -119,7 +119,7 @@ struct ContentView: View {
             .padding(10)
         }
         .frame(width: 300)
-        .background(Color(NSColor.windowBackgroundColor)) // More solid background
+        .background(Color(NSColor.windowBackgroundColor))
         .cornerRadius(12)
         .onAppear {
             setupCallbacks()
@@ -129,25 +129,6 @@ struct ContentView: View {
                 network.connect()
             }
         }
-    }
-    
-    // --- Actions ---
-    
-    func triggerSurprise() {
-        // The surprise: Play a notification and maybe change the icon?
-        let content = UNMutableNotificationContent()
-        content.title = "🦞 LOBSTER MODE ACTIVATED!"
-        content.body = "Fire Sequence initiated. CyberClaw is watching. 2035 is now."
-        content.sound = .default
-        
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(request)
-        
-        // Bonus: Send an event to the agent
-        if network.isConnected {
-            network.sendEvent(kind: "surprise", payload: ["msg": "Lobster Mode Triggered"])
-        }
-    }
         // Alerts/Popups
         .alert("Allow Screenshot?", isPresented: $showingScreenshotAlert) {
              Button("Deny", role: .cancel) {
@@ -180,20 +161,31 @@ struct ContentView: View {
         }
     }
     
+    func triggerSurprise() {
+        let content = UNMutableNotificationContent()
+        content.title = "🦞 LOBSTER MODE ACTIVATED!"
+        content.body = "Fire Sequence initiated. CyberClaw is watching. 2035 is now."
+        content.sound = .default
+        
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+        
+        if network.isConnected {
+            network.sendEvent(kind: "surprise", payload: ["msg": "Lobster Mode Triggered"])
+        }
+    }
+    
     func requestScreenshot() {
         self.showingScreenshotAlert = true
-        self.pendingRequestId = nil // Manual trigger has no ID
+        self.pendingRequestId = nil
     }
     
     func takeScreenshot() {
         if let b64 = ScreenshotManager.takeScreenshot(interactive: isScreenshotInteractive) {
             if let rid = pendingRequestId {
-                // Respond to Request
                 network.sendResponse(id: rid, result: ["format": "png", "base64": b64])
             } else {
-                // Manual Send (Event)
                 network.sendEvent(kind: "screenshot", payload: ["format": "png", "base64": b64])
-                print("Manual screenshot sent")
             }
         } else {
             if let rid = pendingRequestId {
@@ -320,6 +312,3 @@ struct SettingsView: View {
         .padding(20)
     }
 }
-
-// Helper for Native Blur -> MOVED TO SharedUI.swift
-// struct VisualEffectView: NSViewRepresentable { ... }
