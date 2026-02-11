@@ -198,8 +198,22 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
         let pubKeyData = publicKey.rawRepresentation
         let deviceId = SHA256.hash(data: pubKeyData).map { String(format: "%02x", $0) }.joined()
         
-        // Payload String: v2|{device_id}|openclaw-macos|node|node||{ts_ms}|{token}|{nonce}
-        let payloadString = "v2|\(deviceId)|openclaw-macos|node|node||\(tsMs)|\(token)|\(nonce)"
+        // --- CRITICAL Protocol Fix (Matching buildDeviceAuthPayload in device-auth.ts) ---
+        // Format: version|deviceId|clientId|clientMode|role|scopes|signedAtMs|token|nonce
+        // scopes are joined by ",", but we have none.
+        let components = [
+            "v2",
+            deviceId,
+            "openclaw-macos",
+            "node",
+            "node",
+            "", // scopes
+            String(tsMs),
+            token,
+            nonce
+        ]
+        let payloadString = components.joined(separator: "|")
+        // -----------------------------------------------------------------------------
         
         guard let payloadData = payloadString.data(using: .utf8) else { return }
         
