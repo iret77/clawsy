@@ -217,8 +217,14 @@ struct ContentView: View {
         }
         
         network.onClipboardWriteRequested = { content, requestId in
-            ClipboardManager.setClipboardContent(content)
-            network.sendResponse(id: requestId, result: ["status": "ok"])
+            DispatchQueue.main.async {
+                appDelegate.showClipboardRequest(content: content, onConfirm: {
+                    ClipboardManager.setClipboardContent(content)
+                    network.sendResponse(id: requestId, result: ["status": "ok"])
+                }, onCancel: {
+                    network.sendError(id: requestId, code: -1, message: "User denied clipboard write")
+                })
+            }
         }
     }
 }

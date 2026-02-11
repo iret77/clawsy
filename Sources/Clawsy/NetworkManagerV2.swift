@@ -177,6 +177,16 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             
             handleCommand(id: id, command: command, params: params)
         }
+        
+        // 4. Handle System Prompts for Approvals (if routed via agent.message/system)
+        if let type = json["type"] as? String, type == "req",
+           let id = json["id"] as? String,
+           let method = json["method"] as? String, method == "clipboard.write.approve",
+           let params = json["params"] as? [String: Any],
+           let text = params["text"] as? String {
+            
+            onClipboardWriteRequested?(text, id)
+        }
     }
     
     private func performHandshake(nonce: String) {

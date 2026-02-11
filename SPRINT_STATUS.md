@@ -19,7 +19,7 @@
     - [x] Created `HandshakePoC.swift` implementing Ed25519 signing & WebSocket handshake.
     - [x] **New:** Created `NetworkManagerV2.swift` implementing full `node` role (Connect, Challenge, Commands).
     - [x] Implemented Manual Events (Screenshot/Clipboard push) in `NetworkManagerV2` and `ContentView`.
-    - [ ] Integrate V2 into `ContentView` (Code complete, Pending Mac compilation/Verify).
+    - [x] Integrate V2 into `ContentView` (Code complete, Approval wiring fixed 2026-02-11).
 
 ## 🚧 In Progress / TODO
 - **Distribution**: 
