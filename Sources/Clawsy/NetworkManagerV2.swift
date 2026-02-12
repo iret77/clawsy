@@ -141,6 +141,8 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     // MARK: - Protocol Logic
     
     private func handleMessage(_ text: String) {
+        print("RAW INBOUND: \(text)")
+        
         guard let data = text.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return
