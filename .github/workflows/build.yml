@@ -60,7 +60,7 @@ jobs:
             <key>CFBundleExecutable</key>
             <string>Clawsy</string>
             <key>CFBundleIdentifier</key>
-            <string>ai.clawlet.clawsy</string>
+            <string>ai.clawsy</string>
             <key>CFBundleName</key>
             <string>Clawsy</string>
             <key>CFBundleShortVersionString</key>

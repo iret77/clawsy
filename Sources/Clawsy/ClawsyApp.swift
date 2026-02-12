@@ -56,7 +56,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             backing: .buffered, defer: false)
         
         window.center()
-        window.setFrameAutosaveName("ClipboardRequestWindow")
+        window.setFrameAutosaveName("ai.clawsy.ClipboardRequestWindow")
         window.isReleasedWhenClosed = false
         window.titlebarAppearsTransparent = true
         window.title = "Clawsy Request"

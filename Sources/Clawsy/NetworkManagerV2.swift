@@ -8,7 +8,7 @@ import os.log
 
 @available(macOS 13.0, *)
 class NetworkManagerV2: ObservableObject, WebSocketDelegate {
-    private let logger = OSLog(subsystem: "ai.clawlet.clawsy", category: "Network")
+    private let logger = OSLog(subsystem: "ai.clawsy", category: "Network")
     
     @Published var isConnected = false
     @Published var connectionStatus = "Disconnected"
@@ -227,7 +227,7 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
         let components = [
             "v2",
             deviceId,
-            "openclaw-macos",
+            "ai.clawsy",
             "node",
             "node",
             "", // scopes
@@ -256,7 +256,7 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
                 "minProtocol": 3,
                 "maxProtocol": 3,
                 "client": [
-                    "id": "openclaw-macos",
+                    "id": "ai.clawsy",
                     "version": "0.2.0",
                     "platform": "macos",
                     "mode": "node"
