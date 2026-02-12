@@ -1,3 +1,7 @@
+import Foundation
+import Starscream
+import CryptoKit
+import AppKit
 import os.log
 
 // MARK: - NetworkManagerV2 (Native Node Protocol)
