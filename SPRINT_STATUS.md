@@ -10,10 +10,10 @@
     - [x] **Event Loop**: "Send Clipboard" from the app works (Push events received).
 - **Bug Fixes**:
     - [x] Refined `handleMessage` handshake logic to be more robust against variant response formats.
+    - [x] Fixed potential deadlock in `ScreenshotManager` by adding process timeout.
 
 ## 🚧 In Progress / TODO
 - **Critical: Command Deadlock/Timeout**:
-    - [ ] `screen.capture` invoke times out (30s) - Node is connected but command processing seems stuck on the app side or waiting for user interaction that isn't surfacing.
     - [ ] **Theory**: If the app is in the background or lack permissions (Accessibility/Screen Recording), `screencapture` might be hanging or returning nil without error.
 - **Feature Alignment**:
     - [ ] Add `screen_record` handler to `NetworkManagerV2.swift`.
@@ -24,4 +24,5 @@
 
 ## 📝 Notes
 - **Status Update**: Node `32792d5a` ist verbunden und gepaart. Manuelle Events (Clipboard Push) funktionieren. Inbound Commands (`screen.capture`) lösen aktuell Timeouts aus.
-- **Next Step**: Christian muss prüfen, ob auf dem Mac Berechtigungs-Dialoge (Screen Recording) im Hintergrund hängen oder ob `screencapture` Berechtigungen fehlen.
+- **Diagnostics**: Code-Verbesserungen zur Fehlerdiagnose (stderr/logging) wurden implementiert. Nächster Build muss von Christian auf dem Mac getestet werden.
+- **Next Step**: Christian muss prüfen, ob auf dem Mac Berechtigungs-Dialoge (Screen Recording) im Hintergrund hängen oder ob `screencapture` Berechtigungen fehlen. Console.app nach `ai.clawlet.clawsy` filtern.

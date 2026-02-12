@@ -302,6 +302,7 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     // MARK: - Response Helpers
     
     func sendResponse(id: String, result: Any) {
+        os_log("Sending Response for id: %{public}@, result keys: %{public}@", log: logger, type: .info, id, "\(result)")
         let response: [String: Any] = [
             "type": "res",
             "id": id,
@@ -311,6 +312,7 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     }
     
     func sendError(id: String, code: Int, message: String) {
+        os_log("Sending Error for id: %{public}@, code: %d, message: %{public}@", log: logger, type: .error, id, code, message)
         let response: [String: Any] = [
             "type": "res",
             "id": id,

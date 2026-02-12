@@ -23,13 +23,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusBarItem.button {
-            button.image = NSImage(named: "Icon") // Use asset icon if available
-            // Fallback if image load fails or is huge? Scale it? 
-            // Better: Load specific size or system icon.
-            // Let's stick to text 🦞 if image fails, or try to load "AppIcon" from assets
-            if let iconImage = NSImage(named: "AppIcon") {
+            // Priority: Assets/Icon.png (if bundled), then AppIcon from assets, then Emoji 🦞
+            if let iconImage = NSImage(named: "Icon") {
                 iconImage.size = NSSize(width: 18, height: 18)
+                iconImage.isTemplate = true
                 button.image = iconImage
+            } else if let appIcon = NSImage(named: "AppIcon") {
+                appIcon.size = NSSize(width: 18, height: 18)
+                appIcon.isTemplate = true
+                button.image = appIcon
             } else {
                 button.title = "🦞"
             }

@@ -23,9 +23,33 @@ class ScreenshotManager {
         args.append(path)
         task.arguments = args
         
+        // Capture stdout and stderr
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+        task.standardOutput = outputPipe
+        task.standardError = errorPipe
+        
         do {
             try task.run()
-            task.waitUntilExit()
+            
+            // Wait with a reasonable timeout (e.g., 30s) to prevent deadlock
+            let timeout: TimeInterval = 30
+            let deadline = Date().addingTimeInterval(timeout)
+            
+            while task.isRunning && Date() < deadline {
+                Thread.sleep(forTimeInterval: 0.1)
+            }
+            
+            if task.isRunning {
+                print("screencapture timed out after \(timeout)s. Terminating.")
+                task.terminate()
+                return nil
+            }
+            
+            let errData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+            if let errString = String(data: errData, encoding: .utf8), !errString.isEmpty {
+                print("screencapture stderr: \(errString)")
+            }
             
             // Check if file exists (user might have cancelled interactive mode with ESC)
             if FileManager.default.fileExists(atPath: path) {
