@@ -13,6 +13,7 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     @Published var isConnected = false
     @Published var connectionStatus = "Disconnected"
     @Published var lastMessage = ""
+    @Published var rawLog = ""
     
     private var socket: WebSocket?
     private var signingKey: Curve25519.Signing.PrivateKey?
@@ -145,6 +146,10 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     
     private func handleMessage(_ text: String) {
         os_log("RAW INBOUND: %{public}@", log: logger, type: .default, text)
+        
+        DispatchQueue.main.async {
+            self.rawLog += "\n\(text)"
+        }
         
         guard let data = text.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {

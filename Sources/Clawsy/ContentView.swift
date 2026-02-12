@@ -7,6 +7,7 @@ struct ContentView: View {
     @EnvironmentObject var appDelegate: AppDelegate
     
     @State private var showingSettings = false
+    @State private var showingLog = false
     
     // Persistent Configuration
     @AppStorage("serverUrl") private var serverUrl = "wss://agenthost.tailb6e490.ts.net"
@@ -98,6 +99,16 @@ struct ContentView: View {
                 .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
                     SettingsView(serverUrl: $serverUrl, serverToken: $serverToken, isPresented: $showingSettings)
                         .frame(width: 380)
+                }
+                
+                // Debug Log
+                Button(action: { showingLog.toggle() }) {
+                    MenuItemRow(icon: "terminal.fill", title: "Debug Log", subtitle: "View raw network traffic", isEnabled: true)
+                }
+                .buttonStyle(.plain)
+                .popover(isPresented: $showingLog, arrowEdge: .trailing) {
+                    DebugLogView(logText: network.rawLog, isPresented: $showingLog)
+                        .frame(width: 400, height: 300)
                 }
                 
                 Divider().padding(.vertical, 4)
@@ -272,6 +283,44 @@ struct MenuItemRow: View {
                 }
             }
         }
+    }
+}
+
+struct DebugLogView: View {
+    var logText: String
+    @Binding var isPresented: Bool
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Network Debug Log")
+                    .font(.headline)
+                Spacer()
+                Button("Done") { isPresented = false }
+            }
+            
+            ScrollView {
+                Text(logText.isEmpty ? "No data received yet." : logText)
+                    .font(.system(.caption, design: .monospaced))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+            }
+            .padding(8)
+            .background(Color(NSColor.textBackgroundColor))
+            .cornerRadius(4)
+            
+            HStack {
+                Text("Select text to copy.")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Button("Copy All") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(logText, forType: .string)
+                }
+            }
+        }
+        .padding(16)
     }
 }
 
