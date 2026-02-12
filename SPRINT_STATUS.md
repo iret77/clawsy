@@ -19,12 +19,15 @@
     - [x] Node identifies with `camera`, `clipboard`, and `screen` capabilities.
     - [ ] Resolve "gateway timeout" on `screen.capture` invoke (potential Clawsy-side deadlock or permission prompt issue).
     - [ ] Christian: Resolve "node command not allowed" for `screen_record`. This is likely a policy restriction in `openclaw.json` for this specific node.
+- [ ] Protocol Alignment: Ensure `NetworkManagerV2.swift` payload signing string exactly matches Gateway expectations (verified minor diffs in scopes/token positioning).
+- [ ] Feature: Add `screen_record` handler to `NetworkManagerV2.swift` (even if it just proxies to `screencapture -v`) to align with Gateway capabilities.
 - **Distribution**: 
     - [ ] Obtain 'Developer ID Application' certificate and Team ID for signing.
     - [ ] Configure `xcrun notarytool` credentials.
     - [ ] Run `scripts/sign.sh` on a Mac environment.
 - **Cleanup**:
     - [x] Deprecate `skills/clawsy-server` (V1 Python Server).
+- [x] Fix Native Handshake Response parsing (V2).
 
 ## 📝 Notes
 - **Major Milestone**: Clawsy is now fully compatible with the Native Node Protocol. It no longer requires the Python bridge.
