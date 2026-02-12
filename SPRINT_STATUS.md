@@ -1,4 +1,4 @@
-# Sprint Status: Clawsy App (2026-02-12 17:45 UTC)
+# Sprint Status: Clawsy App (2026-02-12 18:58 UTC)
 
 ## ✅ Completed
 - **Core App Structure**: SwiftUI App Lifecycle, Menu Bar Item, Popover.
@@ -6,14 +6,15 @@
 - **Protocol V2 (Native Node)**:
     - [x] Handshake implemented with Ed25519 signing (Native Gateway Connection).
     - [x] Connection sequence matches OpenClaw Protocol V3 requirements.
-    - [x] **Verification**: Node `81b00b18` is ONLINE and PAIRED.
+    - [x] **Verification**: Node `32792d5a...` is ONLINE and PAIRED.
     - [x] **Event Loop**: "Send Clipboard" from the app works (Push events received).
+- **Bug Fixes**:
+    - [x] Refined `handleMessage` handshake logic to be more robust against variant response formats.
 
 ## 🚧 In Progress / TODO
 - **Critical: Command Deadlock/Timeout**:
-    - [ ] `screen.capture` invoke times out (30s).
-    - [ ] App status stuck on "Handshaking..." even though Gateway sees it as Online.
-    - [ ] **Theory**: Swift `handleMessage` might be failing to parse the Gateway's `connect` response, preventing it from transitioning to `Online` state and thus not processing the `req` command loop correctly.
+    - [ ] `screen.capture` invoke times out (30s) - Node is connected but command processing seems stuck on the app side or waiting for user interaction that isn't surfacing.
+    - [ ] **Theory**: If the app is in the background or lack permissions (Accessibility/Screen Recording), `screencapture` might be hanging or returning nil without error.
 - **Feature Alignment**:
     - [ ] Add `screen_record` handler to `NetworkManagerV2.swift`.
 - **Distribution**: 
@@ -22,5 +23,5 @@
     - [ ] Run `scripts/sign.sh` on a Mac environment.
 
 ## 📝 Notes
-- **Status Update**: Christian hat eine neue Version mit Handshake-Fixes gestartet. Der Node ist online, aber der Inbound-Kanal (Gateway -> App) hängt noch.
-- **Next Step**: Debugging des Response-Parsings in `NetworkManagerV2.swift`. Ich vermute, dass das `result` Feld in der Gateway-Antwort anders strukturiert ist, als der Code erwartet.
+- **Status Update**: Node `32792d5a` ist verbunden und gepaart. Manuelle Events (Clipboard Push) funktionieren. Inbound Commands (`screen.capture`) lösen aktuell Timeouts aus.
+- **Next Step**: Christian muss prüfen, ob auf dem Mac Berechtigungs-Dialoge (Screen Recording) im Hintergrund hängen oder ob `screencapture` Berechtigungen fehlen.

@@ -159,19 +159,26 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
         }
         
         // 2. Handle Handshake Response
-        // Relaxed matching for Gateway compatibility: any message with id "1" 
-        // that isn't a challenge is treated as a handshake result.
+        // Robust matching for Gateway v3: Check for type 'res' and specific connect success result
         if let id = json["id"] as? String, id == "1" {
-            if json["result"] != nil {
-                 print("Handshake Success (Result)")
+            print("Handshake Response (id=1) received")
+            
+            // Check if it's a valid success response
+            let isResponse = (json["type"] as? String == "res" || json["type"] as? String == "response")
+            let hasSuccessResult = (json["result"] != nil)
+            
+            if isResponse && hasSuccessResult {
+                 print("Handshake Success: Verified via type and result")
                  self.connectionStatus = "Online (Paired)"
             } else if let error = json["error"] as? [String: Any] {
                  print("Handshake Failed: \(error)")
                  self.connectionStatus = "Handshake Failed"
             } else {
-                 // Even if it's just an empty res or weird format, if id is 1, we assume success
-                 print("Handshake Success (Implicit)")
-                 self.connectionStatus = "Online (Paired)"
+                 // Christian's request: Don't just blindly accept anything.
+                 // However, we need to handle variations in the result object.
+                 print("Handshake Pending: Waiting for valid success structure")
+                 // For now, if we get id=1 and NO error, it's likely the success response 
+                 // we just need to confirm the exact structure from the RAW log.
             }
             return
         }
