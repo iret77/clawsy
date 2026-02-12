@@ -1,4 +1,4 @@
-# Sprint Status: Clawsy App (2026-02-12 18:58 UTC)
+# Sprint Status: Clawsy App (2026-02-12 21:55 UTC)
 
 ## ✅ Completed
 - **Core App Structure**: SwiftUI App Lifecycle, Menu Bar Item, Popover.
@@ -8,15 +8,16 @@
     - [x] Connection sequence matches OpenClaw Protocol V3 requirements.
     - [x] **Verification**: Node `32792d5a...` is ONLINE and PAIRED.
     - [x] **Event Loop**: "Send Clipboard" from the app works (Push events received).
-- **Bug Fixes**:
-    - [x] Refined `handleMessage` handshake logic to be more robust against variant response formats.
-    - [x] Fixed potential deadlock in `ScreenshotManager` by adding process timeout.
+- **Inbound Command Refinement**:
+    - [x] Added `screen.record` stub (notifies agent it's unimplemented rather than timing out).
+    - [x] Improved `screen.capture` to respect `interactive` parameter from Gateway.
+    - [x] Refactored `sendScreenshot` for consistency between push and response.
 
 ## 🚧 In Progress / TODO
 - **Critical: Command Deadlock/Timeout**:
     - [ ] **Theory**: If the app is in the background or lack permissions (Accessibility/Screen Recording), `screencapture` might be hanging or returning nil without error.
 - **Feature Alignment**:
-    - [ ] Add `screen_record` handler to `NetworkManagerV2.swift`.
+    - [ ] Implementation of `screen.record` (using `AVAssetWriter` or similar).
 - **Distribution**: 
     - [ ] Obtain 'Developer ID Application' certificate and Team ID for signing.
     - [ ] Configure `xcrun notarytool` credentials.

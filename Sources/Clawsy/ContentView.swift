@@ -193,14 +193,10 @@ struct ContentView: View {
     
     func takeScreenshot() {
         if let b64 = ScreenshotManager.takeScreenshot(interactive: isScreenshotInteractive) {
-            if let rid = pendingRequestId {
-                network.sendResponse(id: rid, result: ["format": "png", "base64": b64])
-            } else {
-                network.sendEvent(kind: "screenshot", payload: ["format": "png", "base64": b64])
-            }
+            network.sendScreenshot(b64: b64, id: pendingRequestId)
         } else {
             if let rid = pendingRequestId {
-                network.sendError(id: rid, code: -1, message: "Screenshot failed")
+                network.sendError(id: rid, code: -1, message: "Screenshot failed or cancelled")
             }
         }
     }

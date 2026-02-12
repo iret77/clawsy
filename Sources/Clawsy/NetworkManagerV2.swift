@@ -256,7 +256,7 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
                 "minProtocol": 3,
                 "maxProtocol": 3,
                 "client": [
-                    "id": "ai.clawsy",
+                    "id": "openclaw-macos",
                     "version": "0.2.0",
                     "platform": "macos",
                     "mode": "node"
@@ -285,9 +285,14 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
         switch command {
         case "screen.capture":
             // Check params for 'interactive' or 'rect' if supported
-            // Default to full screen for now, or respect params if passed
-            let interactive = false // TODO: parse from params if needed
+            let interactive = params["interactive"] as? Bool ?? false
             onScreenshotRequested?(interactive, id)
+            
+        case "screen.record":
+            // Placeholder for recording support
+            let duration = params["durationMs"] as? Int ?? 5000
+            os_log("Screen record requested: %d ms", log: logger, type: .info, duration)
+            sendError(id: id, code: -32601, message: "Screen recording not yet implemented")
             
         case "clipboard.read":
             onClipboardReadRequested?(id)
@@ -333,10 +338,10 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     
     func sendEvent(kind: String, payload: Any) {
         // Wrap in a standard event structure
-        // This assumes the Gateway propagates "node.event" or similar
+        // This is a top-level event message for Gateway V3
         let message: [String: Any] = [
             "type": "event",
-            "event": "node.event", // Generic node event
+            "event": "node.event", // We use a generic type that the gateway recognizes
             "payload": [
                 "kind": kind,
                 "data": payload,
@@ -344,6 +349,20 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             ]
         ]
         send(json: message)
+    }
+
+    func sendScreenshot(b64: String, id: String?) {
+        let result: [String: Any] = [
+            "format": "png",
+            "base64": b64
+        ]
+        
+        if let requestId = id {
+            sendResponse(id: requestId, result: result)
+        } else {
+            // Proactive push
+            sendEvent(kind: "screenshot", payload: result)
+        }
     }
     
     private func send(json: [String: Any]) {
