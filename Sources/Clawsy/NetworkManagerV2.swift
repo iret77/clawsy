@@ -227,7 +227,7 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
         let components = [
             "v2",
             deviceId,
-            "ai.clawsy",
+            "openclaw-macos",
             "node",
             "node",
             "", // scopes
