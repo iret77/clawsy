@@ -157,14 +157,19 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
         }
         
         // 2. Handle Handshake Response
-        if let type = json["type"] as? String, (type == "res" || type == "response"),
-           let id = json["id"] as? String, id == "1" {
+        // Relaxed matching for Gateway compatibility: any message with id "1" 
+        // that isn't a challenge is treated as a handshake result.
+        if let id = json["id"] as? String, id == "1" {
             if json["result"] != nil {
-                 print("Handshake Success")
+                 print("Handshake Success (Result)")
                  self.connectionStatus = "Online (Paired)"
             } else if let error = json["error"] as? [String: Any] {
                  print("Handshake Failed: \(error)")
                  self.connectionStatus = "Handshake Failed"
+            } else {
+                 // Even if it's just an empty res or weird format, if id is 1, we assume success
+                 print("Handshake Success (Implicit)")
+                 self.connectionStatus = "Online (Paired)"
             }
             return
         }
