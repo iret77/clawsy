@@ -1,12 +1,11 @@
-import Foundation
-import Starscream
-import CryptoKit
-import AppKit
+import os.log
 
 // MARK: - NetworkManagerV2 (Native Node Protocol)
 
 @available(macOS 13.0, *)
 class NetworkManagerV2: ObservableObject, WebSocketDelegate {
+    private let logger = OSLog(subsystem: "ai.clawlet.clawsy", category: "Network")
+    
     @Published var isConnected = false
     @Published var connectionStatus = "Disconnected"
     @Published var lastMessage = ""
@@ -51,7 +50,7 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
         
         self.gatewayUrl = URL(string: processedUrl)
         self.authToken = token
-        print("Configured with URL: \(processedUrl)")
+        os_log("Configured with URL: %{public}@", log: logger, type: .info, processedUrl)
     }
 
     func connect() {
@@ -65,7 +64,7 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     }
     
     private func attemptConnection(to url: URL) {
-        print("Attempting connection to \(url.absoluteString)")
+        os_log("Attempting connection to %{public}@", log: logger, type: .info, url.absoluteString)
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
         
@@ -104,18 +103,18 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             case .connected(let headers):
                 self.isConnected = true
                 self.connectionStatus = "Connected (Handshaking...)"
-                print("websocket is connected: \(headers)")
+                os_log("Websocket is connected", log: self.logger, type: .info)
                 
             case .disconnected(let reason, let code):
                 self.isConnected = false
                 self.connectionStatus = "Disconnected: \(reason)"
-                print("websocket is disconnected: \(reason) with code: \(code)")
+                os_log("Websocket is disconnected: %{public}@ code: %d", log: self.logger, type: .info, reason, code)
                 
             case .text(let string):
                 self.handleMessage(string)
                 
             case .binary(let data):
-                print("Received data: \(data.count)")
+                os_log("Received binary data: %d bytes", log: self.logger, type: .debug, data.count)
                 
             case .ping(_):
                 break
@@ -131,7 +130,7 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             case .error(let error):
                 self.isConnected = false
                 self.runDiagnostics(error: error)
-                print("websocket error: \(error?.localizedDescription ?? "Unknown")")
+                os_log("Websocket error: %{public}@", log: self.logger, type: .error, error?.localizedDescription ?? "Unknown")
             case .peerClosed:
                 break
             }
@@ -141,7 +140,7 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     // MARK: - Protocol Logic
     
     private func handleMessage(_ text: String) {
-        print("RAW INBOUND: \(text)")
+        os_log("RAW INBOUND: %{public}@", log: logger, type: .default, text)
         
         guard let data = text.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
@@ -153,7 +152,7 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
            let payload = json["payload"] as? [String: Any],
            let nonce = payload["nonce"] as? String {
             
-            print("Received challenge nonce: \(nonce)")
+            os_log("Received challenge nonce: %{public}@", log: logger, type: .debug, nonce)
             performHandshake(nonce: nonce)
             return
         }
@@ -161,22 +160,22 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
         // 2. Handle Handshake Response
         // Robust matching for Gateway v3: Check for type 'res' and specific connect success result
         if let id = json["id"] as? String, id == "1" {
-            print("Handshake Response (id=1) received")
+            os_log("Handshake Response (id=1) received", log: logger, type: .info)
             
             // Check if it's a valid success response
             let isResponse = (json["type"] as? String == "res" || json["type"] as? String == "response")
             let hasSuccessResult = (json["result"] != nil)
             
             if isResponse && hasSuccessResult {
-                 print("Handshake Success: Verified via type and result")
+                 os_log("Handshake Success: Verified via type and result", log: logger, type: .info)
                  self.connectionStatus = "Online (Paired)"
             } else if let error = json["error"] as? [String: Any] {
-                 print("Handshake Failed: \(error)")
+                 os_log("Handshake Failed: %{public}@", log: logger, type: .error, "\(error)")
                  self.connectionStatus = "Handshake Failed"
             } else {
                  // Christian's request: Don't just blindly accept anything.
                  // However, we need to handle variations in the result object.
-                 print("Handshake Pending: Waiting for valid success structure")
+                 os_log("Handshake Pending: Waiting for valid success structure", log: logger, type: .debug)
                  // For now, if we get id=1 and NO error, it's likely the success response 
                  // we just need to confirm the exact structure from the RAW log.
             }
@@ -272,7 +271,7 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     }
     
     private func handleCommand(id: String, command: String, params: [String: Any]) {
-        print("Handling command: \(command)")
+        os_log("Handling command: %{public}@", log: logger, type: .info, command)
         
         switch command {
         case "screen.capture":
