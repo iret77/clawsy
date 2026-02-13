@@ -27,12 +27,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusBarItem.button {
-            if let appIcon = NSImage(named: "AppIcon") {
-                appIcon.size = NSSize(width: 18, height: 18)
-                appIcon.isTemplate = true // Allows automatic light/dark mode adaptation
-                button.image = appIcon
+            // Use the specific Menu Bar Icon (the black/white PNG)
+            if let menuIcon = NSImage(named: "Icon") {
+                menuIcon.size = NSSize(width: 18, height: 18)
+                menuIcon.isTemplate = true
+                button.image = menuIcon
             } else {
-                // Check for SF Symbol availability
+                // Fallback to SF Symbol
                 let config = NSImage.SymbolConfiguration(pointSize: 15, weight: .regular)
                 if let sfIcon = NSImage(systemSymbolName: "ant.fill", accessibilityDescription: "Clawsy")?.withSymbolConfiguration(config) {
                     button.image = sfIcon

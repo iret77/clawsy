@@ -20,7 +20,8 @@ let package = Package(
             path: "Sources/Clawsy",
             resources: [
                 .process("Assets.xcassets"),
-                .process("Resources")
+                .process("Resources"),
+                .copy("Assets/Icon.png")
             ]
         )
     ]

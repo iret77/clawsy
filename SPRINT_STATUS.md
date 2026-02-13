@@ -11,8 +11,9 @@
 - **Permission Duration**: Added "Allow for 1h" and "Allow for rest of day" options to File Sync HUD (Christian's Request).
 - **Notifications**: Integrated macOS UNUserNotificationCenter. Displays notifications for all File Sync actions. 
 - **Auto-Revoke**: Notifications for automated syncs (during "Allow" periods) include a "Revoke Permissions" button to immediately cancel active temporary permissions.
-- **Localization**: Implemented i18n support. Added base translations for English (EN), German (DE), French (FR), and Spanish (ES). Fallback defaults to EN.
+- **Localization**: Implemented i18n support. Added base translations for English (EN), German (DE), French (FR), and Spanish (ES). [DONE] Fallback defaults to EN.
 - **Clipboard HUD**: Refined preview window with 'Copy Local' support.
+- **Version bump**: Info.plist updated to 0.2.0.
 
 ## 🚧 In Progress / TODO
 - **Icon Refinement**:
@@ -22,6 +23,9 @@
     - [ ] Obtain 'Developer ID Application' certificate and Team ID for signing.
     - [ ] Configure `xcrun notarytool` credentials.
     - [ ] Run `scripts/sign.sh` on a Mac environment.
+- **Camera Integration**:
+    - [ ] Implement `camera.list` (AVFoundation).
+    - [ ] Implement `camera.snap` (Still image capture).
 
 ## 📝 Notes
 - **USP**: Clawsy focuses on professional workflow integration (File Sync, advanced Clipboard management) exceeding the standard companion app.

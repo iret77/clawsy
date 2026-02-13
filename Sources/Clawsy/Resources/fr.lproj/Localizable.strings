@@ -1,0 +1,15 @@
+"FILE_SYNC_REQUEST" = "Synchronisation de fichiers";
+"AGENT_WANTS_TO" = "L'agent veut %@ un fichier.";
+"LOCATION" = "Emplacement : %@";
+"DENY" = "Refuser";
+"ALLOW" = "Autoriser %@";
+"ALLOW_ONCE" = "Seulement cette fois";
+"ALLOW_1H" = "Pendant 1 heure";
+"ALLOW_DAY" = "Pour le reste de la journée";
+"NOTIFICATION_TITLE" = "Clawsy Synchro";
+"NOTIFICATION_BODY_DOWNLOADING" = "Téléchargement : %@";
+"NOTIFICATION_BODY_UPLOADING" = "Envoi : %@";
+"REVOKE_PERMISSION" = "Révoquer l'accès";
+"CLIPBOARD_SYNC" = "Synchro Presse-papiers";
+"CLIPBOARD_WANTS_WRITE" = "L'agent veut écrire dans votre presse-papiers :";
+"CLIPBOARD_WANTS_READ" = "L'agent veut lire votre presse-papiers.";
