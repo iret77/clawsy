@@ -41,7 +41,13 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     private var serverPort: String { UserDefaults.standard.string(forKey: "serverPort") ?? "18789" }
     private var serverToken: String { UserDefaults.standard.string(forKey: "serverToken") ?? "" }
     private var sshUser: String { UserDefaults.standard.string(forKey: "sshUser") ?? "" }
-    private var useSshFallback: Bool { UserDefaults.standard.bool(forKey: "useSshFallback") }
+    private var useSshFallback: Bool { 
+        // If the key is missing from UserDefaults, default to true
+        if UserDefaults.standard.object(forKey: "useSshFallback") == nil {
+            return true
+        }
+        return UserDefaults.standard.bool(forKey: "useSshFallback") 
+    }
     private var sharedFolderPath: String { UserDefaults.standard.string(forKey: "sharedFolderPath") ?? "~/Documents/Clawsy" }
     
     override init() {
@@ -49,6 +55,18 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         self.signingKey = Curve25519.Signing.PrivateKey()
         self.publicKey = self.signingKey?.publicKey
         setupNotifications()
+    }
+    
+    private func dumpUserDefaults() {
+        let keys = ["serverHost", "serverPort", "serverToken", "sshUser", "useSshFallback"]
+        var dump = "\n[DEBUG] UserDefaults Dump:"
+        for key in keys {
+            let val = UserDefaults.standard.object(forKey: key) ?? "nil"
+            dump += "\n  \(key): \(val)"
+        }
+        DispatchQueue.main.async {
+            self.rawLog += dump
+        }
     }
     
     private func setupNotifications() {
@@ -97,11 +115,14 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         UNUserNotificationCenter.current().add(request)
     }
     
-    func configure(host: String, port: String, token: String) {
+    func configure(host: String, port: String, token: String, sshUser: String? = nil, fallback: Bool? = nil) {
         // Sync to UserDefaults as we don't use @AppStorage here
         UserDefaults.standard.set(host, forKey: "serverHost")
         UserDefaults.standard.set(port, forKey: "serverPort")
         UserDefaults.standard.set(token, forKey: "serverToken")
+        if let user = sshUser { UserDefaults.standard.set(user, forKey: "sshUser") }
+        if let fback = fallback { UserDefaults.standard.set(fback, forKey: "useSshFallback") }
+        
         // Ensure values are synchronized to disk
         UserDefaults.standard.synchronize()
         os_log("Configured with Host: %{public}@, Port: %{public}@", log: logger, type: .info, host, port)
@@ -110,6 +131,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     func connect() {
         // Refresh values from disk before connecting
         UserDefaults.standard.synchronize()
+        dumpUserDefaults()
         
         let host = serverHost
         let token = serverToken

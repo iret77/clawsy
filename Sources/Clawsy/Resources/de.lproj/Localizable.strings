@@ -25,6 +25,9 @@
 "COPY_TO_AGENT" = "Zum Agenten kopieren";
 "FILE_SYNC" = "Dateisync";
 "MANAGED_FOLDER" = "Verwalteter Ordner";
+"CAMERA" = "Kamera";
+"TAKE_PHOTO" = "Foto aufnehmen";
+"LIST_CAMERAS" = "Kameras auflisten";
 "CONNECT" = "Verbinden";
 "DISCONNECT" = "Trennen";
 "SETTINGS" = "Einstellungen...";

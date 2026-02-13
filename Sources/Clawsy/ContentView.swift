@@ -93,6 +93,25 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
+
+                // Camera Group
+                Menu {
+                    Button(action: {
+                        network.sendEvent(kind: "camera.trigger", payload: ["action": "snap"])
+                    }) {
+                        Label("TAKE_PHOTO", systemImage: "camera.fill")
+                    }
+                    Button(action: {
+                        network.sendEvent(kind: "camera.trigger", payload: ["action": "list"])
+                    }) {
+                        Label("LIST_CAMERAS", systemImage: "list.bullet")
+                    }
+                } label: {
+                    MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected, hasChevron: true)
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .frame(maxWidth: .infinity)
                 
                 Divider().padding(.vertical, 4).opacity(0.5)
                 
@@ -182,7 +201,13 @@ struct ContentView: View {
         if network.isConnected {
             network.disconnect()
         } else {
-            network.configure(host: serverHost, port: serverPort, token: serverToken)
+            network.configure(
+                host: serverHost, 
+                port: serverPort, 
+                token: serverToken, 
+                sshUser: sshUser, 
+                fallback: useSshFallback
+            )
             network.connect()
         }
     }
@@ -351,7 +376,14 @@ struct SettingsView: View {
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(.orange)
                             Spacer()
-                            Toggle("", isOn: $useSshFallback).toggleStyle(.switch).scaleEffect(0.7)
+                            Toggle("", isOn: $useSshFallback)
+                                .toggleStyle(.switch)
+                                .scaleEffect(0.7)
+                                .onChange(of: useSshFallback) { newValue in
+                                    // Force sync to UserDefaults
+                                    UserDefaults.standard.set(newValue, forKey: "useSshFallback")
+                                    UserDefaults.standard.synchronize()
+                                }
                         }
                         
                         TextField(LocalizedStringKey("SSH_USER"), text: $sshUser)

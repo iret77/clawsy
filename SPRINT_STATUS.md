@@ -12,6 +12,7 @@
 - **Notifications**: Integrated macOS UNUserNotificationCenter. Displays notifications for all File Sync actions. 
 - **Auto-Revoke**: Notifications for automated syncs (during "Allow" periods) include a "Revoke Permissions" button to immediately cancel active temporary permissions.
 - **Localization**: Implemented i18n support. Added base translations for English (EN), German (DE), French (FR), and Spanish (ES). [DONE] Fallback defaults to EN.
+- **Camera Group**: Added "Camera" menu to UI for manual photo/list triggers.
 - **Clipboard HUD**: Refined preview window with 'Copy Local' support.
 - **Version bump**: Info.plist updated to 0.2.0.
 
@@ -19,13 +20,11 @@
 - **Icon Refinement**:
     - [x] Implemented SF Symbol fallback (`ant.fill`) as a placeholder until custom SVG/Asset is ready.
     - [x] Enabled `isTemplate = true` for automatic light/dark mode icon switching.
-- **Distribution**: 
-    - [ ] Obtain 'Developer ID Application' certificate and Team ID for signing.
-    - [ ] Configure `xcrun notarytool` credentials.
-    - [ ] Run `scripts/sign.sh` on a Mac environment.
 - **Camera Integration**:
     - [x] Implement `camera.list` (AVFoundation).
     - [x] Implement `camera.snap` (Still image capture).
+    - [ ] Add "Preview before Send" option for manual camera snaps.
+- **Distribution**: 
 
 ## 📝 Notes
 - **USP**: Clawsy focuses on professional workflow integration (File Sync, advanced Clipboard management) exceeding the standard companion app.

@@ -25,6 +25,9 @@
 "COPY_TO_AGENT" = "Copy to Agent";
 "FILE_SYNC" = "File Sync";
 "MANAGED_FOLDER" = "Managed Folder";
+"CAMERA" = "Camera";
+"TAKE_PHOTO" = "Take Photo";
+"LIST_CAMERAS" = "List Cameras";
 "CONNECT" = "Connect";
 "DISCONNECT" = "Disconnect";
 "SETTINGS" = "Settings...";
