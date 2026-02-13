@@ -111,12 +111,17 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         UserDefaults.standard.synchronize()
         
         guard !serverHost.isEmpty, !serverToken.isEmpty else {
-            connectionStatus = "STATUS_DISCONNECTED"
+            DispatchQueue.main.async {
+                self.connectionStatus = "STATUS_DISCONNECTED"
+                self.rawLog += "\n[WSS] Error: Missing Host or Token"
+            }
             return
         }
         
         connectionAttemptCount += 1
-        connectionStatus = "STATUS_CONNECTING"
+        DispatchQueue.main.async {
+            self.connectionStatus = "STATUS_CONNECTING"
+        }
         
         // Ensure old socket is cleaned up before creating a new one
         socket?.delegate = nil
@@ -135,7 +140,10 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         }
 
         guard let targetUrl = URL(string: targetUrlStr) else {
-            connectionStatus = "STATUS_ERROR"
+            DispatchQueue.main.async {
+                self.connectionStatus = "STATUS_ERROR"
+                self.rawLog += "\n[WSS] Error: Invalid URL \(targetUrlStr)"
+            }
             return
         }
         
@@ -144,6 +152,10 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
 
     private func attemptConnection(to url: URL) {
         os_log("Attempting connection to %{public}@", log: logger, type: .info, url.absoluteString)
+        DispatchQueue.main.async {
+            self.rawLog += "\n[WSS] Connecting to \(url.absoluteString)..."
+        }
+        
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
         
@@ -154,7 +166,11 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     }
     
     private func handleConnectionFailure(error: Error?) {
-        os_log("Connection failure: %{public}@", log: logger, type: .error, error?.localizedDescription ?? "Unknown")
+        let errDesc = error?.localizedDescription ?? "Unknown"
+        os_log("Connection failure: %{public}@", log: logger, type: .error, errDesc)
+        DispatchQueue.main.async {
+            self.rawLog += "\n[WSS] Connection Error: \(errDesc)"
+        }
         
         if useSshFallback && !isUsingSshTunnel {
             startSshTunnel()
@@ -167,12 +183,18 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     private func startSshTunnel() {
         guard !sshUser.isEmpty else {
             os_log("SSH User is missing. Cannot start tunnel.", log: logger, type: .error)
-            connectionStatus = "STATUS_SSH_USER_MISSING"
+            DispatchQueue.main.async {
+                self.connectionStatus = "STATUS_SSH_USER_MISSING"
+                self.rawLog += "\n[SSH] Error: SSH User is missing"
+            }
             return
         }
         
         os_log("Initiating SSH Tunnel Fallback for %{public}@...", log: logger, type: .info, serverHost)
-        connectionStatus = "STATUS_STARTING_SSH"
+        DispatchQueue.main.async {
+            self.connectionStatus = "STATUS_STARTING_SSH"
+            self.rawLog += "\n[SSH] Starting tunnel: ssh -L 18790:127.0.0.1:\(self.serverPort) \(self.sshUser)@\(self.serverHost)"
+        }
         
         // Kill existing tunnel if any
         sshProcess?.terminate()
@@ -204,17 +226,22 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
                 if let proc = self.sshProcess, proc.isRunning {
                     os_log("SSH Tunnel established successfully.", log: self.logger, type: .info)
                     self.isUsingSshTunnel = true
+                    self.rawLog += "\n[SSH] Tunnel established."
                     self.connect() // This will now use Attempt 2 with the tunnel URL
                 } else {
                     os_log("SSH Tunnel failed to stay alive.", log: self.logger, type: .error)
                     self.isUsingSshTunnel = false
                     self.connectionStatus = "STATUS_SSH_FAILED"
+                    self.rawLog += "\n[SSH] Error: Tunnel failed to stay alive."
                 }
             }
         } catch {
             os_log("Failed to launch SSH process: %{public}@", log: logger, type: .error, error.localizedDescription)
-            connectionStatus = "STATUS_SSH_FAILED"
-            isUsingSshTunnel = false
+            DispatchQueue.main.async {
+                self.connectionStatus = "STATUS_SSH_FAILED"
+                self.isUsingSshTunnel = false
+                self.rawLog += "\n[SSH] Launch Error: \(error.localizedDescription)"
+            }
         }
     }
     
