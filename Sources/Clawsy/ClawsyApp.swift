@@ -9,8 +9,8 @@ struct ClawsyApp: App {
         Settings {
             // Placeholder for real settings window
             VStack {
-                Text("Clawsy Settings")
-                Text("Version 0.2.0")
+                Text("SETTINGS_WINDOW_TITLE")
+                Text("VERSION_FORMAT 0.2.0")
             }
             .frame(width: 300, height: 200)
         }

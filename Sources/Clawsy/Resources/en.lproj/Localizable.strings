@@ -53,6 +53,7 @@
 /* Settings */
 "SETTINGS_TITLE" = "Settings";
 "GATEWAY" = "Gateway";
+"GATEWAY_PLACEHOLDER" = "wss://host:port";
 "TOKEN" = "Token";
 "SSH_HOST_PLACEHOLDER" = "SSH Host (e.g. agenthost)";
 "SSH_FALLBACK" = "SSH Fallback";
@@ -62,6 +63,10 @@
 "SHARED_FOLDER_DESC" = "Only files in this folder are visible to the agent.";
 "VIBRANT_SECURE" = "Vibrant & Secure.";
 "DONE" = "Done";
+
+/* Settings Window */
+"SETTINGS_WINDOW_TITLE" = "Clawsy Settings";
+"VERSION_FORMAT %@" = "Version %@";
 
 /* Debug Log */
 "DEBUG_LOG_TITLE" = "Network Debug Log";

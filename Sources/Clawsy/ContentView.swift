@@ -309,7 +309,7 @@ struct SettingsView: View {
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.blue)
                         
-                        TextField("wss://host:port", text: $serverUrl)
+                        TextField("GATEWAY_PLACEHOLDER", text: $serverUrl)
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
                         
