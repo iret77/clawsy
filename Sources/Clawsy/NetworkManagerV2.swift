@@ -543,13 +543,17 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         case "file.list":
             let sharedPath = self.sharedFolderPath // Capture current path
             os_log("[FILE] Listing files for path: %{public}@ (resolved: %{public}@)", log: self.logger, type: .info, sharedPath, baseDir)
+            
+            // Build #114: Acknowledge and log path verification
+            self.sendAck(id: id)
             DispatchQueue.main.async {
-                self.rawLog += "\n[FILE] Listing: \(sharedPath)"
+                self.rawLog += "\n[FILE] Listing (Ack sent): \(sharedPath)"
             }
             
             DispatchQueue.global(qos: .userInitiated).async {
+                os_log("[FILE] Starting list operation for: %{public}@", log: self.logger, type: .info, baseDir)
                 let files = ClawsyFileManager.listFiles(at: baseDir)
-                os_log("[FILE] Found %d items in %{public}@", log: self.logger, type: .info, files.count, baseDir)
+                os_log("[FILE] List operation complete. Found %d items", log: self.logger, type: .info, files.count)
                 
                 DispatchQueue.main.async {
                     self.rawLog += "\n[FILE] Found \(files.count) items"
@@ -566,15 +570,20 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             }
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
             
+            // Build #114: Acknowledge
+            self.sendAck(id: id)
+            
             let executeGet = {
                 self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", comment: ""), 
                                 body: String(format: NSLocalizedString("NOTIFICATION_BODY_DOWNLOADING", comment: ""), name), 
                                 isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
                 
                 DispatchQueue.global(qos: .userInitiated).async {
+                    os_log("[FILE] Reading file: %{public}@", log: self.logger, type: .info, fullPath)
                     if let b64 = ClawsyFileManager.readFile(at: fullPath) {
                         self.sendResponse(id: id, result: ["content": b64, "name": name])
                     } else {
+                        os_log("[FILE] Failed to read file: %{public}@", log: self.logger, type: .error, fullPath)
                         self.sendError(id: id, code: -32000, message: "Failed to read file")
                     }
                 }
@@ -600,15 +609,20 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             }
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
             
+            // Build #114: Acknowledge
+            self.sendAck(id: id)
+            
             let executeSet = {
                 self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", comment: ""), 
                                 body: String(format: NSLocalizedString("NOTIFICATION_BODY_UPLOADING", comment: ""), name), 
                                 isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
                 
                 DispatchQueue.global(qos: .userInitiated).async {
+                    os_log("[FILE] Writing file: %{public}@", log: self.logger, type: .info, fullPath)
                     if ClawsyFileManager.writeFile(at: fullPath, base64Content: content) {
                         self.sendResponse(id: id, result: ["status": "ok", "name": name])
                     } else {
+                        os_log("[FILE] Failed to write file: %{public}@", log: self.logger, type: .error, fullPath)
                         self.sendError(id: id, code: -32000, message: "Failed to write file")
                     }
                 }
@@ -636,6 +650,11 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     
     func sendResponse(id: String, result: Any) {
         send(json: ["type": "res", "id": id, "result": result])
+    }
+    
+    func sendAck(id: String) {
+        // Build #114: Immediate acknowledgment to prevent Gateway timeouts
+        send(json: ["type": "ack", "id": id, "status": "processing"])
     }
     
     func sendError(id: String, code: Int, message: String) {

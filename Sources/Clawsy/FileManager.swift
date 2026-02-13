@@ -21,19 +21,30 @@ class ClawsyFileManager {
         let fileManager = Foundation.FileManager.default
         let url = URL(fileURLWithPath: path)
         
+        print("[FileManager] Attempting to list directory: \(path)")
+        
         do {
-            let items = try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: [.nameKey, .isDirectoryKey, .fileSizeKey, .contentModificationDateKey])
+            let resourceKeys: [URLResourceKey] = [.nameKey, .isDirectoryKey, .fileSizeKey, .contentModificationDateKey]
+            let items = try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: resourceKeys, options: [.skipsHiddenFiles])
+            
+            print("[FileManager] Found \(items.count) raw items")
+            
             return items.compactMap { item in
-                let values = try? item.resourceValues(forKeys: [.nameKey, .isDirectoryKey, .fileSizeKey, .contentModificationDateKey])
-                return FileEntry(
-                    name: values?.name ?? item.lastPathComponent,
-                    isDirectory: values?.isDirectory ?? false,
-                    size: Int64(values?.fileSize ?? 0),
-                    modified: values?.contentModificationDate ?? Date()
-                )
+                do {
+                    let values = try item.resourceValues(forKeys: Set(resourceKeys))
+                    return FileEntry(
+                        name: values.name ?? item.lastPathComponent,
+                        isDirectory: values.isDirectory ?? false,
+                        size: Int64(values.fileSize ?? 0),
+                        modified: values.contentModificationDate ?? Date()
+                    )
+                } catch {
+                    print("[FileManager] Skipping item \(item.lastPathComponent) due to error: \(error)")
+                    return nil
+                }
             }
         } catch {
-            print("Error listing directory: \(error)")
+            print("[FileManager] Critical error listing directory: \(error)")
             return []
         }
     }

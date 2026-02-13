@@ -432,15 +432,17 @@ struct SettingsView: View {
                             TextField(LocalizedStringKey("HOST"), text: $serverHost)
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(.body, design: .monospaced))
+                                .frame(height: 32)
                             
                             TextField(LocalizedStringKey("PORT"), text: $serverPort)
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(.body, design: .monospaced))
-                                .frame(width: 80)
+                                .frame(width: 80, height: 32)
                         }
                         
                         SecureField(LocalizedStringKey("TOKEN"), text: $serverToken)
                             .textFieldStyle(.roundedBorder)
+                            .frame(height: 32)
                     }
                     
                     // SSH Fallback Section
@@ -463,6 +465,7 @@ struct SettingsView: View {
                         TextField(LocalizedStringKey("SSH_USER"), text: $sshUser)
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
+                            .frame(height: 32)
                             .disabled(!useSshFallback)
                         
                         Text(LocalizedStringKey("SSH_FALLBACK_DESC"))
@@ -479,12 +482,11 @@ struct SettingsView: View {
                         // Refined Path Display: Clearer text, themed background
                         Text(sharedFolderPath.isEmpty ? "None" : sharedFolderPath)
                             .font(.system(.body, design: .monospaced))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 6)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color(NSColor.controlBackgroundColor))
-                            .cornerRadius(4)
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(NSColor.separatorColor), lineWidth: 1))
+                            .padding(.horizontal, 10)
+                            .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
+                            .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
+                            .cornerRadius(5)
+                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.primary.opacity(0.1), lineWidth: 1))
                             .foregroundColor(.primary)
                         
                         HStack(spacing: 12) {
@@ -493,6 +495,7 @@ struct SettingsView: View {
                             }
                             .buttonStyle(.borderedProminent)
                             .controlSize(.regular)
+                            .frame(height: 32)
                             
                             if !sharedFolderPath.isEmpty {
                                 Button(action: {
@@ -503,6 +506,7 @@ struct SettingsView: View {
                                 }
                                 .buttonStyle(.bordered)
                                 .controlSize(.regular)
+                                .frame(height: 32)
                                 .help("Open in Finder")
                             }
                         }

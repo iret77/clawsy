@@ -24,22 +24,12 @@
 - **Version bump**: Info.plist updated to 0.2.0.
 
 ## 🚧 In Progress / TODO
-- **Icon Refinement**:
-    - [x] Implemented SF Symbol fallback (`ant.fill`) as a placeholder until custom SVG/Asset is ready.
-    - [x] Enabled `isTemplate = true` for automatic light/dark mode icon switching.
-- **Camera Integration**:
-    - [x] Implement `camera.list` (AVFoundation).
-    - [x] Implement `camera.snap` (Still image capture).
-    - [x] Add "Preview before Send" option for camera snaps. (Implemented `CameraPreviewView` and protocol support).
-    - [x] Localized Camera Preview UI (EN/DE/FR/ES). [DONE]
-    - [x] Added `NSCameraUsageDescription` to Info.plist. [DONE]
-    - [x] Implemented logic to auto-close floating windows after confirmation/cancel. [DONE]
-- **Distribution**: 
-    - [x] Create ad-hoc install script `install_clawsy.sh` for easy deployment on Christian's Mac. [DONE]
-    - [x] Refined `build.sh` for universal binary (arm64/x86_64). [DONE]
-    - [ ] Finalize `sign.sh` for ad-hoc signing (since it's a private build).
+- **Production Readiness**:
+    - [ ] Implement Sparkle or custom auto-update mechanism.
+    - [ ] Create DMGs or PKG installers for easier distribution.
+    - [ ] Enhance File Watcher performance for large directories (caching).
 
 ## 📝 Notes
 - **USP**: Clawsy focuses on professional workflow integration (File Sync, advanced Clipboard management) exceeding the standard companion app.
-- **Night Sprint Concluded**: (2026-02-13 18:20 UTC) Finalized full i18n localization for Camera Preview and Folder Management (EN/DE/FR/ES), fixed floating window auto-close logic, and verified binary distribution scripts. Build is optimized for M-series/Intel and ready for local installation via `install_clawsy.sh`.
+- **Night Sprint Concluded**: (2026-02-13 19:45 UTC) Finalized ad-hoc signing script (`sign.sh`). All distribution and build scripts are now verified. Sprint tasks for the "Mac Companion Bridge" core are effectively complete for this phase. Build is ready for local installation via `install_clawsy.sh`.
 - **Verification**: christian will test the inbound `screen.capture` fix and the new UI in the morning.
