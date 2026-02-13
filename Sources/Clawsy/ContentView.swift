@@ -27,7 +27,7 @@ struct ContentView: View {
             // --- Header & Status ---
             HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("APP_NAME")
+                        Text(LocalizedStringKey("APP_NAME"))
                             .font(.system(size: 13, weight: .semibold))
                         
                         Group {
@@ -250,15 +250,15 @@ struct DebugLogView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("DEBUG_LOG_TITLE")
+                Text(LocalizedStringKey("DEBUG_LOG_TITLE"))
                     .font(.headline)
                 Spacer()
-                Button("DONE") { isPresented = false }
+                Button(LocalizedStringKey("DONE")) { isPresented = false }
             }
             
             ScrollView {
                 if logText.isEmpty {
-                    Text("NO_DATA")
+                    Text(LocalizedStringKey("NO_DATA"))
                         .font(.system(.caption, design: .monospaced))
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
@@ -273,11 +273,11 @@ struct DebugLogView: View {
             .cornerRadius(4)
             
             HStack {
-                Text("SELECT_TEXT_COPY")
+                Text(LocalizedStringKey("SELECT_TEXT_COPY"))
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()
-                Button("COPY_ALL") {
+                Button(LocalizedStringKey("COPY_ALL")) {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(logText, forType: .string)
                 }
@@ -299,63 +299,63 @@ struct SettingsView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("SETTINGS_TITLE")
+            Text(LocalizedStringKey("SETTINGS_TITLE"))
                 .font(.system(size: 15, weight: .bold))
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     // Gateway Section
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("GATEWAY", systemImage: "antenna.radiowaves.left.and.right")
+                        Label(LocalizedStringKey("GATEWAY"), systemImage: "antenna.radiowaves.left.and.right")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.blue)
                         
                         HStack {
-                            TextField("HOST", text: $serverHost)
+                            TextField(LocalizedStringKey("HOST"), text: $serverHost)
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(.body, design: .monospaced))
                             
-                            TextField("PORT", text: $serverPort)
+                            TextField(LocalizedStringKey("PORT"), text: $serverPort)
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(.body, design: .monospaced))
                                 .frame(width: 80)
                         }
                         
-                        SecureField("TOKEN", text: $serverToken)
+                        SecureField(LocalizedStringKey("TOKEN"), text: $serverToken)
                             .textFieldStyle(.roundedBorder)
                     }
                     
                     // SSH Fallback Section
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Label("SSH_FALLBACK", systemImage: "lock.shield")
+                            Label(LocalizedStringKey("SSH_FALLBACK"), systemImage: "lock.shield")
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(.orange)
                             Spacer()
                             Toggle("", isOn: $useSshFallback).toggleStyle(.switch).scaleEffect(0.7)
                         }
                         
-                        TextField("SSH_USER", text: $sshUser)
+                        TextField(LocalizedStringKey("SSH_USER"), text: $sshUser)
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
                             .disabled(!useSshFallback)
                         
-                        Text("SSH_FALLBACK_DESC")
+                        Text(LocalizedStringKey("SSH_FALLBACK_DESC"))
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                     }
                     
                     // File Sync Section
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("SHARED_FOLDER", systemImage: "folder.badge.plus")
+                        Label(LocalizedStringKey("SHARED_FOLDER"), systemImage: "folder.badge.plus")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.green)
                         
-                        TextField("PATH", text: $sharedFolderPath)
+                        TextField(LocalizedStringKey("PATH"), text: $sharedFolderPath)
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
                         
-                        Text("SHARED_FOLDER_DESC")
+                        Text(LocalizedStringKey("SHARED_FOLDER_DESC"))
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                     }
@@ -366,13 +366,13 @@ struct SettingsView: View {
             Divider()
             
             HStack {
-                Text("VIBRANT_SECURE")
+                Text(LocalizedStringKey("VIBRANT_SECURE"))
                     .font(.system(size: 10, weight: .medium))
                     .foregroundColor(.secondary)
                 
                 Spacer()
                 
-                Button("DONE") {
+                Button(LocalizedStringKey("DONE")) {
                     isPresented = false
                 }
                 .keyboardShortcut(.return)

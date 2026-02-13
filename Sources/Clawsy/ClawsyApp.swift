@@ -8,7 +8,7 @@ struct ClawsyApp: App {
     var body: some Scene {
         Settings {
             VStack {
-                Text("SETTINGS_WINDOW_TITLE")
+                Text(LocalizedStringKey("SETTINGS_WINDOW_TITLE"))
                 Text("VERSION_FORMAT 0.2.0")
             }
             .frame(width: 300, height: 200)
