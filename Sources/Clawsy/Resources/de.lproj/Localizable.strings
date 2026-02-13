@@ -78,3 +78,7 @@
 "NO_DATA" = "Noch keine Daten empfangen.";
 "SELECT_TEXT_COPY" = "Text zum Kopieren auswählen.";
 "COPY_ALL" = "Alles kopieren";
+
+/* Camera Preview */
+"CAMERA_PREVIEW_TITLE" = "Kameravorschau";
+"SEND_TO_AGENT" = "An Agenten senden";

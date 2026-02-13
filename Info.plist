@@ -24,5 +24,7 @@
     <true/> <!-- This makes it a menu bar app (agent) without a dock icon -->
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSCameraUsageDescription</key>
+    <string>Clawsy needs camera access to send snapshots to your AI agent when requested.</string>
 </dict>
 </plist>

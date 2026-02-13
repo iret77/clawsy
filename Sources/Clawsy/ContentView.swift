@@ -8,6 +8,8 @@ struct ContentView: View {
     
     @State private var showingSettings = false
     @State private var showingLog = false
+    @State private var showingScreenshotMenu = false
+    @State private var showingCameraMenu = false
     
     // Persistent Configuration (UI State only)
     @AppStorage("serverHost") private var serverHost = "agenthost"
@@ -60,26 +62,34 @@ struct ContentView: View {
             // --- Main Actions List ---
             VStack(spacing: 2) {
                 // Screenshot Group
-                Menu {
-                    Button(action: {
-                        self.isScreenshotInteractive = false
-                        self.requestScreenshot()
-                    }) {
-                        Label("FULL_SCREEN", systemImage: "rectangle.dashed")
-                    }
-                    Button(action: {
-                        self.isScreenshotInteractive = true
-                        self.requestScreenshot()
-                    }) {
-                        Label("INTERACTIVE_AREA", systemImage: "plus.viewfinder")
-                    }
-                } label: {
-                    MenuItemRow(icon: "camera", title: "SCREENSHOT", isEnabled: network.isConnected, hasChevron: true, isMenu: true)
+                Button(action: { showingScreenshotMenu.toggle() }) {
+                    MenuItemRow(icon: "camera", title: "SCREENSHOT", isEnabled: network.isConnected, hasChevron: true)
                 }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .padding(.horizontal, 12)
+                .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
+                .popover(isPresented: $showingScreenshotMenu, arrowEdge: .trailing) {
+                    VStack(spacing: 0) {
+                        Button(action: {
+                            showingScreenshotMenu = false
+                            self.isScreenshotInteractive = false
+                            self.requestScreenshot()
+                        }) {
+                            MenuItemRow(icon: "rectangle.dashed", title: "FULL_SCREEN", isEnabled: network.isConnected)
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Button(action: {
+                            showingScreenshotMenu = false
+                            self.isScreenshotInteractive = true
+                            self.requestScreenshot()
+                        }) {
+                            MenuItemRow(icon: "plus.viewfinder", title: "INTERACTIVE_AREA", isEnabled: network.isConnected)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(4)
+                    .frame(width: 200)
+                }
 
                 // Clipboard
                 Button(action: handleManualClipboardSend) {
@@ -96,24 +106,32 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
 
                 // Camera Group
-                Menu {
-                    Button(action: {
-                        network.sendEvent(kind: "camera.trigger", payload: ["action": "snap"])
-                    }) {
-                        Label("TAKE_PHOTO", systemImage: "camera.fill")
-                    }
-                    Button(action: {
-                        network.sendEvent(kind: "camera.trigger", payload: ["action": "list"])
-                    }) {
-                        Label("LIST_CAMERAS", systemImage: "list.bullet")
-                    }
-                } label: {
-                    MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected, hasChevron: true, isMenu: true)
+                Button(action: { showingCameraMenu.toggle() }) {
+                    MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected, hasChevron: true)
                 }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .padding(.horizontal, 12)
+                .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
+                .popover(isPresented: $showingCameraMenu, arrowEdge: .trailing) {
+                    VStack(spacing: 0) {
+                        Button(action: {
+                            showingCameraMenu = false
+                            network.sendEvent(kind: "camera.trigger", payload: ["action": "snap"])
+                        }) {
+                            MenuItemRow(icon: "camera.fill", title: "TAKE_PHOTO", isEnabled: network.isConnected)
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Button(action: {
+                            showingCameraMenu = false
+                            network.sendEvent(kind: "camera.trigger", payload: ["action": "list"])
+                        }) {
+                            MenuItemRow(icon: "list.bullet", title: "LIST_CAMERAS", isEnabled: network.isConnected)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(4)
+                    .frame(width: 200)
+                }
                 
                 Divider().padding(.vertical, 4).opacity(0.5)
                 

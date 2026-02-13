@@ -61,18 +61,18 @@ struct MenuItemRow: View {
             
             if hasChevron {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(.secondary.opacity(0.4))
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.secondary.opacity(0.6))
             }
         }
-        .padding(.horizontal, isMenu ? 0 : 12)
+        .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
-        .background(isHovering && isEnabled && !isMenu ? Color.primary.opacity(0.1) : Color.clear)
+        .background(isHovering && isEnabled ? Color.primary.opacity(0.1) : Color.clear)
         .cornerRadius(4)
         .onHover { hover in
-            if isEnabled && !isMenu {
+            if isEnabled {
                 withAnimation(.easeInOut(duration: 0.05)) {
                     isHovering = hover
                 }

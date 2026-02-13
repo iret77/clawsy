@@ -24,9 +24,13 @@
     - [x] Implement `camera.list` (AVFoundation).
     - [x] Implement `camera.snap` (Still image capture).
     - [x] Add "Preview before Send" option for camera snaps. (Implemented `CameraPreviewView` and protocol support).
+    - [x] Localized Camera Preview UI (EN/DE/FR/ES). [DONE]
+    - [x] Added `NSCameraUsageDescription` to Info.plist. [DONE]
 - **Distribution**: 
+    - [ ] Create `.dmg` / Installer for easy deployment on Christian's Mac.
+    - [ ] Prepare `sign.sh` for ad-hoc signing (since it's a private build).
 
 ## 📝 Notes
 - **USP**: Clawsy focuses on professional workflow integration (File Sync, advanced Clipboard management) exceeding the standard companion app.
-- **Night Sprint Concluded**: (2026-02-13 14:45 UTC) Implemented Camera Preview HUD and protocol support for `camera.snap` with preview. Ready for build verification on Mac node.
+- **Night Sprint Concluded**: (2026-02-13 15:55 UTC) Finalized Camera Preview HUD and localized UI (EN/DE). Added TCC permissions to Info.plist. Ready for distribution testing.
 - **Verification**: christian will test the inbound `screen.capture` fix and the new UI in the morning.
