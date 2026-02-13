@@ -29,11 +29,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         if let button = statusBarItem.button {
             if let appIcon = NSImage(named: "AppIcon") {
                 appIcon.size = NSSize(width: 18, height: 18)
-                appIcon.isTemplate = false
+                appIcon.isTemplate = true // Allows automatic light/dark mode adaptation
                 button.image = appIcon
             } else {
-                // Fallback to Emoji for visibility during development
-                button.title = "🦞"
+                // Check for SF Symbol availability
+                let config = NSImage.SymbolConfiguration(pointSize: 15, weight: .regular)
+                if let sfIcon = NSImage(systemSymbolName: "ant.fill", accessibilityDescription: "Clawsy")?.withSymbolConfiguration(config) {
+                    button.image = sfIcon
+                } else {
+                    button.title = "🦞"
+                }
             }
             button.action = #selector(togglePopover(_:))
         }

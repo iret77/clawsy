@@ -6,19 +6,20 @@
 - **UI Redesign**: Native macOS Look & Feel (Vibrancy/Blur), refined typography, and shortcuts (⌘Q, ⌘,).
 - **Diagnostics**: Integrated "Debug Log" window for RAW traffic inspection.
 - **Permissions**: Confirmed TCC (Screen Recording) is active on Christian's Mac.
+- **Automatic SSH Fallback**: Implemented logic to auto-tunnel port 18789 via SSH on connection failure.
+- **Bidirectional File Sync**: Core logic for 'file.list', 'file.get', and 'file.set' integrated with local HUD alerts.
+- **Clipboard HUD**: Refined preview window with 'Copy Local' support.
 
-## 🚧 In Progress / TODO (Night Sprint)
-- **Automatic SSH Fallback**: 
-    - [ ] Implement connectivity check.
-    - [ ] Add logic to launch `ssh -NT -L ...` automatically on connection failure.
-- **File & Folder Sharing**:
-    - [x] Architect bidirectional sync (The Clawsy USP).
-    - [x] Implement `file.list`, `file.get`, and `file.set` node commands.
-- **Clipboard Preview**:
-    - [ ] Add a dedicated UI component to preview incoming clipboard data.
+## 🚧 In Progress / TODO
 - **Icon Refinement**:
-    - [ ] Replace Emoji fallback with a monochrome outline Lobster icon (SF Symbol style).
+    - [x] Implemented SF Symbol fallback (`ant.fill`) as a placeholder until custom SVG/Asset is ready.
+    - [x] Enabled `isTemplate = true` for automatic light/dark mode icon switching.
+- **Distribution**: 
+    - [ ] Obtain 'Developer ID Application' certificate and Team ID for signing.
+    - [ ] Configure `xcrun notarytool` credentials.
+    - [ ] Run `scripts/sign.sh` on a Mac environment.
 
 ## 📝 Notes
 - **USP**: Clawsy focuses on professional workflow integration (File Sync, advanced Clipboard management) exceeding the standard companion app.
+- **Night Sprint Concluded**: (2026-02-13 02:00 UTC) Major features for SSH Fallback and File Sync added.
 - **Verification**: christian will test the inbound `screen.capture` fix and the new UI in the morning.
