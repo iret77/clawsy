@@ -39,7 +39,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     @AppStorage("serverHost") private var serverHost = "agenthost"
     @AppStorage("serverPort") private var serverPort = "18789"
     @AppStorage("serverToken") private var serverToken = ""
-    @AppStorage("sshUser") private var sshUser = "claw"
+    @AppStorage("sshUser") private var sshUser = ""
     @AppStorage("useSshFallback") private var useSshFallback = true
     @AppStorage("sharedFolderPath") private var sharedFolderPath = "~/Documents/Clawsy"
     
@@ -152,6 +152,12 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     }
     
     private func startSshTunnel() {
+        guard !sshUser.isEmpty else {
+            os_log("SSH User is missing. Cannot start tunnel.", log: logger, type: .error)
+            connectionStatusKey = "STATUS_SSH_USER_MISSING"
+            return
+        }
+        
         os_log("Initiating SSH Tunnel Fallback...", log: logger, type: .info)
         connectionStatusKey = "STATUS_STARTING_SSH"
         

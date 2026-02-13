@@ -13,7 +13,7 @@ struct ContentView: View {
     @AppStorage("serverHost") private var serverHost = "agenthost"
     @AppStorage("serverPort") private var serverPort = "18789"
     @AppStorage("serverToken") private var serverToken = ""
-    @AppStorage("sshUser") private var sshUser = "claw"
+    @AppStorage("sshUser") private var sshUser = ""
     @AppStorage("useSshFallback") private var useSshFallback = true
     @AppStorage("sharedFolderPath") private var sharedFolderPath = "~/Documents/Clawsy"
     

@@ -43,6 +43,7 @@
 "STATUS_HANDSHAKE_FAILED" = "Handshake Failed";
 "STATUS_STARTING_SSH" = "Starting SSH Tunnel...";
 "STATUS_SSH_FAILED" = "SSH Tunnel Failed";
+"STATUS_SSH_USER_MISSING" = "SSH User Required";
 
 /* Alerts */
 "ALERT_SCREENSHOT_TITLE" = "Allow Screenshot?";
@@ -56,7 +57,7 @@
 "HOST" = "Host / IP";
 "PORT" = "Port";
 "TOKEN" = "Token";
-"SSH_USER" = "SSH User (e.g. claw)";
+"SSH_USER" = "SSH User";
 "SSH_FALLBACK" = "SSH Fallback";
 "SSH_FALLBACK_DESC" = "Auto-tunnels port 18789 if direct connection fails.";
 "SHARED_FOLDER" = "Shared Folder";

@@ -43,6 +43,7 @@
 "STATUS_HANDSHAKE_FAILED" = "Handshake fehlgeschlagen";
 "STATUS_STARTING_SSH" = "SSH-Tunnel wird gestartet...";
 "STATUS_SSH_FAILED" = "SSH-Tunnel fehlgeschlagen";
+"STATUS_SSH_USER_MISSING" = "SSH-Benutzer erforderlich";
 
 /* Alerts */
 "ALERT_SCREENSHOT_TITLE" = "Screenshot erlauben?";
@@ -56,7 +57,7 @@
 "HOST" = "Host / IP";
 "PORT" = "Port";
 "TOKEN" = "Token";
-"SSH_USER" = "SSH-Benutzer (z.B. claw)";
+"SSH_USER" = "SSH-Benutzer";
 "SSH_FALLBACK" = "SSH-Fallback";
 "SSH_FALLBACK_DESC" = "Automatischer Port-Tunnel (18789) bei Verbindungsfehlern.";
 "SHARED_FOLDER" = "Gemeinsamer Ordner";
