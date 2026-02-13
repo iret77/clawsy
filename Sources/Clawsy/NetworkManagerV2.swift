@@ -29,9 +29,9 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     private var isUsingSshTunnel = false
     
     // Callbacks for UI/Logic
-    var onScreenshotRequested: ((Bool, String) -> Void)?
-    var onClipboardReadRequested: ((String) -> Void)?
-    var onClipboardWriteRequested: ((String, String) -> Void)?
+    var onScreenshotRequested: ((Bool, Any) -> Void)?
+    var onClipboardReadRequested: ((Any) -> Void)?
+    var onClipboardWriteRequested: ((String, Any) -> Void)?
     var onFileSyncRequested: ((String, String, @escaping (TimeInterval?) -> Void, @escaping () -> Void) -> Void)?
     var onCameraPreviewRequested: ((NSImage, @escaping () -> Void, @escaping () -> Void) -> Void)?
     
@@ -374,19 +374,27 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             return
         }
 
-        // RELAXED DISPATCH (Build #113 v3)
-        // Support JSON-RPC 'method', or Gateway 'event', or just 'command'
+        // 1. Identify Message Identity (ID) - Build #115 v2: Mirror exactly
+        let rawId = json["id"]
+        let isValidId: Bool
+        if let s = rawId as? String {
+            isValidId = !s.isEmpty
+        } else {
+            isValidId = rawId is Int
+        }
+        
+        // 2. Identify Command/Event Name
         let method = json["method"] as? String
         let event = json["event"] as? String
         let command = json["command"] as? String
         let commandName = method ?? event ?? command
-
-        // Build #115: Explicitly ignore 'tick' and 'health' events from generating traffic
+        
+        // 3. Explicitly ignore 'tick' and 'health' (Action 1.3)
         if let name = commandName, (name == "tick" || name == "health") {
             return
         }
-        
-        // Handle Handshake Challenge (no ID)
+
+        // 4. Handle Handshake Challenge (no ID expected)
         if event == "connect.challenge" {
             if let payload = json["payload"] as? [String: Any], let nonce = payload["nonce"] as? String {
                 performHandshake(nonce: nonce)
@@ -394,51 +402,46 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             return
         }
         
-        // Robust ID extraction (Build #113 v3: Always ensure we have an ID string)
-        let rawId = json["id"]
-        let idStr: String
-        if let s = rawId as? String {
-            idStr = s
-        } else if let n = rawId as? Int {
-            idStr = String(n)
-        } else {
-            idStr = "" // Fallback for event-style requests
-        }
-        
         let type = json["type"] as? String
         
-        // Handle Handshake Response (expecting ID "1" from connect request)
-        if idStr == "1" && (type == "res" || type == "response") {
-            let payload = json["payload"] as? [String: Any]
-            
-            if payload?["type"] as? String == "hello-ok" || json["result"] != nil {
-                 self.isHandshakeComplete = true // Build #113 v3: Signal ready
-                 self.connectionStatus = isUsingSshTunnel ? "STATUS_ONLINE_PAIRED_SSH" : "STATUS_ONLINE_PAIRED"
-                 os_log("Handshake successful, status: %{public}@", log: logger, type: .info, self.connectionStatus)
-            } else if json["error"] != nil {
-                 self.isHandshakeComplete = false
-                 self.connectionStatus = "STATUS_HANDSHAKE_FAILED"
-                 os_log("Handshake failed", log: logger, type: .error)
+        // 5. Handle Responses/Errors from Gateway (Build #115 v2: Process but don't respond)
+        if type == "res" || type == "response" || type == "error" {
+            // Handshake Response (expecting ID "1" from connect request)
+            if let rid = rawId as? String, rid == "1" {
+                let payload = json["payload"] as? [String: Any]
+                if payload?["type"] as? String == "hello-ok" || json["result"] != nil {
+                     self.isHandshakeComplete = true
+                     self.connectionStatus = isUsingSshTunnel ? "STATUS_ONLINE_PAIRED_SSH" : "STATUS_ONLINE_PAIRED"
+                     os_log("Handshake successful, status: %{public}@", log: logger, type: .info, self.connectionStatus)
+                } else if json["error"] != nil {
+                     self.isHandshakeComplete = false
+                     self.connectionStatus = "STATUS_HANDSHAKE_FAILED"
+                     os_log("Handshake failed", log: logger, type: .error)
+                }
             }
             return
         }
         
+        // 6. Handle Commands (Requests) - Build #115 v2: ONLY if ID is present
         if let name = commandName {
-            // Support 'params' or 'payload'
             let params = json["params"] as? [String: Any] ?? json["payload"] as? [String: Any] ?? [:]
             
-            // Support both "node.invoke" wrapper and direct method calls
-            var effectiveCommand = name
-            if name == "node.invoke", let cmd = params["command"] as? String {
-                effectiveCommand = cmd
+            if isValidId, let id = rawId {
+                var effectiveCommand = name
+                if name == "node.invoke", let cmd = params["command"] as? String {
+                    effectiveCommand = cmd
+                }
+                
+                os_log("Dispatching command: %{public}@ (id: %{public}@)", log: logger, type: .info, effectiveCommand, "\(id)")
+                handleCommand(id: id, command: effectiveCommand, params: params)
+            } else {
+                // If it's an event without an ID, or a command without an ID, we log but DON'T respond
+                os_log("Processing internal event/message (no id): %{public}@", log: logger, type: .info, name)
             }
-            
-            os_log("Dispatching command (relaxed): %{public}@ (id: %{public}@)", log: logger, type: .info, effectiveCommand, idStr)
-            handleCommand(id: idStr, command: effectiveCommand, params: params)
             return
         }
         
-        os_log("Unhandled message type: %{public}@, id: %{public}@", log: logger, type: .debug, type ?? "none", idStr)
+        os_log("Unhandled message type: %{public}@, id: %{public}@", log: logger, type: .debug, type ?? "none", "\(rawId ?? "none")")
     }
     
     private func performHandshake(nonce: String) {
@@ -478,8 +481,9 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         return path.replacingOccurrences(of: "~", with: NSHomeDirectory())
     }
     
-    private func handleCommand(id: String, command: String, params: [String: Any]) {
-        os_log("Handling command: %{public}@ (id: %{public}@)", log: logger, type: .info, command, id)
+    private func handleCommand(id: Any, command: String, params: [String: Any]) {
+        let idStr = "\(id)" // Build #115 v2: Use string version for logging and callbacks
+        os_log("Handling command: %{public}@ (id: %{public}@)", log: logger, type: .info, command, idStr)
         
         // Build #113 v3: Debug command dispatch
         DispatchQueue.main.async {
@@ -654,19 +658,26 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     
     // MARK: - Response Helpers
     
-    func sendResponse(id: String, result: Any) {
-        guard !id.isEmpty else { return } // Build #115: ONLY respond if ID is present
+    private func isValidId(_ id: Any?) -> Bool {
+        if let s = id as? String {
+            return !s.isEmpty
+        }
+        return id is Int
+    }
+    
+    func sendResponse(id: Any, result: Any) {
+        guard isValidId(id) else { return } // Build #115 v2: ONLY respond if ID is valid
         send(json: ["type": "res", "id": id, "result": result])
     }
     
-    func sendAck(id: String) {
-        guard !id.isEmpty else { return } // Build #115: ONLY respond if ID is present
+    func sendAck(id: Any) {
+        guard isValidId(id) else { return } // Build #115 v2: ONLY respond if ID is valid
         // Build #114: Immediate acknowledgment to prevent Gateway timeouts
         send(json: ["type": "ack", "id": id, "status": "processing"])
     }
     
-    func sendError(id: String, code: Int, message: String) {
-        guard !id.isEmpty else { return } // Build #115: ONLY respond if ID is present
+    func sendError(id: Any, code: Int, message: String) {
+        guard isValidId(id) else { return } // Build #115 v2: ONLY respond if ID is valid
         send(json: ["type": "res", "id": id, "error": ["code": code, "message": message]])
     }
     

@@ -22,7 +22,7 @@ struct ContentView: View {
     // Alert States
     @State private var showingScreenshotAlert = false
     @State private var isScreenshotInteractive = false
-    @State private var pendingRequestId: String? = nil
+    @State private var pendingRequestId: Any? = nil
     
     var body: some View {
         VStack(spacing: 0) {
