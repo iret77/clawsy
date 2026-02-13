@@ -111,7 +111,8 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         connectionStatusKey = "STATUS_CONNECTING" // Will be formatted in UI or here
         
         // Use local tunnel port if SSH is active
-        var targetUrlStr = isUsingSshTunnel ? "ws://localhost:18789" : serverUrl
+        // Goal 3: Port 18790 for local tunnel endpoint
+        var targetUrlStr = isUsingSshTunnel ? "ws://127.0.0.1:18790" : serverUrl
         
         // Ensure scheme is present
         if !targetUrlStr.lowercased().hasPrefix("ws://") && !targetUrlStr.lowercased().hasPrefix("wss://") {
@@ -164,8 +165,13 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
+        
+        // Ensure user 'claw' is used as requested
+        let remoteTarget = sshHost.contains("@") ? sshHost : "claw@\(sshHost)"
+        
         // Use -o ConnectTimeout to fail fast if SSH is down
-        process.arguments = ["-NT", "-L", "18789:localhost:18789", sshHost, "-o", "ConnectTimeout=5"]
+        // Tunnel configuration: Local 18790 -> Remote 127.0.0.1:18789
+        process.arguments = ["-NT", "-L", "18790:127.0.0.1:18789", remoteTarget, "-o", "ConnectTimeout=5"]
         
         do {
             try process.run()
