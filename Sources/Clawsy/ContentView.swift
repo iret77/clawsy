@@ -22,36 +22,30 @@ struct ContentView: View {
         VStack(spacing: 0) {
             // --- Header & Status ---
             HStack {
-                Text("Clawsy")
-                    .font(.headline)
-                    .fontWeight(.semibold)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Clawsy")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text(network.connectionStatus)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
                 
                 Spacer()
                 
-                // Status Pill
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(getStatusColor())
-                        .frame(width: 8, height: 8)
-                    Text(network.connectionStatus)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(12)
+                // Status Indicator
+                Circle()
+                    .fill(getStatusColor())
+                    .frame(width: 8, height: 8)
+                    .shadow(color: getStatusColor().opacity(0.5), radius: 2)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.top, 14)
+            .padding(.bottom, 12)
             
-            Divider()
+            Divider().opacity(0.5)
             
             // --- Main Actions List ---
-            VStack(spacing: 6) {
-                
+            VStack(spacing: 2) {
                 // Screenshot Group
                 Menu {
                     Button(action: {
@@ -67,33 +61,31 @@ struct ContentView: View {
                         Label("Interactive Area", systemImage: "plus.viewfinder")
                     }
                 } label: {
-                    MenuItemRow(icon: "camera", title: "Screenshot", subtitle: "Capture screen or area", isEnabled: network.isConnected)
+                    MenuItemRow(icon: "camera", title: "Screenshot", isEnabled: network.isConnected, hasChevron: true)
                 }
                 .menuStyle(.borderlessButton)
-                .fixedSize(horizontal: false, vertical: true)
 
                 // Clipboard
                 Button(action: handleManualClipboardSend) {
-                    MenuItemRow(icon: "doc.on.clipboard", title: "Send Clipboard", subtitle: "Push current clipboard to agent", isEnabled: network.isConnected)
+                    MenuItemRow(icon: "doc.on.clipboard", title: "Send Clipboard", isEnabled: network.isConnected)
                 }
                 .buttonStyle(.plain)
                 
-                Divider().padding(.vertical, 4)
+                Divider().padding(.vertical, 4).opacity(0.5)
                 
                 // Connection Control
                 Button(action: toggleConnection) {
                     MenuItemRow(
                         icon: network.isConnected ? "power" : "bolt.slash.fill",
                         title: network.isConnected ? "Disconnect" : "Connect",
-                        color: network.isConnected ? .red : .blue,
-                        isEnabled: true
+                        color: network.isConnected ? .red : .blue
                     )
                 }
                 .buttonStyle(.plain)
 
                 // Settings
                 Button(action: { showingSettings.toggle() }) {
-                    MenuItemRow(icon: "gearshape.fill", title: "Preferences...", isEnabled: true)
+                    MenuItemRow(icon: "gearshape.fill", title: "Settings...", shortcut: "⌘,", isEnabled: true)
                 }
                 .buttonStyle(.plain)
                 .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
@@ -103,7 +95,7 @@ struct ContentView: View {
                 
                 // Debug Log
                 Button(action: { showingLog.toggle() }) {
-                    MenuItemRow(icon: "terminal.fill", title: "Debug Log", subtitle: "View raw network traffic", isEnabled: true)
+                    MenuItemRow(icon: "terminal.fill", title: "Debug Log", isEnabled: true)
                 }
                 .buttonStyle(.plain)
                 .popover(isPresented: $showingLog, arrowEdge: .trailing) {
@@ -111,26 +103,18 @@ struct ContentView: View {
                         .frame(width: 400, height: 300)
                 }
                 
-                Divider().padding(.vertical, 4)
-                
-                // Surprise Button (Project X)
-                Button(action: triggerSurprise) {
-                    MenuItemRow(icon: "sparkles", title: "Lobster Mode", subtitle: "Execute Fire Sequence", color: .orange, isEnabled: true)
-                }
-                .buttonStyle(.plain)
-
-                Divider().padding(.vertical, 4)
+                Divider().padding(.vertical, 4).opacity(0.5)
                 
                 // Quit
                 Button(action: { NSApplication.shared.terminate(nil) }) {
-                    MenuItemRow(icon: "xmark.circle.fill", title: "Quit Clawsy", color: .secondary, isEnabled: true)
+                    MenuItemRow(icon: "xmark.circle.fill", title: "Quit", shortcut: "⌘Q", isEnabled: true)
                 }
                 .buttonStyle(.plain)
             }
-            .padding(10)
+            .padding(6)
         }
-        .frame(width: 300)
-        .background(Color(NSColor.windowBackgroundColor))
+        .frame(width: 240)
+        .background(VisualEffectView(material: .popover, blendingMode: .withinWindow))
         .cornerRadius(12)
         .onAppear {
             setupCallbacks()
