@@ -349,7 +349,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
                 os_log("Websocket is disconnected: %{public}@ code: %d", log: self.logger, type: .info, reason, code)
                 
             case .text(let string):
-                // Build #113 v3: Immediate raw logging to catch "swallowed" messages
+                // Build #116: Diagnostic Trap - Log absolutely first
                 self.rawLog += "\nIN: \(string)"
                 self.handleMessage(string)
                 
