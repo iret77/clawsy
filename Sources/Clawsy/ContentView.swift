@@ -99,7 +99,7 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
                 
                 // File Sync (USP)
-                Button(action: { /* Placeholder for manual sync trigger */ }) {
+                Button(action: triggerFileSync) {
                     MenuItemRow(icon: "folder.badge.gearshape", title: "FILE_SYNC", subtitle: "MANAGED_FOLDER", isEnabled: network.isConnected)
                 }
                 .buttonStyle(.plain)
@@ -272,6 +272,11 @@ struct ContentView: View {
         if let content = ClipboardManager.getClipboardContent() {
             network.sendEvent(kind: "clipboard", payload: ["text": content])
         }
+    }
+    
+    func triggerFileSync() {
+        network.rawLog += "\n[FILE] Manual sync requested..."
+        network.sendEvent(kind: "file.sync_triggered", payload: ["path": sharedFolderPath])
     }
     
     func setupCallbacks() {

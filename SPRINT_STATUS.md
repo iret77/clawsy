@@ -1,6 +1,7 @@
 # Sprint Status: Clawsy App (2026-02-13)
 
 ## ✅ Completed
+- **Manual File Sync Trigger**: Updated 'File Sync' button in `ContentView` to manually trigger a sync event (`file.sync_triggered`) with path payload and added debug logging for user feedback. [Build #111]
 - **Handshake V2**: Fully implemented and verified (hello-ok payload matching).
 - **Branding/ID**: Aligned internal client ID with `openclaw-macos` for Gateway compatibility.
 - **UI Redesign**: Native macOS Look & Feel (Vibrancy/Blur), refined typography, and shortcuts (⌘Q, ⌘,).
