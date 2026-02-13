@@ -3,12 +3,13 @@ import Starscream
 import CryptoKit
 import AppKit
 import SwiftUI
+import UserNotifications
 import os.log
 
 // MARK: - NetworkManagerV2 (Native Node Protocol)
 
 @available(macOS 13.0, *)
-class NetworkManagerV2: ObservableObject, WebSocketDelegate {
+class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNotificationCenterDelegate {
     private let logger = OSLog(subsystem: "ai.clawsy", category: "Network")
     
     @Published var isConnected = false
@@ -41,9 +42,57 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     @AppStorage("useSshFallback") private var useSshFallback = true
     @AppStorage("sharedFolderPath") private var sharedFolderPath = "~/Documents/Clawsy"
     
-    init() {
+    override init() {
+        super.init()
         self.signingKey = Curve25519.Signing.PrivateKey()
         self.publicKey = self.signingKey?.publicKey
+        setupNotifications()
+    }
+    
+    private func setupNotifications() {
+        let center = UNUserNotificationCenter.current()
+        center.delegate = self
+        
+        let revokeAction = UNNotificationAction(identifier: "REVOKE_PERMISSION",
+                                              title: "Revoke Permissions",
+                                              options: [.destructive])
+        
+        let category = UNNotificationCategory(identifier: "FILE_SYNC",
+                                             actions: [revokeAction],
+                                             intentIdentifiers: [],
+                                             options: [])
+        
+        center.setNotificationCategories([category])
+        
+        center.requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if let error = error {
+                os_log("Notification permission error: %{public}@", log: self.logger, type: .error, error.localizedDescription)
+            }
+        }
+    }
+    
+    func userNotificationCenter(_ center: UNUserNotificationCenter, 
+                                didReceive response: UNNotificationResponse, 
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        if response.actionIdentifier == "REVOKE_PERMISSION" {
+            os_log("User revoked file permissions via notification", log: logger, type: .info)
+            filePermissionExpiry = nil
+        }
+        completionHandler()
+    }
+    
+    private func notifyAction(title: String, body: String, isAuto: Bool) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        
+        if isAuto {
+            content.categoryIdentifier = "FILE_SYNC"
+        }
+        
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
     }
     
     func configure(url: String, token: String) {
@@ -281,6 +330,9 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
             
             let executeGet = {
+                self.notifyAction(title: "Clawsy File Sync", 
+                                body: "Downloading: \(name)", 
+                                isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
                 if let b64 = ClawsyFileManager.readFile(at: fullPath) {
                     self.sendResponse(id: id, result: ["content": b64, "name": name])
                 } else {
@@ -309,6 +361,9 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
             
             let executeSet = {
+                self.notifyAction(title: "Clawsy File Sync", 
+                                body: "Uploading: \(name)", 
+                                isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
                 if ClawsyFileManager.writeFile(at: fullPath, base64Content: content) {
                     self.sendResponse(id: id, result: ["status": "ok", "name": name])
                 } else {

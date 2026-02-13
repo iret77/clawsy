@@ -9,6 +9,8 @@
 - **Automatic SSH Fallback**: Implemented logic to auto-tunnel port 18789 via SSH on connection failure.
 - **Bidirectional File Sync**: Core logic for 'file.list', 'file.get', and 'file.set' integrated with local HUD alerts.
 - **Permission Duration**: Added "Allow for 1h" and "Allow for rest of day" options to File Sync HUD (Christian's Request).
+- **Notifications**: Integrated macOS UNUserNotificationCenter. Displays notifications for all File Sync actions. 
+- **Auto-Revoke**: Notifications for automated syncs (during "Allow" periods) include a "Revoke Permissions" button to immediately cancel active temporary permissions.
 - **Clipboard HUD**: Refined preview window with 'Copy Local' support.
 
 ## 🚧 In Progress / TODO
