@@ -81,3 +81,8 @@
 "NO_DATA" = "No data received yet.";
 "SELECT_TEXT_COPY" = "Select text to copy.";
 "COPY_ALL" = "Copy All";
+
+/* Shared Folder */
+"FOLDER_MISSING_TITLE" = "Folder Not Found";
+"FOLDER_MISSING_BODY" = "The configured shared folder no longer exists: %@. Setting has been reset.";
+"SELECT_SHARED_FOLDER" = "Select Shared Folder";

@@ -27,10 +27,11 @@
     - [x] Localized Camera Preview UI (EN/DE/FR/ES). [DONE]
     - [x] Added `NSCameraUsageDescription` to Info.plist. [DONE]
 - **Distribution**: 
-    - [ ] Create `.dmg` / Installer for easy deployment on Christian's Mac.
-    - [ ] Prepare `sign.sh` for ad-hoc signing (since it's a private build).
+    - [x] Create ad-hoc install script `install_clawsy.sh` for easy deployment on Christian's Mac. [DONE]
+    - [x] Refined `build.sh` for universal binary (arm64/x86_64). [DONE]
+    - [ ] Finalize `sign.sh` for ad-hoc signing (since it's a private build).
 
 ## 📝 Notes
 - **USP**: Clawsy focuses on professional workflow integration (File Sync, advanced Clipboard management) exceeding the standard companion app.
-- **Night Sprint Concluded**: (2026-02-13 15:55 UTC) Finalized Camera Preview HUD and localized UI (EN/DE). Added TCC permissions to Info.plist. Ready for distribution testing.
+- **Night Sprint Concluded**: (2026-02-13 16:50 UTC) Finalized Camera Preview HUD, localized UI (EN/DE), and refined distribution scripts. Build is optimized for M-series/Intel and ready for local installation via `install_clawsy.sh`.
 - **Verification**: christian will test the inbound `screen.capture` fix and the new UI in the morning.

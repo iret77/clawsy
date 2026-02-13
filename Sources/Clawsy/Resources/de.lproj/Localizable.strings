@@ -79,6 +79,11 @@
 "SELECT_TEXT_COPY" = "Text zum Kopieren auswählen.";
 "COPY_ALL" = "Alles kopieren";
 
+/* Shared Folder */
+"FOLDER_MISSING_TITLE" = "Ordner nicht gefunden";
+"FOLDER_MISSING_BODY" = "Der konfigurierte Ordner existiert nicht mehr: %@. Die Einstellung wurde zurückgesetzt.";
+"SELECT_SHARED_FOLDER" = "Gemeinsamen Ordner auswählen";
+
 /* Camera Preview */
 "CAMERA_PREVIEW_TITLE" = "Kameravorschau";
 "SEND_TO_AGENT" = "An Agenten senden";
