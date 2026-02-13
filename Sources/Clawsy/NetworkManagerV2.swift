@@ -402,6 +402,20 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             return
         }
         
+        // 4.1 Handle node.invoke.request (Modern Gateway Protocol - Event based)
+        if event == "node.invoke.request", let payload = json["payload"] as? [String: Any], let invocationId = payload["id"] as? String {
+            let command = payload["command"] as? String ?? ""
+            var innerParams: [String: Any] = [:]
+            
+            if let paramsJSON = payload["paramsJSON"] as? String, let data = paramsJSON.data(using: .utf8) {
+                innerParams = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
+            }
+            
+            os_log("Dispatching invocation: %{public}@ (id: %{public}@)", log: logger, type: .info, command, invocationId)
+            handleCommand(id: "inv:\(invocationId)", command: command, params: innerParams)
+            return
+        }
+        
         let type = json["type"] as? String
         
         // 5. Handle Responses/Errors from Gateway (Build #115 v2: Process but don't respond)
@@ -428,12 +442,22 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             
             if isValidId, let id = rawId {
                 var effectiveCommand = name
-                if name == "node.invoke", let cmd = params["command"] as? String {
-                    effectiveCommand = cmd
+                var effectiveParams = params
+                var effectiveId = id
+                
+                if name == "node.invoke" {
+                    if let cmd = params["command"] as? String {
+                        effectiveCommand = cmd
+                    }
+                    if let nested = params["params"] as? [String: Any] {
+                        effectiveParams = nested
+                    }
+                    // Signal wrapping in response for node.invoke method
+                    effectiveId = "wrap:\(id)"
                 }
                 
                 os_log("Dispatching command: %{public}@ (id: %{public}@)", log: logger, type: .info, effectiveCommand, "\(id)")
-                handleCommand(id: id, command: effectiveCommand, params: params)
+                handleCommand(id: effectiveId, command: effectiveCommand, params: effectiveParams)
             } else {
                 // If it's an event without an ID, or a command without an ID, we log but DON'T respond
                 os_log("Processing internal event/message (no id): %{public}@", log: logger, type: .info, name)
@@ -444,20 +468,24 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         os_log("Unhandled message type: %{public}@, id: %{public}@", log: logger, type: .debug, type ?? "none", "\(rawId ?? "none")")
     }
     
+    private var deviceId: String {
+        guard let pubKeyData = publicKey?.rawRepresentation else { return "node" }
+        return SHA256.hash(data: pubKeyData).map { String(format: "%02x", $0) }.joined()
+    }
+
     private func performHandshake(nonce: String) {
         guard let signingKey = signingKey, let publicKey = publicKey else { return }
         
         let tsMs = Int64(Date().timeIntervalSince1970 * 1000)
-        let pubKeyData = publicKey.rawRepresentation
-        let deviceId = SHA256.hash(data: pubKeyData).map { String(format: "%02x", $0) }.joined()
+        let deviceId = self.deviceId
         
-        let components = ["v2", deviceId, "operator", "operator", "node", "", String(tsMs), serverToken, nonce]
+        let components = ["v2", deviceId, "openclaw-macos", "openclaw-macos", "node", "", String(tsMs), serverToken, nonce]
         let payloadString = components.joined(separator: "|")
         
         guard let payloadData = payloadString.data(using: .utf8) else { return }
         guard let signature = try? signingKey.signature(for: payloadData) else { return }
         
-        let pubKeyB64 = base64UrlEncode(pubKeyData)
+        let pubKeyB64 = base64UrlEncode(publicKey.rawRepresentation)
         let sigB64 = base64UrlEncode(signature)
         
         let connectReq: [String: Any] = [
@@ -466,8 +494,8 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             "method": "connect",
             "params": [
                 "minProtocol": 3, "maxProtocol": 3,
-                "client": ["id": "operator", "version": "0.2.2", "platform": "macos", "mode": "node"],
-                "role": "operator", "caps": ["clipboard", "screen", "camera", "file"], 
+                "client": ["id": "openclaw-macos", "version": "0.2.3", "platform": "macos", "mode": "node"],
+                "role": "node", "caps": ["clipboard", "screen", "camera", "file"], 
                 "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set"],
                 "permissions": ["clipboard.read": true, "clipboard.write": true],
                 "auth": ["token": serverToken],
@@ -666,17 +694,65 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     }
     
     func sendResponse(id: Any, result: Any) {
+        if let idStr = id as? String {
+            if idStr.hasPrefix("inv:") {
+                let invocationId = String(idStr.dropFirst(4))
+                send(json: [
+                    "type": "req",
+                    "method": "node.invoke.result",
+                    "params": [
+                        "id": invocationId,
+                        "nodeId": self.deviceId,
+                        "ok": true,
+                        "payload": result
+                    ]
+                ])
+                return
+            } else if idStr.hasPrefix("wrap:") {
+                let actualIdStr = String(idStr.dropFirst(5))
+                let actualId: Any = Int(actualIdStr) ?? actualIdStr
+                send(json: ["type": "res", "id": actualId, "result": ["ok": true, "payload": result]])
+                return
+            }
+        }
+        
         guard isValidId(id) else { return } // Build #115 v2: ONLY respond if ID is valid
         send(json: ["type": "res", "id": id, "result": result])
     }
     
     func sendAck(id: Any) {
+        if let idStr = id as? String, (idStr.hasPrefix("inv:") || idStr.hasPrefix("wrap:")) {
+            return // Skip acks for invocations (not supported by Gateway protocol yet)
+        }
+        
         guard isValidId(id) else { return } // Build #115 v2: ONLY respond if ID is valid
         // Build #114: Immediate acknowledgment to prevent Gateway timeouts
         send(json: ["type": "ack", "id": id, "status": "processing"])
     }
     
     func sendError(id: Any, code: Int, message: String) {
+        if let idStr = id as? String {
+            if idStr.hasPrefix("inv:") {
+                let invocationId = String(idStr.dropFirst(4))
+                send(json: [
+                    "type": "req",
+                    "method": "node.invoke.result",
+                    "params": [
+                        "id": invocationId,
+                        "nodeId": self.deviceId,
+                        "ok": false,
+                        "error": ["code": "\(code)", "message": message]
+                    ]
+                ])
+                return
+            } else if idStr.hasPrefix("wrap:") {
+                let actualIdStr = String(idStr.dropFirst(5))
+                let actualId: Any = Int(actualIdStr) ?? actualIdStr
+                send(json: ["type": "res", "id": actualId, "result": ["ok": false, "error": ["code": code, "message": message]]])
+                return
+            }
+        }
+        
         guard isValidId(id) else { return } // Build #115 v2: ONLY respond if ID is valid
         send(json: ["type": "res", "id": id, "error": ["code": code, "message": message]])
     }
