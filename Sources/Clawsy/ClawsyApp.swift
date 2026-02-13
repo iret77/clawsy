@@ -28,7 +28,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         if let button = statusBarItem.button {
             let iconName = NSImage.Name("Icon")
             if let menuIcon = NSImage(named: iconName) {
-                menuIcon.size = NSSize(width: 18, height: 18)
+                // Remove hardcoded 18x18 size to allow asset-defined sizes
                 menuIcon.isTemplate = true
                 button.image = menuIcon
             } else {
