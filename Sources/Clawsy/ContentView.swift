@@ -32,8 +32,10 @@ struct ContentView: View {
                         
                         Group {
                             if network.connectionStatus == "STATUS_CONNECTING" {
+                                // Dynamic string interpolation for connection attempts
                                 Text("STATUS_CONNECTING \(network.connectionAttemptCount)")
                             } else {
+                                // Standard localization for static status keys
                                 Text(LocalizedStringKey(network.connectionStatus))
                             }
                         }
@@ -255,10 +257,16 @@ struct DebugLogView: View {
             }
             
             ScrollView {
-                Text(logText.isEmpty ? "NO_DATA" : logText)
-                    .font(.system(.caption, design: .monospaced))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .textSelection(.enabled)
+                if logText.isEmpty {
+                    Text("NO_DATA")
+                        .font(.system(.caption, design: .monospaced))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    Text(logText)
+                        .font(.system(.caption, design: .monospaced))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                }
             }
             .padding(8)
             .background(VisualEffectView(material: .popover, blendingMode: .withinWindow))
