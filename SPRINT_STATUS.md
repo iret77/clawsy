@@ -1,29 +1,24 @@
-# Sprint Status: Clawsy App (2026-02-12 21:55 UTC)
+# Sprint Status: Clawsy App (2026-02-13)
 
 ## ✅ Completed
-- **Core App Structure**: SwiftUI App Lifecycle, Menu Bar Item, Popover.
-- **Networking**: WebSocket client (`Starscream`), auto-reconnect logic.
-- **Protocol V2 (Native Node)**:
-    - [x] Handshake implemented with Ed25519 signing (Native Gateway Connection).
-    - [x] Connection sequence matches OpenClaw Protocol V3 requirements.
-    - [x] **Verification**: Node `32792d5a...` is ONLINE and PAIRED.
-    - [x] **Event Loop**: "Send Clipboard" from the app works (Push events received).
-- **Inbound Command Refinement**:
-    - [x] Added `screen.record` stub (notifies agent it's unimplemented rather than timing out).
-    - [x] Improved `screen.capture` to respect `interactive` parameter from Gateway.
-    - [x] Refactored `sendScreenshot` for consistency between push and response.
+- **Handshake V2**: Fully implemented and verified (hello-ok payload matching).
+- **Branding/ID**: Aligned internal client ID with `openclaw-macos` for Gateway compatibility.
+- **UI Redesign**: Native macOS Look & Feel (Vibrancy/Blur), refined typography, and shortcuts (⌘Q, ⌘,).
+- **Diagnostics**: Integrated "Debug Log" window for RAW traffic inspection.
+- **Permissions**: Confirmed TCC (Screen Recording) is active on Christian's Mac.
 
-## 🚧 In Progress / TODO
-- **Critical: Command Deadlock/Timeout**:
-    - [ ] **Theory**: If the app is in the background or lack permissions (Accessibility/Screen Recording), `screencapture` might be hanging or returning nil without error.
-- **Feature Alignment**:
-    - [ ] Implementation of `screen.record` (using `AVAssetWriter` or similar).
-- **Distribution**: 
-    - [ ] Obtain 'Developer ID Application' certificate and Team ID for signing.
-    - [ ] Configure `xcrun notarytool` credentials.
-    - [ ] Run `scripts/sign.sh` on a Mac environment.
+## 🚧 In Progress / TODO (Night Sprint)
+- **Automatic SSH Fallback**: 
+    - [ ] Implement connectivity check.
+    - [ ] Add logic to launch `ssh -NT -L ...` automatically on connection failure.
+- **File & Folder Sharing**:
+    - [ ] Architect bidirectional sync (The Clawsy USP).
+    - [ ] Implement `file.get` and `file.set` node commands.
+- **Clipboard Preview**:
+    - [ ] Add a dedicated UI component to preview incoming clipboard data.
+- **Icon Refinement**:
+    - [ ] Replace Emoji fallback with a monochrome outline Lobster icon (SF Symbol style).
 
 ## 📝 Notes
-- **Status Update**: Node `32792d5a` ist verbunden und gepaart. Manuelle Events (Clipboard Push) funktionieren. Inbound Commands (`screen.capture`) lösen aktuell Timeouts aus.
-- **Diagnostics**: Code-Verbesserungen zur Fehlerdiagnose (stderr/logging) wurden implementiert. Nächster Build muss von Christian auf dem Mac getestet werden.
-- **Next Step**: Christian muss prüfen, ob auf dem Mac Berechtigungs-Dialoge (Screen Recording) im Hintergrund hängen oder ob `screencapture` Berechtigungen fehlen. Console.app nach `ai.clawlet.clawsy` filtern.
+- **USP**: Clawsy focuses on professional workflow integration (File Sync, advanced Clipboard management) exceeding the standard companion app.
+- **Verification**: christian will test the inbound `screen.capture` fix and the new UI in the morning.

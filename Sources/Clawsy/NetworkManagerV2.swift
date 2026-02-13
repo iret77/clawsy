@@ -19,53 +19,44 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     private var signingKey: Curve25519.Signing.PrivateKey?
     private var publicKey: Curve25519.Signing.PublicKey?
     
+    // SSH Tunnel Management
+    private var sshProcess: Process?
+    private var isUsingSshTunnel = false
+    private var connectionAttemptCount = 0
+    
     // Callbacks for UI/Logic
-    var onScreenshotRequested: ((Bool, String) -> Void)? // interactive, request_id
-    var onClipboardReadRequested: ((String) -> Void)? // request_id
-    var onClipboardWriteRequested: ((String, String) -> Void)? // content, request_id
+    var onScreenshotRequested: ((Bool, String) -> Void)?
+    var onClipboardReadRequested: ((String) -> Void)?
+    var onClipboardWriteRequested: ((String, String) -> Void)?
     
     // Gateway Configuration
-    // In production, these should come from Settings/UserDefaults
-    private var gatewayUrl: URL?
-    private var authToken: String?
+    @AppStorage("serverUrl") private var serverUrl = "wss://agenthost.tailb6e490.ts.net"
+    @AppStorage("serverToken") private var serverToken = ""
+    @AppStorage("sshHost") private var sshHost = "agenthost"
+    @AppStorage("useSshFallback") private var useSshFallback = true
     
     init() {
-        // Load or Generate Identity
-        // TODO: Persist keypair in Keychain
         self.signingKey = Curve25519.Signing.PrivateKey()
         self.publicKey = self.signingKey?.publicKey
     }
     
     func configure(url: String, token: String) {
-        var processedUrl = url.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        // Auto-fix URL scheme
-        if !processedUrl.contains("://") {
-            if processedUrl.contains(".ts.net") || processedUrl.contains("cloud") {
-                processedUrl = "wss://" + processedUrl
-            } else {
-                processedUrl = "ws://" + processedUrl
-            }
-        }
-        
-        // Ensure path for WebSocket
-        if processedUrl.hasSuffix(".ts.net") {
-            processedUrl += "/"
-        }
-        
-        self.gatewayUrl = URL(string: processedUrl)
-        self.authToken = token
-        os_log("Configured with URL: %{public}@", log: logger, type: .info, processedUrl)
+        self.serverUrl = url
+        self.serverToken = token
+        os_log("Configured with URL: %{public}@", log: logger, type: .info, url)
     }
 
     func connect() {
-        guard let url = gatewayUrl, !authToken!.isEmpty else {
+        guard !serverUrl.isEmpty, !serverToken.isEmpty else {
             connectionStatus = "Missing Configuration"
             return
         }
         
-        connectionStatus = "Connecting..."
-        attemptConnection(to: url)
+        connectionAttemptCount += 1
+        connectionStatus = "Connecting (Attempt \(connectionAttemptCount))..."
+        
+        let targetUrl = isUsingSshTunnel ? URL(string: "ws://localhost:8765")! : URL(string: serverUrl)!
+        attemptConnection(to: targetUrl)
     }
     
     private func attemptConnection(to url: URL) {
@@ -78,17 +69,46 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
         socket?.connect()
     }
     
+    private func handleConnectionFailure(error: Error?) {
+        if useSshFallback && !isUsingSshTunnel && connectionAttemptCount >= 2 {
+            startSshTunnel()
+        } else {
+            runDiagnostics(error: error)
+        }
+    }
+    
+    private func startSshTunnel() {
+        os_log("Initiating SSH Tunnel Fallback...", log: logger, type: .info)
+        connectionStatus = "Starting SSH Tunnel..."
+        
+        // Kill existing if any
+        sshProcess?.terminate()
+        
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
+        process.arguments = ["-NT", "-L", "8765:localhost:18789", sshHost]
+        
+        do {
+            try process.run()
+            self.sshProcess = process
+            self.isUsingSshTunnel = true
+            
+            // Wait a bit for tunnel to establish
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                self.connect()
+            }
+        } catch {
+            os_log("Failed to start SSH process: %{public}@", log: logger, type: .error, error.localizedDescription)
+            connectionStatus = "SSH Tunnel Failed"
+        }
+    }
+    
     private func runDiagnostics(error: Error?) {
         let errorDesc = error?.localizedDescription ?? "Unknown error"
-        
-        if errorDesc.contains("not permitted") || errorDesc.contains("App Transport Security") {
-            connectionStatus = "Security Block (Try wss://)"
-        } else if errorDesc.contains("refused") {
-            connectionStatus = "Server Refused (Check Port)"
+        if errorDesc.contains("refused") {
+            connectionStatus = "Offline (Server Refused)"
         } else if errorDesc.contains("timed out") {
-            connectionStatus = "Timeout (Check Network/IP)"
-        } else if errorDesc.contains("hostname could not be found") {
-            connectionStatus = "DNS Fail (Check URL)"
+            connectionStatus = "Offline (Timeout)"
         } else {
             connectionStatus = "Error: \(errorDesc)"
         }
@@ -96,6 +116,10 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     
     func disconnect() {
         socket?.disconnect()
+        sshProcess?.terminate()
+        sshProcess = nil
+        isUsingSshTunnel = false
+        connectionAttemptCount = 0
     }
     
     // MARK: - WebSocketDelegate
@@ -105,39 +129,26 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             guard let self = self else { return }
             
             switch event {
-            case .connected(let headers):
+            case .connected(_):
                 self.isConnected = true
                 self.connectionStatus = "Connected (Handshaking...)"
+                self.connectionAttemptCount = 0
                 os_log("Websocket is connected", log: self.logger, type: .info)
                 
             case .disconnected(let reason, let code):
                 self.isConnected = false
-                self.connectionStatus = "Disconnected: \(reason)"
+                self.connectionStatus = "Disconnected"
                 os_log("Websocket is disconnected: %{public}@ code: %d", log: self.logger, type: .info, reason, code)
                 
             case .text(let string):
                 self.handleMessage(string)
                 
-            case .binary(let data):
-                os_log("Received binary data: %d bytes", log: self.logger, type: .debug, data.count)
-                
-            case .ping(_):
-                break
-            case .pong(_):
-                break
-            case .viabilityChanged(_):
-                break
-            case .reconnectSuggested(_):
-                break
-            case .cancelled:
-                self.isConnected = false
-                self.connectionStatus = "Cancelled"
             case .error(let error):
                 self.isConnected = false
-                self.runDiagnostics(error: error)
+                self.handleConnectionFailure(error: error)
                 os_log("Websocket error: %{public}@", log: self.logger, type: .error, error?.localizedDescription ?? "Unknown")
-            case .peerClosed:
-                break
+                
+            default: break
             }
         }
     }
@@ -156,32 +167,26 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             return
         }
         
-        // 1. Handle Connect Challenge
         if let event = json["event"] as? String, event == "connect.challenge" {
             if let payload = json["payload"] as? [String: Any], let nonce = payload["nonce"] as? String {
-                os_log("Received challenge nonce: %{public}@", log: logger, type: .debug, nonce)
                 performHandshake(nonce: nonce)
             }
             return
         }
         
-        // 2. Handle Handshake Response
         if let id = json["id"] as? String, id == "1" {
             let isResponse = (json["type"] as? String == "res" || json["type"] as? String == "response")
             let payload = json["payload"] as? [String: Any]
-            let result = json["result"] as? [String: Any]
             
-            if isResponse && (payload?["type"] as? String == "hello-ok" || result != nil) {
-                 os_log("Handshake Success", log: logger, type: .info)
+            if isResponse && (payload?["type"] as? String == "hello-ok" || json["result"] != nil) {
                  self.connectionStatus = "Online (Paired)"
+                 if isUsingSshTunnel { self.connectionStatus += " via SSH" }
             } else if let error = json["error"] as? [String: Any] {
-                 os_log("Handshake Failed: %{public}@", log: logger, type: .error, "\(error)")
                  self.connectionStatus = "Handshake Failed"
             }
             return
         }
         
-        // 3. Handle Requests (node.invoke)
         if let type = json["type"] as? String, type == "req",
            let id = json["id"] as? String,
            let method = json["method"] as? String, method == "node.invoke",
@@ -189,181 +194,72 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
            let command = params["command"] as? String {
             
             handleCommand(id: id, command: command, params: params)
-            return
         }
-        
-        // Ignore other messages (like tick, health, agent events) to prevent feedback loops
     }
     
     private func performHandshake(nonce: String) {
-        guard let signingKey = signingKey, let publicKey = publicKey, let token = authToken else { return }
+        guard let signingKey = signingKey, let publicKey = publicKey else { return }
         
         let tsMs = Int64(Date().timeIntervalSince1970 * 1000)
-        
-        // Device ID = SHA256(raw_public_key)
         let pubKeyData = publicKey.rawRepresentation
         let deviceId = SHA256.hash(data: pubKeyData).map { String(format: "%02x", $0) }.joined()
         
-        // --- CRITICAL Protocol Fix (Matching buildDeviceAuthPayload in device-auth.ts) ---
-        // Format: version|deviceId|clientId|clientMode|role|scopes|signedAtMs|token|nonce
-        // scopes are joined by ",", but we have none.
-        let components = [
-            "v2",
-            deviceId,
-            "openclaw-macos",
-            "node",
-            "node",
-            "", // scopes
-            String(tsMs),
-            token,
-            nonce
-        ]
+        let components = ["v2", deviceId, "openclaw-macos", "node", "node", "", String(tsMs), serverToken, nonce]
         let payloadString = components.joined(separator: "|")
-        // -----------------------------------------------------------------------------
         
-        guard let payloadData = payloadString.data(using: .utf8) else { return }
+        guard let payloadData = payloadString.data(using: .utf8),
+              let signature = try? signingKey.signature(for: payloadData) else { return }
         
-        // Sign
-        guard let signature = try? signingKey.signature(for: payloadData) else { return }
-        
-        // Encode Base64URL
-        let pubKeyB64 = base64UrlEncode(pubKeyData)
-        let sigB64 = base64UrlEncode(signature)
-        
-        // Construct Connect Request
         let connectReq: [String: Any] = [
-            "type": "req",
-            "id": "1",
-            "method": "connect",
+            "type": "req", "id": "1", "method": "connect",
             "params": [
-                "minProtocol": 3,
-                "maxProtocol": 3,
-                "client": [
-                    "id": "openclaw-macos",
-                    "version": "0.2.0",
-                    "platform": "macos",
-                    "mode": "node"
-                ],
-                "role": "node",
-                "caps": ["clipboard", "screen", "camera"], // Advertise capabilities
-                "commands": ["clipboard.read", "clipboard.write", "screen.capture"],
-                "permissions": ["clipboard.read": true, "clipboard.write": true],
-                "auth": ["token": token],
-                "device": [
-                    "id": deviceId,
-                    "publicKey": pubKeyB64,
-                    "signature": sigB64,
-                    "signedAt": tsMs,
-                    "nonce": nonce
-                ]
+                "minProtocol": 3, "maxProtocol": 3,
+                "client": ["id": "openclaw-macos", "version": "0.2.0", "platform": "macos", "mode": "node"],
+                "role": "node", "caps": ["clipboard", "screen", "camera", "file"],
+                "commands": ["clipboard.read", "clipboard.write", "screen.capture", "file.list", "file.get", "file.set"],
+                "auth": ["token": serverToken],
+                "device": ["id": deviceId, "publicKey": base64UrlEncode(pubKeyData), "signature": base64UrlEncode(signature), "signedAt": tsMs, "nonce": nonce]
             ]
         ]
-        
         send(json: connectReq)
     }
     
     private func handleCommand(id: String, command: String, params: [String: Any]) {
-        os_log("Handling command: %{public}@", log: logger, type: .info, command)
-        
         switch command {
         case "screen.capture":
-            // Check params for 'interactive' or 'rect' if supported
-            let interactive = params["interactive"] as? Bool ?? false
-            onScreenshotRequested?(interactive, id)
-            
-        case "screen.record":
-            // Placeholder for recording support
-            let duration = params["durationMs"] as? Int ?? 5000
-            os_log("Screen record requested: %d ms", log: logger, type: .info, duration)
-            sendError(id: id, code: -32601, message: "Screen recording not yet implemented")
-            
+            onScreenshotRequested?(params["interactive"] as? Bool ?? false, id)
         case "clipboard.read":
             onClipboardReadRequested?(id)
-            
         case "clipboard.write":
-            if let content = params["text"] as? String {
-                onClipboardWriteRequested?(content, id)
-            } else {
-                sendError(id: id, code: -32602, message: "Missing 'text' parameter")
-            }
-            
+            if let content = params["text"] as? String { onClipboardWriteRequested?(content, id) }
+        case "file.list":
+            // TODO: Implement actual file listing
+            sendResponse(id: id, result: ["files": []])
         default:
             sendError(id: id, code: -32601, message: "Method not found")
         }
     }
     
-    // MARK: - Response Helpers
-    
     func sendResponse(id: String, result: Any) {
-        os_log("Sending Response for id: %{public}@, result keys: %{public}@", log: logger, type: .info, id, "\(result)")
-        let response: [String: Any] = [
-            "type": "res",
-            "id": id,
-            "result": result
-        ]
-        send(json: response)
+        send(json: ["type": "res", "id": id, "result": result])
     }
     
     func sendError(id: String, code: Int, message: String) {
-        os_log("Sending Error for id: %{public}@, code: %d, message: %{public}@", log: logger, type: .error, id, code, message)
-        let response: [String: Any] = [
-            "type": "res",
-            "id": id,
-            "error": [
-                "code": code,
-                "message": message
-            ]
-        ]
-        send(json: response)
+        send(json: ["type": "res", "id": id, "error": ["code": code, "message": message]])
     }
-    
-    // MARK: - Manual Events
     
     func sendEvent(kind: String, payload: Any) {
-        // Wrap in a standard event structure
-        // This is a top-level event message for Gateway V3
-        let message: [String: Any] = [
-            "type": "event",
-            "event": "node.event", // We use a generic type that the gateway recognizes
-            "payload": [
-                "kind": kind,
-                "data": payload,
-                "ts": Int64(Date().timeIntervalSince1970 * 1000)
-            ]
-        ]
-        send(json: message)
+        send(json: ["type": "event", "event": "node.event", "payload": ["kind": kind, "data": payload, "ts": Int64(Date().timeIntervalSince1970 * 1000)]])
     }
 
-    func sendScreenshot(b64: String, id: String?) {
-        let result: [String: Any] = [
-            "format": "png",
-            "base64": b64
-        ]
-        
-        if let requestId = id {
-            sendResponse(id: requestId, result: result)
-        } else {
-            // Proactive push
-            sendEvent(kind: "screenshot", payload: result)
-        }
-    }
-    
     private func send(json: [String: Any]) {
         guard let data = try? JSONSerialization.data(withJSONObject: json),
               let text = String(data: data, encoding: .utf8) else { return }
-        
-        DispatchQueue.main.async {
-            self.rawLog += "\nOUT: \(text)"
-        }
-        
+        DispatchQueue.main.async { self.rawLog += "\nOUT: \(text)" }
         socket?.write(string: text)
     }
     
-    // Helper: Base64URL
     private func base64UrlEncode(_ data: Data) -> String {
-        return data.base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
+        return data.base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
     }
 }
