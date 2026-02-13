@@ -25,13 +25,20 @@ struct ContentView: View {
         VStack(spacing: 0) {
             // --- Header & Status ---
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("APP_NAME")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text(LocalizedStringKey(network.connectionStatus))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("APP_NAME")
+                            .font(.system(size: 13, weight: .semibold))
+                        
+                        Group {
+                            if network.connectionStatusKey == "STATUS_CONNECTING" {
+                                Text("STATUS_CONNECTING \(network.connectionAttemptCount)")
+                            } else {
+                                Text(LocalizedStringKey(network.connectionStatusKey))
+                            }
+                        }
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
-                }
+                    }
                 
                 Spacer()
                 
@@ -151,7 +158,7 @@ struct ContentView: View {
     
     func getStatusColor() -> Color {
         if network.isConnected { return .green }
-        if network.connectionStatus.contains("Connecting") { return .orange }
+        if network.connectionStatusKey.contains("CONNECTING") || network.connectionStatusKey.contains("STARTING") { return .orange }
         return .red
     }
     
@@ -306,7 +313,7 @@ struct SettingsView: View {
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
                         
-                        SecureField("Token", text: $serverToken)
+                        SecureField("TOKEN", text: $serverToken)
                             .textFieldStyle(.roundedBorder)
                     }
                     
@@ -320,7 +327,7 @@ struct SettingsView: View {
                             Toggle("", isOn: $useSshFallback).toggleStyle(.switch).scaleEffect(0.7)
                         }
                         
-                        TextField("SSH Host (e.g. agenthost)", text: $sshHost)
+                        TextField("SSH_HOST_PLACEHOLDER", text: $sshHost)
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
                             .disabled(!useSshFallback)
@@ -336,7 +343,7 @@ struct SettingsView: View {
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.green)
                         
-                        TextField("Path", text: $sharedFolderPath)
+                        TextField("PATH", text: $sharedFolderPath)
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
                         

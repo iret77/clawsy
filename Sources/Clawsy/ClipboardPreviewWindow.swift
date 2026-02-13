@@ -35,10 +35,10 @@ struct ClipboardPreviewWindow: View {
                         )
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Clipboard Request")
+                        Text("CLIPBOARD_SYNC")
                             .font(.system(size: 15, weight: .semibold))
                         
-                        Text("\(charCount) characters")
+                        Text("CHAR_COUNT \(charCount)")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                             .monospacedDigit()
@@ -70,7 +70,7 @@ struct ClipboardPreviewWindow: View {
                     Button(action: {
                         copyToSystem()
                     }) {
-                        Label("Copy Local", systemImage: "doc.on.doc")
+                        Label("COPY_LOCAL", systemImage: "doc.on.doc")
                     }
                     .buttonStyle(.plain)
                     .font(.system(size: 12))
@@ -78,7 +78,7 @@ struct ClipboardPreviewWindow: View {
                     
                     Spacer()
                     
-                    Button("Deny") {
+                    Button("DENY") {
                         onCancel()
                     }
                     .buttonStyle(.plain)
@@ -88,7 +88,7 @@ struct ClipboardPreviewWindow: View {
                     .cornerRadius(6)
                     .keyboardShortcut(.escape, modifiers: [])
                     
-                    Button("Allow") {
+                    Button("ALLOW") {
                         onConfirm()
                     }
                     .padding(.horizontal, 16)

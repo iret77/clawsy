@@ -21,8 +21,8 @@ struct VisualEffectView: NSViewRepresentable {
 
 struct MenuItemRow: View {
     var icon: String? = nil
-    var title: String
-    var subtitle: String? = nil
+    var title: LocalizedStringKey
+    var subtitle: LocalizedStringKey? = nil
     var color: Color = .primary
     var isEnabled: Bool = true
     var shortcut: String? = nil
