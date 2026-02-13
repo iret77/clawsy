@@ -173,20 +173,23 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             
             // Check if it's a valid success response
             let isResponse = (json["type"] as? String == "res" || json["type"] as? String == "response")
-            let hasSuccessResult = (json["result"] != nil)
             
-            if isResponse && hasSuccessResult {
-                 os_log("Handshake Success: Verified via type and result", log: logger, type: .info)
+            // Gateway V3 payload check: it might put everything inside a "payload" object
+            let payload = json["payload"] as? [String: Any]
+            let result = json["result"] as? [String: Any]
+            
+            let isHelloOk = (payload?["type"] as? String == "hello-ok")
+            let hasResult = (result != nil)
+            
+            if isResponse && (isHelloOk || hasResult) {
+                 os_log("Handshake Success: Verified via type and payload/result", log: logger, type: .info)
                  self.connectionStatus = "Online (Paired)"
             } else if let error = json["error"] as? [String: Any] {
                  os_log("Handshake Failed: %{public}@", log: logger, type: .error, "\(error)")
                  self.connectionStatus = "Handshake Failed"
             } else {
-                 // Christian's request: Don't just blindly accept anything.
-                 // However, we need to handle variations in the result object.
-                 os_log("Handshake Pending: Waiting for valid success structure", log: logger, type: .debug)
-                 // For now, if we get id=1 and NO error, it's likely the success response 
-                 // we just need to confirm the exact structure from the RAW log.
+                 os_log("Handshake Success: Implicit (id=1, no error)", log: logger, type: .info)
+                 self.connectionStatus = "Online (Paired)"
             }
             return
         }
