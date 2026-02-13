@@ -111,7 +111,10 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         // Refresh values from disk before connecting
         UserDefaults.standard.synchronize()
         
-        guard !serverHost.isEmpty, !serverToken.isEmpty else {
+        let host = serverHost
+        let token = serverToken
+        
+        guard !host.isEmpty, !token.isEmpty else {
             DispatchQueue.main.async {
                 self.connectionStatus = "STATUS_DISCONNECTED"
                 self.rawLog += "\n[WSS] Error: Missing Host or Token"
@@ -136,9 +139,12 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             // Force ws for local tunnel
             targetUrlStr = "ws://127.0.0.1:18790"
             os_log("CONNECT: Using SSH Tunnel target: %{public}@", log: logger, type: .info, targetUrlStr)
+            DispatchQueue.main.async {
+                self.rawLog += "\n[WSS] Switching to Tunnel URL: \(targetUrlStr)"
+            }
         } else {
-            let scheme = (serverHost.contains("localhost") || serverHost.contains("127.0.0.1")) ? "ws" : "wss"
-            targetUrlStr = "\(scheme)://\(serverHost):\(serverPort)"
+            let scheme = (host.contains("localhost") || host.contains("127.0.0.1")) ? "ws" : "wss"
+            targetUrlStr = "\(scheme)://\(host):\(serverPort)"
             os_log("CONNECT: Using direct target: %{public}@", log: logger, type: .info, targetUrlStr)
         }
 
@@ -289,12 +295,20 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     }
     
     func disconnect() {
+        socket?.delegate = nil
         socket?.disconnect()
+        socket = nil
+        
         sshProcess?.terminate()
         sshProcess = nil
         isUsingSshTunnel = false
+        
         connectionAttemptCount = 0
-        connectionStatus = "STATUS_DISCONNECTED"
+        DispatchQueue.main.async {
+            self.isConnected = false
+            self.connectionStatus = "STATUS_DISCONNECTED"
+            self.rawLog += "\n[WSS] Disconnected and Tunnel closed."
+        }
     }
     
     // MARK: - WebSocketDelegate
