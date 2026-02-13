@@ -70,7 +70,13 @@ struct ContentView: View {
 
                 // Clipboard
                 Button(action: handleManualClipboardSend) {
-                    MenuItemRow(icon: "doc.on.clipboard", title: "Send Clipboard", isEnabled: network.isConnected)
+                    MenuItemRow(icon: "doc.on.clipboard", title: "Push Clipboard", subtitle: "Copy to Agent", isEnabled: network.isConnected)
+                }
+                .buttonStyle(.plain)
+                
+                // File Sync (USP)
+                Button(action: { /* Placeholder for manual sync trigger */ }) {
+                    MenuItemRow(icon: "folder.badge.gearshape", title: "File Sync", subtitle: "Managed Folder", isEnabled: network.isConnected)
                 }
                 .buttonStyle(.plain)
                 

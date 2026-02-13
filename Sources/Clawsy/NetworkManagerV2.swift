@@ -298,8 +298,33 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             }
             
         case "file.list":
-            // USP: File Sync Placeholder
-            sendResponse(id: id, result: ["files": [], "status": "permission_pending"])
+            let path = params["path"] as? String ?? NSHomeDirectory()
+            let files = ClawsyFileManager.listFiles(at: path)
+            // Convert to simple dict for JSON
+            let result = files.map { ["name": $0.name, "isDirectory": $0.isDirectory, "size": $0.size, "modified": $0.modified.timeIntervalSince1970] }
+            sendResponse(id: id, result: ["files": result, "path": path])
+            
+        case "file.get":
+            guard let path = params["path"] as? String else {
+                sendError(id: id, code: -32602, message: "Missing 'path' parameter")
+                return
+            }
+            if let b64 = ClawsyFileManager.readFile(at: path) {
+                sendResponse(id: id, result: ["content": b64, "path": path])
+            } else {
+                sendError(id: id, code: -32000, message: "Failed to read file")
+            }
+            
+        case "file.set":
+            guard let path = params["path"] as? String, let content = params["content"] as? String else {
+                sendError(id: id, code: -32602, message: "Missing 'path' or 'content' parameter")
+                return
+            }
+            if ClawsyFileManager.writeFile(at: path, base64Content: content) {
+                sendResponse(id: id, result: ["status": "ok", "path": path])
+            } else {
+                sendError(id: id, code: -32000, message: "Failed to write file")
+            }
             
         default:
             sendError(id: id, code: -32601, message: "Method not found")

@@ -12,8 +12,8 @@
     - [ ] Implement connectivity check.
     - [ ] Add logic to launch `ssh -NT -L ...` automatically on connection failure.
 - **File & Folder Sharing**:
-    - [ ] Architect bidirectional sync (The Clawsy USP).
-    - [ ] Implement `file.get` and `file.set` node commands.
+    - [x] Architect bidirectional sync (The Clawsy USP).
+    - [x] Implement `file.list`, `file.get`, and `file.set` node commands.
 - **Clipboard Preview**:
     - [ ] Add a dedicated UI component to preview incoming clipboard data.
 - **Icon Refinement**:
