@@ -2,6 +2,7 @@ import Foundation
 import Starscream
 import CryptoKit
 import AppKit
+import SwiftUI
 import os.log
 
 // MARK: - NetworkManagerV2 (Native Node Protocol)
@@ -181,7 +182,7 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             if isResponse && (payload?["type"] as? String == "hello-ok" || json["result"] != nil) {
                  self.connectionStatus = "Online (Paired)"
                  if isUsingSshTunnel { self.connectionStatus += " via SSH" }
-            } else if let error = json["error"] as? [String: Any] {
+            } else if json["error"] != nil {
                  self.connectionStatus = "Handshake Failed"
             }
             return
