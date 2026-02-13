@@ -13,6 +13,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     private let logger = OSLog(subsystem: "ai.clawsy", category: "Network")
     
     @Published var isConnected = false
+    @Published var isHandshakeComplete = false // Build #113: Track pairing state
     @Published var connectionStatus = "STATUS_DISCONNECTED"
     @Published var connectionAttemptCount = 0
     @Published var lastMessage = ""
@@ -319,6 +320,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         connectionAttemptCount = 0
         DispatchQueue.main.async {
             self.isConnected = false
+            self.isHandshakeComplete = false
             self.connectionStatus = "STATUS_DISCONNECTED"
             self.rawLog += "\n[WSS] Disconnected"
         }
@@ -347,6 +349,8 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
                 os_log("Websocket is disconnected: %{public}@ code: %d", log: self.logger, type: .info, reason, code)
                 
             case .text(let string):
+                // Build #113: Immediate raw logging to catch "swallowed" messages
+                self.rawLog += "\nIN: \(string)"
                 self.handleMessage(string)
                 
             case .error(let error):
@@ -396,9 +400,11 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             let payload = json["payload"] as? [String: Any]
             
             if payload?["type"] as? String == "hello-ok" || json["result"] != nil {
+                 self.isHandshakeComplete = true // Build #113: Signal ready
                  self.connectionStatus = isUsingSshTunnel ? "STATUS_ONLINE_PAIRED_SSH" : "STATUS_ONLINE_PAIRED"
                  os_log("Handshake successful, status: %{public}@", log: logger, type: .info, self.connectionStatus)
             } else if json["error"] != nil {
+                 self.isHandshakeComplete = false
                  self.connectionStatus = "STATUS_HANDSHAKE_FAILED"
                  os_log("Handshake failed", log: logger, type: .error)
             }
@@ -466,6 +472,11 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     
     private func handleCommand(id: String, command: String, params: [String: Any]) {
         os_log("Handling command: %{public}@ (id: %{public}@)", log: logger, type: .info, command, id)
+        
+        // Build #113: Debug command dispatch
+        DispatchQueue.main.async {
+            self.rawLog += "\n[DEBUG] Received command: \(command)"
+        }
         
         let rawPath = sharedFolderPath
         if rawPath.isEmpty {

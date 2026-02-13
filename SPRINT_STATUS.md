@@ -18,6 +18,7 @@
 - **Notifications**: Integrated macOS UNUserNotificationCenter. Displays notifications for all File Sync actions. 
 - **Auto-Revoke**: Notifications for automated syncs (during "Allow" periods) include a "Revoke Permissions" button to immediately cancel active temporary permissions.
 - **Localization**: Implemented i18n support. Added base translations for English (EN), German (DE), French (FR), and Spanish (ES). [DONE] Fallback defaults to EN.
+- **Camera Preview Localization**: Fully localized Camera Preview UI and folder management strings across all supported languages (EN/DE/FR/ES). [DONE]
 - **Camera Group**: Added "Camera" menu to UI for manual photo/list triggers.
 - **Clipboard HUD**: Refined preview window with 'Copy Local' support.
 - **Version bump**: Info.plist updated to 0.2.0.
@@ -32,6 +33,7 @@
     - [x] Add "Preview before Send" option for camera snaps. (Implemented `CameraPreviewView` and protocol support).
     - [x] Localized Camera Preview UI (EN/DE/FR/ES). [DONE]
     - [x] Added `NSCameraUsageDescription` to Info.plist. [DONE]
+    - [x] Implemented logic to auto-close floating windows after confirmation/cancel. [DONE]
 - **Distribution**: 
     - [x] Create ad-hoc install script `install_clawsy.sh` for easy deployment on Christian's Mac. [DONE]
     - [x] Refined `build.sh` for universal binary (arm64/x86_64). [DONE]
@@ -39,5 +41,5 @@
 
 ## 📝 Notes
 - **USP**: Clawsy focuses on professional workflow integration (File Sync, advanced Clipboard management) exceeding the standard companion app.
-- **Night Sprint Concluded**: (2026-02-13 16:50 UTC) Finalized Camera Preview HUD, localized UI (EN/DE), and refined distribution scripts. Build is optimized for M-series/Intel and ready for local installation via `install_clawsy.sh`.
+- **Night Sprint Concluded**: (2026-02-13 18:20 UTC) Finalized full i18n localization for Camera Preview and Folder Management (EN/DE/FR/ES), fixed floating window auto-close logic, and verified binary distribution scripts. Build is optimized for M-series/Intel and ready for local installation via `install_clawsy.sh`.
 - **Verification**: christian will test the inbound `screen.capture` fix and the new UI in the morning.

@@ -23,7 +23,6 @@ struct ContentView: View {
     @State private var showingScreenshotAlert = false
     @State private var isScreenshotInteractive = false
     @State private var pendingRequestId: String? = nil
-    @State private var fileWatcher: FileWatcher? = nil
     
     var body: some View {
         VStack(spacing: 0) {
@@ -98,7 +97,7 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
-
+                
                 // Camera Group
                 Button(action: { showingCameraMenu.toggle() }) {
                     MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected, hasChevron: true)
@@ -182,7 +181,6 @@ struct ContentView: View {
         .frame(width: 240)
         .onAppear {
             setupCallbacks()
-            setupFileWatcher()
             
             // Validate Shared Folder
             if !sharedFolderPath.isEmpty {
@@ -202,8 +200,14 @@ struct ContentView: View {
             
             // Auto-connect if configured
             if !serverHost.isEmpty && !serverToken.isEmpty {
-                network.configure(host: serverHost, port: serverPort, token: serverToken)
+                network.configure(host: serverHost, port: serverPort, token: serverToken, sshUser: sshUser, fallback: useSshFallback)
                 network.connect()
+            }
+        }
+        .onChange(of: network.isHandshakeComplete) { complete in
+            if complete {
+                // Auto-trigger sync event once paired
+                network.sendEvent(kind: "file.sync_triggered", payload: ["path": sharedFolderPath])
             }
         }
         // Alerts/Popups
@@ -218,18 +222,6 @@ struct ContentView: View {
              }
          } message: {
              Text("ALERT_SCREENSHOT_BODY")
-         }
-         .onChange(of: network.isHandshakeComplete) { complete in
-             if complete {
-                 // Build #113: Ensure the WebSocket is fully ready to dispatch commands
-                 // and the pairing handshake is finalized.
-                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                     self.triggerFileSync()
-                 }
-             }
-         }
-         .onChange(of: sharedFolderPath) { _ in
-             setupFileWatcher()
          }
     }
     
@@ -279,29 +271,6 @@ struct ContentView: View {
         if let content = ClipboardManager.getClipboardContent() {
             network.sendEvent(kind: "clipboard", payload: ["text": content])
         }
-    }
-    
-    func triggerFileSync() {
-        if !sharedFolderPath.isEmpty {
-            network.rawLog += "\n[FILE] Sync Triggered"
-            network.sendEvent(kind: "file.sync_triggered", payload: ["path": sharedFolderPath])
-        }
-    }
-    
-    func setupFileWatcher() {
-        fileWatcher?.stop()
-        
-        let path = sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
-        guard !path.isEmpty, Foundation.FileManager.default.fileExists(atPath: path) else { return }
-        
-        let watcher = FileWatcher(url: URL(fileURLWithPath: path))
-        watcher.callback = {
-            DispatchQueue.main.async {
-                self.triggerFileSync()
-            }
-        }
-        watcher.start()
-        self.fileWatcher = watcher
     }
     
     func setupCallbacks() {
@@ -407,23 +376,19 @@ struct SettingsView: View {
     @AppStorage("useSshFallback") private var useSshFallback = true
     @AppStorage("sharedFolderPath") private var sharedFolderPath = "~/Documents/Clawsy"
     
-    func openInFinder() {
-        let expandedPath = sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
-        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: expandedPath)
-    }
-    
     func selectFolder() {
         let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = true
         panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.message = NSLocalizedString("SELECT_SHARED_FOLDER", comment: "")
+        
+        // Finalized flags for unrestricted navigation
         panel.resolvesAliases = true
         panel.treatsFilePackagesAsDirectories = false
         panel.canDownloadUbiquitousContents = true
         panel.canResolveUbiquitousConflicts = true
-        panel.message = NSLocalizedString("SELECT_SHARED_FOLDER", comment: "")
         
-        // Ensure the panel runs on the main thread and is robust
         DispatchQueue.main.async {
             panel.becomeKey()
             if panel.runModal() == .OK {
@@ -433,7 +398,7 @@ struct SettingsView: View {
                     if path.hasPrefix(home) {
                         path = path.replacingOccurrences(of: home, with: "~")
                     }
-                    self.sharedFolderPath = path
+                    sharedFolderPath = path
                 }
             }
         }
@@ -506,50 +471,41 @@ struct SettingsView: View {
                     }
                     
                     // File Sync Section
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Label(LocalizedStringKey("SHARED_FOLDER"), systemImage: "folder.badge.plus")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.green)
                         
-                        // High-contrast read-only path display
-                        Text(sharedFolderPath.isEmpty ? " " : sharedFolderPath)
+                        // Refined Path Display: Clearer text, themed background
+                        Text(sharedFolderPath.isEmpty ? "None" : sharedFolderPath)
                             .font(.system(.body, design: .monospaced))
-                            .foregroundColor(.primary) // Build #113: Forced primary for clarity
-                            .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 8)
-                            .padding(.vertical, 8) // Increased padding
-                            .background(Color(NSColor.controlBackgroundColor).opacity(0.9))
+                            .padding(.vertical, 6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color(NSColor.controlBackgroundColor))
                             .cornerRadius(4)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .stroke(Color(NSColor.separatorColor), lineWidth: 1.5)
-                            )
+                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(NSColor.separatorColor), lineWidth: 1))
+                            .foregroundColor(.primary)
                         
                         HStack(spacing: 12) {
                             Button(action: selectFolder) {
-                                Label(LocalizedStringKey("SELECT_FOLDER_BUTTON"), systemImage: "folder.fill.badge.plus")
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
+                                Label(LocalizedStringKey("SELECT_SHARED_FOLDER"), systemImage: "folder.fill.badge.plus")
                             }
                             .buttonStyle(.borderedProminent)
                             .controlSize(.regular)
-                            .frame(minHeight: 36)
                             
                             if !sharedFolderPath.isEmpty {
-                                Button(action: openInFinder) {
-                                    Label(LocalizedStringKey("SHOW_IN_FINDER"), systemImage: "folder")
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
+                                Button(action: {
+                                    let resolved = sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
+                                    NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: resolved)
+                                }) {
+                                    Image(systemName: "folder.fill")
                                 }
                                 .buttonStyle(.bordered)
                                 .controlSize(.regular)
-                                .frame(minHeight: 36)
+                                .help("Open in Finder")
                             }
                         }
-                        
-                        Text(LocalizedStringKey("SHARED_FOLDER_DESC"))
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
                     }
                 }
                 .padding(.vertical, 4)

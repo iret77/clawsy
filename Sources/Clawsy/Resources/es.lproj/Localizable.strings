@@ -16,6 +16,18 @@
 "CLIPBOARD_WANTS_WRITE" = "El agente quiere escribir en tu portapapeles:";
 "CLIPBOARD_WANTS_READ" = "El agente quiere leer tu portapapeles.";
 
+"CAMERA" = "Cámara";
+"TAKE_PHOTO" = "Tomar foto";
+"LIST_CAMERAS" = "Listar cámaras";
+"CAMERA_PREVIEW_TITLE" = "Vista previa de la cámara";
+"SEND_TO_AGENT" = "Enviar al agente";
+
+"FOLDER_MISSING_TITLE" = "Carpeta no encontrada";
+"FOLDER_MISSING_BODY" = "La carpeta compartida configurada ya no existe: %@. Se ha restablecido el ajuste.";
+"SELECT_SHARED_FOLDER" = "Seleccionar carpeta compartida";
+"SELECT_FOLDER_BUTTON" = "Seleccionar carpeta...";
+"SHOW_IN_FINDER" = "Mostrar en Finder";
+
 /* Main Menu */
 "APP_NAME" = "Clawsy";
 "SCREENSHOT" = "Captura de pantalla";
