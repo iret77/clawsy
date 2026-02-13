@@ -299,8 +299,17 @@ struct SettingsView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(LocalizedStringKey("SETTINGS_TITLE"))
-                .font(.system(size: 15, weight: .bold))
+            HStack {
+                Text(LocalizedStringKey("SETTINGS_TITLE"))
+                    .font(.system(size: 15, weight: .bold))
+                Spacer()
+                Button(action: { isPresented = false }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 16))
+                }
+                .buttonStyle(.plain)
+            }
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
@@ -372,13 +381,11 @@ struct SettingsView: View {
                 
                 Spacer()
                 
-                Button(LocalizedStringKey("DONE")) {
-                    isPresented = false
-                }
-                .keyboardShortcut(.return)
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
+                Text("Auto-saves")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary.opacity(0.5))
             }
+            .padding(.bottom, 4)
         }
         .padding(20)
         .background(VisualEffectView(material: .popover, blendingMode: .withinWindow))

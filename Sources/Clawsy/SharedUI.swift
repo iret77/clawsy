@@ -21,7 +21,7 @@ struct VisualEffectView: NSViewRepresentable {
 
 struct MenuItemRow: View {
     var icon: String? = nil
-    var title: String  // Simplified to String per Christian's request
+    var title: String
     var subtitle: String? = nil
     var color: Color = .primary
     var isEnabled: Bool = true
