@@ -26,9 +26,9 @@ struct ContentView: View {
             // --- Header & Status ---
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Clawsy")
+                    Text("APP_NAME")
                         .font(.system(size: 13, weight: .semibold))
-                    Text(network.connectionStatus)
+                    Text(LocalizedStringKey(network.connectionStatus))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
@@ -55,28 +55,28 @@ struct ContentView: View {
                         self.isScreenshotInteractive = false
                         self.requestScreenshot()
                     }) {
-                        Label("Full Screen", systemImage: "rectangle.dashed")
+                        Label("FULL_SCREEN", systemImage: "rectangle.dashed")
                     }
                     Button(action: {
                         self.isScreenshotInteractive = true
                         self.requestScreenshot()
                     }) {
-                        Label("Interactive Area", systemImage: "plus.viewfinder")
+                        Label("INTERACTIVE_AREA", systemImage: "plus.viewfinder")
                     }
                 } label: {
-                    MenuItemRow(icon: "camera", title: "Screenshot", isEnabled: network.isConnected, hasChevron: true)
+                    MenuItemRow(icon: "camera", title: "SCREENSHOT", isEnabled: network.isConnected, hasChevron: true)
                 }
                 .menuStyle(.borderlessButton)
 
                 // Clipboard
                 Button(action: handleManualClipboardSend) {
-                    MenuItemRow(icon: "doc.on.clipboard", title: "Push Clipboard", subtitle: "Copy to Agent", isEnabled: network.isConnected)
+                    MenuItemRow(icon: "doc.on.clipboard", title: "PUSH_CLIPBOARD", subtitle: "COPY_TO_AGENT", isEnabled: network.isConnected)
                 }
                 .buttonStyle(.plain)
                 
                 // File Sync (USP)
                 Button(action: { /* Placeholder for manual sync trigger */ }) {
-                    MenuItemRow(icon: "folder.badge.gearshape", title: "File Sync", subtitle: "Managed Folder", isEnabled: network.isConnected)
+                    MenuItemRow(icon: "folder.badge.gearshape", title: "FILE_SYNC", subtitle: "MANAGED_FOLDER", isEnabled: network.isConnected)
                 }
                 .buttonStyle(.plain)
                 
@@ -86,7 +86,7 @@ struct ContentView: View {
                 Button(action: toggleConnection) {
                     MenuItemRow(
                         icon: network.isConnected ? "power" : "bolt.slash.fill",
-                        title: network.isConnected ? "Disconnect" : "Connect",
+                        title: network.isConnected ? "DISCONNECT" : "CONNECT",
                         color: network.isConnected ? .red : .blue
                     )
                 }
@@ -94,7 +94,7 @@ struct ContentView: View {
 
                 // Settings
                 Button(action: { showingSettings.toggle() }) {
-                    MenuItemRow(icon: "gearshape.fill", title: "Settings...", isEnabled: true, shortcut: "⌘,")
+                    MenuItemRow(icon: "gearshape.fill", title: "SETTINGS", isEnabled: true, shortcut: "⌘,")
                 }
                 .buttonStyle(.plain)
                 .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
@@ -104,7 +104,7 @@ struct ContentView: View {
                 
                 // Debug Log
                 Button(action: { showingLog.toggle() }) {
-                    MenuItemRow(icon: "terminal.fill", title: "Debug Log", isEnabled: true)
+                    MenuItemRow(icon: "terminal.fill", title: "DEBUG_LOG", isEnabled: true)
                 }
                 .buttonStyle(.plain)
                 .popover(isPresented: $showingLog, arrowEdge: .trailing) {
@@ -116,15 +116,14 @@ struct ContentView: View {
                 
                 // Quit
                 Button(action: { NSApplication.shared.terminate(nil) }) {
-                    MenuItemRow(icon: "xmark.circle.fill", title: "Quit", isEnabled: true, shortcut: "⌘Q")
+                    MenuItemRow(icon: "xmark.circle.fill", title: "QUIT", isEnabled: true, shortcut: "⌘Q")
                 }
                 .buttonStyle(.plain)
             }
             .padding(6)
         }
         .frame(width: 240)
-        .background(VisualEffectView(material: .popover, blendingMode: .withinWindow))
-        .cornerRadius(12)
+        // Background removed to allow NSPopover's native material to show
         .onAppear {
             setupCallbacks()
             // Auto-connect if configured
@@ -134,17 +133,17 @@ struct ContentView: View {
             }
         }
         // Alerts/Popups
-        .alert("Allow Screenshot?", isPresented: $showingScreenshotAlert) {
-             Button("Deny", role: .cancel) {
+        .alert("ALERT_SCREENSHOT_TITLE", isPresented: $showingScreenshotAlert) {
+             Button("ALERT_DENY", role: .cancel) {
                  if let rid = pendingRequestId {
                      network.sendError(id: rid, code: -1, message: "User denied screenshot")
                  }
              }
-             Button("Allow", role: .destructive) {
+             Button("ALERT_ALLOW", role: .destructive) {
                  takeScreenshot()
              }
          } message: {
-             Text("The agent requested to see your screen.")
+             Text("ALERT_SCREENSHOT_BODY")
          }
     }
     
@@ -250,14 +249,14 @@ struct DebugLogView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Network Debug Log")
+                Text("DEBUG_LOG_TITLE")
                     .font(.headline)
                 Spacer()
-                Button("Done") { isPresented = false }
+                Button("DONE") { isPresented = false }
             }
             
             ScrollView {
-                Text(logText.isEmpty ? "No data received yet." : logText)
+                Text(logText.isEmpty ? "NO_DATA" : logText)
                     .font(.system(.caption, design: .monospaced))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .textSelection(.enabled)
@@ -267,11 +266,11 @@ struct DebugLogView: View {
             .cornerRadius(4)
             
             HStack {
-                Text("Select text to copy.")
+                Text("SELECT_TEXT_COPY")
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()
-                Button("Copy All") {
+                Button("COPY_ALL") {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(logText, forType: .string)
                 }
@@ -292,14 +291,14 @@ struct SettingsView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Settings")
+            Text("SETTINGS_TITLE")
                 .font(.system(size: 15, weight: .bold))
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     // Gateway Section
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("Gateway", systemImage: "antenna.radiowaves.left.and.right")
+                        Label("GATEWAY", systemImage: "antenna.radiowaves.left.and.right")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.blue)
                         
@@ -314,7 +313,7 @@ struct SettingsView: View {
                     // SSH Fallback Section
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Label("SSH Fallback", systemImage: "lock.shield")
+                            Label("SSH_FALLBACK", systemImage: "lock.shield")
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(.orange)
                             Spacer()
@@ -326,14 +325,14 @@ struct SettingsView: View {
                             .font(.system(.body, design: .monospaced))
                             .disabled(!useSshFallback)
                         
-                        Text("Auto-tunnels port 18789 if direct connection fails.")
+                        Text("SSH_FALLBACK_DESC")
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                     }
                     
                     // File Sync Section
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("Shared Folder", systemImage: "folder.badge.plus")
+                        Label("SHARED_FOLDER", systemImage: "folder.badge.plus")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.green)
                         
@@ -341,7 +340,7 @@ struct SettingsView: View {
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
                         
-                        Text("Only files in this folder are visible to the agent.")
+                        Text("SHARED_FOLDER_DESC")
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                     }
@@ -352,13 +351,13 @@ struct SettingsView: View {
             Divider()
             
             HStack {
-                Text("Vibrant & Secure.")
+                Text("VIBRANT_SECURE")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundColor(.secondary)
                 
                 Spacer()
                 
-                Button("Done") {
+                Button("DONE") {
                     isPresented = false
                 }
                 .keyboardShortcut(.return)

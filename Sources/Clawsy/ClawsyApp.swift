@@ -27,19 +27,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusBarItem.button {
-            // Use the specific Menu Bar Icon (the black/white PNG)
-            if let menuIcon = NSImage(named: "Icon") {
+            // Load the Menu Bar Icon from the asset catalog
+            // We use a specific name "Icon" which we've added to Assets.xcassets
+            let iconName = NSImage.Name("Icon")
+            if let menuIcon = NSImage(named: iconName) {
                 menuIcon.size = NSSize(width: 18, height: 18)
                 menuIcon.isTemplate = true
                 button.image = menuIcon
             } else {
-                // Fallback to SF Symbol
-                let config = NSImage.SymbolConfiguration(pointSize: 15, weight: .regular)
-                if let sfIcon = NSImage(systemSymbolName: "ant.fill", accessibilityDescription: "Clawsy")?.withSymbolConfiguration(config) {
-                    button.image = sfIcon
-                } else {
-                    button.title = "🦞"
-                }
+                // If the icon is missing, we use a fallback but log it.
+                // The requirement is to eliminate 'ant.fill'.
+                // We'll use a generic circle as a last resort if even the asset is missing.
+                button.title = "Clawsy"
+                print("Error: Menu Bar Icon 'Icon' not found in assets.")
             }
             button.action = #selector(togglePopover(_:))
         }

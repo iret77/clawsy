@@ -24,8 +24,8 @@
     - [ ] Configure `xcrun notarytool` credentials.
     - [ ] Run `scripts/sign.sh` on a Mac environment.
 - **Camera Integration**:
-    - [ ] Implement `camera.list` (AVFoundation).
-    - [ ] Implement `camera.snap` (Still image capture).
+    - [x] Implement `camera.list` (AVFoundation).
+    - [x] Implement `camera.snap` (Still image capture).
 
 ## 📝 Notes
 - **USP**: Clawsy focuses on professional workflow integration (File Sync, advanced Clipboard management) exceeding the standard companion app.

@@ -13,3 +13,53 @@
 "CLIPBOARD_SYNC" = "Clipboard Sync";
 "CLIPBOARD_WANTS_WRITE" = "The agent wants to write to your clipboard:";
 "CLIPBOARD_WANTS_READ" = "The agent wants to read your clipboard.";
+
+/* Main Menu */
+"APP_NAME" = "Clawsy";
+"SCREENSHOT" = "Screenshot";
+"FULL_SCREEN" = "Full Screen";
+"INTERACTIVE_AREA" = "Interactive Area";
+"PUSH_CLIPBOARD" = "Push Clipboard";
+"COPY_TO_AGENT" = "Copy to Agent";
+"FILE_SYNC" = "File Sync";
+"MANAGED_FOLDER" = "Managed Folder";
+"CONNECT" = "Connect";
+"DISCONNECT" = "Disconnect";
+"SETTINGS" = "Settings...";
+"DEBUG_LOG" = "Debug Log";
+"QUIT" = "Quit";
+
+/* Status */
+"STATUS_CONNECTED" = "Connected";
+"STATUS_DISCONNECTED" = "Disconnected";
+"STATUS_CONNECTING" = "Connecting...";
+"STATUS_OFFLINE_REFUSED" = "Offline (Server Refused)";
+"STATUS_OFFLINE_TIMEOUT" = "Offline (Timeout)";
+"STATUS_ERROR" = "Error";
+"STATUS_ONLINE_PAIRED" = "Online (Paired)";
+"STATUS_ONLINE_PAIRED_SSH" = "Online (Paired via SSH)";
+"STATUS_HANDSHAKE_FAILED" = "Handshake Failed";
+"STATUS_STARTING_SSH" = "Starting SSH Tunnel...";
+"STATUS_SSH_FAILED" = "SSH Tunnel Failed";
+
+/* Alerts */
+"ALERT_SCREENSHOT_TITLE" = "Allow Screenshot?";
+"ALERT_SCREENSHOT_BODY" = "The agent requested to see your screen.";
+"ALERT_DENY" = "Deny";
+"ALERT_ALLOW" = "Allow";
+
+/* Settings */
+"SETTINGS_TITLE" = "Settings";
+"GATEWAY" = "Gateway";
+"SSH_FALLBACK" = "SSH Fallback";
+"SSH_FALLBACK_DESC" = "Auto-tunnels port 18789 if direct connection fails.";
+"SHARED_FOLDER" = "Shared Folder";
+"SHARED_FOLDER_DESC" = "Only files in this folder are visible to the agent.";
+"VIBRANT_SECURE" = "Vibrant & Secure.";
+"DONE" = "Done";
+
+/* Debug Log */
+"DEBUG_LOG_TITLE" = "Network Debug Log";
+"NO_DATA" = "No data received yet.";
+"SELECT_TEXT_COPY" = "Select text to copy.";
+"COPY_ALL" = "Copy All";

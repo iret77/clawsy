@@ -40,12 +40,12 @@ struct MenuItemRow: View {
             }
             
             VStack(alignment: .leading, spacing: 1) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.system(size: 13))
                     .foregroundColor(isEnabled ? .primary : .secondary.opacity(0.5))
                 
                 if let subtitle = subtitle {
-                    Text(subtitle)
+                    Text(LocalizedStringKey(subtitle))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary.opacity(0.7))
                 }

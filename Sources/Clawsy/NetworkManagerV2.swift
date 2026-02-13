@@ -13,7 +13,8 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     private let logger = OSLog(subsystem: "ai.clawsy", category: "Network")
     
     @Published var isConnected = false
-    @Published var connectionStatus = "Disconnected"
+    @Published var connectionStatusKey = "STATUS_DISCONNECTED"
+    @Published var connectionAttemptCount = 0
     @Published var lastMessage = ""
     @Published var rawLog = ""
     
@@ -24,7 +25,6 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     // SSH Tunnel Management
     private var sshProcess: Process?
     private var isUsingSshTunnel = false
-    private var connectionAttemptCount = 0
     
     // Callbacks for UI/Logic
     var onScreenshotRequested: ((Bool, String) -> Void)?
@@ -103,19 +103,35 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
 
     func connect() {
         guard !serverUrl.isEmpty, !serverToken.isEmpty else {
-            connectionStatus = "Missing Configuration"
+            connectionStatusKey = "STATUS_DISCONNECTED"
             return
         }
         
         connectionAttemptCount += 1
-        connectionStatus = "Connecting (Attempt \(connectionAttemptCount))..."
+        connectionStatusKey = "STATUS_CONNECTING" // Will be formatted in UI or here
         
         // Use local tunnel port if SSH is active
-        let targetUrlStr = isUsingSshTunnel ? "ws://localhost:18789" : serverUrl
+        var targetUrlStr = isUsingSshTunnel ? "ws://localhost:18789" : serverUrl
+        
+        // Ensure scheme is present
+        if !targetUrlStr.lowercased().hasPrefix("ws://") && !targetUrlStr.lowercased().hasPrefix("wss://") {
+            if targetUrlStr.contains("localhost") || targetUrlStr.contains("127.0.0.1") {
+                targetUrlStr = "ws://" + targetUrlStr
+            } else {
+                targetUrlStr = "wss://" + targetUrlStr
+            }
+        }
+
         guard let targetUrl = URL(string: targetUrlStr) else {
-            connectionStatus = "Invalid URL"
+            connectionStatusKey = "STATUS_ERROR"
             return
         }
+        
+        // Update connectionStatus with attempt number if needed, 
+        // but for LocalizedStringKey we might just use the key.
+        // Actually, let's use a simpler status for the key and handle formatting in the UI if possible,
+        // or just set the string to something like "STATUS_CONNECTING" and have the UI handle it.
+        // For now, I'll just use the keys.
         
         attemptConnection(to: targetUrl)
     }
@@ -131,7 +147,9 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     }
     
     private func handleConnectionFailure(error: Error?) {
-        if useSshFallback && !isUsingSshTunnel && connectionAttemptCount >= 2 {
+        // Trigger SSH fallback if enabled and not already using it.
+        // Proactive: try SSH if the first direct attempt fails.
+        if useSshFallback && !isUsingSshTunnel {
             startSshTunnel()
         } else {
             runDiagnostics(error: error)
@@ -140,25 +158,32 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     
     private func startSshTunnel() {
         os_log("Initiating SSH Tunnel Fallback...", log: logger, type: .info)
-        connectionStatus = "Starting SSH Tunnel..."
+        connectionStatusKey = "STATUS_STARTING_SSH"
         
         sshProcess?.terminate()
         
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
-        process.arguments = ["-NT", "-L", "18789:localhost:18789", sshHost]
+        // Use -o ConnectTimeout to fail fast if SSH is down
+        process.arguments = ["-NT", "-L", "18789:localhost:18789", sshHost, "-o", "ConnectTimeout=5"]
         
         do {
             try process.run()
             self.sshProcess = process
             self.isUsingSshTunnel = true
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                self.connect()
+            // Wait for tunnel to establish
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                if let proc = self.sshProcess, proc.isRunning {
+                    self.connect()
+                } else {
+                    self.isUsingSshTunnel = false
+                    self.connectionStatusKey = "STATUS_SSH_FAILED"
+                }
             }
         } catch {
             os_log("Failed to start SSH process: %{public}@", log: logger, type: .error, error.localizedDescription)
-            connectionStatus = "SSH Tunnel Failed"
+            connectionStatusKey = "STATUS_SSH_FAILED"
             isUsingSshTunnel = false
         }
     }
@@ -166,11 +191,11 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     private func runDiagnostics(error: Error?) {
         let errorDesc = error?.localizedDescription ?? "Unknown error"
         if errorDesc.contains("refused") {
-            connectionStatus = "Offline (Server Refused)"
+            connectionStatusKey = "STATUS_OFFLINE_REFUSED"
         } else if errorDesc.contains("timed out") {
-            connectionStatus = "Offline (Timeout)"
+            connectionStatusKey = "STATUS_OFFLINE_TIMEOUT"
         } else {
-            connectionStatus = "Error: \(errorDesc)"
+            connectionStatusKey = "STATUS_ERROR" // We could include the error description but i18n is hard with dynamic errors
         }
     }
     
@@ -180,6 +205,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         sshProcess = nil
         isUsingSshTunnel = false
         connectionAttemptCount = 0
+        connectionStatusKey = "STATUS_DISCONNECTED"
     }
     
     // MARK: - WebSocketDelegate
@@ -191,13 +217,13 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             switch event {
             case .connected(_):
                 self.isConnected = true
-                self.connectionStatus = "Connected (Handshaking...)"
+                self.connectionStatusKey = "STATUS_CONNECTED"
                 self.connectionAttemptCount = 0
                 os_log("Websocket is connected", log: self.logger, type: .info)
                 
             case .disconnected(let reason, let code):
                 self.isConnected = false
-                self.connectionStatus = "Disconnected"
+                self.connectionStatusKey = "STATUS_DISCONNECTED"
                 os_log("Websocket is disconnected: %{public}@ code: %d", log: self.logger, type: .info, reason, code)
                 
             case .text(let string):
@@ -239,12 +265,9 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             let payload = json["payload"] as? [String: Any]
             
             if isResponse && (payload?["type"] as? String == "hello-ok" || json["result"] != nil) {
-                 self.connectionStatus = "Online (Paired)"
-                 if isUsingSshTunnel {
-                     self.connectionStatus += " via SSH"
-                 }
+                 self.connectionStatusKey = isUsingSshTunnel ? "STATUS_ONLINE_PAIRED_SSH" : "STATUS_ONLINE_PAIRED"
             } else if json["error"] != nil {
-                 self.connectionStatus = "Handshake Failed"
+                 self.connectionStatusKey = "STATUS_HANDSHAKE_FAILED"
             }
             return
         }
@@ -284,7 +307,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
                 "minProtocol": 3, "maxProtocol": 3,
                 "client": ["id": "openclaw-macos", "version": "0.2.0", "platform": "macos", "mode": "node"],
                 "role": "node", "caps": ["clipboard", "screen", "camera", "file"], 
-                "commands": ["clipboard.read", "clipboard.write", "screen.capture", "file.list", "file.get", "file.set"],
+                "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set"],
                 "permissions": ["clipboard.read": true, "clipboard.write": true],
                 "auth": ["token": serverToken],
                 "device": ["id": deviceId, "publicKey": pubKeyB64, "signature": sigB64, "signedAt": tsMs, "nonce": nonce]
@@ -306,6 +329,20 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         case "screen.capture":
             let interactive = params["interactive"] as? Bool ?? false
             onScreenshotRequested?(interactive, id)
+            
+        case "camera.list":
+            let cameras = CameraManager.listCameras()
+            sendResponse(id: id, result: ["cameras": cameras])
+            
+        case "camera.snap":
+            let deviceId = params["deviceId"] as? String
+            CameraManager.takePhoto(deviceId: deviceId) { b64 in
+                if let b64 = b64 {
+                    self.sendResponse(id: id, result: ["content": b64])
+                } else {
+                    self.sendError(id: id, code: -32000, message: "Camera capture failed")
+                }
+            }
             
         case "clipboard.read":
             onClipboardReadRequested?(id)

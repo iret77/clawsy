@@ -13,3 +13,53 @@
 "CLIPBOARD_SYNC" = "Zwischenablage-Sync";
 "CLIPBOARD_WANTS_WRITE" = "Der Agent möchte in deine Zwischenablage schreiben:";
 "CLIPBOARD_WANTS_READ" = "Der Agent möchte deine Zwischenablage lesen.";
+
+/* Main Menu */
+"APP_NAME" = "Clawsy";
+"SCREENSHOT" = "Screenshot";
+"FULL_SCREEN" = "Vollbild";
+"INTERACTIVE_AREA" = "Interaktiver Bereich";
+"PUSH_CLIPBOARD" = "Zwischenablage senden";
+"COPY_TO_AGENT" = "Zum Agenten kopieren";
+"FILE_SYNC" = "Dateisync";
+"MANAGED_FOLDER" = "Verwalteter Ordner";
+"CONNECT" = "Verbinden";
+"DISCONNECT" = "Trennen";
+"SETTINGS" = "Einstellungen...";
+"DEBUG_LOG" = "Debug-Protokoll";
+"QUIT" = "Beenden";
+
+/* Status */
+"STATUS_CONNECTED" = "Verbunden";
+"STATUS_DISCONNECTED" = "Getrennt";
+"STATUS_CONNECTING" = "Verbinde...";
+"STATUS_OFFLINE_REFUSED" = "Offline (Server verweigert)";
+"STATUS_OFFLINE_TIMEOUT" = "Offline (Zeitüberschreitung)";
+"STATUS_ERROR" = "Fehler";
+"STATUS_ONLINE_PAIRED" = "Online (Gepaart)";
+"STATUS_ONLINE_PAIRED_SSH" = "Online (Gepaart über SSH)";
+"STATUS_HANDSHAKE_FAILED" = "Handshake fehlgeschlagen";
+"STATUS_STARTING_SSH" = "SSH-Tunnel wird gestartet...";
+"STATUS_SSH_FAILED" = "SSH-Tunnel fehlgeschlagen";
+
+/* Alerts */
+"ALERT_SCREENSHOT_TITLE" = "Screenshot erlauben?";
+"ALERT_SCREENSHOT_BODY" = "Der Agent möchte deinen Bildschirm sehen.";
+"ALERT_DENY" = "Ablehnen";
+"ALERT_ALLOW" = "Erlauben";
+
+/* Settings */
+"SETTINGS_TITLE" = "Einstellungen";
+"GATEWAY" = "Gateway";
+"SSH_FALLBACK" = "SSH-Fallback";
+"SSH_FALLBACK_DESC" = "Automatischer Port-Tunnel (18789) bei Verbindungsfehlern.";
+"SHARED_FOLDER" = "Gemeinsamer Ordner";
+"SHARED_FOLDER_DESC" = "Nur Dateien in diesem Ordner sind für den Agenten sichtbar.";
+"VIBRANT_SECURE" = "Lebendig & Sicher.";
+"DONE" = "Fertig";
+
+/* Debug Log */
+"DEBUG_LOG_TITLE" = "Netzwerk-Protokoll";
+"NO_DATA" = "Noch keine Daten empfangen.";
+"SELECT_TEXT_COPY" = "Text zum Kopieren auswählen.";
+"COPY_ALL" = "Alles kopieren";
