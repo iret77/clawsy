@@ -13,7 +13,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     private let logger = OSLog(subsystem: "ai.clawsy", category: "Network")
     
     @Published var isConnected = false
-    @Published var isHandshakeComplete = false // Build #113: Track pairing state
+    @Published var isHandshakeComplete = false // Build #113 v3: Track pairing state
     @Published var connectionStatus = "STATUS_DISCONNECTED"
     @Published var connectionAttemptCount = 0
     @Published var lastMessage = ""
@@ -349,7 +349,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
                 os_log("Websocket is disconnected: %{public}@ code: %d", log: self.logger, type: .info, reason, code)
                 
             case .text(let string):
-                // Build #113: Immediate raw logging to catch "swallowed" messages
+                // Build #113 v3: Immediate raw logging to catch "swallowed" messages
                 self.rawLog += "\nIN: \(string)"
                 self.handleMessage(string)
                 
@@ -382,15 +382,15 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             return
         }
         
-        // Robust ID extraction (support both String and Int IDs from server)
+        // Robust ID extraction (Build #113 v3: Always ensure we have an ID string)
         let rawId = json["id"]
-        let idStr: String?
+        let idStr: String
         if let s = rawId as? String {
             idStr = s
         } else if let n = rawId as? Int {
             idStr = String(n)
         } else {
-            idStr = nil
+            idStr = "" // Fallback for event-style requests
         }
         
         let type = json["type"] as? String
@@ -400,7 +400,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             let payload = json["payload"] as? [String: Any]
             
             if payload?["type"] as? String == "hello-ok" || json["result"] != nil {
-                 self.isHandshakeComplete = true // Build #113: Signal ready
+                 self.isHandshakeComplete = true // Build #113 v3: Signal ready
                  self.connectionStatus = isUsingSshTunnel ? "STATUS_ONLINE_PAIRED_SSH" : "STATUS_ONLINE_PAIRED"
                  os_log("Handshake successful, status: %{public}@", log: logger, type: .info, self.connectionStatus)
             } else if json["error"] != nil {
@@ -411,26 +411,28 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             return
         }
         
-        // Handle Requests
-        if type == "req", let reqId = idStr {
-            if let method = json["method"] as? String {
-                let params = json["params"] as? [String: Any] ?? [:]
-                
-                // Support both "node.invoke" wrapper and direct method calls
-                var commandName = method
-                if method == "node.invoke", let cmd = params["command"] as? String {
-                    commandName = cmd
-                }
-                
-                os_log("Dispatching command: %{public}@ (id: %{public}@)", log: logger, type: .info, commandName, reqId)
-                handleCommand(id: reqId, command: commandName, params: params)
-            } else {
-                os_log("Request missing method", log: logger, type: .error)
+        // RELAXED DISPATCH (Build #113 v3)
+        // Support JSON-RPC 'method', or Gateway 'event', or just 'command'
+        let method = json["method"] as? String
+        let event = json["event"] as? String
+        let command = json["command"] as? String
+        
+        if let commandName = method ?? event ?? command {
+            // Support 'params' or 'payload'
+            let params = json["params"] as? [String: Any] ?? json["payload"] as? [String: Any] ?? [:]
+            
+            // Support both "node.invoke" wrapper and direct method calls
+            var effectiveCommand = commandName
+            if commandName == "node.invoke", let cmd = params["command"] as? String {
+                effectiveCommand = cmd
             }
+            
+            os_log("Dispatching command (relaxed): %{public}@ (id: %{public}@)", log: logger, type: .info, effectiveCommand, idStr)
+            handleCommand(id: idStr, command: effectiveCommand, params: params)
             return
         }
         
-        os_log("Unhandled message type: %{public}@, id: %{public}@", log: logger, type: .debug, type ?? "none", idStr ?? "none")
+        os_log("Unhandled message type: %{public}@, id: %{public}@", log: logger, type: .debug, type ?? "none", idStr)
     }
     
     private func performHandshake(nonce: String) {
@@ -473,7 +475,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     private func handleCommand(id: String, command: String, params: [String: Any]) {
         os_log("Handling command: %{public}@ (id: %{public}@)", log: logger, type: .info, command, id)
         
-        // Build #113: Debug command dispatch
+        // Build #113 v3: Debug command dispatch
         DispatchQueue.main.async {
             self.rawLog += "\n[DEBUG] Received command: \(command)"
         }
