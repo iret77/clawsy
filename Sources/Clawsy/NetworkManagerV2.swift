@@ -57,18 +57,6 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         setupNotifications()
     }
     
-    private func dumpUserDefaults() {
-        let keys = ["serverHost", "serverPort", "serverToken", "sshUser", "useSshFallback"]
-        var dump = "\n[DEBUG] UserDefaults Dump:"
-        for key in keys {
-            let val = UserDefaults.standard.object(forKey: key) ?? "nil"
-            dump += "\n  \(key): \(val)"
-        }
-        DispatchQueue.main.async {
-            self.rawLog += dump
-        }
-    }
-    
     private func setupNotifications() {
         let center = UNUserNotificationCenter.current()
         center.delegate = self
@@ -131,7 +119,6 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     func connect() {
         // Refresh values from disk before connecting
         UserDefaults.standard.synchronize()
-        dumpUserDefaults()
         
         let host = serverHost
         let token = serverToken
@@ -231,13 +218,9 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
                 self.rawLog += "\n[WSS] Possible SSL/Handshake error detected."
             }
             
-            let fallbackEnabled = self.useSshFallback
-            let alreadyInTunnel = self.isUsingSshTunnel
-            
             self.rawLog += "\n[WSS] Connection Error: \(errDesc)"
-            self.rawLog += "\n[WSS] State: useSshFallback=\(fallbackEnabled), isUsingSshTunnel=\(alreadyInTunnel)"
             
-            if fallbackEnabled && !alreadyInTunnel {
+            if self.useSshFallback && !self.isUsingSshTunnel {
                 self.startSshTunnel()
             } else {
                 // If we are already in a tunnel and it fails, or no fallback
@@ -249,8 +232,6 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     private func startSshTunnel() {
         // Ensure we are on main thread for rawLog updates
         DispatchQueue.main.async {
-            self.rawLog += "\n[SSH] Entering startSshTunnel..."
-            
             let host = self.serverHost
             let user = self.sshUser
             let port = self.serverPort
@@ -268,7 +249,6 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             os_log("Initiating SSH Tunnel Fallback for %{public}@...", log: self.logger, type: .info, host)
             self.connectionStatus = "STATUS_STARTING_SSH"
             self.rawLog += "\n[SSH] Starting SSH process..."
-            self.rawLog += "\n[SSH] Command: ssh -NT -L \(tunnelSpec) \(remoteTarget)"
             
             // Kill existing tunnel if any
             self.sshProcess?.terminate()
@@ -291,9 +271,6 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             do {
                 try process.run()
                 self.sshProcess = process
-                let pid = process.processIdentifier
-                
-                self.rawLog += "\n[SSH] SSH process started (PID: \(pid))"
                 
                 // Give SSH a moment to establish the encrypted link
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {

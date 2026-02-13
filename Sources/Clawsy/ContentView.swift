@@ -286,10 +286,16 @@ struct DebugLogView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(LocalizedStringKey("DEBUG_LOG_TITLE"))
-                    .font(.headline)
+                    .font(.system(size: 15, weight: .bold))
                 Spacer()
-                Button(LocalizedStringKey("DONE")) { isPresented = false }
+                Button(action: { isPresented = false }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 16))
+                }
+                .buttonStyle(.plain)
             }
+            .padding(.top, 2)
             
             ScrollView {
                 if logText.isEmpty {
