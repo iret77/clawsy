@@ -60,90 +60,80 @@ struct ContentView: View {
             // --- Main Actions List ---
             VStack(spacing: 2) {
                 // Screenshot Group
-                HStack(spacing: 0) {
-                    Menu {
-                        Button(action: {
-                            self.isScreenshotInteractive = false
-                            self.requestScreenshot()
-                        }) {
-                            Label("FULL_SCREEN", systemImage: "rectangle.dashed")
-                        }
-                        Button(action: {
-                            self.isScreenshotInteractive = true
-                            self.requestScreenshot()
-                        }) {
-                            Label("INTERACTIVE_AREA", systemImage: "plus.viewfinder")
-                        }
-                    } label: {
-                        MenuItemRow(icon: "camera", title: "SCREENSHOT", isEnabled: network.isConnected, hasChevron: true)
+                Menu {
+                    Button(action: {
+                        self.isScreenshotInteractive = false
+                        self.requestScreenshot()
+                    }) {
+                        Label("FULL_SCREEN", systemImage: "rectangle.dashed")
                     }
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
-                    .frame(maxWidth: .infinity)
+                    Button(action: {
+                        self.isScreenshotInteractive = true
+                        self.requestScreenshot()
+                    }) {
+                        Label("INTERACTIVE_AREA", systemImage: "plus.viewfinder")
+                    }
+                } label: {
+                    MenuItemRow(icon: "camera", title: "SCREENSHOT", isEnabled: network.isConnected, hasChevron: true, isMenu: true)
                 }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity)
 
                 // Clipboard
-                HStack(spacing: 0) {
-                    Button(action: handleManualClipboardSend) {
-                        MenuItemRow(icon: "doc.on.clipboard", title: "PUSH_CLIPBOARD", subtitle: "COPY_TO_AGENT", isEnabled: network.isConnected)
-                    }
-                    .buttonStyle(.plain)
-                    .frame(maxWidth: .infinity)
+                Button(action: handleManualClipboardSend) {
+                    MenuItemRow(icon: "doc.on.clipboard", title: "PUSH_CLIPBOARD", subtitle: "COPY_TO_AGENT", isEnabled: network.isConnected)
                 }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
                 
                 // File Sync (USP)
-                HStack(spacing: 0) {
-                    Button(action: { /* Placeholder for manual sync trigger */ }) {
-                        MenuItemRow(icon: "folder.badge.gearshape", title: "FILE_SYNC", subtitle: "MANAGED_FOLDER", isEnabled: network.isConnected)
-                    }
-                    .buttonStyle(.plain)
-                    .frame(maxWidth: .infinity)
+                Button(action: { /* Placeholder for manual sync trigger */ }) {
+                    MenuItemRow(icon: "folder.badge.gearshape", title: "FILE_SYNC", subtitle: "MANAGED_FOLDER", isEnabled: network.isConnected)
                 }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
 
                 // Camera Group
-                HStack(spacing: 0) {
-                    Menu {
-                        Button(action: {
-                            network.sendEvent(kind: "camera.trigger", payload: ["action": "snap"])
-                        }) {
-                            Label("TAKE_PHOTO", systemImage: "camera.fill")
-                        }
-                        Button(action: {
-                            network.sendEvent(kind: "camera.trigger", payload: ["action": "list"])
-                        }) {
-                            Label("LIST_CAMERAS", systemImage: "list.bullet")
-                        }
-                    } label: {
-                        MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected, hasChevron: true)
+                Menu {
+                    Button(action: {
+                        network.sendEvent(kind: "camera.trigger", payload: ["action": "snap"])
+                    }) {
+                        Label("TAKE_PHOTO", systemImage: "camera.fill")
                     }
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
-                    .frame(maxWidth: .infinity)
+                    Button(action: {
+                        network.sendEvent(kind: "camera.trigger", payload: ["action": "list"])
+                    }) {
+                        Label("LIST_CAMERAS", systemImage: "list.bullet")
+                    }
+                } label: {
+                    MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected, hasChevron: true, isMenu: true)
                 }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity)
                 
                 Divider().padding(.vertical, 4).opacity(0.5)
                 
                 // Connection Control
-                HStack(spacing: 0) {
-                    Button(action: toggleConnection) {
-                        MenuItemRow(
-                            icon: network.isConnected ? "power" : "bolt.slash.fill",
-                            title: network.isConnected ? "DISCONNECT" : "CONNECT",
-                            color: network.isConnected ? .red : .blue
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .frame(maxWidth: .infinity)
+                Button(action: toggleConnection) {
+                    MenuItemRow(
+                        icon: network.isConnected ? "power" : "bolt.slash.fill",
+                        title: network.isConnected ? "DISCONNECT" : "CONNECT",
+                        color: network.isConnected ? .red : .blue
+                    )
                 }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
 
                 // Settings
-                HStack(spacing: 0) {
-                    Button(action: { showingSettings.toggle() }) {
-                        MenuItemRow(icon: "gearshape.fill", title: "SETTINGS", isEnabled: true, shortcut: "⌘,")
-                    }
-                    .buttonStyle(.plain)
-                    .frame(maxWidth: .infinity)
+                Button(action: { showingSettings.toggle() }) {
+                    MenuItemRow(icon: "gearshape.fill", title: "SETTINGS", isEnabled: true, shortcut: "⌘,")
                 }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
                 .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
                     SettingsView(
                         serverHost: $serverHost,
@@ -156,13 +146,11 @@ struct ContentView: View {
                 }
                 
                 // Debug Log
-                HStack(spacing: 0) {
-                    Button(action: { showingLog.toggle() }) {
-                        MenuItemRow(icon: "terminal.fill", title: "DEBUG_LOG", isEnabled: true)
-                    }
-                    .buttonStyle(.plain)
-                    .frame(maxWidth: .infinity)
+                Button(action: { showingLog.toggle() }) {
+                    MenuItemRow(icon: "terminal.fill", title: "DEBUG_LOG", isEnabled: true)
                 }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
                 .popover(isPresented: $showingLog, arrowEdge: .trailing) {
                     DebugLogView(logText: network.rawLog, isPresented: $showingLog)
                         .frame(width: 400, height: 300)
@@ -171,13 +159,11 @@ struct ContentView: View {
                 Divider().padding(.vertical, 4).opacity(0.5)
                 
                 // Quit
-                HStack(spacing: 0) {
-                    Button(action: { NSApplication.shared.terminate(nil) }) {
-                        MenuItemRow(icon: "xmark.circle.fill", title: "QUIT", isEnabled: true, shortcut: "⌘Q")
-                    }
-                    .buttonStyle(.plain)
-                    .frame(maxWidth: .infinity)
+                Button(action: { NSApplication.shared.terminate(nil) }) {
+                    MenuItemRow(icon: "xmark.circle.fill", title: "QUIT", isEnabled: true, shortcut: "⌘Q")
                 }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
             }
             .padding(6)
         }

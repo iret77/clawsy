@@ -27,6 +27,7 @@ struct MenuItemRow: View {
     var isEnabled: Bool = true
     var shortcut: String? = nil
     var hasChevron: Bool = false
+    var isMenu: Bool = false
     
     @State private var isHovering = false
     
@@ -64,14 +65,14 @@ struct MenuItemRow: View {
                     .foregroundColor(.secondary.opacity(0.4))
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, isMenu ? 0 : 12)
         .padding(.vertical, 6)
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
-        .background(isHovering && isEnabled ? Color.primary.opacity(0.1) : Color.clear)
+        .background(isHovering && isEnabled && !isMenu ? Color.primary.opacity(0.1) : Color.clear)
         .cornerRadius(4)
         .onHover { hover in
-            if isEnabled {
+            if isEnabled && !isMenu {
                 withAnimation(.easeInOut(duration: 0.05)) {
                     isHovering = hover
                 }
