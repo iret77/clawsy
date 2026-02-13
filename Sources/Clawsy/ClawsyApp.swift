@@ -86,11 +86,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         showFloatingWindow(view: view, title: "Clipboard Sync", autosaveName: "ai.clawsy.ClipboardWindow")
     }
     
-    func showFileSyncRequest(filename: String, operation: String, onConfirm: @escaping () -> Void, onCancel: @escaping () -> Void) {
+    func showFileSyncRequest(filename: String, operation: String, onConfirm: @escaping (TimeInterval?) -> Void, onCancel: @escaping () -> Void) {
         let view = FileSyncRequestWindow(
             filename: filename,
             operation: operation,
-            onConfirm: { onConfirm(); self.alertWindow?.close() },
+            onConfirm: { duration in onConfirm(duration); self.alertWindow?.close() },
             onCancel: { onCancel(); self.alertWindow?.close() }
         )
         showFloatingWindow(view: view, title: "File Sync", autosaveName: "ai.clawsy.FileWindow")

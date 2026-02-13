@@ -29,7 +29,10 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     var onScreenshotRequested: ((Bool, String) -> Void)?
     var onClipboardReadRequested: ((String) -> Void)?
     var onClipboardWriteRequested: ((String, String) -> Void)?
-    var onFileSyncRequested: ((String, String, @escaping () -> Void, @escaping () -> Void) -> Void)?
+    var onFileSyncRequested: ((String, String, @escaping (TimeInterval?) -> Void, @escaping () -> Void) -> Void)?
+    
+    // Permission Tracking
+    private var filePermissionExpiry: Date?
     
     // Gateway Configuration
     @AppStorage("serverUrl") private var serverUrl = "wss://agenthost.tailb6e490.ts.net"
@@ -277,15 +280,26 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             }
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
             
-            onFileSyncRequested?(name, "Download", {
+            let executeGet = {
                 if let b64 = ClawsyFileManager.readFile(at: fullPath) {
                     self.sendResponse(id: id, result: ["content": b64, "name": name])
                 } else {
                     self.sendError(id: id, code: -32000, message: "Failed to read file")
                 }
-            }, {
-                self.sendError(id: id, code: -1, message: "User denied file access")
-            })
+            }
+            
+            if let expiry = filePermissionExpiry, expiry > Date() {
+                executeGet()
+            } else {
+                onFileSyncRequested?(name, "Download", { duration in
+                    if let duration = duration {
+                        self.filePermissionExpiry = Date().addingTimeInterval(duration)
+                    }
+                    executeGet()
+                }, {
+                    self.sendError(id: id, code: -1, message: "User denied file access")
+                })
+            }
             
         case "file.set":
             guard let name = params["name"] as? String, let content = params["content"] as? String else {
@@ -294,15 +308,26 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             }
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
             
-            onFileSyncRequested?(name, "Upload", {
+            let executeSet = {
                 if ClawsyFileManager.writeFile(at: fullPath, base64Content: content) {
                     self.sendResponse(id: id, result: ["status": "ok", "name": name])
                 } else {
                     self.sendError(id: id, code: -32000, message: "Failed to write file")
                 }
-            }, {
-                self.sendError(id: id, code: -1, message: "User denied file write")
-            })
+            }
+            
+            if let expiry = filePermissionExpiry, expiry > Date() {
+                executeSet()
+            } else {
+                onFileSyncRequested?(name, "Upload", { duration in
+                    if let duration = duration {
+                        self.filePermissionExpiry = Date().addingTimeInterval(duration)
+                    }
+                    executeSet()
+                }, {
+                    self.sendError(id: id, code: -1, message: "User denied file write")
+                })
+            }
             
         default:
             sendError(id: id, code: -32601, message: "Method not found")

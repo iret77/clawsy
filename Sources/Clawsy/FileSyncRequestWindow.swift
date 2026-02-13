@@ -4,7 +4,7 @@ import AppKit
 struct FileSyncRequestWindow: View {
     let filename: String
     let operation: String // "Upload" or "Download"
-    let onConfirm: () -> Void
+    let onConfirm: (TimeInterval?) -> Void // Optional duration in seconds
     let onCancel: () -> Void
     
     var body: some View {
@@ -46,7 +46,6 @@ struct FileSyncRequestWindow: View {
                 Divider().opacity(0.3)
                 
                 HStack(spacing: 12) {
-                    Spacer()
                     Button("Deny") { onCancel() }
                         .buttonStyle(.plain)
                         .padding(.horizontal, 16)
@@ -54,7 +53,27 @@ struct FileSyncRequestWindow: View {
                         .background(Color.black.opacity(0.1))
                         .cornerRadius(6)
                     
-                    Button("Allow \(operation)") { onConfirm() }
+                    Spacer()
+                    
+                    Menu("Allow...") {
+                        Button("Just this once") { onConfirm(nil) }
+                        Button("For 1 hour") { onConfirm(3600) }
+                        Button("For the rest of the day") {
+                            let now = Date()
+                            let calendar = Calendar.current
+                            if let endOfDay = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: now) {
+                                let seconds = endOfDay.timeIntervalSince(now)
+                                onConfirm(seconds)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(6)
+                    
+                    Button("Allow \(operation)") { onConfirm(nil) }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 6)
                         .background(Color.blue)
@@ -64,6 +83,6 @@ struct FileSyncRequestWindow: View {
                 .padding(20)
             }
         }
-        .frame(width: 400, height: 280)
+        .frame(width: 440, height: 280)
     }
 }
