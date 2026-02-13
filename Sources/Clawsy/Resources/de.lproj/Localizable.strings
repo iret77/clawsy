@@ -1,0 +1,15 @@
+"FILE_SYNC_REQUEST" = "Dateisynchronisierung";
+"AGENT_WANTS_TO" = "Der Agent möchte eine Datei %@.";
+"LOCATION" = "Ort: %@";
+"DENY" = "Ablehnen";
+"ALLOW" = "%@ erlauben";
+"ALLOW_ONCE" = "Nur dieses Mal";
+"ALLOW_1H" = "Für 1 Stunde";
+"ALLOW_DAY" = "Für den Rest des Tages";
+"NOTIFICATION_TITLE" = "Clawsy Dateisync";
+"NOTIFICATION_BODY_DOWNLOADING" = "Lade herunter: %@";
+"NOTIFICATION_BODY_UPLOADING" = "Lade hoch: %@";
+"REVOKE_PERMISSION" = "Zugriff widerrufen";
+"CLIPBOARD_SYNC" = "Zwischenablage-Sync";
+"CLIPBOARD_WANTS_WRITE" = "Der Agent möchte in deine Zwischenablage schreiben:";
+"CLIPBOARD_WANTS_READ" = "Der Agent möchte deine Zwischenablage lesen.";

@@ -54,7 +54,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         center.delegate = self
         
         let revokeAction = UNNotificationAction(identifier: "REVOKE_PERMISSION",
-                                              title: "Revoke Permissions",
+                                              title: NSLocalizedString("REVOKE_PERMISSION", comment: ""),
                                               options: [.destructive])
         
         let category = UNNotificationCategory(identifier: "FILE_SYNC",
@@ -330,8 +330,8 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
             
             let executeGet = {
-                self.notifyAction(title: "Clawsy File Sync", 
-                                body: "Downloading: \(name)", 
+                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", comment: ""), 
+                                body: String(format: NSLocalizedString("NOTIFICATION_BODY_DOWNLOADING", comment: ""), name), 
                                 isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
                 if let b64 = ClawsyFileManager.readFile(at: fullPath) {
                     self.sendResponse(id: id, result: ["content": b64, "name": name])
@@ -361,8 +361,8 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
             
             let executeSet = {
-                self.notifyAction(title: "Clawsy File Sync", 
-                                body: "Uploading: \(name)", 
+                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", comment: ""), 
+                                body: String(format: NSLocalizedString("NOTIFICATION_BODY_UPLOADING", comment: ""), name), 
                                 isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
                 if ClawsyFileManager.writeFile(at: fullPath, base64Content: content) {
                     self.sendResponse(id: id, result: ["status": "ok", "name": name])

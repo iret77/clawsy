@@ -19,7 +19,7 @@ struct FileSyncRequestWindow: View {
                         .foregroundColor(.blue)
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("File Sync Request")
+                        Text(LocalizedStringKey("FILE_SYNC_REQUEST"))
                             .font(.system(size: 15, weight: .semibold))
                         Text("\(operation): \(filename)")
                             .font(.system(size: 11))
@@ -34,9 +34,9 @@ struct FileSyncRequestWindow: View {
                 Divider().opacity(0.3)
                 
                 VStack(spacing: 12) {
-                    Text("The agent wants to \(operation.lowercased()) a file.")
+                    Text(String(format: NSLocalizedString("AGENT_WANTS_TO", comment: ""), operation.lowercased()))
                         .font(.system(size: 13))
-                    Text("Location: ~/Documents/Clawsy/\(filename)")
+                    Text(String(format: NSLocalizedString("LOCATION", comment: ""), "~/Documents/Clawsy/\(filename)"))
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundColor(.secondary)
                 }
@@ -46,7 +46,7 @@ struct FileSyncRequestWindow: View {
                 Divider().opacity(0.3)
                 
                 HStack(spacing: 12) {
-                    Button("Deny") { onCancel() }
+                    Button(LocalizedStringKey("DENY")) { onCancel() }
                         .buttonStyle(.plain)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 6)
@@ -56,9 +56,9 @@ struct FileSyncRequestWindow: View {
                     Spacer()
                     
                     Menu("Allow...") {
-                        Button("Just this once") { onConfirm(nil) }
-                        Button("For 1 hour") { onConfirm(3600) }
-                        Button("For the rest of the day") {
+                        Button(LocalizedStringKey("ALLOW_ONCE")) { onConfirm(nil) }
+                        Button(LocalizedStringKey("ALLOW_1H")) { onConfirm(3600) }
+                        Button(LocalizedStringKey("ALLOW_DAY")) {
                             let now = Date()
                             let calendar = Calendar.current
                             if let endOfDay = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: now) {
@@ -73,7 +73,7 @@ struct FileSyncRequestWindow: View {
                     .foregroundColor(.white)
                     .cornerRadius(6)
                     
-                    Button("Allow \(operation)") { onConfirm(nil) }
+                    Button(String(format: NSLocalizedString("ALLOW", comment: ""), operation)) { onConfirm(nil) }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 6)
                         .background(Color.blue)

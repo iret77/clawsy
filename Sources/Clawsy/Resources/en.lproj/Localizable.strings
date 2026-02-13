@@ -1,0 +1,15 @@
+"FILE_SYNC_REQUEST" = "File Sync Request";
+"AGENT_WANTS_TO" = "The agent wants to %@ a file.";
+"LOCATION" = "Location: %@";
+"DENY" = "Deny";
+"ALLOW" = "Allow %@";
+"ALLOW_ONCE" = "Just this once";
+"ALLOW_1H" = "For 1 hour";
+"ALLOW_DAY" = "For the rest of the day";
+"NOTIFICATION_TITLE" = "Clawsy File Sync";
+"NOTIFICATION_BODY_DOWNLOADING" = "Downloading: %@";
+"NOTIFICATION_BODY_UPLOADING" = "Uploading: %@";
+"REVOKE_PERMISSION" = "Revoke Permissions";
+"CLIPBOARD_SYNC" = "Clipboard Sync";
+"CLIPBOARD_WANTS_WRITE" = "The agent wants to write to your clipboard:";
+"CLIPBOARD_WANTS_READ" = "The agent wants to read your clipboard.";
