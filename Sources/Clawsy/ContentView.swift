@@ -310,6 +310,8 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.plain)
             }
+            .padding(.top, 2) // Positioning slightly higher as requested
+
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
