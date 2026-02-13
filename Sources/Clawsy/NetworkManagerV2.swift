@@ -479,7 +479,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         let tsMs = Int64(Date().timeIntervalSince1970 * 1000)
         let deviceId = self.deviceId
         
-        let components = ["v2", deviceId, "openclaw-macos", "openclaw-macos", "node", "", String(tsMs), serverToken, nonce]
+        let components = ["v2", deviceId, "openclaw-macos", "node", "node", "", String(tsMs), serverToken, nonce]
         let payloadString = components.joined(separator: "|")
         
         guard let payloadData = payloadString.data(using: .utf8) else { return }
