@@ -85,7 +85,7 @@ struct ContentView: View {
 
                 // Settings
                 Button(action: { showingSettings.toggle() }) {
-                    MenuItemRow(icon: "gearshape.fill", title: "Settings...", shortcut: "⌘,", isEnabled: true)
+                    MenuItemRow(icon: "gearshape.fill", title: "Settings...", isEnabled: true, shortcut: "⌘,")
                 }
                 .buttonStyle(.plain)
                 .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
@@ -107,7 +107,7 @@ struct ContentView: View {
                 
                 // Quit
                 Button(action: { NSApplication.shared.terminate(nil) }) {
-                    MenuItemRow(icon: "xmark.circle.fill", title: "Quit", shortcut: "⌘Q", isEnabled: true)
+                    MenuItemRow(icon: "xmark.circle.fill", title: "Quit", isEnabled: true, shortcut: "⌘Q")
                 }
                 .buttonStyle(.plain)
             }
@@ -286,7 +286,7 @@ struct DebugLogView: View {
                     .textSelection(.enabled)
             }
             .padding(8)
-            .background(Color(NSColor.textBackgroundColor))
+            .background(VisualEffectView(material: .popover, blendingMode: .withinWindow))
             .cornerRadius(4)
             
             HStack {
@@ -345,5 +345,6 @@ struct SettingsView: View {
             }
         }
         .padding(20)
+        .background(VisualEffectView(material: .popover, blendingMode: .withinWindow))
     }
 }
