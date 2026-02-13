@@ -24,17 +24,18 @@ jobs:
         echo "📂 Current Directory Layout:"
         ls -R
         
-        # Prepare Output Directory for App Bundle (needed for iconutil output)
-        mkdir -p Clawsy.app/Contents/MacOS
-        mkdir -p Clawsy.app/Contents/Resources
+        # Ensure Assets exist
+        mkdir -p Sources/Clawsy/Assets.xcassets/AppIcon.appiconset
         
         chmod +x scripts/generate_icons.sh
         ./scripts/generate_icons.sh
         
         # iconutil requires folder to end in .iconset
-        # We copy the generated .appiconset content to a temporary .iconset folder
         mkdir -p TempIcon.iconset
         cp Sources/Clawsy/Assets.xcassets/AppIcon.appiconset/*.png TempIcon.iconset/
+        
+        # Prepare Output Directory for App Bundle
+        mkdir -p Clawsy.app/Contents/Resources
         
         # Create ICNS
         iconutil -c icns TempIcon.iconset -o Clawsy.app/Contents/Resources/AppIcon.icns
