@@ -373,9 +373,21 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             os_log("Failed to parse inbound JSON", log: logger, type: .error)
             return
         }
+
+        // RELAXED DISPATCH (Build #113 v3)
+        // Support JSON-RPC 'method', or Gateway 'event', or just 'command'
+        let method = json["method"] as? String
+        let event = json["event"] as? String
+        let command = json["command"] as? String
+        let commandName = method ?? event ?? command
+
+        // Build #115: Explicitly ignore 'tick' and 'health' events from generating traffic
+        if let name = commandName, (name == "tick" || name == "health") {
+            return
+        }
         
         // Handle Handshake Challenge (no ID)
-        if let event = json["event"] as? String, event == "connect.challenge" {
+        if event == "connect.challenge" {
             if let payload = json["payload"] as? [String: Any], let nonce = payload["nonce"] as? String {
                 performHandshake(nonce: nonce)
             }
@@ -411,19 +423,13 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             return
         }
         
-        // RELAXED DISPATCH (Build #113 v3)
-        // Support JSON-RPC 'method', or Gateway 'event', or just 'command'
-        let method = json["method"] as? String
-        let event = json["event"] as? String
-        let command = json["command"] as? String
-        
-        if let commandName = method ?? event ?? command {
+        if let name = commandName {
             // Support 'params' or 'payload'
             let params = json["params"] as? [String: Any] ?? json["payload"] as? [String: Any] ?? [:]
             
             // Support both "node.invoke" wrapper and direct method calls
-            var effectiveCommand = commandName
-            if commandName == "node.invoke", let cmd = params["command"] as? String {
+            var effectiveCommand = name
+            if name == "node.invoke", let cmd = params["command"] as? String {
                 effectiveCommand = cmd
             }
             
@@ -457,7 +463,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             "method": "connect",
             "params": [
                 "minProtocol": 3, "maxProtocol": 3,
-                "client": ["id": "openclaw-macos", "version": "0.2.0", "platform": "macos", "mode": "node"],
+                "client": ["id": "openclaw-macos", "version": "0.2.1", "platform": "macos", "mode": "node"],
                 "role": "node", "caps": ["clipboard", "screen", "camera", "file"], 
                 "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set"],
                 "permissions": ["clipboard.read": true, "clipboard.write": true],
@@ -649,15 +655,18 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     // MARK: - Response Helpers
     
     func sendResponse(id: String, result: Any) {
+        guard !id.isEmpty else { return } // Build #115: ONLY respond if ID is present
         send(json: ["type": "res", "id": id, "result": result])
     }
     
     func sendAck(id: String) {
+        guard !id.isEmpty else { return } // Build #115: ONLY respond if ID is present
         // Build #114: Immediate acknowledgment to prevent Gateway timeouts
         send(json: ["type": "ack", "id": id, "status": "processing"])
     }
     
     func sendError(id: String, code: Int, message: String) {
+        guard !id.isEmpty else { return } // Build #115: ONLY respond if ID is present
         send(json: ["type": "res", "id": id, "error": ["code": code, "message": message]])
     }
     
