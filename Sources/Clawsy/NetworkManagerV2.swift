@@ -171,7 +171,8 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         let remoteTarget = "\(sshUser)@\(serverHost)"
         let tunnelSpec = "18790:127.0.0.1:\(serverPort)"
         
-        process.arguments = ["-NT", "-L", tunnelSpec, remoteTarget, "-o", "ConnectTimeout=5"]
+        // Use BatchMode to prevent hanging on password prompts
+        process.arguments = ["-NT", "-L", tunnelSpec, remoteTarget, "-o", "ConnectTimeout=5", "-o", "BatchMode=yes"]
         
         do {
             try process.run()
