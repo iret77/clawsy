@@ -177,10 +177,14 @@ struct ContentView: View {
     
     func takeScreenshot() {
         if let b64 = ScreenshotManager.takeScreenshot(interactive: isScreenshotInteractive) {
-            network.sendScreenshot(b64: b64, id: pendingRequestId)
+            if let rid = pendingRequestId {
+                network.sendResponse(id: rid, result: ["format": "png", "base64": b64])
+            } else {
+                network.sendEvent(kind: "screenshot", payload: ["format": "png", "base64": b64])
+            }
         } else {
             if let rid = pendingRequestId {
-                network.sendError(id: rid, code: -1, message: "Screenshot failed or cancelled")
+                network.sendError(id: rid, code: -1, message: "Screenshot failed")
             }
         }
     }
@@ -215,52 +219,6 @@ struct ContentView: View {
                 }, onCancel: {
                     network.sendError(id: requestId, code: -1, message: "User denied clipboard write")
                 })
-            }
-        }
-    }
-}
-
-// --- Components ---
-
-struct MenuItemRow: View {
-    var icon: String
-    var title: String
-    var subtitle: String? = nil
-    var color: Color = .primary
-    var isEnabled: Bool = true
-    
-    @State private var isHovering = false
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 14))
-                .foregroundColor(isEnabled ? color : color.opacity(0.3))
-                .frame(width: 16)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(isEnabled ? .primary : .primary.opacity(0.4))
-                if let subtitle = subtitle {
-                    Text(subtitle)
-                        .font(.system(size: 10))
-                        .foregroundColor(isEnabled ? .secondary : .secondary.opacity(0.3))
-                }
-            }
-            
-            Spacer()
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .contentShape(Rectangle())
-        .background(isHovering && isEnabled ? Color.primary.opacity(0.08) : Color.clear)
-        .cornerRadius(6)
-        .onHover { hover in
-            if isEnabled {
-                withAnimation(.easeInOut(duration: 0.1)) {
-                    isHovering = hover
-                }
             }
         }
     }
