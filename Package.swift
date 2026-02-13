@@ -19,7 +19,8 @@ let package = Package(
             dependencies: ["Starscream"],
             path: "Sources/Clawsy",
             resources: [
-                .process("Assets.xcassets")
+                .process("Assets.xcassets"),
+                .process("Resources")
             ]
         )
     ]
