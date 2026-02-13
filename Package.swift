@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "Clawsy",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v13) // macOS Ventura or later
     ],
@@ -20,8 +21,7 @@ let package = Package(
             path: "Sources/Clawsy",
             resources: [
                 .process("Assets.xcassets"),
-                .process("Resources"),
-                .copy("Assets/Icon.png")
+                .process("Resources")
             ]
         )
     ]
