@@ -1,6 +1,7 @@
 # Sprint Status: Clawsy App (2026-02-13)
 
 ## ✅ Completed
+- **Finder Integration**: Added a "Reveal in Finder" button to the Settings menu, allowing users to quickly open the shared folder via `NSWorkspace`. [Build #111]
 - **Automated Folder Monitoring**: Implemented `FileWatcher` using `DispatchSourceFileSystemObject` to monitor the shared folder for changes. The app now automatically triggers a sync event (`file.sync_triggered`) whenever a file is added/modified or upon successful connection, removing the need for a manual 'File Sync' button. [Build #111]
 - **Handshake V2**: Fully implemented and verified (hello-ok payload matching).
 - **Branding/ID**: Aligned internal client ID with `openclaw-macos` for Gateway compatibility.

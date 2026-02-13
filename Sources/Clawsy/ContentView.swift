@@ -406,6 +406,11 @@ struct SettingsView: View {
     @AppStorage("useSshFallback") private var useSshFallback = true
     @AppStorage("sharedFolderPath") private var sharedFolderPath = "~/Documents/Clawsy"
     
+    func openInFinder() {
+        let expandedPath = sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
+        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: expandedPath)
+    }
+    
     func selectFolder() {
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
@@ -501,6 +506,12 @@ struct SettingsView: View {
                             TextField(LocalizedStringKey("PATH"), text: $sharedFolderPath)
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(.body, design: .monospaced))
+                            
+                            Button(action: openInFinder) {
+                                Image(systemName: "arrow.right.circle.fill")
+                                    .foregroundColor(.blue)
+                            }
+                            .buttonStyle(.plain)
                             
                             Button(action: selectFolder) {
                                 Image(systemName: "folder.fill")
