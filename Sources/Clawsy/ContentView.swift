@@ -282,7 +282,7 @@ struct ContentView: View {
     
     func triggerFileSync() {
         if !sharedFolderPath.isEmpty {
-            network.rawLog += "\n[FILE] Sync triggered (Watcher or Connection)..."
+            network.rawLog += "\n[FILE] Sync Triggered"
             network.sendEvent(kind: "file.sync_triggered", payload: ["path": sharedFolderPath])
         }
     }

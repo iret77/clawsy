@@ -142,7 +142,6 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         DispatchQueue.main.async {
             self.isConnected = false
             self.connectionStatus = "STATUS_CONNECTING"
-            self.rawLog += "\n[WSS] Connection Attempt #\(self.connectionAttemptCount) (Tunnel: \(self.isUsingSshTunnel))"
         }
         
         // Ensure old socket is cleaned up before creating a new one
@@ -155,9 +154,6 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             // Force ws for local tunnel
             targetUrlStr = "ws://127.0.0.1:18790"
             os_log("CONNECT: Using SSH Tunnel target: %{public}@", log: logger, type: .info, targetUrlStr)
-            DispatchQueue.main.async {
-                self.rawLog += "\n[WSS] Switching to Tunnel URL: \(targetUrlStr)"
-            }
         } else {
             let scheme = (host.contains("localhost") || host.contains("127.0.0.1")) ? "ws" : "wss"
             targetUrlStr = "\(scheme)://\(host):\(serverPort)"
@@ -177,9 +173,6 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
 
     private func attemptConnection(to url: URL) {
         os_log("Attempting connection to %{public}@", log: logger, type: .info, url.absoluteString)
-        DispatchQueue.main.async {
-            self.rawLog += "\n[WSS] Connecting to \(url.absoluteString)..."
-        }
         
         // Start Watchdog (Manual 5s Timer)
         connectionWatchdog?.invalidate()
@@ -216,10 +209,10 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             
             // Check for SSL/Handshake specific hints
             if errDesc.lowercased().contains("ssl") || errDesc.lowercased().contains("certificate") || errDesc.lowercased().contains("handshake") {
-                self.rawLog += "\n[WSS] Possible SSL/Handshake error detected."
+                self.rawLog += "\n[WSS] SSL Error: \(errDesc)"
+            } else {
+                self.rawLog += "\n[WSS] Connection Error: \(errDesc)"
             }
-            
-            self.rawLog += "\n[WSS] Connection Error: \(errDesc)"
             
             if self.useSshFallback && !self.isUsingSshTunnel {
                 self.startSshTunnel()
@@ -249,7 +242,6 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             
             os_log("Initiating SSH Tunnel Fallback for %{public}@...", log: self.logger, type: .info, host)
             self.connectionStatus = "STATUS_STARTING_SSH"
-            self.rawLog += "\n[SSH] Starting SSH process..."
             
             // Kill existing tunnel if any
             self.sshProcess?.terminate()
@@ -286,20 +278,20 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
                     if let proc = self.sshProcess, proc.isRunning {
                         os_log("SSH Tunnel established successfully.", log: self.logger, type: .info)
                         self.isUsingSshTunnel = true
-                        self.rawLog += "\n[SSH] Tunnel established."
+                        self.rawLog += "\n[SSH] Tunnel Active"
                         self.connect() // This will now use Attempt 2 with the tunnel URL
                     } else {
                         os_log("SSH Tunnel failed to stay alive.", log: self.logger, type: .error)
                         self.isUsingSshTunnel = false
                         self.connectionStatus = "STATUS_SSH_FAILED"
-                        self.rawLog += "\n[SSH] Error: Tunnel failed to stay alive."
+                        self.rawLog += "\n[SSH] Error: Tunnel Failed"
                     }
                 }
             } catch {
                 os_log("Failed to launch SSH process: %{public}@", log: self.logger, type: .error, error.localizedDescription)
                 self.connectionStatus = "STATUS_SSH_FAILED"
                 self.isUsingSshTunnel = false
-                self.rawLog += "\n[SSH] Launch Error: \(error.localizedDescription)"
+                self.rawLog += "\n[SSH] Error: \(error.localizedDescription)"
             }
         }
     }
@@ -328,7 +320,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         DispatchQueue.main.async {
             self.isConnected = false
             self.connectionStatus = "STATUS_DISCONNECTED"
-            self.rawLog += "\n[WSS] Disconnected and Tunnel closed."
+            self.rawLog += "\n[WSS] Disconnected"
         }
     }
     
@@ -345,11 +337,13 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
                 self.isConnected = true
                 self.connectionStatus = "STATUS_CONNECTED"
                 self.connectionAttemptCount = 0
+                self.rawLog += "\n[WSS] Connected"
                 os_log("Websocket is connected", log: self.logger, type: .info)
                 
             case .disconnected(let reason, let code):
                 self.isConnected = false
                 self.connectionStatus = "STATUS_DISCONNECTED"
+                self.rawLog += "\n[WSS] Disconnected"
                 os_log("Websocket is disconnected: %{public}@ code: %d", log: self.logger, type: .info, reason, code)
                 
             case .text(let string):
@@ -369,10 +363,6 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     
     private func handleMessage(_ text: String) {
         os_log("RAW INBOUND: %{public}@", log: logger, type: .default, text)
-        
-        DispatchQueue.main.async {
-            self.rawLog += "\nIN: \(text)"
-        }
         
         guard let data = text.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
@@ -635,10 +625,6 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     private func send(json: [String: Any]) {
         guard let data = try? JSONSerialization.data(withJSONObject: json),
               let text = String(data: data, encoding: .utf8) else { return }
-        
-        DispatchQueue.main.async {
-            self.rawLog += "\nOUT: \(text)"
-        }
         
         socket?.write(string: text)
     }
