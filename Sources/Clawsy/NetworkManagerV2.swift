@@ -376,9 +376,11 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         
         guard let data = text.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            os_log("Failed to parse inbound JSON", log: logger, type: .error)
             return
         }
         
+        // Handle Handshake Challenge (no ID)
         if let event = json["event"] as? String, event == "connect.challenge" {
             if let payload = json["payload"] as? [String: Any], let nonce = payload["nonce"] as? String {
                 performHandshake(nonce: nonce)
@@ -386,27 +388,53 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             return
         }
         
-        if let id = json["id"] as? String, id == "1" {
-            let isResponse = (json["type"] as? String == "res" || json["type"] as? String == "response")
+        // Robust ID extraction (support both String and Int IDs from server)
+        let rawId = json["id"]
+        let idStr: String?
+        if let s = rawId as? String {
+            idStr = s
+        } else if let n = rawId as? Int {
+            idStr = String(n)
+        } else {
+            idStr = nil
+        }
+        
+        let type = json["type"] as? String
+        
+        // Handle Handshake Response (expecting ID "1" from connect request)
+        if idStr == "1" && (type == "res" || type == "response") {
             let payload = json["payload"] as? [String: Any]
             
-            if isResponse && (payload?["type"] as? String == "hello-ok" || json["result"] != nil) {
+            if payload?["type"] as? String == "hello-ok" || json["result"] != nil {
                  self.connectionStatus = isUsingSshTunnel ? "STATUS_ONLINE_PAIRED_SSH" : "STATUS_ONLINE_PAIRED"
+                 os_log("Handshake successful, status: %{public}@", log: logger, type: .info, self.connectionStatus)
             } else if json["error"] != nil {
                  self.connectionStatus = "STATUS_HANDSHAKE_FAILED"
+                 os_log("Handshake failed", log: logger, type: .error)
             }
             return
         }
         
-        if let type = json["type"] as? String, type == "req",
-           let id = json["id"] as? String,
-           let method = json["method"] as? String, method == "node.invoke",
-           let params = json["params"] as? [String: Any],
-           let command = params["command"] as? String {
-            
-            handleCommand(id: id, command: command, params: params)
+        // Handle Requests
+        if type == "req", let reqId = idStr {
+            if let method = json["method"] as? String {
+                let params = json["params"] as? [String: Any] ?? [:]
+                
+                // Support both "node.invoke" wrapper and direct method calls
+                var commandName = method
+                if method == "node.invoke", let cmd = params["command"] as? String {
+                    commandName = cmd
+                }
+                
+                os_log("Dispatching command: %{public}@ (id: %{public}@)", log: logger, type: .info, commandName, reqId)
+                handleCommand(id: reqId, command: commandName, params: params)
+            } else {
+                os_log("Request missing method", log: logger, type: .error)
+            }
             return
         }
+        
+        os_log("Unhandled message type: %{public}@, id: %{public}@", log: logger, type: .debug, type ?? "none", idStr ?? "none")
     }
     
     private func performHandshake(nonce: String) {
@@ -494,9 +522,12 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             }
             
         case "file.list":
-            let files = ClawsyFileManager.listFiles(at: baseDir)
-            let result = files.map { ["name": $0.name, "isDirectory": $0.isDirectory, "size": $0.size, "modified": $0.modified.timeIntervalSince1970] }
-            sendResponse(id: id, result: ["files": result, "path": sharedFolderPath])
+            let sharedPath = self.sharedFolderPath // Capture current path
+            DispatchQueue.global(qos: .userInitiated).async {
+                let files = ClawsyFileManager.listFiles(at: baseDir)
+                let result = files.map { ["name": $0.name, "isDirectory": $0.isDirectory, "size": $0.size, "modified": $0.modified.timeIntervalSince1970] }
+                self.sendResponse(id: id, result: ["files": result, "path": sharedPath])
+            }
             
         case "file.get":
             guard let name = params["name"] as? String else {
@@ -509,10 +540,13 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
                 self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", comment: ""), 
                                 body: String(format: NSLocalizedString("NOTIFICATION_BODY_DOWNLOADING", comment: ""), name), 
                                 isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
-                if let b64 = ClawsyFileManager.readFile(at: fullPath) {
-                    self.sendResponse(id: id, result: ["content": b64, "name": name])
-                } else {
-                    self.sendError(id: id, code: -32000, message: "Failed to read file")
+                
+                DispatchQueue.global(qos: .userInitiated).async {
+                    if let b64 = ClawsyFileManager.readFile(at: fullPath) {
+                        self.sendResponse(id: id, result: ["content": b64, "name": name])
+                    } else {
+                        self.sendError(id: id, code: -32000, message: "Failed to read file")
+                    }
                 }
             }
             
@@ -540,10 +574,13 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
                 self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", comment: ""), 
                                 body: String(format: NSLocalizedString("NOTIFICATION_BODY_UPLOADING", comment: ""), name), 
                                 isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
-                if ClawsyFileManager.writeFile(at: fullPath, base64Content: content) {
-                    self.sendResponse(id: id, result: ["status": "ok", "name": name])
-                } else {
-                    self.sendError(id: id, code: -32000, message: "Failed to write file")
+                
+                DispatchQueue.global(qos: .userInitiated).async {
+                    if ClawsyFileManager.writeFile(at: fullPath, base64Content: content) {
+                        self.sendResponse(id: id, result: ["status": "ok", "name": name])
+                    } else {
+                        self.sendError(id: id, code: -32000, message: "Failed to write file")
+                    }
                 }
             }
             
