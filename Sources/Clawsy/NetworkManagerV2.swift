@@ -29,16 +29,16 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     var onScreenshotRequested: ((Bool, String) -> Void)?
     var onClipboardReadRequested: ((String) -> Void)?
     var onClipboardWriteRequested: ((String, String) -> Void)?
+    var onFileSyncRequested: ((String, String, @escaping () -> Void, @escaping () -> Void) -> Void)?
     
     // Gateway Configuration
     @AppStorage("serverUrl") private var serverUrl = "wss://agenthost.tailb6e490.ts.net"
     @AppStorage("serverToken") private var serverToken = ""
     @AppStorage("sshHost") private var sshHost = "agenthost"
     @AppStorage("useSshFallback") private var useSshFallback = true
+    @AppStorage("sharedFolderPath") private var sharedFolderPath = "~/Documents/Clawsy"
     
     init() {
-        // Load or Generate Identity
-        // TODO: Persist keypair in Keychain
         self.signingKey = Curve25519.Signing.PrivateKey()
         self.publicKey = self.signingKey?.publicKey
     }
@@ -89,12 +89,10 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
         os_log("Initiating SSH Tunnel Fallback...", log: logger, type: .info)
         connectionStatus = "Starting SSH Tunnel..."
         
-        // Terminate existing process if any
         sshProcess?.terminate()
         
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
-        // Use -NT for background tunnel without terminal, -L for local forwarding
         process.arguments = ["-NT", "-L", "18789:localhost:18789", sshHost]
         
         do {
@@ -102,7 +100,6 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             self.sshProcess = process
             self.isUsingSshTunnel = true
             
-            // Wait for tunnel to establish before retrying WebSocket
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                 self.connect()
             }
@@ -115,7 +112,6 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     
     private func runDiagnostics(error: Error?) {
         let errorDesc = error?.localizedDescription ?? "Unknown error"
-        
         if errorDesc.contains("refused") {
             connectionStatus = "Offline (Server Refused)"
         } else if errorDesc.contains("timed out") {
@@ -178,35 +174,28 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             return
         }
         
-        // 1. Handle Connect Challenge
         if let event = json["event"] as? String, event == "connect.challenge" {
             if let payload = json["payload"] as? [String: Any], let nonce = payload["nonce"] as? String {
-                os_log("Received challenge nonce: %{public}@", log: logger, type: .debug, nonce)
                 performHandshake(nonce: nonce)
             }
             return
         }
         
-        // 2. Handle Handshake Response
         if let id = json["id"] as? String, id == "1" {
             let isResponse = (json["type"] as? String == "res" || json["type"] as? String == "response")
             let payload = json["payload"] as? [String: Any]
-            let result = json["result"] as? [String: Any]
             
-            if isResponse && (payload?["type"] as? String == "hello-ok" || result != nil) {
-                 os_log("Handshake Success", log: logger, type: .info)
+            if isResponse && (payload?["type"] as? String == "hello-ok" || json["result"] != nil) {
                  self.connectionStatus = "Online (Paired)"
                  if isUsingSshTunnel {
                      self.connectionStatus += " via SSH"
                  }
             } else if json["error"] != nil {
-                 os_log("Handshake Failed", log: logger, type: .error)
                  self.connectionStatus = "Handshake Failed"
             }
             return
         }
         
-        // 3. Handle Requests (node.invoke)
         if let type = json["type"] as? String, type == "req",
            let id = json["id"] as? String,
            let method = json["method"] as? String, method == "node.invoke",
@@ -222,23 +211,10 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
         guard let signingKey = signingKey, let publicKey = publicKey else { return }
         
         let tsMs = Int64(Date().timeIntervalSince1970 * 1000)
-        
-        // Device ID = SHA256(raw_public_key)
         let pubKeyData = publicKey.rawRepresentation
         let deviceId = SHA256.hash(data: pubKeyData).map { String(format: "%02x", $0) }.joined()
         
-        // Payload alignment with openclaw-macos
-        let components = [
-            "v2",
-            deviceId,
-            "openclaw-macos",
-            "node",
-            "node",
-            "",
-            String(tsMs),
-            serverToken,
-            nonce
-        ]
+        let components = ["v2", deviceId, "openclaw-macos", "node", "node", "", String(tsMs), serverToken, nonce]
         let payloadString = components.joined(separator: "|")
         
         guard let payloadData = payloadString.data(using: .utf8) else { return }
@@ -247,45 +223,35 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
         let pubKeyB64 = base64UrlEncode(pubKeyData)
         let sigB64 = base64UrlEncode(signature)
         
-        // Construct Connect Request
         let connectReq: [String: Any] = [
             "type": "req",
             "id": "1",
             "method": "connect",
             "params": [
-                "minProtocol": 3,
-                "maxProtocol": 3,
-                "client": [
-                    "id": "openclaw-macos",
-                    "version": "0.2.0",
-                    "platform": "macos",
-                    "mode": "node"
-                ],
-                "role": "node",
-                "caps": ["clipboard", "screen", "camera", "file"], 
+                "minProtocol": 3, "maxProtocol": 3,
+                "client": ["id": "openclaw-macos", "version": "0.2.0", "platform": "macos", "mode": "node"],
+                "role": "node", "caps": ["clipboard", "screen", "camera", "file"], 
                 "commands": ["clipboard.read", "clipboard.write", "screen.capture", "file.list", "file.get", "file.set"],
                 "permissions": ["clipboard.read": true, "clipboard.write": true],
                 "auth": ["token": serverToken],
-                "device": [
-                    "id": deviceId,
-                    "publicKey": pubKeyB64,
-                    "signature": sigB64,
-                    "signedAt": tsMs,
-                    "nonce": nonce
-                ]
+                "device": ["id": deviceId, "publicKey": pubKeyB64, "signature": sigB64, "signedAt": tsMs, "nonce": nonce]
             ]
         ]
-        
         send(json: connectReq)
+    }
+    
+    private func resolveSharedPath(_ path: String) -> String {
+        return path.replacingOccurrences(of: "~", with: NSHomeDirectory())
     }
     
     private func handleCommand(id: String, command: String, params: [String: Any]) {
         os_log("Handling command: %{public}@", log: logger, type: .info, command)
         
+        let baseDir = resolveSharedPath(sharedFolderPath)
+        
         switch command {
         case "screen.capture":
-            let interactive = params["interactive"] as? Bool ?? false
-            onScreenshotRequested?(interactive, id)
+            onScreenshotRequested?(params["interactive"] as? Bool ?? false, id)
             
         case "clipboard.read":
             onClipboardReadRequested?(id)
@@ -298,33 +264,44 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             }
             
         case "file.list":
-            let path = params["path"] as? String ?? NSHomeDirectory()
-            let files = ClawsyFileManager.listFiles(at: path)
-            // Convert to simple dict for JSON
+            // Clawsy Rule: Only list the shared folder
+            let files = ClawsyFileManager.listFiles(at: baseDir)
             let result = files.map { ["name": $0.name, "isDirectory": $0.isDirectory, "size": $0.size, "modified": $0.modified.timeIntervalSince1970] }
-            sendResponse(id: id, result: ["files": result, "path": path])
+            sendResponse(id: id, result: ["files": result, "path": sharedFolderPath])
             
         case "file.get":
-            guard let path = params["path"] as? String else {
-                sendError(id: id, code: -32602, message: "Missing 'path' parameter")
+            guard let name = params["name"] as? String else {
+                sendError(id: id, code: -32602, message: "Missing 'name' parameter")
                 return
             }
-            if let b64 = ClawsyFileManager.readFile(at: path) {
-                sendResponse(id: id, result: ["content": b64, "path": path])
-            } else {
-                sendError(id: id, code: -32000, message: "Failed to read file")
-            }
+            let fullPath = (baseDir as NSString).appendingPathComponent(name)
+            
+            onFileSyncRequested?(name, "Download", {
+                if let b64 = ClawsyFileManager.readFile(at: fullPath) {
+                    self.sendResponse(id: id, result: ["content": b64, "name": name])
+                } else {
+                    self.sendError(id: id, code: -32000, message: "Failed to read file")
+                }
+            }, {
+                self.sendError(id: id, code: -1, message: "User denied file access")
+            })
             
         case "file.set":
-            guard let path = params["path"] as? String, let content = params["content"] as? String else {
-                sendError(id: id, code: -32602, message: "Missing 'path' or 'content' parameter")
+            guard let name = params["name"] as? String, let content = params["content"] as? String else {
+                sendError(id: id, code: -32602, message: "Missing 'name' or 'content' parameter")
                 return
             }
-            if ClawsyFileManager.writeFile(at: path, base64Content: content) {
-                sendResponse(id: id, result: ["status": "ok", "path": path])
-            } else {
-                sendError(id: id, code: -32000, message: "Failed to write file")
-            }
+            let fullPath = (baseDir as NSString).appendingPathComponent(name)
+            
+            onFileSyncRequested?(name, "Upload", {
+                if ClawsyFileManager.writeFile(at: fullPath, base64Content: content) {
+                    self.sendResponse(id: id, result: ["status": "ok", "name": name])
+                } else {
+                    self.sendError(id: id, code: -32000, message: "Failed to write file")
+                }
+            }, {
+                self.sendError(id: id, code: -1, message: "User denied file write")
+            })
             
         default:
             sendError(id: id, code: -32601, message: "Method not found")
@@ -334,56 +311,25 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     // MARK: - Response Helpers
     
     func sendResponse(id: String, result: Any) {
-        let response: [String: Any] = [
-            "type": "res",
-            "id": id,
-            "result": result
-        ]
-        send(json: response)
+        send(json: ["type": "res", "id": id, "result": result])
     }
     
     func sendError(id: String, code: Int, message: String) {
-        let response: [String: Any] = [
-            "type": "res",
-            "id": id,
-            "error": [
-                "code": code,
-                "message": message
-            ]
-        ]
-        send(json: response)
+        send(json: ["type": "res", "id": id, "error": ["code": code, "message": message]])
     }
     
-    // MARK: - Manual Events
-    
     func sendEvent(kind: String, payload: Any) {
-        let message: [String: Any] = [
-            "type": "event",
-            "event": "node.event",
-            "payload": [
-                "kind": kind,
-                "data": payload,
-                "ts": Int64(Date().timeIntervalSince1970 * 1000)
-            ]
-        ]
-        send(json: message)
+        send(json: ["type": "event", "event": "node.event", "payload": ["kind": kind, "data": payload, "ts": Int64(Date().timeIntervalSince1970 * 1000)]])
     }
 
     private func send(json: [String: Any]) {
         guard let data = try? JSONSerialization.data(withJSONObject: json),
               let text = String(data: data, encoding: .utf8) else { return }
-        
-        DispatchQueue.main.async {
-            self.rawLog += "\nOUT: \(text)"
-        }
-        
+        DispatchQueue.main.async { self.rawLog += "\nOUT: \(text)" }
         socket?.write(string: text)
     }
     
     private func base64UrlEncode(_ data: Data) -> String {
-        return data.base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
+        return data.base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
     }
 }

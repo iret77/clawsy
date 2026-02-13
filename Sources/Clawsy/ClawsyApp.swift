@@ -7,8 +7,12 @@ struct ClawsyApp: App {
     
     var body: some Scene {
         Settings {
-            Text("Settings Window (Placeholder)")
-                .frame(width: 300, height: 200)
+            // Placeholder for real settings window
+            VStack {
+                Text("Clawsy Settings")
+                Text("Version 0.2.0")
+            }
+            .frame(width: 300, height: 200)
         }
     }
 }
@@ -19,6 +23,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var alertWindow: NSWindow?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Create Status Bar Item
         statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusBarItem.button {
@@ -27,36 +32,44 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 appIcon.isTemplate = false
                 button.image = appIcon
             } else {
+                // Fallback to Emoji for visibility during development
                 button.title = "🦞"
             }
             button.action = #selector(togglePopover(_:))
         }
         
+        // Create Popover
         popover = NSPopover()
-        popover.contentSize = NSSize(width: 320, height: 380)
+        popover.contentSize = NSSize(width: 240, height: 360)
         popover.behavior = .transient
-        popover.contentViewController = NSHostingController(rootView: ContentView().environmentObject(self))
+        // Inject AppDelegate into ContentView
+        let contentView = ContentView().environmentObject(self)
+        popover.contentViewController = NSHostingController(rootView: contentView)
     }
     
-    private func showFloatingWindow(view: some View, title: String, autosaveName: String) {
-        alertWindow?.close()
-        
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 480, height: 360),
-            styleMask: [.titled, .closable, .fullSizeContentView],
-            backing: .buffered, defer: false)
-        
-        window.center()
-        window.setFrameAutosaveName(autosaveName)
-        window.isReleasedWhenClosed = false
-        window.titlebarAppearsTransparent = true
-        window.title = title
-        window.level = .floating
-        
-        window.contentView = NSHostingView(rootView: view)
-        self.alertWindow = window
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+    private func showFloatingWindow<V: View>(view: V, title: String, autosaveName: String) {
+        // Ensure UI updates on main thread
+        DispatchQueue.main.async {
+            self.alertWindow?.close()
+            
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 480, height: 360),
+                styleMask: [.titled, .closable, .fullSizeContentView],
+                backing: .buffered, defer: false)
+            
+            window.center()
+            window.setFrameAutosaveName(autosaveName)
+            window.isReleasedWhenClosed = false
+            window.titlebarAppearsTransparent = true
+            window.title = title
+            window.level = .floating // Force on top
+            
+            window.contentView = NSHostingView(rootView: view)
+            self.alertWindow = window
+            
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
     
     func showClipboardRequest(content: String, onConfirm: @escaping () -> Void, onCancel: @escaping () -> Void) {

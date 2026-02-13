@@ -230,6 +230,16 @@ struct ContentView: View {
                 })
             }
         }
+        
+        network.onFileSyncRequested = { filename, operation, onConfirm, onCancel in
+            DispatchQueue.main.async {
+                appDelegate.showFileSyncRequest(filename: filename, operation: operation, onConfirm: {
+                    onConfirm()
+                }, onCancel: {
+                    onCancel()
+                })
+            }
+        }
     }
 }
 
