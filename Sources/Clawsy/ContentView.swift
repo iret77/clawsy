@@ -12,6 +12,9 @@ struct ContentView: View {
     // Persistent Configuration
     @AppStorage("serverUrl") private var serverUrl = "wss://agenthost.tailb6e490.ts.net"
     @AppStorage("serverToken") private var serverToken = ""
+    @AppStorage("sshHost") private var sshHost = "agenthost"
+    @AppStorage("useSshFallback") private var useSshFallback = true
+    @AppStorage("sharedFolderPath") private var sharedFolderPath = "~/Documents/Clawsy"
     
     // Alert States
     @State private var showingScreenshotAlert = false
@@ -267,31 +270,74 @@ struct SettingsView: View {
     @Binding var serverToken: String
     @Binding var isPresented: Bool
     
+    @AppStorage("sshHost") private var sshHost = "agenthost"
+    @AppStorage("useSshFallback") private var useSshFallback = true
+    @AppStorage("sharedFolderPath") private var sharedFolderPath = "~/Documents/Clawsy"
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Connection Settings")
-                .font(.headline)
+            Text("Settings")
+                .font(.system(size: 15, weight: .bold))
             
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Gateway URL")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                TextField("wss://your-agent.ts.net", text: $serverUrl)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(.body, design: .monospaced))
-                
-                Text("Gateway Token")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                SecureField("Enter token...", text: $serverToken)
-                    .textFieldStyle(.roundedBorder)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Gateway Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Gateway", systemImage: "antenna.radiowaves.left.and.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.blue)
+                        
+                        TextField("wss://host:port", text: $serverUrl)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(.body, design: .monospaced))
+                        
+                        SecureField("Token", text: $serverToken)
+                            .textFieldStyle(.roundedBorder)
+                    }
+                    
+                    // SSH Fallback Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Label("SSH Fallback", systemImage: "lock.shield")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.orange)
+                            Spacer()
+                            Toggle("", isOn: $useSshFallback).toggleStyle(.switch).scaleEffect(0.7)
+                        }
+                        
+                        TextField("SSH Host (e.g. agenthost)", text: $sshHost)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(.body, design: .monospaced))
+                            .disabled(!useSshFallback)
+                        
+                        Text("Auto-tunnels port 18789 if direct connection fails.")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    // File Sync Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Shared Folder", systemImage: "folder.badge.plus")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.green)
+                        
+                        TextField("Path", text: $sharedFolderPath)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(.body, design: .monospaced))
+                        
+                        Text("Only files in this folder are visible to the agent.")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
             }
             
             Divider()
             
             HStack {
-                Text("Changes apply after reconnect.")
-                    .font(.system(size: 10))
+                Text("Vibrant & Secure.")
+                    .font(.system(size: 10, weight: .medium))
                     .foregroundColor(.secondary)
                 
                 Spacer()
@@ -300,6 +346,8 @@ struct SettingsView: View {
                     isPresented = false
                 }
                 .keyboardShortcut(.return)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
             }
         }
         .padding(20)

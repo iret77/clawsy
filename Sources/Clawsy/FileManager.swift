@@ -1,0 +1,52 @@
+import Foundation
+import AppKit
+
+class FileManager {
+    
+    struct FileEntry: Codable {
+        let name: String
+        let isDirectory: Bool
+        let size: Int64
+        let modified: Date
+    }
+    
+    static func listFiles(at path: String) -> [FileEntry] {
+        let fileManager = Foundation.FileManager.default
+        let url = URL(fileURLWithPath: path)
+        
+        do {
+            let items = try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: [.nameKey, .isDirectoryKey, .fileSizeKey, .contentModificationDateKey])
+            return items.compactMap { item in
+                let values = try? item.resourceValues(forKeys: [.nameKey, .isDirectoryKey, .fileSizeKey, .contentModificationDateKey])
+                return FileEntry(
+                    name: values?.name ?? item.lastPathComponent,
+                    isDirectory: values?.isDirectory ?? false,
+                    size: Int64(values?.fileSize ?? 0),
+                    modified: values?.contentModificationDate ?? Date()
+                )
+            }
+        } catch {
+            print("Error listing directory: \(error)")
+            return []
+        }
+    }
+    
+    static func readFile(at path: String) -> String? {
+        let url = URL(fileURLWithPath: path)
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return data.base64EncodedString()
+    }
+    
+    static func writeFile(at path: String, base64Content: String) -> Bool {
+        guard let data = Data(base64Encoded: base64Content) else { return false }
+        let url = URL(fileURLWithPath: path)
+        
+        do {
+            try data.write(to: url)
+            return true
+        } catch {
+            print("Error writing file: \(error)")
+            return false
+        }
+    }
+}

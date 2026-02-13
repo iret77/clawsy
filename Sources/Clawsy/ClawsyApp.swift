@@ -16,76 +16,66 @@ struct ClawsyApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var statusBarItem: NSStatusItem!
     var popover: NSPopover!
-    var clipboardWindow: NSWindow?
+    var alertWindow: NSWindow?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Create Status Bar Item
         statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusBarItem.button {
-            // Priority: AppIcon from assets, then Assets/Icon.png (if bundled), then Emoji 🦞
-            // Using isTemplate = true only for monochrome icons. 
-            // For now, let's try the AppIcon with isTemplate = false to avoid the white square.
             if let appIcon = NSImage(named: "AppIcon") {
                 appIcon.size = NSSize(width: 18, height: 18)
-                appIcon.isTemplate = false // Keep colors/transparency as is
+                appIcon.isTemplate = false
                 button.image = appIcon
-            } else if let iconImage = NSImage(named: "Icon") {
-                iconImage.size = NSSize(width: 18, height: 18)
-                iconImage.isTemplate = false
-                button.image = iconImage
             } else {
                 button.title = "🦞"
             }
             button.action = #selector(togglePopover(_:))
         }
         
-        // Create Popover
         popover = NSPopover()
         popover.contentSize = NSSize(width: 320, height: 380)
         popover.behavior = .transient
-        // Inject AppDelegate into ContentView so it can call showClipboardWindow
         popover.contentViewController = NSHostingController(rootView: ContentView().environmentObject(self))
     }
     
-    func showClipboardRequest(content: String, onConfirm: @escaping () -> Void, onCancel: @escaping () -> Void) {
-        // Close previous if exists
-        clipboardWindow?.close()
+    private func showFloatingWindow(view: some View, title: String, autosaveName: String) {
+        alertWindow?.close()
         
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 360),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered, defer: false)
         
         window.center()
-        window.setFrameAutosaveName("ai.clawsy.ClipboardRequestWindow")
+        window.setFrameAutosaveName(autosaveName)
         window.isReleasedWhenClosed = false
         window.titlebarAppearsTransparent = true
-        window.title = "Clawsy Request"
-        window.level = .floating // Force on top
-        
-        let view = ClipboardPreviewWindow(
-            content: content,
-            onConfirm: {
-                print("DEBUG: Window confirmed")
-                onConfirm()
-                window.close()
-                self.clipboardWindow = nil
-            },
-            onCancel: {
-                print("DEBUG: Window cancelled")
-                onCancel()
-                window.close()
-                self.clipboardWindow = nil
-            }
-        )
+        window.title = title
+        window.level = .floating
         
         window.contentView = NSHostingView(rootView: view)
-        self.clipboardWindow = window // Retain BEFORE showing
-        
-        print("DEBUG: Showing Clipboard Window")
+        self.alertWindow = window
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+    
+    func showClipboardRequest(content: String, onConfirm: @escaping () -> Void, onCancel: @escaping () -> Void) {
+        let view = ClipboardPreviewWindow(
+            content: content,
+            onConfirm: { onConfirm(); self.alertWindow?.close() },
+            onCancel: { onCancel(); self.alertWindow?.close() }
+        )
+        showFloatingWindow(view: view, title: "Clipboard Sync", autosaveName: "ai.clawsy.ClipboardWindow")
+    }
+    
+    func showFileSyncRequest(filename: String, operation: String, onConfirm: @escaping () -> Void, onCancel: @escaping () -> Void) {
+        let view = FileSyncRequestWindow(
+            filename: filename,
+            operation: operation,
+            onConfirm: { onConfirm(); self.alertWindow?.close() },
+            onCancel: { onCancel(); self.alertWindow?.close() }
+        )
+        showFloatingWindow(view: view, title: "File Sync", autosaveName: "ai.clawsy.FileWindow")
     }
     
     @objc func togglePopover(_ sender: AnyObject?) {
