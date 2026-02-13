@@ -19,6 +19,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     @Published var rawLog = ""
     
     private var socket: WebSocket?
+    private var connectionWatchdog: Timer?
     private var signingKey: Curve25519.Signing.PrivateKey?
     private var publicKey: Curve25519.Signing.PublicKey?
     
@@ -120,7 +121,9 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         
         connectionAttemptCount += 1
         DispatchQueue.main.async {
+            self.isConnected = false
             self.connectionStatus = "STATUS_CONNECTING"
+            self.rawLog += "\n[WSS] Connection Attempt #\(self.connectionAttemptCount)"
         }
         
         // Ensure old socket is cleaned up before creating a new one
@@ -156,8 +159,19 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             self.rawLog += "\n[WSS] Connecting to \(url.absoluteString)..."
         }
         
+        // Start Watchdog (Manual 5s Timer)
+        connectionWatchdog?.invalidate()
+        connectionWatchdog = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { [weak self] _ in
+            guard let self = self, !self.isConnected else { return }
+            os_log("Connection watchdog fired (Timeout)", log: self.logger, type: .error)
+            DispatchQueue.main.async {
+                self.rawLog += "\n[WSS] Watchdog Timeout (5s)"
+                self.handleConnectionFailure(error: NSError(domain: "ai.clawsy", code: -1, userInfo: [NSLocalizedDescriptionKey: "Connection Timeout (Watchdog)"]))
+            }
+        }
+        
         var request = URLRequest(url: url)
-        request.timeoutInterval = 10
+        request.timeoutInterval = 5 // Aggressive timeout
         
         let newSocket = WebSocket(request: request)
         newSocket.delegate = self
@@ -166,6 +180,14 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     }
     
     private func handleConnectionFailure(error: Error?) {
+        connectionWatchdog?.invalidate()
+        connectionWatchdog = nil
+        
+        // Clean up socket on failure
+        socket?.delegate = nil
+        socket?.disconnect()
+        socket = nil
+
         let errDesc = error?.localizedDescription ?? "Unknown"
         os_log("Connection failure: %{public}@", log: logger, type: .error, errDesc)
         DispatchQueue.main.async {
@@ -190,10 +212,14 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             return
         }
         
+        let remoteTarget = "\(sshUser)@\(serverHost)"
+        let tunnelSpec = "18790:127.0.0.1:\(serverPort)"
+        
         os_log("Initiating SSH Tunnel Fallback for %{public}@...", log: logger, type: .info, serverHost)
         DispatchQueue.main.async {
             self.connectionStatus = "STATUS_STARTING_SSH"
-            self.rawLog += "\n[SSH] Starting tunnel: ssh -L 18790:127.0.0.1:\(self.serverPort) \(self.sshUser)@\(self.serverHost)"
+            self.rawLog += "\n[SSH] Starting SSH process..."
+            self.rawLog += "\n[SSH] Command: ssh -NT -L \(tunnelSpec) \(remoteTarget)"
         }
         
         // Kill existing tunnel if any
@@ -202,9 +228,6 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
-        
-        let remoteTarget = "\(sshUser)@\(serverHost)"
-        let tunnelSpec = "18790:127.0.0.1:\(serverPort)"
         
         // -o ExitOnForwardFailure=yes is CRITICAL to know if the tunnel actually worked
         process.arguments = [
@@ -220,19 +243,28 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         do {
             try process.run()
             self.sshProcess = process
+            let pid = process.processIdentifier
+            
+            DispatchQueue.main.async {
+                self.rawLog += "\n[SSH] SSH process started (PID: \(pid))"
+            }
             
             // Give SSH a moment to establish the encrypted link
             DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                 if let proc = self.sshProcess, proc.isRunning {
                     os_log("SSH Tunnel established successfully.", log: self.logger, type: .info)
                     self.isUsingSshTunnel = true
-                    self.rawLog += "\n[SSH] Tunnel established."
-                    self.connect() // This will now use Attempt 2 with the tunnel URL
+                    DispatchQueue.main.async {
+                        self.rawLog += "\n[SSH] Tunnel established."
+                        self.connect() // This will now use Attempt 2 with the tunnel URL
+                    }
                 } else {
                     os_log("SSH Tunnel failed to stay alive.", log: self.logger, type: .error)
                     self.isUsingSshTunnel = false
-                    self.connectionStatus = "STATUS_SSH_FAILED"
-                    self.rawLog += "\n[SSH] Error: Tunnel failed to stay alive."
+                    DispatchQueue.main.async {
+                        self.connectionStatus = "STATUS_SSH_FAILED"
+                        self.rawLog += "\n[SSH] Error: Tunnel failed to stay alive."
+                    }
                 }
             }
         } catch {
@@ -273,6 +305,8 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             
             switch event {
             case .connected(_):
+                self.connectionWatchdog?.invalidate()
+                self.connectionWatchdog = nil
                 self.isConnected = true
                 self.connectionStatus = "STATUS_CONNECTED"
                 self.connectionAttemptCount = 0
