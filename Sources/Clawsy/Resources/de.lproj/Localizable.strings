@@ -53,9 +53,10 @@
 /* Settings */
 "SETTINGS_TITLE" = "Einstellungen";
 "GATEWAY" = "Gateway";
-"GATEWAY_PLACEHOLDER" = "wss://host:port";
+"HOST" = "Host / IP";
+"PORT" = "Port";
 "TOKEN" = "Token";
-"SSH_HOST_PLACEHOLDER" = "SSH-Host (z.B. agenthost)";
+"SSH_USER" = "SSH-Benutzer (z.B. claw)";
 "SSH_FALLBACK" = "SSH-Fallback";
 "SSH_FALLBACK_DESC" = "Automatischer Port-Tunnel (18789) bei Verbindungsfehlern.";
 "SHARED_FOLDER" = "Gemeinsamer Ordner";

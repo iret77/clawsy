@@ -53,9 +53,10 @@
 /* Settings */
 "SETTINGS_TITLE" = "Settings";
 "GATEWAY" = "Gateway";
-"GATEWAY_PLACEHOLDER" = "wss://host:port";
+"HOST" = "Host / IP";
+"PORT" = "Port";
 "TOKEN" = "Token";
-"SSH_HOST_PLACEHOLDER" = "SSH Host (e.g. agenthost)";
+"SSH_USER" = "SSH User (e.g. claw)";
 "SSH_FALLBACK" = "SSH Fallback";
 "SSH_FALLBACK_DESC" = "Auto-tunnels port 18789 if direct connection fails.";
 "SHARED_FOLDER" = "Shared Folder";

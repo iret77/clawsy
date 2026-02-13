@@ -10,9 +10,10 @@ struct ContentView: View {
     @State private var showingLog = false
     
     // Persistent Configuration
-    @AppStorage("serverUrl") private var serverUrl = "wss://agenthost.tailb6e490.ts.net"
+    @AppStorage("serverHost") private var serverHost = "agenthost"
+    @AppStorage("serverPort") private var serverPort = "18789"
     @AppStorage("serverToken") private var serverToken = ""
-    @AppStorage("sshHost") private var sshHost = "agenthost"
+    @AppStorage("sshUser") private var sshUser = "claw"
     @AppStorage("useSshFallback") private var useSshFallback = true
     @AppStorage("sharedFolderPath") private var sharedFolderPath = "~/Documents/Clawsy"
     
@@ -105,8 +106,14 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
                 .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
-                    SettingsView(serverUrl: $serverUrl, serverToken: $serverToken, isPresented: $showingSettings)
-                        .frame(width: 380)
+                    SettingsView(
+                        serverHost: $serverHost,
+                        serverPort: $serverPort,
+                        serverToken: $serverToken,
+                        sshUser: $sshUser,
+                        isPresented: $showingSettings
+                    )
+                    .frame(width: 380)
                 }
                 
                 // Debug Log
@@ -134,8 +141,8 @@ struct ContentView: View {
         .onAppear {
             setupCallbacks()
             // Auto-connect if configured
-            if !serverUrl.isEmpty && !serverToken.isEmpty {
-                network.configure(url: serverUrl, token: serverToken)
+            if !serverHost.isEmpty && !serverToken.isEmpty {
+                network.configure(host: serverHost, port: serverPort, token: serverToken)
                 network.connect()
             }
         }
@@ -166,7 +173,7 @@ struct ContentView: View {
         if network.isConnected {
             network.disconnect()
         } else {
-            network.configure(url: serverUrl, token: serverToken)
+            network.configure(host: serverHost, port: serverPort, token: serverToken)
             network.connect()
         }
     }
@@ -288,11 +295,12 @@ struct DebugLogView: View {
 }
 
 struct SettingsView: View {
-    @Binding var serverUrl: String
+    @Binding var serverHost: String
+    @Binding var serverPort: String
     @Binding var serverToken: String
+    @Binding var sshUser: String
     @Binding var isPresented: Bool
     
-    @AppStorage("sshHost") private var sshHost = "agenthost"
     @AppStorage("useSshFallback") private var useSshFallback = true
     @AppStorage("sharedFolderPath") private var sharedFolderPath = "~/Documents/Clawsy"
     
@@ -309,9 +317,16 @@ struct SettingsView: View {
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.blue)
                         
-                        TextField("GATEWAY_PLACEHOLDER", text: $serverUrl)
-                            .textFieldStyle(.roundedBorder)
-                            .font(.system(.body, design: .monospaced))
+                        HStack {
+                            TextField("HOST", text: $serverHost)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(.body, design: .monospaced))
+                            
+                            TextField("PORT", text: $serverPort)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(.body, design: .monospaced))
+                                .frame(width: 80)
+                        }
                         
                         SecureField("TOKEN", text: $serverToken)
                             .textFieldStyle(.roundedBorder)
@@ -327,7 +342,7 @@ struct SettingsView: View {
                             Toggle("", isOn: $useSshFallback).toggleStyle(.switch).scaleEffect(0.7)
                         }
                         
-                        TextField("SSH_HOST_PLACEHOLDER", text: $sshHost)
+                        TextField("SSH_USER", text: $sshUser)
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
                             .disabled(!useSshFallback)

@@ -36,9 +36,10 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     private var filePermissionExpiry: Date?
     
     // Gateway Configuration
-    @AppStorage("serverUrl") private var serverUrl = "wss://agenthost.tailb6e490.ts.net"
+    @AppStorage("serverHost") private var serverHost = "agenthost"
+    @AppStorage("serverPort") private var serverPort = "18789"
     @AppStorage("serverToken") private var serverToken = ""
-    @AppStorage("sshHost") private var sshHost = "agenthost"
+    @AppStorage("sshUser") private var sshUser = "claw"
     @AppStorage("useSshFallback") private var useSshFallback = true
     @AppStorage("sharedFolderPath") private var sharedFolderPath = "~/Documents/Clawsy"
     
@@ -95,44 +96,37 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         UNUserNotificationCenter.current().add(request)
     }
     
-    func configure(url: String, token: String) {
-        self.serverUrl = url
+    func configure(host: String, port: String, token: String) {
+        self.serverHost = host
+        self.serverPort = port
         self.serverToken = token
-        os_log("Configured with URL: %{public}@", log: logger, type: .info, url)
+        os_log("Configured with Host: %{public}@, Port: %{public}@", log: logger, type: .info, host, port)
     }
 
     func connect() {
-        guard !serverUrl.isEmpty, !serverToken.isEmpty else {
+        guard !serverHost.isEmpty, !serverToken.isEmpty else {
             connectionStatusKey = "STATUS_DISCONNECTED"
             return
         }
         
         connectionAttemptCount += 1
-        connectionStatusKey = "STATUS_CONNECTING" // Will be formatted in UI or here
+        connectionStatusKey = "STATUS_CONNECTING"
         
-        // Use local tunnel port if SSH is active
-        // Goal 3: Port 18790 for local tunnel endpoint
-        var targetUrlStr = isUsingSshTunnel ? "ws://127.0.0.1:18790" : serverUrl
+        var targetUrlStr: String
         
-        // Ensure scheme is present
-        if !targetUrlStr.lowercased().hasPrefix("ws://") && !targetUrlStr.lowercased().hasPrefix("wss://") {
-            if targetUrlStr.contains("localhost") || targetUrlStr.contains("127.0.0.1") {
-                targetUrlStr = "ws://" + targetUrlStr
-            } else {
-                targetUrlStr = "wss://" + targetUrlStr
-            }
+        if isUsingSshTunnel {
+            // Goal: Fallback WebSocket: ws://127.0.0.1:18790
+            targetUrlStr = "ws://127.0.0.1:18790"
+        } else {
+            // Goal: Main WebSocket: wss://{host}:{port} or ws://{host}:{port}
+            let scheme = (serverHost.contains("localhost") || serverHost.contains("127.0.0.1")) ? "ws" : "wss"
+            targetUrlStr = "\(scheme)://\(serverHost):\(serverPort)"
         }
 
         guard let targetUrl = URL(string: targetUrlStr) else {
             connectionStatusKey = "STATUS_ERROR"
             return
         }
-        
-        // Update connectionStatus with attempt number if needed, 
-        // but for LocalizedStringKey we might just use the key.
-        // Actually, let's use a simpler status for the key and handle formatting in the UI if possible,
-        // or just set the string to something like "STATUS_CONNECTING" and have the UI handle it.
-        // For now, I'll just use the keys.
         
         attemptConnection(to: targetUrl)
     }
@@ -166,12 +160,11 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
         
-        // Ensure user 'claw' is used as requested
-        let remoteTarget = sshHost.contains("@") ? sshHost : "claw@\(sshHost)"
+        // Goal: ssh -N -L 18790:127.0.0.1:{port} {sshUser}@{host}
+        let remoteTarget = "\(sshUser)@\(serverHost)"
+        let tunnelSpec = "18790:127.0.0.1:\(serverPort)"
         
-        // Use -o ConnectTimeout to fail fast if SSH is down
-        // Tunnel configuration: Local 18790 -> Remote 127.0.0.1:18789
-        process.arguments = ["-NT", "-L", "18790:127.0.0.1:18789", remoteTarget, "-o", "ConnectTimeout=5"]
+        process.arguments = ["-NT", "-L", tunnelSpec, remoteTarget, "-o", "ConnectTimeout=5"]
         
         do {
             try process.run()
