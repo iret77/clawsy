@@ -11,6 +11,8 @@
 "NOTIFICATION_BODY_UPLOADING" = "Lade hoch: %@";
 "REVOKE_PERMISSION" = "Zugriff widerrufen";
 "CLIPBOARD_SYNC" = "Zwischenablage-Sync";
+"CHAR_COUNT %lld" = "%lld Zeichen";
+"COPY_LOCAL" = "Lokal kopieren";
 "CLIPBOARD_WANTS_WRITE" = "Der Agent möchte in deine Zwischenablage schreiben:";
 "CLIPBOARD_WANTS_READ" = "Der Agent möchte deine Zwischenablage lesen.";
 
@@ -51,12 +53,20 @@
 /* Settings */
 "SETTINGS_TITLE" = "Einstellungen";
 "GATEWAY" = "Gateway";
+"GATEWAY_PLACEHOLDER" = "wss://host:port";
+"TOKEN" = "Token";
+"SSH_HOST_PLACEHOLDER" = "SSH-Host (z.B. agenthost)";
 "SSH_FALLBACK" = "SSH-Fallback";
 "SSH_FALLBACK_DESC" = "Automatischer Port-Tunnel (18789) bei Verbindungsfehlern.";
 "SHARED_FOLDER" = "Gemeinsamer Ordner";
+"PATH" = "Pfad";
 "SHARED_FOLDER_DESC" = "Nur Dateien in diesem Ordner sind für den Agenten sichtbar.";
 "VIBRANT_SECURE" = "Lebendig & Sicher.";
 "DONE" = "Fertig";
+
+/* Settings Window */
+"SETTINGS_WINDOW_TITLE" = "Clawsy Einstellungen";
+"VERSION_FORMAT %@" = "Version %@";
 
 /* Debug Log */
 "DEBUG_LOG_TITLE" = "Netzwerk-Protokoll";
