@@ -451,7 +451,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         let pubKeyData = publicKey.rawRepresentation
         let deviceId = SHA256.hash(data: pubKeyData).map { String(format: "%02x", $0) }.joined()
         
-        let components = ["v2", deviceId, "openclaw-macos", "node", "node", "", String(tsMs), serverToken, nonce]
+        let components = ["v2", deviceId, "operator", "operator", "node", "", String(tsMs), serverToken, nonce]
         let payloadString = components.joined(separator: "|")
         
         guard let payloadData = payloadString.data(using: .utf8) else { return }
@@ -466,8 +466,8 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             "method": "connect",
             "params": [
                 "minProtocol": 3, "maxProtocol": 3,
-                "client": ["id": "openclaw-macos", "version": "0.2.1", "platform": "macos", "mode": "node"],
-                "role": "node", "caps": ["clipboard", "screen", "camera", "file"], 
+                "client": ["id": "operator", "version": "0.2.2", "platform": "macos", "mode": "node"],
+                "role": "operator", "caps": ["clipboard", "screen", "camera", "file"], 
                 "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set"],
                 "permissions": ["clipboard.read": true, "clipboard.write": true],
                 "auth": ["token": serverToken],
