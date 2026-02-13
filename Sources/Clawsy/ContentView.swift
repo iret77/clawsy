@@ -97,13 +97,6 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
-                
-                // File Sync (USP)
-                Button(action: triggerFileSync) {
-                    MenuItemRow(icon: "folder.badge.gearshape", title: "FILE_SYNC", subtitle: "MANAGED_FOLDER", isEnabled: network.isConnected)
-                }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity)
 
                 // Camera Group
                 Button(action: { showingCameraMenu.toggle() }) {
@@ -224,6 +217,14 @@ struct ContentView: View {
          } message: {
              Text("ALERT_SCREENSHOT_BODY")
          }
+         .onChange(of: network.isConnected) { connected in
+             if connected {
+                 // Slight delay to ensure handshake is fully processed on the server side
+                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                     self.triggerFileSync()
+                 }
+             }
+         }
     }
     
     // --- Actions ---
@@ -275,8 +276,10 @@ struct ContentView: View {
     }
     
     func triggerFileSync() {
-        network.rawLog += "\n[FILE] Manual sync requested..."
-        network.sendEvent(kind: "file.sync_triggered", payload: ["path": sharedFolderPath])
+        if !sharedFolderPath.isEmpty {
+            network.rawLog += "\n[FILE] Automatic sync triggered..."
+            network.sendEvent(kind: "file.sync_triggered", payload: ["path": sharedFolderPath])
+        }
     }
     
     func setupCallbacks() {
