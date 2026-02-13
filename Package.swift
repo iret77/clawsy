@@ -20,7 +20,10 @@ let package = Package(
             path: "Sources/Clawsy",
             resources: [
                 .process("Assets.xcassets"),
-                .process("Resources")
+                .process("Resources/de.lproj"),
+                .process("Resources/en.lproj"),
+                .process("Resources/es.lproj"),
+                .process("Resources/fr.lproj")
             ]
         )
     ]
