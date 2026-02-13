@@ -50,8 +50,13 @@ jobs:
         # Create App Bundle Structure (Minimal)
         mkdir -p Clawsy.app/Contents/MacOS
         
-        # Copy Binary
-        cp .build/apple/Products/Release/Clawsy Clawsy.app/Contents/MacOS/
+        # Copy Binary (handle different build structures)
+        if [ -f .build/apple/Products/Release/Clawsy ]; then
+          cp .build/apple/Products/Release/Clawsy Clawsy.app/Contents/MacOS/
+        else
+          # Fallback for standard swift build path
+          cp .build/release/Clawsy Clawsy.app/Contents/MacOS/
+        fi
         
         # Create Info.plist
         cat <<EOF > Clawsy.app/Contents/Info.plist
@@ -79,7 +84,12 @@ jobs:
                 <true/>
             </dict>
         </dict>
+        </plist>
         EOF
+        
+        # Copy Resources from build artifacts to App Bundle
+        # Search for the bundle containing our resources
+        find .build -name "Clawsy_Clawsy.bundle" -exec cp -R {} Clawsy.app/Contents/Resources/ \;
         
         # Ad-hoc sign the app with Entitlements
         codesign --force --deep --entitlements Entitlements.plist -s - Clawsy.app
