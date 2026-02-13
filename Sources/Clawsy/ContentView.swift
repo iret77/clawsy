@@ -28,22 +28,22 @@ struct ContentView: View {
         VStack(spacing: 0) {
             // --- Header & Status ---
             HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(LocalizedStringKey("APP_NAME"))
-                            .font(.system(size: 13, weight: .semibold))
-                        
-                        Group {
-                            if network.connectionStatus == "STATUS_CONNECTING" {
-                                // Dynamic string interpolation for connection attempts
-                                Text("STATUS_CONNECTING \(network.connectionAttemptCount)")
-                            } else {
-                                // Standard localization for static status keys
-                                Text(LocalizedStringKey(network.connectionStatus))
-                            }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(LocalizedStringKey("APP_NAME"))
+                        .font(.system(size: 13, weight: .semibold))
+                    
+                    Group {
+                        if network.connectionStatus == "STATUS_CONNECTING" {
+                            // Dynamic string interpolation for connection attempts
+                            Text("STATUS_CONNECTING \(network.connectionAttemptCount)")
+                        } else {
+                            // Standard localization for static status keys
+                            Text(LocalizedStringKey(network.connectionStatus))
                         }
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
                     }
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                }
                 
                 Spacer()
                 
@@ -206,6 +206,11 @@ struct ContentView: View {
             }
             
             // Auto-connect if configured
+            if !serverHost.isEmpty && !serverToken.isEmpty {
+                network.configure(host: serverHost, port: serverPort, token: serverToken)
+                network.connect()
+            }
+        }
         // Alerts/Popups
         .alert("ALERT_SCREENSHOT_TITLE", isPresented: $showingScreenshotAlert) {
              Button("ALERT_DENY", role: .cancel) {
