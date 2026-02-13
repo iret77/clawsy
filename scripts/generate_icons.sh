@@ -49,11 +49,11 @@ MENU_DEST="Sources/Clawsy/Assets.xcassets/Icon.imageset"
 mkdir -p "$MENU_DEST"
 
 if [ -f "$SOURCE_MENU" ]; then
-    echo "🦞 Generating Menu Bar Icons (Standard 22pt) from $SOURCE_MENU..."
-    # 1x: 22x22, 2x: 44x44, 3x: 66x66
-    sips -s format png -z 22 22 "$SOURCE_MENU" --out "$MENU_DEST/Icon.png" > /dev/null
-    sips -s format png -z 44 44 "$SOURCE_MENU" --out "$MENU_DEST/Icon@2x.png" > /dev/null
-    sips -s format png -z 66 66 "$SOURCE_MENU" --out "$MENU_DEST/Icon@3x.png" > /dev/null
+    echo "🦞 Generating Menu Bar Icons (Enlarged 28pt) from $SOURCE_MENU..."
+    # 1x: 28x28, 2x: 56x56, 3x: 84x84
+    sips -s format png -z 28 28 "$SOURCE_MENU" --out "$MENU_DEST/Icon.png" > /dev/null
+    sips -s format png -z 56 56 "$SOURCE_MENU" --out "$MENU_DEST/Icon@2x.png" > /dev/null
+    sips -s format png -z 84 84 "$SOURCE_MENU" --out "$MENU_DEST/Icon@3x.png" > /dev/null
     
     # Create Contents.json for the imageset
     cat <<EOF > "$MENU_DEST/Contents.json"

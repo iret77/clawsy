@@ -118,13 +118,20 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         connectionAttemptCount += 1
         connectionStatus = "STATUS_CONNECTING"
         
-        var targetUrlStr: String
+        // Ensure old socket is cleaned up before creating a new one
+        socket?.delegate = nil
+        socket?.disconnect()
+        socket = nil
         
+        var targetUrlStr: String
         if isUsingSshTunnel {
+            // Force ws for local tunnel
             targetUrlStr = "ws://127.0.0.1:18790"
+            os_log("CONNECT: Using SSH Tunnel target: %{public}@", log: logger, type: .info, targetUrlStr)
         } else {
             let scheme = (serverHost.contains("localhost") || serverHost.contains("127.0.0.1")) ? "ws" : "wss"
             targetUrlStr = "\(scheme)://\(serverHost):\(serverPort)"
+            os_log("CONNECT: Using direct target: %{public}@", log: logger, type: .info, targetUrlStr)
         }
 
         guard let targetUrl = URL(string: targetUrlStr) else {
@@ -134,21 +141,25 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         
         attemptConnection(to: targetUrl)
     }
-    
+
     private func attemptConnection(to url: URL) {
         os_log("Attempting connection to %{public}@", log: logger, type: .info, url.absoluteString)
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
         
-        socket = WebSocket(request: request)
-        socket?.delegate = self
-        socket?.connect()
+        let newSocket = WebSocket(request: request)
+        newSocket.delegate = self
+        self.socket = newSocket
+        self.socket?.connect()
     }
     
     private func handleConnectionFailure(error: Error?) {
+        os_log("Connection failure: %{public}@", log: logger, type: .error, error?.localizedDescription ?? "Unknown")
+        
         if useSshFallback && !isUsingSshTunnel {
             startSshTunnel()
         } else {
+            // If we are already in a tunnel and it fails, or no fallback
             runDiagnostics(error: error)
         }
     }
@@ -160,10 +171,12 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             return
         }
         
-        os_log("Initiating SSH Tunnel Fallback...", log: logger, type: .info)
+        os_log("Initiating SSH Tunnel Fallback for %{public}@...", log: logger, type: .info, serverHost)
         connectionStatus = "STATUS_STARTING_SSH"
         
+        // Kill existing tunnel if any
         sshProcess?.terminate()
+        isUsingSshTunnel = false
         
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
@@ -171,24 +184,35 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         let remoteTarget = "\(sshUser)@\(serverHost)"
         let tunnelSpec = "18790:127.0.0.1:\(serverPort)"
         
-        // Use BatchMode to prevent hanging on password prompts
-        process.arguments = ["-NT", "-L", tunnelSpec, remoteTarget, "-o", "ConnectTimeout=5", "-o", "BatchMode=yes"]
+        // -o ExitOnForwardFailure=yes is CRITICAL to know if the tunnel actually worked
+        process.arguments = [
+            "-NT", 
+            "-L", tunnelSpec, 
+            remoteTarget, 
+            "-o", "ConnectTimeout=10", 
+            "-o", "BatchMode=yes",
+            "-o", "StrictHostKeyChecking=no",
+            "-o", "ExitOnForwardFailure=yes"
+        ]
         
         do {
             try process.run()
             self.sshProcess = process
-            self.isUsingSshTunnel = true
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            // Give SSH a moment to establish the encrypted link
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                 if let proc = self.sshProcess, proc.isRunning {
-                    self.connect()
+                    os_log("SSH Tunnel established successfully.", log: self.logger, type: .info)
+                    self.isUsingSshTunnel = true
+                    self.connect() // This will now use Attempt 2 with the tunnel URL
                 } else {
+                    os_log("SSH Tunnel failed to stay alive.", log: self.logger, type: .error)
                     self.isUsingSshTunnel = false
                     self.connectionStatus = "STATUS_SSH_FAILED"
                 }
             }
         } catch {
-            os_log("Failed to start SSH process: %{public}@", log: logger, type: .error, error.localizedDescription)
+            os_log("Failed to launch SSH process: %{public}@", log: logger, type: .error, error.localizedDescription)
             connectionStatus = "STATUS_SSH_FAILED"
             isUsingSshTunnel = false
         }
