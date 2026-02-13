@@ -50,8 +50,7 @@ struct MenuItemRow: View {
                         .foregroundColor(.secondary.opacity(0.7))
                 }
             }
-            
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
             
             if let shortcut = shortcut {
                 Text(shortcut)
@@ -61,12 +60,13 @@ struct MenuItemRow: View {
             
             if hasChevron {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(.secondary.opacity(0.3))
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.secondary.opacity(0.4))
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
+        .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
         .background(isHovering && isEnabled ? Color.primary.opacity(0.1) : Color.clear)
         .cornerRadius(4)

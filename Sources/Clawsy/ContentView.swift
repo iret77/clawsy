@@ -77,18 +77,22 @@ struct ContentView: View {
                     MenuItemRow(icon: "camera", title: "SCREENSHOT", isEnabled: network.isConnected, hasChevron: true)
                 }
                 .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .frame(maxWidth: .infinity)
 
                 // Clipboard
                 Button(action: handleManualClipboardSend) {
                     MenuItemRow(icon: "doc.on.clipboard", title: "PUSH_CLIPBOARD", subtitle: "COPY_TO_AGENT", isEnabled: network.isConnected)
                 }
                 .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
                 
                 // File Sync (USP)
                 Button(action: { /* Placeholder for manual sync trigger */ }) {
                     MenuItemRow(icon: "folder.badge.gearshape", title: "FILE_SYNC", subtitle: "MANAGED_FOLDER", isEnabled: network.isConnected)
                 }
                 .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
                 
                 Divider().padding(.vertical, 4).opacity(0.5)
                 
@@ -101,12 +105,14 @@ struct ContentView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
 
                 // Settings
                 Button(action: { showingSettings.toggle() }) {
                     MenuItemRow(icon: "gearshape.fill", title: "SETTINGS", isEnabled: true, shortcut: "⌘,")
                 }
                 .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
                 .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
                     SettingsView(
                         serverHost: $serverHost,
@@ -123,6 +129,7 @@ struct ContentView: View {
                     MenuItemRow(icon: "terminal.fill", title: "DEBUG_LOG", isEnabled: true)
                 }
                 .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
                 .popover(isPresented: $showingLog, arrowEdge: .trailing) {
                     DebugLogView(logText: network.rawLog, isPresented: $showingLog)
                         .frame(width: 400, height: 300)
@@ -135,6 +142,7 @@ struct ContentView: View {
                     MenuItemRow(icon: "xmark.circle.fill", title: "QUIT", isEnabled: true, shortcut: "⌘Q")
                 }
                 .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
             }
             .padding(6)
         }
