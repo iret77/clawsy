@@ -219,10 +219,11 @@ struct ContentView: View {
          } message: {
              Text("ALERT_SCREENSHOT_BODY")
          }
-         .onChange(of: network.isConnected) { connected in
-             if connected {
-                 // Slight delay to ensure handshake is fully processed on the server side
-                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+         .onChange(of: network.isHandshakeComplete) { complete in
+             if complete {
+                 // Build #113: Ensure the WebSocket is fully ready to dispatch commands
+                 // and the pairing handshake is finalized.
+                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                      self.triggerFileSync()
                  }
              }
@@ -505,37 +506,44 @@ struct SettingsView: View {
                     }
                     
                     // File Sync Section
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 12) {
                         Label(LocalizedStringKey("SHARED_FOLDER"), systemImage: "folder.badge.plus")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.green)
                         
-                        TextField(LocalizedStringKey("PATH"), text: $sharedFolderPath)
-                            .textFieldStyle(.roundedBorder)
+                        // High-contrast read-only path display
+                        Text(sharedFolderPath.isEmpty ? " " : sharedFolderPath)
                             .font(.system(.body, design: .monospaced))
-                            .disabled(true)
+                            .foregroundColor(.primary) // Build #113: Forced primary for clarity
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 8) // Increased padding
+                            .background(Color(NSColor.controlBackgroundColor).opacity(0.9))
+                            .cornerRadius(4)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(Color(NSColor.separatorColor), lineWidth: 1.5)
+                            )
                         
                         HStack(spacing: 12) {
                             Button(action: selectFolder) {
-                                HStack {
-                                    Image(systemName: "folder.fill.badge.plus")
-                                    Text(LocalizedStringKey("SELECT_FOLDER_BUTTON"))
-                                }
-                                .padding(.horizontal, 4)
+                                Label(LocalizedStringKey("SELECT_FOLDER_BUTTON"), systemImage: "folder.fill.badge.plus")
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
                             }
                             .buttonStyle(.borderedProminent)
                             .controlSize(.regular)
+                            .frame(minHeight: 36)
                             
                             if !sharedFolderPath.isEmpty {
                                 Button(action: openInFinder) {
-                                    HStack {
-                                        Image(systemName: "folder")
-                                        Text(LocalizedStringKey("SHOW_IN_FINDER"))
-                                    }
-                                    .padding(.horizontal, 4)
+                                    Label(LocalizedStringKey("SHOW_IN_FINDER"), systemImage: "folder")
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
                                 }
                                 .buttonStyle(.bordered)
                                 .controlSize(.regular)
+                                .frame(minHeight: 36)
                             }
                         }
                         
