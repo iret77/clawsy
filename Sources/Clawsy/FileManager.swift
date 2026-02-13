@@ -1,7 +1,7 @@
 import Foundation
 import AppKit
 
-class FileManager {
+class ClawsyFileManager {
     
     struct FileEntry: Codable {
         let name: String
