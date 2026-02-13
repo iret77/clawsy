@@ -10,6 +10,13 @@ class ClawsyFileManager {
         let modified: Date
     }
     
+    static func folderExists(at path: String) -> Bool {
+        let fileManager = Foundation.FileManager.default
+        let expandedPath = path.replacingOccurrences(of: "~", with: NSHomeDirectory())
+        var isDir: ObjCBool = false
+        return fileManager.fileExists(atPath: expandedPath, isDirectory: &isDir) && isDir.boolValue
+    }
+    
     static func listFiles(at path: String) -> [FileEntry] {
         let fileManager = Foundation.FileManager.default
         let url = URL(fileURLWithPath: path)

@@ -477,7 +477,23 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     private func handleCommand(id: String, command: String, params: [String: Any]) {
         os_log("Handling command: %{public}@", log: logger, type: .info, command)
         
-        let baseDir = resolveSharedPath(sharedFolderPath)
+        let rawPath = sharedFolderPath
+        if rawPath.isEmpty {
+            if command.hasPrefix("file.") {
+                sendError(id: id, code: -32000, message: "Folder not configured")
+                return
+            }
+        }
+        
+        let baseDir = resolveSharedPath(rawPath)
+        
+        // Ensure folder exists for file commands
+        if command.hasPrefix("file.") {
+            if !ClawsyFileManager.folderExists(at: baseDir) {
+                sendError(id: id, code: -32000, message: "Shared folder does not exist: \(rawPath)")
+                return
+            }
+        }
         
         switch command {
         case "screen.capture":

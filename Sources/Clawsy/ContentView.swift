@@ -188,12 +188,24 @@ struct ContentView: View {
         .frame(width: 240)
         .onAppear {
             setupCallbacks()
-            // Auto-connect if configured
-            if !serverHost.isEmpty && !serverToken.isEmpty {
-                network.configure(host: serverHost, port: serverPort, token: serverToken)
-                network.connect()
+            
+            // Validate Shared Folder
+            if !sharedFolderPath.isEmpty {
+                if !ClawsyFileManager.folderExists(at: sharedFolderPath) {
+                    let path = sharedFolderPath
+                    sharedFolderPath = ""
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        let content = UNMutableNotificationContent()
+                        content.title = NSLocalizedString("FOLDER_MISSING_TITLE", comment: "")
+                        content.body = String(format: NSLocalizedString("FOLDER_MISSING_BODY", comment: ""), path)
+                        content.sound = .default
+                        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+                        UNUserNotificationCenter.current().add(request)
+                    }
+                }
             }
-        }
+            
+            // Auto-connect if configured
         // Alerts/Popups
         .alert("ALERT_SCREENSHOT_TITLE", isPresented: $showingScreenshotAlert) {
              Button("ALERT_DENY", role: .cancel) {
@@ -360,6 +372,25 @@ struct SettingsView: View {
     @AppStorage("useSshFallback") private var useSshFallback = true
     @AppStorage("sharedFolderPath") private var sharedFolderPath = "~/Documents/Clawsy"
     
+    func selectFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.message = NSLocalizedString("SELECT_SHARED_FOLDER", comment: "")
+        
+        if panel.runModal() == .OK {
+            if let url = panel.url {
+                var path = url.path
+                let home = NSHomeDirectory()
+                if path.hasPrefix(home) {
+                    path = path.replacingOccurrences(of: home, with: "~")
+                }
+                sharedFolderPath = path
+            }
+        }
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -432,9 +463,15 @@ struct SettingsView: View {
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.green)
                         
-                        TextField(LocalizedStringKey("PATH"), text: $sharedFolderPath)
-                            .textFieldStyle(.roundedBorder)
-                            .font(.system(.body, design: .monospaced))
+                        HStack {
+                            TextField(LocalizedStringKey("PATH"), text: $sharedFolderPath)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(.body, design: .monospaced))
+                            
+                            Button(action: selectFolder) {
+                                Image(systemName: "folder.fill")
+                            }
+                        }
                         
                         Text(LocalizedStringKey("SHARED_FOLDER_DESC"))
                             .font(.system(size: 10))
