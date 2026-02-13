@@ -148,7 +148,7 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
         os_log("RAW INBOUND: %{public}@", log: logger, type: .default, text)
         
         DispatchQueue.main.async {
-            self.rawLog += "\n\(text)"
+            self.rawLog += "\nIN: \(text)"
         }
         
         guard let data = text.data(using: .utf8),
@@ -157,39 +157,26 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
         }
         
         // 1. Handle Connect Challenge
-        if let event = json["event"] as? String, event == "connect.challenge",
-           let payload = json["payload"] as? [String: Any],
-           let nonce = payload["nonce"] as? String {
-            
-            os_log("Received challenge nonce: %{public}@", log: logger, type: .debug, nonce)
-            performHandshake(nonce: nonce)
+        if let event = json["event"] as? String, event == "connect.challenge" {
+            if let payload = json["payload"] as? [String: Any], let nonce = payload["nonce"] as? String {
+                os_log("Received challenge nonce: %{public}@", log: logger, type: .debug, nonce)
+                performHandshake(nonce: nonce)
+            }
             return
         }
         
         // 2. Handle Handshake Response
-        // Robust matching for Gateway v3: Check for type 'res' and specific connect success result
         if let id = json["id"] as? String, id == "1" {
-            os_log("Handshake Response (id=1) received", log: logger, type: .info)
-            
-            // Check if it's a valid success response
             let isResponse = (json["type"] as? String == "res" || json["type"] as? String == "response")
-            
-            // Gateway V3 payload check: it might put everything inside a "payload" object
             let payload = json["payload"] as? [String: Any]
             let result = json["result"] as? [String: Any]
             
-            let isHelloOk = (payload?["type"] as? String == "hello-ok")
-            let hasResult = (result != nil)
-            
-            if isResponse && (isHelloOk || hasResult) {
-                 os_log("Handshake Success: Verified via type and payload/result", log: logger, type: .info)
+            if isResponse && (payload?["type"] as? String == "hello-ok" || result != nil) {
+                 os_log("Handshake Success", log: logger, type: .info)
                  self.connectionStatus = "Online (Paired)"
             } else if let error = json["error"] as? [String: Any] {
                  os_log("Handshake Failed: %{public}@", log: logger, type: .error, "\(error)")
                  self.connectionStatus = "Handshake Failed"
-            } else {
-                 os_log("Handshake Success: Implicit (id=1, no error)", log: logger, type: .info)
-                 self.connectionStatus = "Online (Paired)"
             }
             return
         }
@@ -202,17 +189,10 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
            let command = params["command"] as? String {
             
             handleCommand(id: id, command: command, params: params)
+            return
         }
         
-        // 4. Handle System Prompts for Approvals (if routed via agent.message/system)
-        if let type = json["type"] as? String, type == "req",
-           let id = json["id"] as? String,
-           let method = json["method"] as? String, method == "clipboard.write.approve",
-           let params = json["params"] as? [String: Any],
-           let text = params["text"] as? String {
-            
-            onClipboardWriteRequested?(text, id)
-        }
+        // Ignore other messages (like tick, health, agent events) to prevent feedback loops
     }
     
     private func performHandshake(nonce: String) {
@@ -371,6 +351,11 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     private func send(json: [String: Any]) {
         guard let data = try? JSONSerialization.data(withJSONObject: json),
               let text = String(data: data, encoding: .utf8) else { return }
+        
+        DispatchQueue.main.async {
+            self.rawLog += "\nOUT: \(text)"
+        }
+        
         socket?.write(string: text)
     }
     
