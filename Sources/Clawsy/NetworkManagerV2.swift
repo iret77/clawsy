@@ -13,7 +13,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     private let logger = OSLog(subsystem: "ai.clawsy", category: "Network")
     
     @Published var isConnected = false
-    @Published var connectionStatusKey = "STATUS_DISCONNECTED"
+    @Published var connectionStatus = "STATUS_DISCONNECTED"
     @Published var connectionAttemptCount = 0
     @Published var lastMessage = ""
     @Published var rawLog = ""
@@ -35,13 +35,13 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     // Permission Tracking
     private var filePermissionExpiry: Date?
     
-    // Gateway Configuration
-    @AppStorage("serverHost") private var serverHost = "agenthost"
-    @AppStorage("serverPort") private var serverPort = "18789"
-    @AppStorage("serverToken") private var serverToken = ""
-    @AppStorage("sshUser") private var sshUser = ""
-    @AppStorage("useSshFallback") private var useSshFallback = true
-    @AppStorage("sharedFolderPath") private var sharedFolderPath = "~/Documents/Clawsy"
+    // Internal Sync'd Settings
+    private var serverHost: String { UserDefaults.standard.string(forKey: "serverHost") ?? "agenthost" }
+    private var serverPort: String { UserDefaults.standard.string(forKey: "serverPort") ?? "18789" }
+    private var serverToken: String { UserDefaults.standard.string(forKey: "serverToken") ?? "" }
+    private var sshUser: String { UserDefaults.standard.string(forKey: "sshUser") ?? "" }
+    private var useSshFallback: Bool { UserDefaults.standard.bool(forKey: "useSshFallback") }
+    private var sharedFolderPath: String { UserDefaults.standard.string(forKey: "sharedFolderPath") ?? "~/Documents/Clawsy" }
     
     override init() {
         super.init()
@@ -97,34 +97,33 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     }
     
     func configure(host: String, port: String, token: String) {
-        self.serverHost = host
-        self.serverPort = port
-        self.serverToken = token
+        // Sync to UserDefaults as we don't use @AppStorage here
+        UserDefaults.standard.set(host, forKey: "serverHost")
+        UserDefaults.standard.set(port, forKey: "serverPort")
+        UserDefaults.standard.set(token, forKey: "serverToken")
         os_log("Configured with Host: %{public}@, Port: %{public}@", log: logger, type: .info, host, port)
     }
 
     func connect() {
         guard !serverHost.isEmpty, !serverToken.isEmpty else {
-            connectionStatusKey = "STATUS_DISCONNECTED"
+            connectionStatus = "STATUS_DISCONNECTED"
             return
         }
         
         connectionAttemptCount += 1
-        connectionStatusKey = "STATUS_CONNECTING"
+        connectionStatus = "STATUS_CONNECTING"
         
         var targetUrlStr: String
         
         if isUsingSshTunnel {
-            // Goal: Fallback WebSocket: ws://127.0.0.1:18790
             targetUrlStr = "ws://127.0.0.1:18790"
         } else {
-            // Goal: Main WebSocket: wss://{host}:{port} or ws://{host}:{port}
             let scheme = (serverHost.contains("localhost") || serverHost.contains("127.0.0.1")) ? "ws" : "wss"
             targetUrlStr = "\(scheme)://\(serverHost):\(serverPort)"
         }
 
         guard let targetUrl = URL(string: targetUrlStr) else {
-            connectionStatusKey = "STATUS_ERROR"
+            connectionStatus = "STATUS_ERROR"
             return
         }
         
@@ -142,8 +141,6 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     }
     
     private func handleConnectionFailure(error: Error?) {
-        // Trigger SSH fallback if enabled and not already using it.
-        // Proactive: try SSH if the first direct attempt fails.
         if useSshFallback && !isUsingSshTunnel {
             startSshTunnel()
         } else {
@@ -154,19 +151,18 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     private func startSshTunnel() {
         guard !sshUser.isEmpty else {
             os_log("SSH User is missing. Cannot start tunnel.", log: logger, type: .error)
-            connectionStatusKey = "STATUS_SSH_USER_MISSING"
+            connectionStatus = "STATUS_SSH_USER_MISSING"
             return
         }
         
         os_log("Initiating SSH Tunnel Fallback...", log: logger, type: .info)
-        connectionStatusKey = "STATUS_STARTING_SSH"
+        connectionStatus = "STATUS_STARTING_SSH"
         
         sshProcess?.terminate()
         
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
         
-        // Goal: ssh -N -L 18790:127.0.0.1:{port} {sshUser}@{host}
         let remoteTarget = "\(sshUser)@\(serverHost)"
         let tunnelSpec = "18790:127.0.0.1:\(serverPort)"
         
@@ -177,18 +173,17 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             self.sshProcess = process
             self.isUsingSshTunnel = true
             
-            // Wait for tunnel to establish
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                 if let proc = self.sshProcess, proc.isRunning {
                     self.connect()
                 } else {
                     self.isUsingSshTunnel = false
-                    self.connectionStatusKey = "STATUS_SSH_FAILED"
+                    self.connectionStatus = "STATUS_SSH_FAILED"
                 }
             }
         } catch {
             os_log("Failed to start SSH process: %{public}@", log: logger, type: .error, error.localizedDescription)
-            connectionStatusKey = "STATUS_SSH_FAILED"
+            connectionStatus = "STATUS_SSH_FAILED"
             isUsingSshTunnel = false
         }
     }
@@ -196,11 +191,11 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     private func runDiagnostics(error: Error?) {
         let errorDesc = error?.localizedDescription ?? "Unknown error"
         if errorDesc.contains("refused") {
-            connectionStatusKey = "STATUS_OFFLINE_REFUSED"
+            connectionStatus = "STATUS_OFFLINE_REFUSED"
         } else if errorDesc.contains("timed out") {
-            connectionStatusKey = "STATUS_OFFLINE_TIMEOUT"
+            connectionStatus = "STATUS_OFFLINE_TIMEOUT"
         } else {
-            connectionStatusKey = "STATUS_ERROR" // We could include the error description but i18n is hard with dynamic errors
+            connectionStatus = "STATUS_ERROR"
         }
     }
     
@@ -210,7 +205,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         sshProcess = nil
         isUsingSshTunnel = false
         connectionAttemptCount = 0
-        connectionStatusKey = "STATUS_DISCONNECTED"
+        connectionStatus = "STATUS_DISCONNECTED"
     }
     
     // MARK: - WebSocketDelegate
@@ -222,13 +217,13 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             switch event {
             case .connected(_):
                 self.isConnected = true
-                self.connectionStatusKey = "STATUS_CONNECTED"
+                self.connectionStatus = "STATUS_CONNECTED"
                 self.connectionAttemptCount = 0
                 os_log("Websocket is connected", log: self.logger, type: .info)
                 
             case .disconnected(let reason, let code):
                 self.isConnected = false
-                self.connectionStatusKey = "STATUS_DISCONNECTED"
+                self.connectionStatus = "STATUS_DISCONNECTED"
                 os_log("Websocket is disconnected: %{public}@ code: %d", log: self.logger, type: .info, reason, code)
                 
             case .text(let string):
@@ -270,9 +265,9 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             let payload = json["payload"] as? [String: Any]
             
             if isResponse && (payload?["type"] as? String == "hello-ok" || json["result"] != nil) {
-                 self.connectionStatusKey = isUsingSshTunnel ? "STATUS_ONLINE_PAIRED_SSH" : "STATUS_ONLINE_PAIRED"
+                 self.connectionStatus = isUsingSshTunnel ? "STATUS_ONLINE_PAIRED_SSH" : "STATUS_ONLINE_PAIRED"
             } else if json["error"] != nil {
-                 self.connectionStatusKey = "STATUS_HANDSHAKE_FAILED"
+                 self.connectionStatus = "STATUS_HANDSHAKE_FAILED"
             }
             return
         }

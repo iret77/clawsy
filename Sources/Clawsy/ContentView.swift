@@ -9,7 +9,7 @@ struct ContentView: View {
     @State private var showingSettings = false
     @State private var showingLog = false
     
-    // Persistent Configuration
+    // Persistent Configuration (UI State only)
     @AppStorage("serverHost") private var serverHost = "agenthost"
     @AppStorage("serverPort") private var serverPort = "18789"
     @AppStorage("serverToken") private var serverToken = ""
@@ -31,10 +31,10 @@ struct ContentView: View {
                             .font(.system(size: 13, weight: .semibold))
                         
                         Group {
-                            if network.connectionStatusKey == "STATUS_CONNECTING" {
+                            if network.connectionStatus == "STATUS_CONNECTING" {
                                 Text("STATUS_CONNECTING \(network.connectionAttemptCount)")
                             } else {
-                                Text(LocalizedStringKey(network.connectionStatusKey))
+                                Text(LocalizedStringKey(network.connectionStatus))
                             }
                         }
                         .font(.system(size: 11))
@@ -137,7 +137,6 @@ struct ContentView: View {
             .padding(6)
         }
         .frame(width: 240)
-        // Background removed to allow NSPopover's native material to show
         .onAppear {
             setupCallbacks()
             // Auto-connect if configured
@@ -165,7 +164,7 @@ struct ContentView: View {
     
     func getStatusColor() -> Color {
         if network.isConnected { return .green }
-        if network.connectionStatusKey.contains("CONNECTING") || network.connectionStatusKey.contains("STARTING") { return .orange }
+        if network.connectionStatus.contains("CONNECTING") || network.connectionStatus.contains("STARTING") { return .orange }
         return .red
     }
     
@@ -175,20 +174,6 @@ struct ContentView: View {
         } else {
             network.configure(host: serverHost, port: serverPort, token: serverToken)
             network.connect()
-        }
-    }
-    
-    func triggerSurprise() {
-        let content = UNMutableNotificationContent()
-        content.title = "🦞 LOBSTER MODE ACTIVATED!"
-        content.body = "Fire Sequence initiated. CyberClaw is watching. 2035 is now."
-        content.sound = .default
-        
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(request)
-        
-        if network.isConnected {
-            network.sendEvent(kind: "surprise", payload: ["msg": "Lobster Mode Triggered"])
         }
     }
     

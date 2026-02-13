@@ -7,7 +7,6 @@ struct ClawsyApp: App {
     
     var body: some Scene {
         Settings {
-            // Placeholder for real settings window
             VStack {
                 Text("SETTINGS_WINDOW_TITLE")
                 Text("VERSION_FORMAT 0.2.0")
@@ -27,17 +26,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusBarItem.button {
-            // Load the Menu Bar Icon from the asset catalog
-            // We use a specific name "Icon" which we've added to Assets.xcassets
             let iconName = NSImage.Name("Icon")
             if let menuIcon = NSImage(named: iconName) {
                 menuIcon.size = NSSize(width: 18, height: 18)
                 menuIcon.isTemplate = true
                 button.image = menuIcon
             } else {
-                // If the icon is missing, we use a fallback but log it.
-                // The requirement is to eliminate 'ant.fill'.
-                // We'll use a generic circle as a last resort if even the asset is missing.
                 button.title = "Clawsy"
                 print("Error: Menu Bar Icon 'Icon' not found in assets.")
             }
@@ -54,7 +48,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     }
     
     private func showFloatingWindow<V: View>(view: V, title: String, autosaveName: String) {
-        // Ensure UI updates on main thread
         DispatchQueue.main.async {
             self.alertWindow?.close()
             
@@ -68,7 +61,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             window.isReleasedWhenClosed = false
             window.titlebarAppearsTransparent = true
             window.title = title
-            window.level = .floating // Force on top
+            window.level = .floating 
             
             window.contentView = NSHostingView(rootView: view)
             self.alertWindow = window
