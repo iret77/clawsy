@@ -11,5 +11,67 @@
 "NOTIFICATION_BODY_UPLOADING" = "Subiendo: %@";
 "REVOKE_PERMISSION" = "Revocar acceso";
 "CLIPBOARD_SYNC" = "Sincronización de portapapeles";
+"CHAR_COUNT %lld" = "%lld caracteres";
+"COPY_LOCAL" = "Copiar local";
 "CLIPBOARD_WANTS_WRITE" = "El agente quiere escribir en tu portapapeles:";
 "CLIPBOARD_WANTS_READ" = "El agente quiere leer tu portapapeles.";
+
+/* Main Menu */
+"APP_NAME" = "Clawsy";
+"SCREENSHOT" = "Captura de pantalla";
+"FULL_SCREEN" = "Pantalla completa";
+"INTERACTIVE_AREA" = "Área interactiva";
+"PUSH_CLIPBOARD" = "Enviar portapapeles";
+"COPY_TO_AGENT" = "Copiar al agente";
+"FILE_SYNC" = "Sincronización de archivos";
+"MANAGED_FOLDER" = "Carpeta gestionada";
+"CONNECT" = "Conectar";
+"DISCONNECT" = "Desconectar";
+"SETTINGS" = "Configuración...";
+"DEBUG_LOG" = "Registro de depuración";
+"QUIT" = "Salir";
+
+/* Status */
+"STATUS_CONNECTED" = "Conectado";
+"STATUS_DISCONNECTED" = "Desconectado";
+"STATUS_CONNECTING %lld" = "Conectando (Intento %lld)...";
+"STATUS_OFFLINE_REFUSED" = "Fuera de línea (Servidor rechazado)";
+"STATUS_OFFLINE_TIMEOUT" = "Fuera de línea (Tiempo agotado)";
+"STATUS_ERROR" = "Error";
+"STATUS_ONLINE_PAIRED" = "En línea (Emparejado)";
+"STATUS_ONLINE_PAIRED_SSH" = "En línea (Emparejado vía SSH)";
+"STATUS_HANDSHAKE_FAILED" = "Fallo en el protocolo de enlace";
+"STATUS_STARTING_SSH" = "Iniciando túnel SSH...";
+"STATUS_SSH_FAILED" = "Fallo en el túnel SSH";
+"STATUS_SSH_USER_MISSING" = "Usuario SSH requerido";
+
+/* Alerts */
+"ALERT_SCREENSHOT_TITLE" = "¿Permitir captura?";
+"ALERT_SCREENSHOT_BODY" = "El agente solicitó ver tu pantalla.";
+"ALERT_DENY" = "Denegar";
+"ALERT_ALLOW" = "Permitir";
+
+/* Settings */
+"SETTINGS_TITLE" = "Configuración";
+"GATEWAY" = "Pasarela";
+"HOST" = "Host / IP";
+"PORT" = "Puerto";
+"TOKEN" = "Token";
+"SSH_USER" = "Usuario SSH";
+"SSH_FALLBACK" = "Respaldo SSH";
+"SSH_FALLBACK_DESC" = "Túnel automático (puerto 18789) si falla la conexión directa.";
+"SHARED_FOLDER" = "Carpeta compartida";
+"PATH" = "Ruta";
+"SHARED_FOLDER_DESC" = "Solo los archivos en esta carpeta son visibles para el agente.";
+"VIBRANT_SECURE" = "Vibrante y Seguro.";
+"DONE" = "Hecho";
+
+/* Settings Window */
+"SETTINGS_WINDOW_TITLE" = "Configuración de Clawsy";
+"VERSION_FORMAT %@" = "Versión %@";
+
+/* Debug Log */
+"DEBUG_LOG_TITLE" = "Registro de red";
+"NO_DATA" = "No hay datos recibidos.";
+"SELECT_TEXT_COPY" = "Selecciona el texto para copiar.";
+"COPY_ALL" = "Copiar todo";
