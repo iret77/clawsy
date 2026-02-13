@@ -89,6 +89,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         )
         showFloatingWindow(view: view, title: "File Sync", autosaveName: "ai.clawsy.FileWindow")
     }
+
+    func showCameraPreview(image: NSImage, onConfirm: @escaping () -> Void, onCancel: @escaping () -> Void) {
+        let view = CameraPreviewView(
+            image: image,
+            onConfirm: { onConfirm(); self.alertWindow?.close() },
+            onCancel: { onCancel(); self.alertWindow?.close() }
+        )
+        showFloatingWindow(view: view, title: "Camera Preview", autosaveName: "ai.clawsy.CameraWindow")
+    }
     
     @objc func togglePopover(_ sender: AnyObject?) {
         if let button = statusBarItem.button {

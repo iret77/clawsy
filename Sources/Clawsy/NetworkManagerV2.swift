@@ -32,6 +32,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     var onClipboardReadRequested: ((String) -> Void)?
     var onClipboardWriteRequested: ((String, String) -> Void)?
     var onFileSyncRequested: ((String, String, @escaping (TimeInterval?) -> Void, @escaping () -> Void) -> Void)?
+    var onCameraPreviewRequested: ((NSImage, @escaping () -> Void, @escaping () -> Void) -> Void)?
     
     // Permission Tracking
     private var filePermissionExpiry: Date?
@@ -461,11 +462,24 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             
         case "camera.snap":
             let deviceId = params["deviceId"] as? String
+            let preview = params["preview"] as? Bool ?? false
+            
             CameraManager.takePhoto(deviceId: deviceId) { b64 in
-                if let b64 = b64 {
-                    self.sendResponse(id: id, result: ["content": b64])
-                } else {
+                guard let b64 = b64, let data = Data(base64Encoded: b64), let image = NSImage(data: data) else {
                     self.sendError(id: id, code: -32000, message: "Camera capture failed")
+                    return
+                }
+                
+                if preview {
+                    DispatchQueue.main.async {
+                        self.onCameraPreviewRequested?(image, {
+                            self.sendResponse(id: id, result: ["content": b64])
+                        }, {
+                            self.sendError(id: id, code: -1, message: "User rejected camera image")
+                        })
+                    }
+                } else {
+                    self.sendResponse(id: id, result: ["content": b64])
                 }
             }
             

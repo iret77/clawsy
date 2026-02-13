@@ -23,10 +23,10 @@
 - **Camera Integration**:
     - [x] Implement `camera.list` (AVFoundation).
     - [x] Implement `camera.snap` (Still image capture).
-    - [ ] Add "Preview before Send" option for manual camera snaps.
+    - [x] Add "Preview before Send" option for camera snaps. (Implemented `CameraPreviewView` and protocol support).
 - **Distribution**: 
 
 ## 📝 Notes
 - **USP**: Clawsy focuses on professional workflow integration (File Sync, advanced Clipboard management) exceeding the standard companion app.
-- **Night Sprint Concluded**: (2026-02-13 02:00 UTC) Major features for SSH Fallback and File Sync added.
+- **Night Sprint Concluded**: (2026-02-13 14:45 UTC) Implemented Camera Preview HUD and protocol support for `camera.snap` with preview. Ready for build verification on Mac node.
 - **Verification**: christian will test the inbound `screen.capture` fix and the new UI in the morning.

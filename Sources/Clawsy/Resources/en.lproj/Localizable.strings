@@ -16,6 +16,9 @@
 "CLIPBOARD_WANTS_WRITE" = "The agent wants to write to your clipboard:";
 "CLIPBOARD_WANTS_READ" = "The agent wants to read your clipboard.";
 
+"CAMERA_PREVIEW_TITLE" = "Camera Preview";
+"SEND_TO_AGENT" = "Send to Agent";
+
 /* Main Menu */
 "APP_NAME" = "Clawsy";
 "SCREENSHOT" = "Screenshot";
