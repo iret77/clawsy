@@ -58,6 +58,7 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
         connectionAttemptCount += 1
         connectionStatus = "Connecting (Attempt \(connectionAttemptCount))..."
         
+        // Use local tunnel port if SSH is active
         let targetUrlStr = isUsingSshTunnel ? "ws://localhost:18789" : serverUrl
         guard let targetUrl = URL(string: targetUrlStr) else {
             connectionStatus = "Invalid URL"
@@ -251,7 +252,8 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
         
         switch command {
         case "screen.capture":
-            onScreenshotRequested?(params["interactive"] as? Bool ?? false, id)
+            let interactive = params["interactive"] as? Bool ?? false
+            onScreenshotRequested?(interactive, id)
             
         case "clipboard.read":
             onClipboardReadRequested?(id)
@@ -264,7 +266,6 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
             }
             
         case "file.list":
-            // Clawsy Rule: Only list the shared folder
             let files = ClawsyFileManager.listFiles(at: baseDir)
             let result = files.map { ["name": $0.name, "isDirectory": $0.isDirectory, "size": $0.size, "modified": $0.modified.timeIntervalSince1970] }
             sendResponse(id: id, result: ["files": result, "path": sharedFolderPath])
@@ -325,11 +326,18 @@ class NetworkManagerV2: ObservableObject, WebSocketDelegate {
     private func send(json: [String: Any]) {
         guard let data = try? JSONSerialization.data(withJSONObject: json),
               let text = String(data: data, encoding: .utf8) else { return }
-        DispatchQueue.main.async { self.rawLog += "\nOUT: \(text)" }
+        
+        DispatchQueue.main.async {
+            self.rawLog += "\nOUT: \(text)"
+        }
+        
         socket?.write(string: text)
     }
     
     private func base64UrlEncode(_ data: Data) -> String {
-        return data.base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
+        return data.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
     }
 }
