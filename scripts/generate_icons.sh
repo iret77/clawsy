@@ -43,3 +43,48 @@ sips -s format png -z 512 512   "$SOURCE_APP" --out "$DEST/icon_512x512.png" > /
 sips -s format png -z 1024 1024 "$SOURCE_APP" --out "$DEST/icon_512x512@2x.png" > /dev/null
 
 echo "✅ App Icons generated as PNG!"
+
+# Generate Menu Bar Icon (Template)
+MENU_DEST="Sources/Clawsy/Assets.xcassets/Icon.imageset"
+mkdir -p "$MENU_DEST"
+
+if [ -f "$SOURCE_MENU" ]; then
+    echo "🦞 Generating Menu Bar Icons from $SOURCE_MENU..."
+    # 1x: 18x18, 2x: 36x36, 3x: 54x54
+    sips -s format png -z 18 18 "$SOURCE_MENU" --out "$MENU_DEST/Icon.png" > /dev/null
+    sips -s format png -z 36 36 "$SOURCE_MENU" --out "$MENU_DEST/Icon@2x.png" > /dev/null
+    sips -s format png -z 54 54 "$SOURCE_MENU" --out "$MENU_DEST/Icon@3x.png" > /dev/null
+    
+    # Create Contents.json for the imageset
+    cat <<EOF > "$MENU_DEST/Contents.json"
+{
+  "images" : [
+    {
+      "idiom" : "universal",
+      "filename" : "Icon.png",
+      "scale" : "1x"
+    },
+    {
+      "idiom" : "universal",
+      "filename" : "Icon@2x.png",
+      "scale" : "2x"
+    },
+    {
+      "idiom" : "universal",
+      "filename" : "Icon@3x.png",
+      "scale" : "3x"
+    }
+  ],
+  "info" : {
+    "version" : 1,
+    "author" : "xcode"
+  },
+  "properties" : {
+    "template-rendering-intent" : "template"
+  }
+}
+EOF
+    echo "✅ Menu Bar Icons generated!"
+else
+    echo "⚠️ Warning: Source Menu Icon not found at $SOURCE_MENU"
+fi

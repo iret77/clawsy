@@ -78,6 +78,15 @@ jobs:
             <true/>
             <key>CFBundleIconFile</key>
             <string>AppIcon</string>
+            <key>CFBundleDevelopmentRegion</key>
+            <string>en</string>
+            <key>CFBundleLocalizations</key>
+            <array>
+                <string>en</string>
+                <string>de</string>
+                <string>fr</string>
+                <string>es</string>
+            </array>
             <key>NSAppTransportSecurity</key>
             <dict>
                 <key>NSAllowsArbitraryLoads</key>
@@ -88,8 +97,20 @@ jobs:
         EOF
         
         # Copy Resources from build artifacts to App Bundle
-        # Search for the bundle containing our resources
-        find .build -name "Clawsy_Clawsy.bundle" -exec cp -R {} Clawsy.app/Contents/Resources/ \;
+        # 1. First attempt: Copy from the SPM resource bundle if it exists
+        find .build -name "Clawsy_Clawsy.bundle" -type d -exec cp -R {}/. Clawsy.app/Contents/Resources/ \;
+        
+        # 2. Second attempt: Manual fallback for localizations if SPM bundle is missing them
+        # This ensures .lproj folders are in Resources/ directly
+        cp -R Sources/Clawsy/Resources/*.lproj Clawsy.app/Contents/Resources/ || echo "No manual lproj to copy"
+        
+        # 3. Manual fallback for Assets.car if it was missed
+        # If Assets.car is missing but exists in the bundle, find and copy it
+        find .build -name "Assets.car" -exec cp {} Clawsy.app/Contents/Resources/ \;
+        
+        # Verify final structure
+        echo "Final Resources Structure:"
+        ls -R Clawsy.app/Contents/Resources/
         
         # Ad-hoc sign the app with Entitlements
         codesign --force --deep --entitlements Entitlements.plist -s - Clawsy.app
