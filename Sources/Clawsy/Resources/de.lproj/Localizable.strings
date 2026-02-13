@@ -41,8 +41,8 @@
 "STATUS_OFFLINE_REFUSED" = "Offline (Server verweigert)";
 "STATUS_OFFLINE_TIMEOUT" = "Offline (Zeitüberschreitung)";
 "STATUS_ERROR" = "Fehler";
-"STATUS_ONLINE_PAIRED" = "Online (Gepaart)";
-"STATUS_ONLINE_PAIRED_SSH" = "Online (Gepaart über SSH)";
+"STATUS_ONLINE_PAIRED" = "Online (Verbunden)";
+"STATUS_ONLINE_PAIRED_SSH" = "Online (Verbunden über SSH)";
 "STATUS_HANDSHAKE_FAILED" = "Handshake fehlgeschlagen";
 "STATUS_STARTING_SSH" = "SSH-Tunnel wird gestartet...";
 "STATUS_SSH_FAILED" = "SSH-Tunnel fehlgeschlagen";
