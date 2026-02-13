@@ -23,6 +23,7 @@ struct ContentView: View {
     @State private var showingScreenshotAlert = false
     @State private var isScreenshotInteractive = false
     @State private var pendingRequestId: String? = nil
+    @State private var fileWatcher: FileWatcher? = nil
     
     var body: some View {
         VStack(spacing: 0) {
@@ -181,6 +182,7 @@ struct ContentView: View {
         .frame(width: 240)
         .onAppear {
             setupCallbacks()
+            setupFileWatcher()
             
             // Validate Shared Folder
             if !sharedFolderPath.isEmpty {
@@ -224,6 +226,9 @@ struct ContentView: View {
                      self.triggerFileSync()
                  }
              }
+         }
+         .onChange(of: sharedFolderPath) { _ in
+             setupFileWatcher()
          }
     }
     
@@ -277,9 +282,25 @@ struct ContentView: View {
     
     func triggerFileSync() {
         if !sharedFolderPath.isEmpty {
-            network.rawLog += "\n[FILE] Automatic sync triggered..."
+            network.rawLog += "\n[FILE] Sync triggered (Watcher or Connection)..."
             network.sendEvent(kind: "file.sync_triggered", payload: ["path": sharedFolderPath])
         }
+    }
+    
+    func setupFileWatcher() {
+        fileWatcher?.stop()
+        
+        let path = sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
+        guard !path.isEmpty, Foundation.FileManager.default.fileExists(atPath: path) else { return }
+        
+        let watcher = FileWatcher(url: URL(fileURLWithPath: path))
+        watcher.callback = {
+            DispatchQueue.main.async {
+                self.triggerFileSync()
+            }
+        }
+        watcher.start()
+        self.fileWatcher = watcher
     }
     
     func setupCallbacks() {

@@ -1,8 +1,7 @@
 # Sprint Status: Clawsy App (2026-02-13)
 
 ## ✅ Completed
-- **Automatic File Sync**: Removed manual 'File Sync' button and implemented automatic sync trigger upon successful connection. App now notifies the agent of the shared folder path automatically. [Build #111]
-- **Manual File Sync Trigger**: Updated 'File Sync' button in `ContentView` to manually trigger a sync event (`file.sync_triggered`) with path payload and added debug logging for user feedback. [Build #111 - DEPRECATED]
+- **Automated Folder Monitoring**: Implemented `FileWatcher` using `DispatchSourceFileSystemObject` to monitor the shared folder for changes. The app now automatically triggers a sync event (`file.sync_triggered`) whenever a file is added/modified or upon successful connection, removing the need for a manual 'File Sync' button. [Build #111]
 - **Handshake V2**: Fully implemented and verified (hello-ok payload matching).
 - **Branding/ID**: Aligned internal client ID with `openclaw-macos` for Gateway compatibility.
 - **UI Redesign**: Native macOS Look & Feel (Vibrancy/Blur), refined typography, and shortcuts (⌘Q, ⌘,).
