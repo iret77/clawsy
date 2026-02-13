@@ -83,6 +83,8 @@
 "FOLDER_MISSING_TITLE" = "Ordner nicht gefunden";
 "FOLDER_MISSING_BODY" = "Der konfigurierte Ordner existiert nicht mehr: %@. Die Einstellung wurde zurückgesetzt.";
 "SELECT_SHARED_FOLDER" = "Gemeinsamen Ordner auswählen";
+"SELECT_FOLDER_BUTTON" = "Ordner wählen...";
+"SHOW_IN_FINDER" = "Im Finder zeigen";
 
 /* Camera Preview */
 "CAMERA_PREVIEW_TITLE" = "Kameravorschau";

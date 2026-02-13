@@ -86,3 +86,5 @@
 "FOLDER_MISSING_TITLE" = "Folder Not Found";
 "FOLDER_MISSING_BODY" = "The configured shared folder no longer exists: %@. Setting has been reset.";
 "SELECT_SHARED_FOLDER" = "Select Shared Folder";
+"SELECT_FOLDER_BUTTON" = "Select Folder...";
+"SHOW_IN_FINDER" = "Show in Finder";

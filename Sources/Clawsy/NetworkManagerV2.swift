@@ -465,7 +465,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
     }
     
     private func handleCommand(id: String, command: String, params: [String: Any]) {
-        os_log("Handling command: %{public}@", log: logger, type: .info, command)
+        os_log("Handling command: %{public}@ (id: %{public}@)", log: logger, type: .info, command, id)
         
         let rawPath = sharedFolderPath
         if rawPath.isEmpty {
@@ -529,8 +529,19 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             
         case "file.list":
             let sharedPath = self.sharedFolderPath // Capture current path
+            os_log("[FILE] Listing files for path: %{public}@ (resolved: %{public}@)", log: self.logger, type: .info, sharedPath, baseDir)
+            DispatchQueue.main.async {
+                self.rawLog += "\n[FILE] Listing: \(sharedPath)"
+            }
+            
             DispatchQueue.global(qos: .userInitiated).async {
                 let files = ClawsyFileManager.listFiles(at: baseDir)
+                os_log("[FILE] Found %d items in %{public}@", log: self.logger, type: .info, files.count, baseDir)
+                
+                DispatchQueue.main.async {
+                    self.rawLog += "\n[FILE] Found \(files.count) items"
+                }
+                
                 let result = files.map { ["name": $0.name, "isDirectory": $0.isDirectory, "size": $0.size, "modified": $0.modified.timeIntervalSince1970] }
                 self.sendResponse(id: id, result: ["files": result, "path": sharedPath])
             }

@@ -413,19 +413,27 @@ struct SettingsView: View {
     
     func selectFolder() {
         let panel = NSOpenPanel()
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.resolvesAliases = true
+        panel.treatsFilePackagesAsDirectories = false
+        panel.canDownloadUbiquitousContents = true
+        panel.canResolveUbiquitousConflicts = true
         panel.message = NSLocalizedString("SELECT_SHARED_FOLDER", comment: "")
         
-        if panel.runModal() == .OK {
-            if let url = panel.url {
-                var path = url.path
-                let home = NSHomeDirectory()
-                if path.hasPrefix(home) {
-                    path = path.replacingOccurrences(of: home, with: "~")
+        // Ensure the panel runs on the main thread and is robust
+        DispatchQueue.main.async {
+            panel.becomeKey()
+            if panel.runModal() == .OK {
+                if let url = panel.url {
+                    var path = url.path
+                    let home = NSHomeDirectory()
+                    if path.hasPrefix(home) {
+                        path = path.replacingOccurrences(of: home, with: "~")
+                    }
+                    self.sharedFolderPath = path
                 }
-                sharedFolderPath = path
             }
         }
     }
@@ -497,24 +505,37 @@ struct SettingsView: View {
                     }
                     
                     // File Sync Section
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         Label(LocalizedStringKey("SHARED_FOLDER"), systemImage: "folder.badge.plus")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.green)
                         
-                        HStack {
-                            TextField(LocalizedStringKey("PATH"), text: $sharedFolderPath)
-                                .textFieldStyle(.roundedBorder)
-                                .font(.system(.body, design: .monospaced))
-                            
-                            Button(action: openInFinder) {
-                                Image(systemName: "arrow.right.circle.fill")
-                                    .foregroundColor(.blue)
-                            }
-                            .buttonStyle(.plain)
-                            
+                        TextField(LocalizedStringKey("PATH"), text: $sharedFolderPath)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(.body, design: .monospaced))
+                            .disabled(true)
+                        
+                        HStack(spacing: 12) {
                             Button(action: selectFolder) {
-                                Image(systemName: "folder.fill")
+                                HStack {
+                                    Image(systemName: "folder.fill.badge.plus")
+                                    Text(LocalizedStringKey("SELECT_FOLDER_BUTTON"))
+                                }
+                                .padding(.horizontal, 4)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.regular)
+                            
+                            if !sharedFolderPath.isEmpty {
+                                Button(action: openInFinder) {
+                                    HStack {
+                                        Image(systemName: "folder")
+                                        Text(LocalizedStringKey("SHOW_IN_FINDER"))
+                                    }
+                                    .padding(.horizontal, 4)
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.regular)
                             }
                         }
                         
