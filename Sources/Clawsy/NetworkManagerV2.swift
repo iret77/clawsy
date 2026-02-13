@@ -252,6 +252,14 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
             
             // Kill existing tunnel if any
             self.sshProcess?.terminate()
+            
+            // Explicitly kill any process on the target port to avoid "Address already in use"
+            let killProcess = Process()
+            killProcess.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            killProcess.arguments = ["bash", "-c", "lsof -t -i:18790 | xargs kill -9"]
+            try? killProcess.run()
+            killProcess.waitUntilExit()
+
             self.isUsingSshTunnel = false
             
             let process = Process()
@@ -273,7 +281,7 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
                 self.sshProcess = process
                 
                 // Give SSH a moment to establish the encrypted link
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
                     if let proc = self.sshProcess, proc.isRunning {
                         os_log("SSH Tunnel established successfully.", log: self.logger, type: .info)
                         self.isUsingSshTunnel = true

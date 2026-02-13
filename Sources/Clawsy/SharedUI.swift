@@ -60,7 +60,7 @@ struct MenuItemRow: View {
             
             if hasChevron {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: 10, weight: .bold))
                     .foregroundColor(.secondary.opacity(0.4))
             }
         }

@@ -78,7 +78,7 @@ struct ContentView: View {
                 }
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
-                .padding(.horizontal, -12) // Neutralize default Menu padding for alignment
+                .padding(.leading, -4)
                 .frame(maxWidth: .infinity)
 
                 // Clipboard
@@ -112,7 +112,7 @@ struct ContentView: View {
                 }
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
-                .padding(.horizontal, -12) // Neutralize default Menu padding for alignment
+                .padding(.leading, -4)
                 .frame(maxWidth: .infinity)
                 
                 Divider().padding(.vertical, 4).opacity(0.5)
