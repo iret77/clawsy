@@ -23,15 +23,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusBarItem.button {
-            // Priority: Assets/Icon.png (if bundled), then AppIcon from assets, then Emoji 🦞
-            if let iconImage = NSImage(named: "Icon") {
-                iconImage.size = NSSize(width: 18, height: 18)
-                iconImage.isTemplate = true
-                button.image = iconImage
-            } else if let appIcon = NSImage(named: "AppIcon") {
+            // Priority: AppIcon from assets, then Assets/Icon.png (if bundled), then Emoji 🦞
+            // Using isTemplate = true only for monochrome icons. 
+            // For now, let's try the AppIcon with isTemplate = false to avoid the white square.
+            if let appIcon = NSImage(named: "AppIcon") {
                 appIcon.size = NSSize(width: 18, height: 18)
-                appIcon.isTemplate = true
+                appIcon.isTemplate = false // Keep colors/transparency as is
                 button.image = appIcon
+            } else if let iconImage = NSImage(named: "Icon") {
+                iconImage.size = NSSize(width: 18, height: 18)
+                iconImage.isTemplate = false
+                button.image = iconImage
             } else {
                 button.title = "🦞"
             }
