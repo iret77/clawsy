@@ -63,7 +63,7 @@
 "SHARED_FOLDER" = "Carpeta compartida";
 "PATH" = "Ruta";
 "SHARED_FOLDER_DESC" = "Solo los archivos en esta carpeta son visibles para el agente.";
-"VIBRANT_SECURE" = "Vibrante y Seguro.";
+"VIBRANT_SECURE" = "Estable y Cifrado.";
 "DONE" = "Hecho";
 
 /* Settings Window */

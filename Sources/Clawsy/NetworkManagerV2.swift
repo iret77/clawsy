@@ -101,10 +101,15 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         UserDefaults.standard.set(host, forKey: "serverHost")
         UserDefaults.standard.set(port, forKey: "serverPort")
         UserDefaults.standard.set(token, forKey: "serverToken")
+        // Ensure values are synchronized to disk
+        UserDefaults.standard.synchronize()
         os_log("Configured with Host: %{public}@, Port: %{public}@", log: logger, type: .info, host, port)
     }
 
     func connect() {
+        // Refresh values from disk before connecting
+        UserDefaults.standard.synchronize()
+        
         guard !serverHost.isEmpty, !serverToken.isEmpty else {
             connectionStatus = "STATUS_DISCONNECTED"
             return

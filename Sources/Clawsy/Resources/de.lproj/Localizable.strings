@@ -63,7 +63,7 @@
 "SHARED_FOLDER" = "Gemeinsamer Ordner";
 "PATH" = "Pfad";
 "SHARED_FOLDER_DESC" = "Nur Dateien in diesem Ordner sind für den Agenten sichtbar.";
-"VIBRANT_SECURE" = "Lebendig & Sicher.";
+"VIBRANT_SECURE" = "Stabil & Verschlüsselt.";
 "DONE" = "Fertig";
 
 /* Settings Window */
