@@ -6,7 +6,7 @@ import SwiftUI
 // Loaded from UserDefaults
 // ---------------------
 
-class NetworkManager: ObservableObject, WebSocketDelegate {
+class NetworkManagerLegacy: ObservableObject, WebSocketDelegate {
     @Published var isConnected = false
     @Published var lastMessage = ""
     

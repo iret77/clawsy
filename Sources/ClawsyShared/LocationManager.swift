@@ -98,7 +98,7 @@ public class LocationManager: NSObject, CLLocationManagerDelegate, ObservableObj
         }
         
         // 2. Perform Reverse Geocoding (On-Device Privacy)
-        geocoder.reverseGeocodeLocation(location) { [weak self] (placemarks, error) in
+        geocoder.reverseGeocodeLocation(location) { [weak self] (placemarks, err) in
             if let placemark = placemarks?.first {
                 clawsyLocation.name = placemark.name
                 clawsyLocation.locality = placemark.locality
@@ -112,13 +112,13 @@ public class LocationManager: NSObject, CLLocationManagerDelegate, ObservableObj
         }
     }
     
-    public func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+    public func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         DispatchQueue.main.async {
-            self.authorizationStatus = status
+            self.authorizationStatus = manager.authorizationStatus
         }
     }
     
-    public func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        os_log("Location error: %{public}@", log: logger, type: .error, error.localizedDescription)
+    public func locationManager(_ manager: CLLocationManager, didFailWithError err: Error) {
+        os_log("Location error: %{public}@", log: logger, type: .error, err.localizedDescription)
     }
 }

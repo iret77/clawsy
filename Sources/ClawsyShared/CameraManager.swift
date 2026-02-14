@@ -1,10 +1,13 @@
 import Foundation
 import AVFoundation
-import AppKit
 
-class CameraManager: NSObject {
+#if os(macOS)
+import AppKit
+#endif
+
+public class CameraManager: NSObject {
     
-    static func listCameras() -> [[String: Any]] {
+    public static func listCameras() -> [[String: Any]] {
         let discoverySession = AVCaptureDevice.DiscoverySession(
             deviceTypes: [.builtInWideAngleCamera, .externalUnknown],
             mediaType: .video,
@@ -29,7 +32,7 @@ class CameraManager: NSObject {
         }
     }
     
-    static func takePhoto(deviceId: String?, completion: @escaping (String?) -> Void) {
+    public static func takePhoto(deviceId: String?, completion: @escaping (String?) -> Void) {
         let device: AVCaptureDevice?
         
         if let deviceId = deviceId {
@@ -83,14 +86,14 @@ class CameraManager: NSObject {
     }
 }
 
-class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
+public class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
     private let completion: (Data?) -> Void
     
-    init(completion: @escaping (Data?) -> Void) {
+    public init(completion: @escaping (Data?) -> Void) {
         self.completion = completion
     }
     
-    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+    public func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
         if let error = error {
             print("Error capturing photo: \(error)")
             completion(nil)

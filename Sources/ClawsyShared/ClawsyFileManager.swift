@@ -1,22 +1,29 @@
 import Foundation
 
-class ClawsyFileManager {
+public class ClawsyFileManager {
     
-    struct FileEntry: Codable {
-        let name: String
-        let isDirectory: Bool
-        let size: Int64
-        let modified: Date
+    public struct FileEntry: Codable {
+        public let name: String
+        public let isDirectory: Bool
+        public let size: Int64
+        public let modified: Date
+        
+        public init(name: String, isDirectory: Bool, size: Int64, modified: Date) {
+            self.name = name
+            self.isDirectory = isDirectory
+            self.size = size
+            self.modified = modified
+        }
     }
     
-    static func folderExists(at path: String) -> Bool {
+    public static func folderExists(at path: String) -> Bool {
         let fileManager = Foundation.FileManager.default
         let expandedPath = path.replacingOccurrences(of: "~", with: NSHomeDirectory())
         var isDir: ObjCBool = false
         return fileManager.fileExists(atPath: expandedPath, isDirectory: &isDir) && isDir.boolValue
     }
     
-    static func listFiles(at path: String) -> [FileEntry] {
+    public static func listFiles(at path: String) -> [FileEntry] {
         let fileManager = Foundation.FileManager.default
         let url = URL(fileURLWithPath: path)
         
@@ -42,13 +49,13 @@ class ClawsyFileManager {
         }
     }
     
-    static func readFile(at path: String) -> String? {
+    public static func readFile(at path: String) -> String? {
         let url = URL(fileURLWithPath: path)
         guard let data = try? Data(contentsOf: url) else { return nil }
         return data.base64EncodedString()
     }
     
-    static func writeFile(at path: String, base64Content: String) -> Bool {
+    public static func writeFile(at path: String, base64Content: String) -> Bool {
         guard let data = Data(base64Encoded: base64Content) else { return false }
         let url = URL(fileURLWithPath: path)
         
