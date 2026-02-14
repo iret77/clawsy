@@ -39,7 +39,7 @@ elif [ -f "$RELEASE_DIR/ClawsyMacShare" ]; then
 fi
 chmod 755 "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
 
-# 3. Handle Icons and Assets
+# 3. Handle Icons and Assets (FORCE .icns)
 echo "🎨 Packaging Icons and Assets..."
 if [ -f "scripts/generate_icons.sh" ]; then
     chmod +x scripts/generate_icons.sh
@@ -47,9 +47,11 @@ if [ -f "scripts/generate_icons.sh" ]; then
 fi
 
 # Create a proper .iconset and then .icns for the Finder
-ICONSET_DIR="$BUILD_DIR/Clawsy.iconset"
+ICONSET_DIR="$BUILD_DIR/AppIcon.iconset"
 mkdir -p "$ICONSET_DIR"
 SRC_ICONS="Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset"
+
+# Precise mapping for iconutil
 cp "$SRC_ICONS/icon_16x16.png" "$ICONSET_DIR/icon_16x16.png" || true
 cp "$SRC_ICONS/icon_32x32.png" "$ICONSET_DIR/icon_16x16@2x.png" || true
 cp "$SRC_ICONS/icon_32x32.png" "$ICONSET_DIR/icon_32x32.png" || true
@@ -63,10 +65,10 @@ cp "$SRC_ICONS/icon_1024x1024.png" "$ICONSET_DIR/icon_512x512@2x.png" || true
 
 if command -v iconutil &> /dev/null; then
     echo "Creating AppIcon.icns..."
-    iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns" || echo "⚠️ iconutil failed"
+    iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns"
 fi
 
-# Compile Assets.car
+# Compile Assets.car for modern SwiftUI usage
 if command -v actool &> /dev/null; then
     actool "Sources/ClawsyMac/Assets.xcassets" \
         --compile "$RESOURCES_DIR" \
@@ -96,10 +98,8 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
     <string>0.2.3</string>
-    <key>CFBundleSignature</key>
-    <string>????</string>
     <key>CFBundleVersion</key>
-    <string>127</string>
+    <string>128</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
@@ -130,12 +130,6 @@ cat <<EOF > "$SHARE_EXT_BUNDLE/Contents/Info.plist"
     <string>Clawsy Share</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
-    <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
-    <key>CFBundleShortVersionString</key>
-    <string>0.2.3</string>
-    <key>CFBundleVersion</key>
-    <string>127</string>
     <key>NSExtension</key>
     <dict>
         <key>NSExtensionAttributes</key>
@@ -159,7 +153,7 @@ cp Sources/ClawsyShared/Resources/en.lproj/Localizable.strings "$RESOURCES_DIR/e
 cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings "$RESOURCES_DIR/de.lproj/"
 
 echo "🛡 Signing (Ad-hoc)..."
-# Inside-out signing
+# Sign inner binary first
 if [ -f "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare" ]; then
     codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
 fi
