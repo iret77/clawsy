@@ -31,8 +31,12 @@ echo "📦 Packaging $APP_NAME.app..."
 cp "$RELEASE_DIR/$BINARY_NAME" "$MACOS_DIR/$APP_NAME"
 chmod 755 "$MACOS_DIR/$APP_NAME"
 
-# 2. Copy Share Extension Binary
-if [ -f "$RELEASE_DIR/ClawsyMacShare" ]; then
+# 2. Copy Share Extension Binary (dylib used as Plugin)
+# In recent builds it's libClawsyMacShare.dylib
+if [ -f "$RELEASE_DIR/libClawsyMacShare.dylib" ]; then
+    cp "$RELEASE_DIR/libClawsyMacShare.dylib" "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
+    chmod 755 "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
+elif [ -f "$RELEASE_DIR/ClawsyMacShare" ]; then
      cp "$RELEASE_DIR/ClawsyMacShare" "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
      chmod 755 "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
 fi
@@ -57,6 +61,7 @@ for size in 16 32 128 256 512; do
 done
 
 if command -v iconutil &> /dev/null; then
+    echo "Creating AppIcon.icns..."
     iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns"
 fi
 
@@ -69,15 +74,10 @@ if command -v actool &> /dev/null; then
         --output-partial-info-plist "$BUILD_DIR/partial.plist"
 fi
 
-# --- CRITICAL: MANUAL RESOURCE BUNDLE PACKAGING ---
-echo "📦 Embedding Resource Bundles..."
-# Find the generated resource bundle from the build process
+# 📦 Embedding Resource Bundles (CRITICAL FIX FOR CRASH)
 SHARED_BUNDLE=$(find "$BUILD_DIR" -name "Clawsy_ClawsyShared.bundle" -type d | head -n 1)
 if [ -d "$SHARED_BUNDLE" ]; then
     cp -R "$SHARED_BUNDLE" "$RESOURCES_DIR/"
-    echo "✅ Embedded ClawsyShared resources"
-else
-    echo "⚠️ Warning: Shared resource bundle not found!"
 fi
 
 # 4. Create PkgInfo
@@ -106,7 +106,7 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleVersion</key>
-    <string>150</string>
+    <string>151</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
@@ -158,11 +158,15 @@ cp Sources/ClawsyShared/Resources/en.lproj/Localizable.strings "$RESOURCES_DIR/e
 cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings "$RESOURCES_DIR/de.lproj/"
 
 echo "🛡 Signing (Ad-hoc)..."
-codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
-codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE"
+if [ -f "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare" ]; then
+    codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
+    codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE"
+fi
 codesign --force --options runtime --entitlements ClawsyMac.entitlements --sign - "$MACOS_DIR/$APP_NAME"
-# Final deep sign
 codesign --force --deep --options runtime --entitlements ClawsyMac.entitlements --sign - "$APP_BUNDLE"
+
+# Verification
+codesign -vvv --deep --strict "$APP_BUNDLE"
 
 echo "✅ Build successful!"
 echo "📂 App Bundle: $APP_BUNDLE"
