@@ -78,13 +78,17 @@ cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings "$RESOURCES_DIR/d
 echo "🛡 Signing (Ad-hoc)..."
 # Deep sign the components from inside out
 if [ -d "$SHARE_EXT_BUNDLE" ]; then
-    echo "Signing Extension..."
+    echo "Signing Extension Binary..."
     codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
+    echo "Signing Extension Bundle..."
     codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE"
 fi
 
+echo "Signing Main Binary..."
+codesign --force --options runtime --entitlements ClawsyMac.entitlements --sign - "$MACOS_DIR/$APP_NAME"
+
 echo "Signing App Bundle..."
-codesign --force --options runtime --entitlements ClawsyMac.entitlements --sign - "$APP_BUNDLE"
+codesign --force --deep --options runtime --entitlements ClawsyMac.entitlements --sign - "$APP_BUNDLE"
 
 echo "✅ Build successful!"
 echo "📂 App Bundle: $APP_BUNDLE"
