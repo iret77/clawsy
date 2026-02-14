@@ -41,42 +41,34 @@ chmod 755 "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
 
 # 3. Handle Icons and Assets
 echo "🎨 Packaging Icons and Assets..."
-# Note: We rely on the Asset Catalog for the icon mostly, but will try ICNS again
 if [ -f "scripts/generate_icons.sh" ]; then
     chmod +x scripts/generate_icons.sh
     ./scripts/generate_icons.sh
 fi
 
-# Manual ICNS creation - robustness fix: check if source files exist
+# Manual ICNS creation with improved robustness
 ICONSET_DIR="$BUILD_DIR/ClawsyIcon.iconset"
 mkdir -p "$ICONSET_DIR"
 SRC_ICONS="Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset"
 
 # Standard Apple iconset naming convention
-# Use a loop to be safer
 for size in 16 32 128 256 512; do
-    cp "$SRC_ICONS/icon_${size}x${size}.png" "$ICONSET_DIR/icon_${size}x${size}.png" || echo "Missing $size"
-    # standard naming for @2x is doubled pixels
+    cp "$SRC_ICONS/icon_${size}x${size}.png" "$ICONSET_DIR/icon_${size}x${size}.png" || true
     double=$((size * 2))
     if [ "$size" -ne "512" ]; then
-        cp "$SRC_ICONS/icon_${double}x${double}.png" "$ICONSET_DIR/icon_${size}x${size}@2x.png" || echo "Missing ${size}@2x"
+        cp "$SRC_ICONS/icon_${double}x${double}.png" "$ICONSET_DIR/icon_${size}x${size}@2x.png" || true
     else
-        # 512@2x is 1024
-        cp "$SRC_ICONS/icon_1024x1024.png" "$ICONSET_DIR/icon_512x512@2x.png" || echo "Missing 512@2x"
+        cp "$SRC_ICONS/icon_1024x1024.png" "$ICONSET_DIR/icon_512x512@2x.png" || true
     fi
 done
 
 if command -v iconutil &> /dev/null; then
-    echo "Creating AppIcon.icns..."
-    # Check if any file in iconset is 0 bytes (which happened in previous build)
-    if [ -s "$ICONSET_DIR/icon_128x128.png" ]; then
-        iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns" || echo "⚠️ iconutil failed"
-    else
-        echo "⚠️ Source icons are empty, skipping icns"
-    fi
+    echo "Generating AppIcon.icns..."
+    iconutil -c icns "$ICONSET_DIR" -o "$BUILD_DIR/AppIcon.icns"
+    cp "$BUILD_DIR/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
 fi
 
-# Compile Assets.car (Modern SwiftUI requirement)
+# Compile Assets.car
 if command -v actool &> /dev/null; then
     actool "Sources/ClawsyMac/Assets.xcassets" \
         --compile "$RESOURCES_DIR" \
@@ -112,7 +104,7 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleVersion</key>
-    <string>138</string>
+    <string>139</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
@@ -153,7 +145,7 @@ cat <<EOF > "$SHARE_EXT_BUNDLE/Contents/Info.plist"
     <key>CFBundleShortVersionString</key>
     <string>0.2.3</string>
     <key>CFBundleVersion</key>
-    <string>138</string>
+    <string>139</string>
     <key>NSExtension</key>
     <dict>
         <key>NSExtensionAttributes</key>
@@ -187,6 +179,7 @@ codesign --force --deep --options runtime --entitlements ClawsyMac.entitlements 
 # Verification
 echo "🔍 Verifying Build..."
 codesign -vvv --deep --strict "$APP_BUNDLE"
+ls -la "$RESOURCES_DIR"
 
 echo "✅ Build successful!"
 echo "📂 App Bundle: $APP_BUNDLE"
