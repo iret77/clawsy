@@ -46,21 +46,24 @@ if [ -f "scripts/generate_icons.sh" ]; then
     ./scripts/generate_icons.sh
 fi
 
-# Create a proper .icns for the Finder
+# Create a proper .iconset and then .icns for the Finder
+ICONSET_DIR="$BUILD_DIR/Clawsy.iconset"
+mkdir -p "$ICONSET_DIR"
+SRC_ICONS="Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset"
+cp "$SRC_ICONS/icon_16x16.png" "$ICONSET_DIR/icon_16x16.png" || true
+cp "$SRC_ICONS/icon_32x32.png" "$ICONSET_DIR/icon_16x16@2x.png" || true
+cp "$SRC_ICONS/icon_32x32.png" "$ICONSET_DIR/icon_32x32.png" || true
+cp "$SRC_ICONS/icon_64x64.png" "$ICONSET_DIR/icon_32x32@2x.png" || true
+cp "$SRC_ICONS/icon_128x128.png" "$ICONSET_DIR/icon_128x128.png" || true
+cp "$SRC_ICONS/icon_256x256.png" "$ICONSET_DIR/icon_128x128@2x.png" || true
+cp "$SRC_ICONS/icon_256x256.png" "$ICONSET_DIR/icon_256x256.png" || true
+cp "$SRC_ICONS/icon_512x512.png" "$ICONSET_DIR/icon_256x256@2x.png" || true
+cp "$SRC_ICONS/icon_512x512.png" "$ICONSET_DIR/icon_512x512.png" || true
+cp "$SRC_ICONS/icon_1024x1024.png" "$ICONSET_DIR/icon_512x512@2x.png" || true
+
 if command -v iconutil &> /dev/null; then
-    ICONSET_DIR="$BUILD_DIR/Clawsy.iconset"
-    mkdir -p "$ICONSET_DIR"
-    cp Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_16x16.png "$ICONSET_DIR/icon_16x16.png" || true
-    cp Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_32x32.png "$ICONSET_DIR/icon_16x16@2x.png" || true
-    cp Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_32x32.png "$ICONSET_DIR/icon_32x32.png" || true
-    cp Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_64x64.png "$ICONSET_DIR/icon_32x32@2x.png" || true
-    cp Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_128x128.png "$ICONSET_DIR/icon_128x128.png" || true
-    cp Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_256x256.png "$ICONSET_DIR/icon_128x128@2x.png" || true
-    cp Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_256x256.png "$ICONSET_DIR/icon_256x256.png" || true
-    cp Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_512x512.png "$ICONSET_DIR/icon_256x256@2x.png" || true
-    cp Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_512x512.png "$ICONSET_DIR/icon_512x512.png" || true
-    cp Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_1024x1024.png "$ICONSET_DIR/icon_512x512@2x.png" || true
-    iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns"
+    echo "Creating AppIcon.icns..."
+    iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns" || echo "⚠️ iconutil failed"
 fi
 
 # Compile Assets.car
@@ -93,8 +96,10 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
     <string>0.2.3</string>
+    <key>CFBundleSignature</key>
+    <string>????</string>
     <key>CFBundleVersion</key>
-    <string>126</string>
+    <string>127</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
@@ -130,7 +135,7 @@ cat <<EOF > "$SHARE_EXT_BUNDLE/Contents/Info.plist"
     <key>CFBundleShortVersionString</key>
     <string>0.2.3</string>
     <key>CFBundleVersion</key>
-    <string>126</string>
+    <string>127</string>
     <key>NSExtension</key>
     <dict>
         <key>NSExtensionAttributes</key>
