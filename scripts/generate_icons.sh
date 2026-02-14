@@ -3,10 +3,13 @@ set -e
 
 SOURCE_MENU="Assets/Icon.png"
 SOURCE_APP="Assets/AppIcon.jpg"
-DEST="Sources/Clawsy/Assets.xcassets/AppIcon.appiconset"
+# Updated for Ecosystem refactor
+DEST="Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset"
+MENU_DEST="Sources/ClawsyMac/Assets.xcassets/Icon.imageset"
 
 # Create Dest Dir if needed
 mkdir -p "$DEST"
+mkdir -p "$MENU_DEST"
 
 if ! command -v sips &> /dev/null; then
     echo "⚠️  'sips' command not found. This is expected on Linux, but FATAL on macOS CI."
@@ -15,8 +18,10 @@ if ! command -v sips &> /dev/null; then
         exit 1
     else
         # Mock for local/linux dev to prevent script failure
+        echo "🐧 Linux Mock: Touching icon placeholders..."
         for size in 16 32 64 128 256 512 1024; do
             touch "$DEST/icon_${size}x${size}.png"
+            touch "$DEST/icon_${size}x${size}@2x.png"
         done
         exit 0
     fi
@@ -43,10 +48,6 @@ sips -s format png -z 512 512   "$SOURCE_APP" --out "$DEST/icon_512x512.png" > /
 sips -s format png -z 1024 1024 "$SOURCE_APP" --out "$DEST/icon_512x512@2x.png" > /dev/null
 
 echo "✅ App Icons generated as PNG!"
-
-# Generate Menu Bar Icon (Template)
-MENU_DEST="Sources/Clawsy/Assets.xcassets/Icon.imageset"
-mkdir -p "$MENU_DEST"
 
 if [ -f "$SOURCE_MENU" ]; then
     echo "🦞 Generating Menu Bar Icons (Enlarged 28pt) from $SOURCE_MENU..."
