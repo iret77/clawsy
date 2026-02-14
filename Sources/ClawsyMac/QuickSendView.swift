@@ -1,0 +1,69 @@
+import SwiftUI
+
+struct QuickSendView: View {
+    @State private var text: String = ""
+    @FocusState private var isFocused: Bool
+    var onSend: (String) -> Void
+    var onCancel: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Image(systemName: "paperplane.fill")
+                    .foregroundColor(.accentColor)
+                
+                TextField(NSLocalizedString("QUICK_SEND_PLACEHOLDER", bundle: .clawsy, comment: ""), text: $text)
+                    .textFieldStyle(.plain)
+                    .focused($isFocused)
+                    .onSubmit {
+                        if !text.isEmpty {
+                            onSend(text)
+                            text = ""
+                        }
+                    }
+                
+                if !text.isEmpty {
+                    Button(action: { text = "" }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.gray)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding()
+            .background(VisualEffectView(material: .hudWindow, blendingMode: .withinWindow))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.accentColor.opacity(0.5), lineWidth: 1)
+            )
+            .shadow(radius: 10)
+        }
+        .frame(width: 400)
+        .padding()
+        .onAppear {
+            isFocused = true
+        }
+        .onExitCommand {
+            onCancel()
+        }
+    }
+}
+
+struct VisualEffectView: NSViewRepresentable {
+    let material: NSVisualEffectView.Material
+    let blendingMode: NSVisualEffectView.BlendingMode
+    
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let visualEffectView = NSVisualEffectView()
+        visualEffectView.material = material
+        visualEffectView.blendingMode = blendingMode
+        visualEffectView.state = .active
+        return visualEffectView
+    }
+    
+    func updateNSView(_ visualEffectView: NSVisualEffectView, context: Context) {
+        visualEffectView.material = material
+        visualEffectView.blendingMode = blendingMode
+    }
+}

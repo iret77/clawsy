@@ -1,5 +1,4 @@
 import Foundation
-import AppKit
 
 class ClawsyFileManager {
     
@@ -21,13 +20,9 @@ class ClawsyFileManager {
         let fileManager = Foundation.FileManager.default
         let url = URL(fileURLWithPath: path)
         
-        print("[FileManager] Attempting to list directory: \(path)")
-        
         do {
             let resourceKeys: [URLResourceKey] = [.nameKey, .isDirectoryKey, .fileSizeKey, .contentModificationDateKey]
             let items = try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: resourceKeys, options: [.skipsHiddenFiles])
-            
-            print("[FileManager] Found \(items.count) raw items")
             
             return items.compactMap { item in
                 do {
@@ -39,12 +34,10 @@ class ClawsyFileManager {
                         modified: values.contentModificationDate ?? Date()
                     )
                 } catch {
-                    print("[FileManager] Skipping item \(item.lastPathComponent) due to error: \(error)")
                     return nil
                 }
             }
         } catch {
-            print("[FileManager] Critical error listing directory: \(error)")
             return []
         }
     }
@@ -63,7 +56,6 @@ class ClawsyFileManager {
             try data.write(to: url)
             return true
         } catch {
-            print("Error writing file: \(error)")
             return false
         }
     }

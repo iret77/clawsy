@@ -26,6 +26,12 @@
 "INTERACTIVE_AREA" = "Interactive Area";
 "PUSH_CLIPBOARD" = "Push Clipboard";
 "COPY_TO_AGENT" = "Copy to Agent";
+"QUICK_SEND" = "Quick Send";
+"SEND_AND_FORGET" = "Send Text to Agent";
+"QUICK_SEND_PLACEHOLDER" = "Send something to OpenClaw...";
+"SENDING_TO_OPENCLAW" = "Sending to OpenClaw...";
+"SHARE_SUCCESS" = "Shared Successfully";
+"SHARE_FAILED" = "Share Failed";
 "FILE_SYNC" = "File Sync";
 "MANAGED_FOLDER" = "Managed Folder";
 "CAMERA" = "Camera";

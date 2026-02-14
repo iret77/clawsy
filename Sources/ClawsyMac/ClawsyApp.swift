@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import ClawsyShared
 
 @main
 struct ClawsyApp: App {
@@ -20,6 +21,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var statusBarItem: NSStatusItem!
     var popover: NSPopover!
     var alertWindow: NSWindow?
+    var quickSendWindow: NSWindow?
+    var networkManager: NetworkManager?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Create Status Bar Item
@@ -45,6 +48,52 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         // Inject AppDelegate into ContentView
         let contentView = ContentView().environmentObject(self)
         popover.contentViewController = NSHostingController(rootView: contentView)
+        
+        // Register Global Hotkey (Option + Shift + C as a placeholder, or Cmd + Shift + K)
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 40 { // Cmd + Shift + K
+                self.showQuickSend()
+                return nil
+            }
+            return event
+        }
+    }
+    
+    func showQuickSend() {
+        guard let network = networkManager, network.isConnected else { return }
+        
+        DispatchQueue.main.async {
+            if self.quickSendWindow == nil {
+                let window = NSWindow(
+                    contentRect: NSRect(x: 0, y: 0, width: 400, height: 100),
+                    styleMask: [.borderless, .fullSizeContentView],
+                    backing: .buffered, defer: false)
+                
+                window.center()
+                window.isReleasedWhenClosed = false
+                window.isMovableByWindowBackground = true
+                window.level = .floating
+                window.backgroundColor = .clear
+                window.hasShadow = true
+                
+                let quickSendView = QuickSendView(onSend: { text in
+                    network.sendEvent(kind: "quick_send", payload: ["text": text])
+                    self.hideQuickSend()
+                }, onCancel: {
+                    self.hideQuickSend()
+                })
+                
+                window.contentView = NSHostingView(rootView: quickSendView)
+                self.quickSendWindow = window
+            }
+            
+            self.quickSendWindow?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
+    }
+    
+    func hideQuickSend() {
+        quickSendWindow?.orderOut(nil)
     }
     
     private func showFloatingWindow<V: View>(view: V, title: String, autosaveName: String) {

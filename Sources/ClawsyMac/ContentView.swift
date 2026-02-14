@@ -1,9 +1,10 @@
 import SwiftUI
 import UserNotifications
+import ClawsyShared
 
 struct ContentView: View {
-    // Use V2 Manager
-    @StateObject private var network = NetworkManagerV2()
+    // Use Shared Network Manager
+    @StateObject private var network = NetworkManager()
     @EnvironmentObject var appDelegate: AppDelegate
     
     @State private var showingSettings = false
@@ -12,12 +13,12 @@ struct ContentView: View {
     @State private var showingCameraMenu = false
     
     // Persistent Configuration (UI State only)
-    @AppStorage("serverHost") private var serverHost = "agenthost"
-    @AppStorage("serverPort") private var serverPort = "18789"
-    @AppStorage("serverToken") private var serverToken = ""
-    @AppStorage("sshUser") private var sshUser = ""
-    @AppStorage("useSshFallback") private var useSshFallback = true
-    @AppStorage("sharedFolderPath") private var sharedFolderPath = "~/Documents/Clawsy"
+    @AppStorage("serverHost", store: SharedConfig.sharedDefaults) private var serverHost = "agenthost"
+    @AppStorage("serverPort", store: SharedConfig.sharedDefaults) private var serverPort = "18789"
+    @AppStorage("serverToken", store: SharedConfig.sharedDefaults) private var serverToken = ""
+    @AppStorage("sshUser", store: SharedConfig.sharedDefaults) private var sshUser = ""
+    @AppStorage("useSshFallback", store: SharedConfig.sharedDefaults) private var useSshFallback = true
+    @AppStorage("sharedFolderPath", store: SharedConfig.sharedDefaults) private var sharedFolderPath = "~/Documents/Clawsy"
     
     // Alert States
     @State private var showingScreenshotAlert = false
@@ -29,7 +30,7 @@ struct ContentView: View {
             // --- Header & Status ---
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(LocalizedStringKey("APP_NAME"))
+                    Text("APP_NAME", bundle: .clawsy)
                         .font(.system(size: 13, weight: .semibold))
                     
                     Group {
@@ -94,6 +95,13 @@ struct ContentView: View {
                 // Clipboard
                 Button(action: handleManualClipboardSend) {
                     MenuItemRow(icon: "doc.on.clipboard", title: "PUSH_CLIPBOARD", subtitle: "COPY_TO_AGENT", isEnabled: network.isConnected)
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
+
+                // Quick Send
+                Button(action: { appDelegate.showQuickSend() }) {
+                    MenuItemRow(icon: "paperplane.fill", title: "QUICK_SEND", subtitle: "SEND_AND_FORGET", isEnabled: network.isConnected)
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
@@ -186,6 +194,7 @@ struct ContentView: View {
         }
         .frame(width: 240)
         .onAppear {
+            appDelegate.networkManager = network // Link for QuickSend
             setupCallbacks()
             
             // Validate Shared Folder
@@ -195,8 +204,8 @@ struct ContentView: View {
                     sharedFolderPath = ""
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                         let content = UNMutableNotificationContent()
-                        content.title = NSLocalizedString("FOLDER_MISSING_TITLE", comment: "")
-                        content.body = String(format: NSLocalizedString("FOLDER_MISSING_BODY", comment: ""), path)
+                        content.title = NSLocalizedString("FOLDER_MISSING_TITLE", bundle: .clawsy, comment: "")
+                        content.body = String(format: NSLocalizedString("FOLDER_MISSING_BODY", bundle: .clawsy, comment: ""), path)
                         content.sound = .default
                         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
                         UNUserNotificationCenter.current().add(request)
@@ -330,7 +339,7 @@ struct DebugLogView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(LocalizedStringKey("DEBUG_LOG_TITLE"))
+                    Text("DEBUG_LOG_TITLE", bundle: .clawsy)
                         .font(.system(size: 15, weight: .bold))
                     Text("v0.2.3 #119")
                         .font(.system(size: 10, design: .monospaced))
@@ -348,7 +357,7 @@ struct DebugLogView: View {
             
             ScrollView {
                 if logText.isEmpty {
-                    Text(LocalizedStringKey("NO_DATA"))
+                    Text("NO_DATA", bundle: .clawsy)
                         .font(.system(.caption, design: .monospaced))
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
@@ -363,11 +372,11 @@ struct DebugLogView: View {
             .cornerRadius(4)
             
             HStack {
-                Text(LocalizedStringKey("SELECT_TEXT_COPY"))
+                Text("SELECT_TEXT_COPY", bundle: .clawsy)
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()
-                Button(LocalizedStringKey("COPY_ALL")) {
+                Button("COPY_ALL", bundle: .clawsy) {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(logText, forType: .string)
                 }
@@ -392,7 +401,7 @@ struct SettingsView: View {
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
-        panel.message = NSLocalizedString("SELECT_SHARED_FOLDER", comment: "")
+        panel.message = NSLocalizedString("SELECT_SHARED_FOLDER", bundle: .clawsy, comment: "")
         
         // Finalized flags for unrestricted navigation
         panel.resolvesAliases = true
@@ -418,7 +427,7 @@ struct SettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text(LocalizedStringKey("SETTINGS_TITLE"))
+                Text("SETTINGS_TITLE", bundle: .clawsy)
                     .font(.system(size: 15, weight: .bold))
                 Spacer()
                 Button(action: { isPresented = false }) {
@@ -435,23 +444,23 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     // Gateway Section
                     VStack(alignment: .leading, spacing: 8) {
-                        Label(LocalizedStringKey("GATEWAY"), systemImage: "antenna.radiowaves.left.and.right")
+                        Label("GATEWAY", bundle: .clawsy, systemImage: "antenna.radiowaves.left.and.right")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.blue)
                         
                         HStack {
-                            TextField(LocalizedStringKey("HOST"), text: $serverHost)
+                            TextField("HOST", bundle: .clawsy, text: $serverHost)
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(.body, design: .monospaced))
                                 .frame(height: 32)
                             
-                            TextField(LocalizedStringKey("PORT"), text: $serverPort)
+                            TextField("PORT", bundle: .clawsy, text: $serverPort)
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(.body, design: .monospaced))
                                 .frame(width: 80, height: 32)
                         }
                         
-                        SecureField(LocalizedStringKey("TOKEN"), text: $serverToken)
+                        SecureField("TOKEN", bundle: .clawsy, text: $serverToken)
                             .textFieldStyle(.roundedBorder)
                             .frame(height: 32)
                     }
@@ -459,7 +468,7 @@ struct SettingsView: View {
                     // SSH Fallback Section
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Label(LocalizedStringKey("SSH_FALLBACK"), systemImage: "lock.shield")
+                            Label("SSH_FALLBACK", bundle: .clawsy, systemImage: "lock.shield")
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(.orange)
                             Spacer()
@@ -473,20 +482,20 @@ struct SettingsView: View {
                                 }
                         }
                         
-                        TextField(LocalizedStringKey("SSH_USER"), text: $sshUser)
+                        TextField("SSH_USER", bundle: .clawsy, text: $sshUser)
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
                             .frame(height: 32)
                             .disabled(!useSshFallback)
                         
-                        Text(LocalizedStringKey("SSH_FALLBACK_DESC"))
+                        Text("SSH_FALLBACK_DESC", bundle: .clawsy)
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                     }
                     
                     // File Sync Section
                     VStack(alignment: .leading, spacing: 8) {
-                        Label(LocalizedStringKey("SHARED_FOLDER"), systemImage: "folder.badge.plus")
+                        Label("SHARED_FOLDER", bundle: .clawsy, systemImage: "folder.badge.plus")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.green)
                         
@@ -502,7 +511,7 @@ struct SettingsView: View {
                         
                         HStack(spacing: 12) {
                             Button(action: selectFolder) {
-                                Label(LocalizedStringKey("SELECT_SHARED_FOLDER"), systemImage: "folder.fill.badge.plus")
+                                Label("SELECT_SHARED_FOLDER", bundle: .clawsy, systemImage: "folder.fill.badge.plus")
                             }
                             .buttonStyle(.borderedProminent)
                             .controlSize(.regular)
@@ -529,7 +538,7 @@ struct SettingsView: View {
             Divider()
             
             HStack {
-                Text(LocalizedStringKey("VIBRANT_SECURE"))
+                Text("VIBRANT_SECURE", bundle: .clawsy)
                     .font(.system(size: 10, weight: .medium))
                     .foregroundColor(.secondary)
                 
