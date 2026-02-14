@@ -39,7 +39,7 @@ struct ContentView: View {
                             Text("STATUS_CONNECTING \(network.connectionAttemptCount)")
                         } else {
                             // Standard localization for static status keys
-                            Text(LocalizedStringKey(network.connectionStatus))
+                            Text(network.connectionStatus, bundle: .clawsy)
                         }
                     }
                     .font(.system(size: 11))
@@ -376,9 +376,11 @@ struct DebugLogView: View {
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()
-                Button("COPY_ALL", bundle: .clawsy) {
+                Button(action: {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(logText, forType: .string)
+                }) {
+                    Text("COPY_ALL", bundle: .clawsy)
                 }
             }
         }
@@ -444,31 +446,37 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     // Gateway Section
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("GATEWAY", bundle: .clawsy, systemImage: "antenna.radiowaves.left.and.right")
+                        Label(title: { Text("GATEWAY", bundle: .clawsy) }, icon: { Image(systemName: "antenna.radiowaves.left.and.right") })
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.blue)
                         
                         HStack {
-                            TextField("HOST", bundle: .clawsy, text: $serverHost)
-                                .textFieldStyle(.roundedBorder)
-                                .font(.system(.body, design: .monospaced))
-                                .frame(height: 32)
+                            TextField(text: $serverHost) {
+                                Text("HOST", bundle: .clawsy)
+                            }
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(.body, design: .monospaced))
+                            .frame(height: 32)
                             
-                            TextField("PORT", bundle: .clawsy, text: $serverPort)
-                                .textFieldStyle(.roundedBorder)
-                                .font(.system(.body, design: .monospaced))
-                                .frame(width: 80, height: 32)
+                            TextField(text: $serverPort) {
+                                Text("PORT", bundle: .clawsy)
+                            }
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(.body, design: .monospaced))
+                            .frame(width: 80, height: 32)
                         }
                         
-                        SecureField("TOKEN", bundle: .clawsy, text: $serverToken)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(height: 32)
+                        SecureField(text: $serverToken) {
+                            Text("TOKEN", bundle: .clawsy)
+                        }
+                        .textFieldStyle(.roundedBorder)
+                        .frame(height: 32)
                     }
                     
                     // SSH Fallback Section
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Label("SSH_FALLBACK", bundle: .clawsy, systemImage: "lock.shield")
+                            Label(title: { Text("SSH_FALLBACK", bundle: .clawsy) }, icon: { Image(systemName: "lock.shield") })
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(.orange)
                             Spacer()
@@ -482,11 +490,13 @@ struct SettingsView: View {
                                 }
                         }
                         
-                        TextField("SSH_USER", bundle: .clawsy, text: $sshUser)
-                            .textFieldStyle(.roundedBorder)
-                            .font(.system(.body, design: .monospaced))
-                            .frame(height: 32)
-                            .disabled(!useSshFallback)
+                        TextField(text: $sshUser) {
+                            Text("SSH_USER", bundle: .clawsy)
+                        }
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(.body, design: .monospaced))
+                        .frame(height: 32)
+                        .disabled(!useSshFallback)
                         
                         Text("SSH_FALLBACK_DESC", bundle: .clawsy)
                             .font(.system(size: 10))
@@ -495,7 +505,7 @@ struct SettingsView: View {
                     
                     // File Sync Section
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("SHARED_FOLDER", bundle: .clawsy, systemImage: "folder.badge.plus")
+                        Label(title: { Text("SHARED_FOLDER", bundle: .clawsy) }, icon: { Image(systemName: "folder.badge.plus") })
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.green)
                         
@@ -511,7 +521,7 @@ struct SettingsView: View {
                         
                         HStack(spacing: 12) {
                             Button(action: selectFolder) {
-                                Label("SELECT_SHARED_FOLDER", bundle: .clawsy, systemImage: "folder.fill.badge.plus")
+                                Label(title: { Text("SELECT_SHARED_FOLDER", bundle: .clawsy) }, icon: { Image(systemName: "folder.fill.badge.plus") })
                             }
                             .buttonStyle(.borderedProminent)
                             .controlSize(.regular)
