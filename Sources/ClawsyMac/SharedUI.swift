@@ -1,6 +1,7 @@
 import SwiftUI
 
 // Helper for Visual Effect Blur (Native macOS look)
+/*
 struct VisualEffectView: NSViewRepresentable {
     let material: NSVisualEffectView.Material
     let blendingMode: NSVisualEffectView.BlendingMode
