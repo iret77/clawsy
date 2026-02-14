@@ -175,6 +175,12 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
+                
+                Text("v0.2.3 #119")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundColor(.secondary.opacity(0.5))
+                    .padding(.top, 4)
+                    .frame(maxWidth: .infinity)
             }
             .padding(6)
         }
@@ -323,8 +329,13 @@ struct DebugLogView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text(LocalizedStringKey("DEBUG_LOG_TITLE"))
-                    .font(.system(size: 15, weight: .bold))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(LocalizedStringKey("DEBUG_LOG_TITLE"))
+                        .font(.system(size: 15, weight: .bold))
+                    Text("v0.2.3 #119")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(.secondary)
+                }
                 Spacer()
                 Button(action: { isPresented = false }) {
                     Image(systemName: "xmark.circle.fill")

@@ -122,6 +122,10 @@ class NetworkManagerV2: NSObject, ObservableObject, WebSocketDelegate, UNUserNot
         // Refresh values from disk before connecting
         UserDefaults.standard.synchronize()
         
+        DispatchQueue.main.async {
+            self.rawLog += "\n[INFO] Clawsy v0.2.3 (Build 119)"
+        }
+        
         let host = serverHost
         let token = serverToken
         
