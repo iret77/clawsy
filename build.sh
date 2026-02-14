@@ -69,7 +69,7 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleVersion</key>
-    <string>122</string>
+    <string>123</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
@@ -84,21 +84,34 @@ if [ -f "Sources/ClawsyMacShare/Info.plist" ]; then
     cp "Sources/ClawsyMacShare/Info.plist" "$SHARE_EXT_BUNDLE/Contents/"
 fi
 
-# 4. Icon Generation & Packaging (Native ICNS for macOS stability)
+# 4. Icon Generation & Packaging
 echo "🎨 Packaging Icons..."
 if [ -f "scripts/generate_icons.sh" ]; then
     chmod +x scripts/generate_icons.sh
     ./scripts/generate_icons.sh
 fi
 
-# We manually create the ICNS if iconutil is available (GitHub Runner has it)
+# Manual ICNS creation with improved robustness
 if command -v iconutil &> /dev/null; then
-    mkdir -p "$BUILD_DIR/Clawsy.iconset"
-    cp Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/*.png "$BUILD_DIR/Clawsy.iconset/"
-    iconutil -c icns "$BUILD_DIR/Clawsy.iconset" -o "$RESOURCES_DIR/AppIcon.icns"
+    ICONSET_DIR="$BUILD_DIR/Clawsy.iconset"
+    mkdir -p "$ICONSET_DIR"
+    
+    # Map our generated PNGs to the standard iconset naming convention
+    cp "Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_16x16.png" "$ICONSET_DIR/icon_16x16.png" || true
+    cp "Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_32x32.png" "$ICONSET_DIR/icon_16x16@2x.png" || true
+    cp "Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_32x32.png" "$ICONSET_DIR/icon_32x32.png" || true
+    cp "Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_64x64.png" "$ICONSET_DIR/icon_32x32@2x.png" || true
+    cp "Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_128x128.png" "$ICONSET_DIR/icon_128x128.png" || true
+    cp "Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" "$ICONSET_DIR/icon_128x128@2x.png" || true
+    cp "Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" "$ICONSET_DIR/icon_256x256.png" || true
+    cp "Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" "$ICONSET_DIR/icon_256x256@2x.png" || true
+    cp "Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" "$ICONSET_DIR/icon_512x512.png" || true
+    cp "Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset/icon_1024x1024.png" "$ICONSET_DIR/icon_512x512@2x.png" || true
+    
+    iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns" || echo "⚠️ iconutil failed, falling back to actool only"
 fi
 
-# Compile Assets.car as backup for SwiftUI
+# Compile Assets.car
 if command -v actool &> /dev/null; then
     actool "Sources/ClawsyMac/Assets.xcassets" --compile "$RESOURCES_DIR" --platform macosx --minimum-deployment-target 13.0 --app-icon AppIcon --output-partial-info-plist "$BUILD_DIR/assets.plist" > /dev/null
 fi
@@ -110,13 +123,17 @@ cp Sources/ClawsyShared/Resources/en.lproj/Localizable.strings "$RESOURCES_DIR/e
 cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings "$RESOURCES_DIR/de.lproj/"
 
 echo "🛡 Signing (Ad-hoc)..."
-# Use --deep and sign from inside out to be absolutely sure
 if [ -d "$SHARE_EXT_BUNDLE" ]; then
+    echo "Signing Extension Binary..."
     codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
+    echo "Signing Extension Bundle..."
     codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE"
 fi
 
+echo "Signing Main Binary..."
 codesign --force --options runtime --entitlements ClawsyMac.entitlements --sign - "$MACOS_DIR/$APP_NAME"
+
+echo "Signing App Bundle..."
 codesign --force --deep --options runtime --entitlements ClawsyMac.entitlements --sign - "$APP_BUNDLE"
 
 echo "✅ Build successful!"
