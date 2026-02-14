@@ -1,6 +1,7 @@
 import SwiftUI
 import ClawsyShared
 
+#if os(iOS)
 // MARK: - Clawsy iOS Mockup UI
 // Focus: Sensor Nodes (Camera, Location) and Interaction Hub
 
@@ -158,3 +159,4 @@ struct IOSHomeView_Previews: PreviewProvider {
             .preferredColorScheme(.dark)
     }
 }
+#endif
