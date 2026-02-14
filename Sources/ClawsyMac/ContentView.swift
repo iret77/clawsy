@@ -36,10 +36,10 @@ struct ContentView: View {
                     Group {
                         if network.connectionStatus == "STATUS_CONNECTING" {
                             // Dynamic string interpolation for connection attempts
-                            Text("STATUS_CONNECTING \(network.connectionAttemptCount)")
+                            Text("STATUS_CONNECTING \(network.connectionAttemptCount)", bundle: .clawsy)
                         } else {
                             // Standard localization for static status keys
-                            Text(network.connectionStatus, bundle: .clawsy)
+                            Text(LocalizedStringKey(network.connectionStatus), bundle: .clawsy)
                         }
                     }
                     .font(.system(size: 11))
