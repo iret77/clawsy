@@ -12,7 +12,7 @@ let package = Package(
     ],
     products: [
         .executable(name: "ClawsyMac", targets: ["ClawsyMac"]),
-        .executable(name: "ClawsyMacShare", targets: ["ClawsyMacShare"])
+        .library(name: "ClawsyMacShare", type: .dynamic, targets: ["ClawsyMacShare"])
     ],
     dependencies: [
         .package(url: "https://github.com/daltoniam/Starscream.git", from: "4.0.0")
@@ -41,8 +41,8 @@ let package = Package(
             ]
         ),
         
-        // macOS Share Extension
-        .executableTarget(
+        // macOS Share Extension (Dynamic Library for Plugin Host)
+        .target(
             name: "ClawsyMacShare",
             dependencies: ["ClawsyShared", "Starscream"],
             path: "Sources/ClawsyMacShare"
