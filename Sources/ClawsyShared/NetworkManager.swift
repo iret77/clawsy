@@ -41,7 +41,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     public var onClipboardReadRequested: ((Any) -> Void)?
     public var onClipboardWriteRequested: ((String, Any) -> Void)?
     public var onFileSyncRequested: ((String, String, @escaping (TimeInterval?) -> Void, @escaping () -> Void) -> Void)?
-    public var onCameraPreviewRequested: ((ClawsyImage, @escaping () -> Void, @escaping () -> Void) -> Void)?
+    public var onCameraPreviewRequested: ((NSImage, @escaping () -> Void, @escaping () -> Void) -> Void)?
     
     // Location Support
     private let locationManager = LocationManager()
@@ -205,7 +205,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             self.socket?.disconnect()
             self.socket = nil
 
-            let errDesc = error?.localizedDescription ?? "Unknown"
+            let _ = error?.localizedDescription ?? "Unknown"
             
             #if os(macOS)
             if self.useSshFallback && !self.isUsingSshTunnel {
@@ -302,7 +302,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     
     // MARK: - WebSocketDelegate
     
-    func didReceive(event: WebSocketEvent, client: WebSocketClient) {
+    public func didReceive(event: WebSocketEvent, client: WebSocketClient) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             switch event {
@@ -312,13 +312,13 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 self.isConnected = true
                 self.connectionStatus = "STATUS_CONNECTED"
                 self.connectionAttemptCount = 0
-            case .disconnected(let reason, let code):
+            case .disconnected(let _, let _):
                 self.isConnected = false
                 self.connectionStatus = "STATUS_DISCONNECTED"
             case .text(let string):
                 self.rawLog += "\nIN: \(string)"
                 self.handleMessage(string)
-            case .error(let error):
+            case .error(let _):
                 self.isConnected = false
                 self.handleConnectionFailure(error: error)
             default: break
