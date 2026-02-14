@@ -4,7 +4,8 @@ set -e
 # Config
 APP_NAME="ClawsyMac"
 BUILD_DIR=".build"
-RELEASE_DIR="$BUILD_DIR/release"
+# Important: Standard Swift build path for universal/multi-arch
+RELEASE_DIR="$BUILD_DIR/apple/Products/Release"
 APP_BUNDLE="$BUILD_DIR/app/$APP_NAME.app"
 CONTENTS_DIR="$APP_BUNDLE/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
@@ -27,7 +28,7 @@ if ! command -v swift &> /dev/null; then
     exit 1
 fi
 
-# Build everything
+# Build everything for both architectures
 swift build -c release --arch arm64 --arch x86_64
 
 echo "📦 Packaging $APP_NAME.app..."
@@ -36,13 +37,22 @@ mkdir -p "$RESOURCES_DIR"
 mkdir -p "$SHARE_EXT_BUNDLE/Contents/MacOS"
 
 # Copy Main Binary
-cp "$RELEASE_DIR/ClawsyMac" "$MACOS_DIR/$APP_NAME"
+if [ -f "$RELEASE_DIR/ClawsyMac" ]; then
+    cp "$RELEASE_DIR/ClawsyMac" "$MACOS_DIR/$APP_NAME"
+else
+    echo "❌ Error: Main binary not found at $RELEASE_DIR/ClawsyMac"
+    # List directory for debugging if it fails
+    ls -R "$BUILD_DIR"
+    exit 1
+fi
 
-# Copy Share Extension Binary (dylib to executable)
+# Copy Share Extension Binary (look in the apple/Products path)
 if [ -f "$RELEASE_DIR/libClawsyMacShare.dylib" ]; then
     cp "$RELEASE_DIR/libClawsyMacShare.dylib" "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
 elif [ -f "$RELEASE_DIR/ClawsyMacShare" ]; then
      cp "$RELEASE_DIR/ClawsyMacShare" "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
+else
+    echo "⚠️ Warning: Share Extension binary not found."
 fi
 
 # Copy Info.plists
@@ -66,11 +76,10 @@ cp Sources/ClawsyShared/Resources/en.lproj/Localizable.strings "$RESOURCES_DIR/e
 cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings "$RESOURCES_DIR/de.lproj/"
 
 echo "🛡 Signing (Ad-hoc)..."
-if [ -f "Sources/ClawsyMacShare/ClawsyMacShare.entitlements" ]; then
-    codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE"
+if [ -d "$SHARE_EXT_BUNDLE" ]; then
+    codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE" || echo "⚠️ Share Ext signing failed"
 fi
 codesign --force --options runtime --entitlements ClawsyMac.entitlements --sign - "$APP_BUNDLE"
 
 echo "✅ Build successful!"
 echo "📂 App Bundle: $APP_BUNDLE"
-echo "🚀 To test: Move to /Applications and enable 'Clawsy Share' in System Settings > Extensions"
