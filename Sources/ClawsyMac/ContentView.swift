@@ -226,17 +226,21 @@ struct ContentView: View {
             }
         }
         // Alerts/Popups
-        .alert("ALERT_SCREENSHOT_TITLE", isPresented: $showingScreenshotAlert) {
-             Button("ALERT_DENY", role: .cancel) {
+        .alert(Text("ALERT_SCREENSHOT_TITLE", bundle: .clawsy), isPresented: $showingScreenshotAlert) {
+             Button(action: {
                  if let rid = pendingRequestId {
                      network.sendError(id: rid, code: -1, message: "User denied screenshot")
                  }
+             }) {
+                 Text("ALERT_DENY", bundle: .clawsy)
              }
-             Button("ALERT_ALLOW", role: .destructive) {
+             Button(role: .destructive, action: {
                  takeScreenshot()
+             }) {
+                 Text("ALERT_ALLOW", bundle: .clawsy)
              }
          } message: {
-             Text("ALERT_SCREENSHOT_BODY")
+             Text("ALERT_SCREENSHOT_BODY", bundle: .clawsy)
          }
     }
     
@@ -395,8 +399,8 @@ struct SettingsView: View {
     @Binding var sshUser: String
     @Binding var isPresented: Bool
     
-    @AppStorage("useSshFallback") private var useSshFallback = true
-    @AppStorage("sharedFolderPath") private var sharedFolderPath = "~/Documents/Clawsy"
+    @AppStorage("useSshFallback", store: SharedConfig.sharedDefaults) private var useSshFallback = true
+    @AppStorage("sharedFolderPath", store: SharedConfig.sharedDefaults) private var sharedFolderPath = "~/Documents/Clawsy"
     
     func selectFolder() {
         let panel = NSOpenPanel()
