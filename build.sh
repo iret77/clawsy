@@ -22,6 +22,7 @@ mkdir -p "$SHARE_EXT_BUNDLE/Contents/MacOS"
 mkdir -p "$SHARE_EXT_BUNDLE/Contents/Resources"
 
 echo "🦞 Building Clawsy Ecosystem (Release)..."
+# Build for universal
 swift build -c release --arch arm64 --arch x86_64
 
 echo "📦 Packaging $APP_NAME.app..."
@@ -45,12 +46,11 @@ if [ -f "scripts/generate_icons.sh" ]; then
     ./scripts/generate_icons.sh
 fi
 
-# Manual ICNS creation with improved robustness
+# Manual ICNS creation
 ICONSET_DIR="$BUILD_DIR/AppIcon.iconset"
 mkdir -p "$ICONSET_DIR"
 SRC_ICONS="Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset"
 
-# Standard Apple iconset naming convention
 cp "$SRC_ICONS/icon_16x16.png" "$ICONSET_DIR/icon_16x16.png" || true
 cp "$SRC_ICONS/icon_32x32.png" "$ICONSET_DIR/icon_16x16@2x.png" || true
 cp "$SRC_ICONS/icon_32x32.png" "$ICONSET_DIR/icon_32x32.png" || true
@@ -64,7 +64,9 @@ cp "$SRC_ICONS/icon_1024x1024.png" "$ICONSET_DIR/icon_512x512@2x.png" || true
 
 if command -v iconutil &> /dev/null; then
     echo "Creating AppIcon.icns..."
-    iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns" || echo "⚠️ iconutil failed"
+    # Explicitly check iconset dir content before running iconutil
+    ls -la "$ICONSET_DIR"
+    iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns"
 fi
 
 # Compile Assets.car
@@ -103,7 +105,7 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleVersion</key>
-    <string>136</string>
+    <string>137</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
@@ -144,7 +146,7 @@ cat <<EOF > "$SHARE_EXT_BUNDLE/Contents/Info.plist"
     <key>CFBundleShortVersionString</key>
     <string>0.2.3</string>
     <key>CFBundleVersion</key>
-    <string>136</string>
+    <string>137</string>
     <key>NSExtension</key>
     <dict>
         <key>NSExtensionAttributes</key>
@@ -168,17 +170,10 @@ cp Sources/ClawsyShared/Resources/en.lproj/Localizable.strings "$RESOURCES_DIR/e
 cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings "$RESOURCES_DIR/de.lproj/"
 
 echo "🛡 Signing (Ad-hoc) - Operation Deep Scrub..."
-# Sign each component from inside out
 codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
 codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE"
 codesign --force --options runtime --entitlements ClawsyMac.entitlements --sign - "$MACOS_DIR/$APP_NAME"
-# Final deep sign
 codesign --force --deep --options runtime --entitlements ClawsyMac.entitlements --sign - "$APP_BUNDLE"
-
-# Verification
-echo "🔍 Verifying Build..."
-codesign -vvv --deep --strict "$APP_BUNDLE"
-ls -la "$RESOURCES_DIR"
 
 echo "✅ Build successful!"
 echo "📂 App Bundle: $APP_BUNDLE"
