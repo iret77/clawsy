@@ -89,9 +89,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         
         center.setNotificationCategories([category])
         
-        center.requestAuthorization(options: [.alert, .sound]) { granted, error in
-            if let error = error {
-                os_log("Notification permission error: %{public}@", log: self.logger, type: .error, error.localizedDescription)
+        center.requestAuthorization(options: [.alert, .sound]) { granted, err in
+            if let err = err {
+                os_log("Notification permission error: %{public}@", log: self.logger, type: .error, err.localizedDescription)
             }
         }
     }
@@ -183,7 +183,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             guard let self = self, !self.isConnected else { return }
             DispatchQueue.main.async {
                 self.rawLog += "\n[WSS] Watchdog Timeout (5s)"
-                self.handleConnectionFailure(error: NSError(domain: "ai.clawsy", code: -1, userInfo: [NSLocalizedDescriptionKey: "Connection Timeout (Watchdog)"]))
+                self.handleConnectionFailure(err: NSError(domain: "ai.clawsy", code: -1, userInfo: [NSLocalizedDescriptionKey: "Connection Timeout (Watchdog)"]))
             }
         }
         
@@ -196,7 +196,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         self.socket?.connect()
     }
     
-    private func handleConnectionFailure(error: Error?) {
+    private func handleConnectionFailure(err: Error?) {
         DispatchQueue.main.async {
             self.connectionWatchdog?.invalidate()
             self.connectionWatchdog = nil
@@ -205,16 +205,16 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             self.socket?.disconnect()
             self.socket = nil
 
-            let _ = error?.localizedDescription ?? "Unknown"
+            let _ = err?.localizedDescription ?? "Unknown"
             
             #if os(macOS)
             if self.useSshFallback && !self.isUsingSshTunnel {
                 self.startSshTunnel()
             } else {
-                self.runDiagnostics(error: error)
+                self.runDiagnostics(err: err)
             }
             #else
-            self.runDiagnostics(error: error)
+            self.runDiagnostics(err: err)
             #endif
         }
     }
@@ -269,8 +269,8 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
     #endif
     
-    private func runDiagnostics(error: Error?) {
-        let errorDesc = error?.localizedDescription ?? "Unknown error"
+    private func runDiagnostics(err: Error?) {
+        let errorDesc = err?.localizedDescription ?? "Unknown error"
         if errorDesc.contains("refused") {
             connectionStatus = "STATUS_OFFLINE_REFUSED"
         } else if errorDesc.contains("timed out") {
@@ -312,15 +312,15 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 self.isConnected = true
                 self.connectionStatus = "STATUS_CONNECTED"
                 self.connectionAttemptCount = 0
-            case .disconnected(let _, let _):
+            case .disconnected(_, _):
                 self.isConnected = false
                 self.connectionStatus = "STATUS_DISCONNECTED"
             case .text(let string):
                 self.rawLog += "\nIN: \(string)"
                 self.handleMessage(string)
-            case .error(let _):
+            case .error(let err):
                 self.isConnected = false
-                self.handleConnectionFailure(error: error)
+                self.handleConnectionFailure(err: err)
             default: break
             }
         }
