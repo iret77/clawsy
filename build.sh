@@ -22,6 +22,7 @@ mkdir -p "$SHARE_EXT_BUNDLE/Contents/MacOS"
 mkdir -p "$SHARE_EXT_BUNDLE/Contents/Resources"
 
 echo "🦞 Building Clawsy Ecosystem (Release)..."
+# Build for universal
 swift build -c release --arch arm64 --arch x86_64
 
 echo "📦 Packaging $APP_NAME.app..."
@@ -41,15 +42,17 @@ chmod 755 "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
 # 3. Handle Icons and Assets
 echo "🎨 Packaging Icons and Assets..."
 if [ -f "scripts/generate_icons.sh" ]; then
+    chmod +x scripts/generate_icons.sh
     ./scripts/generate_icons.sh
 fi
 
 # Manual ICNS creation with improved robustness
-ICONSET_DIR="$BUILD_DIR/AppIcon.iconset"
+# We use a DIFFERENT dir name to avoid any cache issues on the runner
+ICONSET_DIR="$BUILD_DIR/ClawsyMain.iconset"
 mkdir -p "$ICONSET_DIR"
 SRC_ICONS="Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset"
 
-# Precise mapping for iconutil - ensuring files exist before cp
+# Standard Apple iconset naming convention - MUST match exactly
 cp "$SRC_ICONS/icon_16x16.png" "$ICONSET_DIR/icon_16x16.png" || true
 cp "$SRC_ICONS/icon_32x32.png" "$ICONSET_DIR/icon_16x16@2x.png" || true
 cp "$SRC_ICONS/icon_32x32.png" "$ICONSET_DIR/icon_32x32.png" || true
@@ -62,7 +65,7 @@ cp "$SRC_ICONS/icon_512x512.png" "$ICONSET_DIR/icon_512x512.png" || true
 cp "$SRC_ICONS/icon_1024x1024.png" "$ICONSET_DIR/icon_512x512@2x.png" || true
 
 if command -v iconutil &> /dev/null; then
-    echo "Creating AppIcon.icns..."
+    echo "Creating AppIcon.icns in $RESOURCES_DIR..."
     iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns" || echo "⚠️ iconutil failed"
 fi
 
@@ -79,7 +82,7 @@ fi
 # 4. Create PkgInfo
 echo -n "APPL????" > "$CONTENTS_DIR/PkgInfo"
 
-# 5. Create robust Info.plist
+# 5. Create Final Info.plist
 cat <<EOF > "$CONTENTS_DIR/Info.plist"
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -102,7 +105,7 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleVersion</key>
-    <string>131</string>
+    <string>132</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
@@ -143,7 +146,7 @@ cat <<EOF > "$SHARE_EXT_BUNDLE/Contents/Info.plist"
     <key>CFBundleShortVersionString</key>
     <string>0.2.3</string>
     <key>CFBundleVersion</key>
-    <string>131</string>
+    <string>132</string>
     <key>NSExtension</key>
     <dict>
         <key>NSExtensionAttributes</key>
@@ -177,6 +180,7 @@ codesign --force --deep --options runtime --entitlements ClawsyMac.entitlements 
 # Verification
 echo "🔍 Verifying Build..."
 codesign -vvv --deep --strict "$APP_BUNDLE"
+ls -la "$RESOURCES_DIR"
 
 echo "✅ Build successful!"
 echo "📂 App Bundle: $APP_BUNDLE"
