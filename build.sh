@@ -51,8 +51,7 @@ ICONSET_DIR="$BUILD_DIR/Clawsy.iconset"
 mkdir -p "$ICONSET_DIR"
 SRC_ICONS="Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset"
 
-# Precise mapping for iconutil - ensuring files exist and are not 0 bytes
-# We use standard naming from Apple docs
+# Standard Apple iconset naming convention
 cp "$SRC_ICONS/icon_16x16.png" "$ICONSET_DIR/icon_16x16.png" || true
 cp "$SRC_ICONS/icon_32x32.png" "$ICONSET_DIR/icon_16x16@2x.png" || true
 cp "$SRC_ICONS/icon_32x32.png" "$ICONSET_DIR/icon_32x32.png" || true
@@ -106,20 +105,20 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleVersion</key>
-    <string>140</string>
+    <string>141</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
     <true/>
-    <key>NSHighResolutionCapable</key>
-    <true/>
-    <key>NSPrincipalClass</key>
-    <string>NSApplication</string>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsArbitraryLoads</key>
         <true/>
     </dict>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
 </dict>
 </plist>
 EOF
@@ -147,7 +146,7 @@ cat <<EOF > "$SHARE_EXT_BUNDLE/Contents/Info.plist"
     <key>CFBundleShortVersionString</key>
     <string>0.2.3</string>
     <key>CFBundleVersion</key>
-    <string>140</string>
+    <string>141</string>
     <key>NSExtension</key>
     <dict>
         <key>NSExtensionAttributes</key>
@@ -171,7 +170,7 @@ cp Sources/ClawsyShared/Resources/en.lproj/Localizable.strings "$RESOURCES_DIR/e
 cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings "$RESOURCES_DIR/de.lproj/"
 
 echo "🛡 Signing (Ad-hoc) - Operation Deep Scrub..."
-# Precise sequence for macOS 15: Component Binary -> Component Bundle -> Main Binary -> App Bundle
+# Sign each component from inside out
 codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
 codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE"
 codesign --force --options runtime --entitlements ClawsyMac.entitlements --sign - "$MACOS_DIR/$APP_NAME"
@@ -181,6 +180,7 @@ codesign --force --deep --options runtime --entitlements ClawsyMac.entitlements 
 # Verification
 echo "🔍 Verifying Build..."
 codesign -vvv --deep --strict "$APP_BUNDLE"
+ls -la "$RESOURCES_DIR"
 
 echo "✅ Build successful!"
 echo "📂 App Bundle: $APP_BUNDLE"
