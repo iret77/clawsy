@@ -38,15 +38,17 @@ elif [ -f "$RELEASE_DIR/ClawsyMacShare" ]; then
 fi
 chmod 755 "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
 
-# 3. Handle Icons (Native ICNS is the only way for Finder visibility)
-echo "🎨 Packaging Icons..."
+# 3. Handle Icons and Assets
+echo "🎨 Packaging Icons and Assets..."
 if [ -f "scripts/generate_icons.sh" ]; then
     ./scripts/generate_icons.sh
 fi
 
+# Create a proper .icns for the Finder using standard iconset naming
 ICONSET_DIR="$BUILD_DIR/AppIcon.iconset"
 mkdir -p "$ICONSET_DIR"
 SRC_ICONS="Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset"
+
 cp "$SRC_ICONS/icon_16x16.png" "$ICONSET_DIR/icon_16x16.png" || true
 cp "$SRC_ICONS/icon_32x32.png" "$ICONSET_DIR/icon_16x16@2x.png" || true
 cp "$SRC_ICONS/icon_32x32.png" "$ICONSET_DIR/icon_32x32.png" || true
@@ -59,13 +61,24 @@ cp "$SRC_ICONS/icon_512x512.png" "$ICONSET_DIR/icon_512x512.png" || true
 cp "$SRC_ICONS/icon_1024x1024.png" "$ICONSET_DIR/icon_512x512@2x.png" || true
 
 if command -v iconutil &> /dev/null; then
-    iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns"
+    echo "Generating AppIcon.icns..."
+    iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns" || echo "⚠️ iconutil failed"
 fi
 
-# 4. Create PkgInfo (Classic requirement)
+# Compile Assets.car
+if command -v actool &> /dev/null; then
+    actool "Sources/ClawsyMac/Assets.xcassets" \
+        --compile "$RESOURCES_DIR" \
+        --platform macosx \
+        --minimum-deployment-target 13.0 \
+        --app-icon AppIcon \
+        --output-partial-info-plist "$BUILD_DIR/partial.plist"
+fi
+
+# 4. Create PkgInfo
 echo -n "APPL????" > "$CONTENTS_DIR/PkgInfo"
 
-# 5. Create robust Info.plist
+# 5. Create Final Info.plist
 cat <<EOF > "$CONTENTS_DIR/Info.plist"
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -101,6 +114,10 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
 </plist>
 EOF
 
+if [ -f "$BUILD_DIR/partial.plist" ] && command -v /usr/libexec/PlistBuddy &> /dev/null; then
+    /usr/libexec/PlistBuddy -c "Merge $BUILD_DIR/partial.plist" "$CONTENTS_DIR/Info.plist"
+fi
+
 # 6. Share Extension Info.plist
 cat <<EOF > "$SHARE_EXT_BUNDLE/Contents/Info.plist"
 <?xml version="1.0" encoding="UTF-8"?>
@@ -115,6 +132,12 @@ cat <<EOF > "$SHARE_EXT_BUNDLE/Contents/Info.plist"
     <string>Clawsy Share</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.2.3</string>
+    <key>CFBundleVersion</key>
+    <string>129</string>
     <key>NSExtension</key>
     <dict>
         <key>NSExtensionAttributes</key>
@@ -137,16 +160,15 @@ mkdir -p "$RESOURCES_DIR/de.lproj"
 cp Sources/ClawsyShared/Resources/en.lproj/Localizable.strings "$RESOURCES_DIR/en.lproj/"
 cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings "$RESOURCES_DIR/de.lproj/"
 
-echo "🛡 Signing (Ad-hoc) - Operation Deep Scrub..."
-# Precise sequence: Binary -> Bundle Folder -> Higher Binary -> Higher Folder
-codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
+echo "🛡 Signing (Ad-hoc)..."
+# Sign inner components first
+if [ -f "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare" ]; then
+    codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
+fi
 codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE"
 codesign --force --options runtime --entitlements ClawsyMac.entitlements --sign - "$MACOS_DIR/$APP_NAME"
-# The crucial 'deep' sign that generates CodeResources
+# Final deep sign to generate CodeResources
 codesign --force --deep --options runtime --entitlements ClawsyMac.entitlements --sign - "$APP_BUNDLE"
-
-# Verify signature
-codesign -vvv "$APP_BUNDLE"
 
 echo "✅ Build successful!"
 echo "📂 App Bundle: $APP_BUNDLE"
