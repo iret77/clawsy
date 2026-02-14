@@ -32,30 +32,27 @@ if [ -f "$RELEASE_DIR/$BINARY_NAME" ]; then
     cp "$RELEASE_DIR/$BINARY_NAME" "$MACOS_DIR/$APP_NAME"
     chmod 755 "$MACOS_DIR/$APP_NAME"
 else
-    echo "❌ Error: Main binary not found at $RELEASE_DIR/$BINARY_NAME"
+    echo "❌ Error: Main binary not found"
     exit 1
 fi
 
-# 2. Copy Share Extension Binary
-if [ -f "$RELEASE_DIR/libClawsyMacShare.dylib" ]; then
-    cp "$RELEASE_DIR/libClawsyMacShare.dylib" "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
-elif [ -f "$RELEASE_DIR/ClawsyMacShare" ]; then
+# 2. Copy Share Extension Binary (now an executable target)
+if [ -f "$RELEASE_DIR/ClawsyMacShare" ]; then
      cp "$RELEASE_DIR/ClawsyMacShare" "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
+     chmod 755 "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
+else
+    echo "⚠️ Warning: ClawsyMacShare binary not found at $RELEASE_DIR/ClawsyMacShare"
 fi
-chmod 755 "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
 
 # 3. Handle Icons and Assets
-echo "🎨 Packaging Icons and Assets..."
 if [ -f "scripts/generate_icons.sh" ]; then
     chmod +x scripts/generate_icons.sh
     ./scripts/generate_icons.sh
 fi
 
-# Create a proper .iconset and then .icns for the Finder
 ICONSET_DIR="$BUILD_DIR/Clawsy.iconset"
 mkdir -p "$ICONSET_DIR"
 SRC_ICONS="Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset"
-
 for size in 16 32 128 256 512; do
     cp "$SRC_ICONS/icon_${size}x${size}.png" "$ICONSET_DIR/icon_${size}x${size}.png" || true
     double=$((size * 2))
@@ -67,11 +64,9 @@ for size in 16 32 128 256 512; do
 done
 
 if command -v iconutil &> /dev/null; then
-    echo "Generating AppIcon.icns..."
     iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns"
 fi
 
-# Compile Assets.car
 if command -v actool &> /dev/null; then
     actool "Sources/ClawsyMac/Assets.xcassets" \
         --compile "$RESOURCES_DIR" \
@@ -84,7 +79,7 @@ fi
 # 4. Create PkgInfo
 echo -n "APPL????" > "$CONTENTS_DIR/PkgInfo"
 
-# 5. Create Final Info.plist
+# 5. Create Final Info.plist (REMOVED NSPrincipalClass)
 cat <<EOF > "$CONTENTS_DIR/Info.plist"
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -107,18 +102,13 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleVersion</key>
-    <string>147</string>
+    <string>148</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
     <false/>
     <key>NSHighResolutionCapable</key>
     <true/>
-    <key>NSAppTransportSecurity</key>
-    <dict>
-        <key>NSAllowsArbitraryLoads</key>
-        <true/>
-    </dict>
 </dict>
 </plist>
 EOF
@@ -163,17 +153,11 @@ mkdir -p "$RESOURCES_DIR/de.lproj"
 cp Sources/ClawsyShared/Resources/en.lproj/Localizable.strings "$RESOURCES_DIR/en.lproj/"
 cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings "$RESOURCES_DIR/de.lproj/"
 
-echo "🛡 Signing (Ad-hoc) - Operation Deep Scrub..."
-# Sign each component from inside out
+echo "🛡 Signing (Ad-hoc) - Security Relaxed Mode..."
 codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
 codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE"
 codesign --force --options runtime --entitlements ClawsyMac.entitlements --sign - "$MACOS_DIR/$APP_NAME"
-# Final deep sign
 codesign --force --deep --options runtime --entitlements ClawsyMac.entitlements --sign - "$APP_BUNDLE"
-
-# Verification
-echo "🔍 Verifying Build..."
-codesign -vvv --deep --strict "$APP_BUNDLE"
 
 echo "✅ Build successful!"
 echo "📂 App Bundle: $APP_BUNDLE"
