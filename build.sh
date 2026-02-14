@@ -41,35 +41,42 @@ chmod 755 "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
 
 # 3. Handle Icons and Assets
 echo "🎨 Packaging Icons and Assets..."
+# Note: We rely on the Asset Catalog for the icon mostly, but will try ICNS again
 if [ -f "scripts/generate_icons.sh" ]; then
     chmod +x scripts/generate_icons.sh
     ./scripts/generate_icons.sh
 fi
 
-# Manual ICNS creation
-ICONSET_DIR="$BUILD_DIR/AppIcon.iconset"
+# Manual ICNS creation - robustness fix: check if source files exist
+ICONSET_DIR="$BUILD_DIR/ClawsyIcon.iconset"
 mkdir -p "$ICONSET_DIR"
 SRC_ICONS="Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset"
 
-cp "$SRC_ICONS/icon_16x16.png" "$ICONSET_DIR/icon_16x16.png" || true
-cp "$SRC_ICONS/icon_32x32.png" "$ICONSET_DIR/icon_16x16@2x.png" || true
-cp "$SRC_ICONS/icon_32x32.png" "$ICONSET_DIR/icon_32x32.png" || true
-cp "$SRC_ICONS/icon_64x64.png" "$ICONSET_DIR/icon_32x32@2x.png" || true
-cp "$SRC_ICONS/icon_128x128.png" "$ICONSET_DIR/icon_128x128.png" || true
-cp "$SRC_ICONS/icon_256x256.png" "$ICONSET_DIR/icon_128x128@2x.png" || true
-cp "$SRC_ICONS/icon_256x256.png" "$ICONSET_DIR/icon_256x256.png" || true
-cp "$SRC_ICONS/icon_512x512.png" "$ICONSET_DIR/icon_256x256@2x.png" || true
-cp "$SRC_ICONS/icon_512x512.png" "$ICONSET_DIR/icon_512x512.png" || true
-cp "$SRC_ICONS/icon_1024x1024.png" "$ICONSET_DIR/icon_512x512@2x.png" || true
+# Standard Apple iconset naming convention
+# Use a loop to be safer
+for size in 16 32 128 256 512; do
+    cp "$SRC_ICONS/icon_${size}x${size}.png" "$ICONSET_DIR/icon_${size}x${size}.png" || echo "Missing $size"
+    # standard naming for @2x is doubled pixels
+    double=$((size * 2))
+    if [ "$size" -ne "512" ]; then
+        cp "$SRC_ICONS/icon_${double}x${double}.png" "$ICONSET_DIR/icon_${size}x${size}@2x.png" || echo "Missing ${size}@2x"
+    else
+        # 512@2x is 1024
+        cp "$SRC_ICONS/icon_1024x1024.png" "$ICONSET_DIR/icon_512x512@2x.png" || echo "Missing 512@2x"
+    fi
+done
 
 if command -v iconutil &> /dev/null; then
     echo "Creating AppIcon.icns..."
-    # Explicitly check iconset dir content before running iconutil
-    ls -la "$ICONSET_DIR"
-    iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns"
+    # Check if any file in iconset is 0 bytes (which happened in previous build)
+    if [ -s "$ICONSET_DIR/icon_128x128.png" ]; then
+        iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns" || echo "⚠️ iconutil failed"
+    else
+        echo "⚠️ Source icons are empty, skipping icns"
+    fi
 fi
 
-# Compile Assets.car
+# Compile Assets.car (Modern SwiftUI requirement)
 if command -v actool &> /dev/null; then
     actool "Sources/ClawsyMac/Assets.xcassets" \
         --compile "$RESOURCES_DIR" \
@@ -105,7 +112,7 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleVersion</key>
-    <string>137</string>
+    <string>138</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
@@ -146,7 +153,7 @@ cat <<EOF > "$SHARE_EXT_BUNDLE/Contents/Info.plist"
     <key>CFBundleShortVersionString</key>
     <string>0.2.3</string>
     <key>CFBundleVersion</key>
-    <string>137</string>
+    <string>138</string>
     <key>NSExtension</key>
     <dict>
         <key>NSExtensionAttributes</key>
@@ -170,10 +177,16 @@ cp Sources/ClawsyShared/Resources/en.lproj/Localizable.strings "$RESOURCES_DIR/e
 cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings "$RESOURCES_DIR/de.lproj/"
 
 echo "🛡 Signing (Ad-hoc) - Operation Deep Scrub..."
+# Sign each component from inside out
 codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
 codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE"
 codesign --force --options runtime --entitlements ClawsyMac.entitlements --sign - "$MACOS_DIR/$APP_NAME"
+# Final deep sign
 codesign --force --deep --options runtime --entitlements ClawsyMac.entitlements --sign - "$APP_BUNDLE"
+
+# Verification
+echo "🔍 Verifying Build..."
+codesign -vvv --deep --strict "$APP_BUNDLE"
 
 echo "✅ Build successful!"
 echo "📂 App Bundle: $APP_BUNDLE"
