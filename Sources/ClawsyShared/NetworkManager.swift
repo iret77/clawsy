@@ -468,7 +468,8 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set", "location.get", "location.start", "location.stop", "location.add_smart"],
                 "permissions": ["clipboard.read": true, "clipboard.write": true],
                 "auth": ["token": serverToken],
-                "device": ["id": deviceId, "name": deviceName, "publicKey": pubKeyB64, "signature": sigB64, "signedAt": tsMs, "nonce": nonce]
+                "device": ["id": deviceId, "publicKey": pubKeyB64, "signature": sigB64, "signedAt": tsMs, "nonce": nonce],
+                "name": deviceName
             ]
         ]
         send(json: connectReq)
