@@ -24,11 +24,18 @@ struct QuickSendView: View {
                 
                 if !text.isEmpty {
                     Button(action: { text = "" }) {
-                        Image(systemName: "xmark.circle.fill")
+                        Image(systemName: "delete.left.fill")
                             .foregroundColor(.gray)
                     }
                     .buttonStyle(.plain)
+                    .padding(.trailing, 4)
                 }
+                
+                Button(action: { onCancel() }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.gray)
+                }
+                .buttonStyle(.plain)
             }
             .padding()
             .background(VisualEffectView(material: .hudWindow, blendingMode: .withinWindow))

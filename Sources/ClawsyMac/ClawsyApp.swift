@@ -17,6 +17,11 @@ struct ClawsyApp: App {
     }
 }
 
+class QuickSendWindow: NSWindow {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+}
+
 class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var statusBarItem: NSStatusItem!
     var popover: NSPopover!
@@ -64,7 +69,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         
         DispatchQueue.main.async {
             if self.quickSendWindow == nil {
-                let window = NSWindow(
+                let window = QuickSendWindow(
                     contentRect: NSRect(x: 0, y: 0, width: 400, height: 100),
                     styleMask: [.borderless, .fullSizeContentView],
                     backing: .buffered, defer: false)
