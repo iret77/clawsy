@@ -16,7 +16,10 @@ class ScreenshotManager {
         var args = ["-x"] // No sound
         
         if interactive {
-            args.append("-i") // Interactive mode
+            // Using -s (selection) instead of -i (interactive) 
+            // to avoid triggering System Audio permission prompts 
+            // associated with the full Screenshot/Recording HUD.
+            args.append("-s") 
         }
         
         // Add output path
