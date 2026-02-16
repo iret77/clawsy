@@ -464,14 +464,13 @@ struct SettingsView: View {
                             }
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
-                            .frame(height: 32)
                             
                             TextField(text: $serverPort) {
                                 Text("PORT", bundle: .clawsy)
                             }
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
-                            .frame(width: 80, height: 32)
+                            .frame(width: 80)
                         }
                         
                         SecureField(text: $serverToken) {
@@ -479,7 +478,6 @@ struct SettingsView: View {
                         }
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
-                        .frame(height: 32)
                     }
                     
                     // SSH Fallback Section
@@ -504,7 +502,6 @@ struct SettingsView: View {
                         }
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
-                        .frame(height: 32)
                         .disabled(!useSshFallback)
                         
                         Text("SSH_FALLBACK_DESC", bundle: .clawsy)
@@ -528,7 +525,7 @@ struct SettingsView: View {
                             TextField("", text: $quickSendHotkey)
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(.body, design: .monospaced))
-                                .frame(width: 40, height: 32)
+                                .frame(width: 40)
                                 .multilineTextAlignment(.center)
                                 .onChange(of: quickSendHotkey) { newValue in
                                     if newValue.count > 1 {
@@ -549,7 +546,7 @@ struct SettingsView: View {
                             TextField("", text: $pushClipboardHotkey)
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(.body, design: .monospaced))
-                                .frame(width: 40, height: 32)
+                                .frame(width: 40)
                                 .multilineTextAlignment(.center)
                                 .onChange(of: pushClipboardHotkey) { newValue in
                                     if newValue.count > 1 {
@@ -567,39 +564,37 @@ struct SettingsView: View {
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.green)
                         
-                        // Refined Path Display: Clearer text, themed background
+                        // Path display
                         Text(sharedFolderPath.isEmpty ? "None" : sharedFolderPath)
                             .font(.system(.body, design: .monospaced))
                             .padding(.horizontal, 10)
                             .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
                             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-                            .cornerRadius(5)
-                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.primary.opacity(0.1), lineWidth: 1))
+                            .cornerRadius(6)
+                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.1), lineWidth: 1))
                             .foregroundColor(.primary)
                         
-                        HStack(spacing: 12) {
+                        HStack(spacing: 8) {
                             Button(action: selectFolder) {
-                                Label(title: { Text("SELECT_SHARED_FOLDER", bundle: .clawsy) }, icon: { Image(systemName: "folder.fill.badge.plus") })
+                                Label(title: { Text("SELECT_FOLDER_BUTTON", bundle: .clawsy) }, icon: { Image(systemName: "folder.fill.badge.plus") })
                             }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(.bordered)
                             .controlSize(.regular)
-                            .frame(height: 32)
                             
                             if !sharedFolderPath.isEmpty {
                                 Button(action: {
                                     let resolved = sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
                                     NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: resolved)
                                 }) {
-                                    Image(systemName: "folder.fill")
+                                    Label(title: { Text("SHOW_IN_FINDER", bundle: .clawsy) }, icon: { Image(systemName: "magnifyingglass") })
                                 }
                                 .buttonStyle(.bordered)
                                 .controlSize(.regular)
-                                .frame(height: 32)
-                                .help("Open in Finder")
                             }
                         }
                     }
                 }
+                .padding(.horizontal, 10) // Prevents focus ring clipping and adds breathing room
                 .padding(.vertical, 4)
             }
             

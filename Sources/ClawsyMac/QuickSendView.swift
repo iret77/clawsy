@@ -25,29 +25,32 @@ struct QuickSendView: View {
                 if !text.isEmpty {
                     Button(action: { text = "" }) {
                         Image(systemName: "delete.left.fill")
-                            .foregroundColor(.gray)
+                            .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
                     .padding(.trailing, 4)
+                    .help("Clear text")
                 }
                 
                 Button(action: { onCancel() }) {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
+                .help("Close")
             }
-            .padding()
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
             .background(VisualEffectView(material: .hudWindow, blendingMode: .withinWindow))
-            .cornerRadius(12)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.accentColor.opacity(0.5), lineWidth: 1)
+                    .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
             )
-            .shadow(radius: 10)
+            .shadow(color: Color.black.opacity(0.2), radius: 10, y: 5)
         }
-        .frame(width: 400)
-        .padding()
+        .frame(width: 450)
+        .padding(20)
         .onAppear {
             isFocused = true
         }

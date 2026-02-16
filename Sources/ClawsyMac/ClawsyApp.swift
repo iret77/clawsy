@@ -215,8 +215,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             if popover.isShown {
                 popover.performClose(sender)
             } else {
+                // Ensure popover behaves like a standard menu (closes on outside clicks)
                 popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+                
+                // standard macOS behavior: popover should resign when other app/menu is clicked
+                // .transient behavior usually handles this, but explicit activation helps
+                popover.contentViewController?.view.window?.makeKey()
             }
+        }
+    }
+
+    func applicationWillResignActive(_ notification: Notification) {
+        // Close popover when user clicks away or switches apps
+        if popover.isShown {
+            popover.performClose(nil)
         }
     }
 }
