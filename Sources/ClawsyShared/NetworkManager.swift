@@ -605,7 +605,19 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
     
     public func sendEvent(kind: String, payload: Any) {
-        send(json: ["type": "event", "event": "node.event", "payload": ["kind": kind, "data": payload, "ts": Int64(Date().timeIntervalSince1970 * 1000)]])
+        // Enforce type: req with method: node.event to bypass 
+        // current Gateway limitations accepting type: event frames after handshake.
+        let frame: [String: Any] = [
+            "type": "req",
+            "id": "event-\(UUID().uuidString.prefix(8))",
+            "method": "node.event",
+            "params": [
+                "event": kind,
+                "payload": payload,
+                "ts": Int64(Date().timeIntervalSince1970 * 1000)
+            ]
+        ]
+        send(json: frame)
     }
 
     private func send(json: [String: Any]) {
