@@ -94,3 +94,12 @@
 "SELECT_SHARED_FOLDER" = "Select Shared Folder";
 "SELECT_FOLDER_BUTTON" = "Select Folder...";
 "SHOW_IN_FINDER" = "Show in Finder";
+
+/* HUD */
+"CLIPBOARD_SENT" = "Copied to Cloud";
+"SCREENSHOT_SENT" = "Image Transferred";
+
+/* Settings Addition */
+"HOTKEYS" = "Hotkeys";
+"HOTKEY_QUICK_SEND" = "Quick Send";
+"HOTKEY_PUSH_CLIPBOARD" = "Push Clipboard";

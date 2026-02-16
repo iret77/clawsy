@@ -80,3 +80,30 @@ struct MenuItemRow: View {
         }
     }
 }
+
+struct StatusHUDView: View {
+    let icon: String
+    let title: String
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 32, weight: .semibold))
+                .foregroundColor(.white)
+            
+            Text(LocalizedStringKey(title), bundle: .clawsy)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(.white)
+        }
+        .padding(24)
+        .background(
+            VisualEffectView(material: .hudWindow, blendingMode: .withinWindow)
+                .overlay(Color.black.opacity(0.4))
+        )
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+        )
+    }
+}

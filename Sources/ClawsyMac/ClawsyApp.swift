@@ -22,11 +22,17 @@ class QuickSendWindow: NSWindow {
     override var canBecomeMain: Bool { true }
 }
 
+class HUDWindow: NSWindow {
+    override var canBecomeKey: Bool { false }
+    override var canBecomeMain: Bool { false }
+}
+
 class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var statusBarItem: NSStatusItem!
     var popover: NSPopover!
     var alertWindow: NSWindow?
     var quickSendWindow: NSWindow?
+    var hudWindow: NSWindow?
     var networkManager: NetworkManager?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -54,13 +60,64 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         let contentView = ContentView().environmentObject(self)
         popover.contentViewController = NSHostingController(rootView: contentView)
         
-        // Register Global Hotkey (Option + Shift + C as a placeholder, or Cmd + Shift + K)
+        // Register Global Hotkeys
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 40 { // Cmd + Shift + K
-                self.showQuickSend()
-                return nil
+            if event.modifierFlags.contains([.command, .shift]) {
+                let char = event.charactersIgnoringModifiers?.uppercased() ?? ""
+                
+                if char == SharedConfig.quickSendHotkey {
+                    self.showQuickSend()
+                    return nil
+                }
+                
+                if char == SharedConfig.pushClipboardHotkey {
+                    self.handleGlobalPushClipboard()
+                    return nil
+                }
             }
             return event
+        }
+    }
+    
+    private func handleGlobalPushClipboard() {
+        guard let network = networkManager, network.isConnected else { return }
+        if let content = ClipboardManager.getClipboardContent() {
+            network.sendEvent(kind: "clipboard", payload: ["text": content])
+            self.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
+        }
+    }
+    
+    func showStatusHUD(icon: String, title: String) {
+        DispatchQueue.main.async {
+            self.hudWindow?.close()
+            
+            let window = HUDWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 200, height: 120),
+                styleMask: [.borderless, .fullSizeContentView],
+                backing: .buffered, defer: false)
+            
+            window.center()
+            window.isReleasedWhenClosed = false
+            window.level = .floating
+            window.backgroundColor = .clear
+            window.hasShadow = true
+            
+            let hudView = StatusHUDView(icon: icon, title: title)
+            window.contentView = NSHostingView(rootView: hudView)
+            self.hudWindow = window
+            
+            window.orderFrontRegardless()
+            
+            // Auto-fade out
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.5
+                    window.animator().alphaValue = 0
+                } completionHandler: {
+                    window.close()
+                    self.hudWindow = nil
+                }
+            }
         }
     }
     

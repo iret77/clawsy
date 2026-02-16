@@ -278,6 +278,7 @@ struct ContentView: View {
                 network.sendResponse(id: rid, result: ["format": "png", "base64": b64])
             } else {
                 network.sendEvent(kind: "screenshot", payload: ["format": "png", "base64": b64])
+                appDelegate.showStatusHUD(icon: "camera.fill", title: "SCREENSHOT_SENT")
             }
         } else {
             if let rid = pendingRequestId {
@@ -289,6 +290,7 @@ struct ContentView: View {
     func handleManualClipboardSend() {
         if let content = ClipboardManager.getClipboardContent() {
             network.sendEvent(kind: "clipboard", payload: ["text": content])
+            appDelegate.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
         }
     }
     
@@ -401,6 +403,8 @@ struct SettingsView: View {
     
     @AppStorage("useSshFallback", store: SharedConfig.sharedDefaults) private var useSshFallback = true
     @AppStorage("sharedFolderPath", store: SharedConfig.sharedDefaults) private var sharedFolderPath = "~/Documents/Clawsy"
+    @AppStorage("quickSendHotkey", store: SharedConfig.sharedDefaults) private var quickSendHotkey = "K"
+    @AppStorage("pushClipboardHotkey", store: SharedConfig.sharedDefaults) private var pushClipboardHotkey = "V"
     
     func selectFolder() {
         let panel = NSOpenPanel()
@@ -443,7 +447,7 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.top, 2) // Positioning slightly higher as requested
+            .padding(.top, 2) 
 
             
             ScrollView {
@@ -474,6 +478,7 @@ struct SettingsView: View {
                             Text("TOKEN", bundle: .clawsy)
                         }
                         .textFieldStyle(.roundedBorder)
+                        .font(.system(.body, design: .monospaced))
                         .frame(height: 32)
                     }
                     
@@ -505,6 +510,55 @@ struct SettingsView: View {
                         Text("SSH_FALLBACK_DESC", bundle: .clawsy)
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
+                    }
+                    
+                    // Hotkeys Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label(title: { Text("HOTKEYS", bundle: .clawsy) }, icon: { Image(systemName: "keyboard") })
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.purple)
+                        
+                        HStack {
+                            Text("HOTKEY_QUICK_SEND", bundle: .clawsy)
+                                .font(.system(size: 12))
+                            Spacer()
+                            Text("⌘ + ⇧ +")
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            TextField("", text: $quickSendHotkey)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(.body, design: .monospaced))
+                                .frame(width: 40, height: 32)
+                                .multilineTextAlignment(.center)
+                                .onChange(of: quickSendHotkey) { newValue in
+                                    if newValue.count > 1 {
+                                        quickSendHotkey = String(newValue.prefix(1)).uppercased()
+                                    } else {
+                                        quickSendHotkey = newValue.uppercased()
+                                    }
+                                }
+                        }
+                        
+                        HStack {
+                            Text("HOTKEY_PUSH_CLIPBOARD", bundle: .clawsy)
+                                .font(.system(size: 12))
+                            Spacer()
+                            Text("⌘ + ⇧ +")
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            TextField("", text: $pushClipboardHotkey)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(.body, design: .monospaced))
+                                .frame(width: 40, height: 32)
+                                .multilineTextAlignment(.center)
+                                .onChange(of: pushClipboardHotkey) { newValue in
+                                    if newValue.count > 1 {
+                                        pushClipboardHotkey = String(newValue.prefix(1)).uppercased()
+                                    } else {
+                                        pushClipboardHotkey = newValue.uppercased()
+                                    }
+                                }
+                        }
                     }
                     
                     // File Sync Section

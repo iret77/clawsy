@@ -95,3 +95,12 @@
 /* Camera Preview */
 "CAMERA_PREVIEW_TITLE" = "Kameravorschau";
 "SEND_TO_AGENT" = "An Agenten senden";
+
+/* HUD */
+"CLIPBOARD_SENT" = "In die Cloud kopiert";
+"SCREENSHOT_SENT" = "Bild übertragen";
+
+/* Settings Addition */
+"HOTKEYS" = "Tastenkürzel";
+"HOTKEY_QUICK_SEND" = "Quick Send";
+"HOTKEY_PUSH_CLIPBOARD" = "Clipboard senden";
