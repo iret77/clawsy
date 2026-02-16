@@ -10,6 +10,7 @@ public class ShareHandler {
     public static func handleSharedItems(_ items: [NSExtensionItem], network: NetworkManager, completion: @escaping (Result<Void, Error>) -> Void) {
         var sharedText = ""
         var sharedURLs: [URL] = []
+        var sharedFiles: [[String: Any]] = []
         
         let group = DispatchGroup()
         
@@ -29,7 +30,33 @@ public class ShareHandler {
                     group.enter()
                     provider.loadItem(forTypeIdentifier: "public.url", options: nil) { (item, error) in
                         if let url = item as? URL {
-                            sharedURLs.append(url)
+                            if url.isFileURL {
+                                // Handle File
+                                if let data = try? Data(contentsOf: url) {
+                                    sharedFiles.append([
+                                        "name": url.lastPathComponent,
+                                        "content": data.base64EncodedString(),
+                                        "type": "file"
+                                    ])
+                                }
+                            } else {
+                                sharedURLs.append(url)
+                            }
+                        }
+                        group.leave()
+                    }
+                } else if provider.hasItemConformingToTypeIdentifier("public.item") {
+                    // Generic fallback for files that don't match public.url (like some images or PDFs)
+                    group.enter()
+                    provider.loadItem(forTypeIdentifier: "public.item", options: nil) { (item, error) in
+                        if let url = item as? URL, url.isFileURL {
+                            if let data = try? Data(contentsOf: url) {
+                                sharedFiles.append([
+                                    "name": url.lastPathComponent,
+                                    "content": data.base64EncodedString(),
+                                    "type": "file"
+                                ])
+                            }
                         }
                         group.leave()
                     }
@@ -46,6 +73,10 @@ public class ShareHandler {
             
             if !sharedURLs.isEmpty {
                 finalContent["urls"] = sharedURLs.map { $0.absoluteString }
+            }
+            
+            if !sharedFiles.isEmpty {
+                finalContent["files"] = sharedFiles
             }
             
             if finalContent.isEmpty {
