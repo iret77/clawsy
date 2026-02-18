@@ -17,7 +17,13 @@ struct QuickSendView: View {
                     .focused($isFocused)
                     .onSubmit {
                         if !text.isEmpty {
-                            onSend(text)
+                            // Use agent.request protocol to route directly to agent
+                            network.sendEvent(kind: "agent.request", payload: [
+                                "message": text,
+                                "deliver": true,
+                                "receipt": true
+                            ])
+                            onSend(text) // Clears UI
                             text = ""
                         }
                     }

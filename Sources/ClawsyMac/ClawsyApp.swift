@@ -82,7 +82,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private func handleGlobalPushClipboard() {
         guard let network = networkManager, network.isConnected else { return }
         if let content = ClipboardManager.getClipboardContent() {
-            network.sendEvent(kind: "clipboard", payload: ["text": content])
+            network.sendEvent(kind: "agent.request", payload: [
+                "message": "📋 Clipboard content:\n" + content,
+                "deliver": true
+            ])
             self.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
         }
     }
