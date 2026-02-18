@@ -613,8 +613,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             "method": "node.event",
             "params": [
                 "event": kind,
-                "payload": payload,
-                "ts": Int64(Date().timeIntervalSince1970 * 1000)
+                "payload": payload
             ]
         ]
         send(json: frame)
