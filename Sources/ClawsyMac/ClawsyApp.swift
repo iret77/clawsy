@@ -142,7 +142,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 window.hasShadow = true
                 
                 let quickSendView = QuickSendView(onSend: { text in
-                    network.sendEvent(kind: "quick_send", payload: ["text": text])
+                    network.sendEvent(kind: "agent.request", payload: [
+                        "message": text,
+                        "deliver": true,
+                        "receipt": true
+                    ])
                     self.hideQuickSend()
                 }, onCancel: {
                     self.hideQuickSend()
