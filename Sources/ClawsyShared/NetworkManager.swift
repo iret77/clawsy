@@ -305,6 +305,13 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     public func didReceive(event: WebSocketEvent, client: WebSocketClient) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
+            
+            // Ensure log header is present
+            if self.rawLog.isEmpty {
+                let dateStr = ISO8601DateFormatter().string(from: Date())
+                self.rawLog = "[LOG START] \(dateStr) | Clawsy v0.2.4\n----------------------------------------\n"
+            }
+            
             switch event {
             case .connected(_):
                 self.connectionWatchdog?.invalidate()
