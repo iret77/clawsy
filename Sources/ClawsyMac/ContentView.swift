@@ -459,11 +459,23 @@ struct MetadataView: View {
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.cyan)
                         
+                        let telemetry = NetworkManager.getTelemetry()
                         MetadataRow(label: "Device", value: telemetry["deviceName"] as? String ?? "Unknown")
                         MetadataRow(label: "Model", value: telemetry["deviceModel"] as? String ?? "Unknown")
                         
                         if let battery = telemetry["batteryLevel"] as? Float, battery >= 0 {
-                            MetadataRow(label: "Battery", value: "\(Int(battery * 100))%")
+                            MetadataRow(label: "Battery", value: "\(Int(battery * 100))%\(telemetry["isCharging"] as? Bool == true ? " ⚡️" : "")")
+                        }
+                        
+                        if let app = telemetry["activeApp"] as? String {
+                            MetadataRow(label: "Active App", value: app)
+                        }
+                        
+                        if let thermal = telemetry["thermalState"] as? Int {
+                            let states = ["Normal", "Fair", "Serious", "Critical"]
+                            if thermal < states.count {
+                                MetadataRow(label: "Thermal", value: states[thermal])
+                            }
                         }
                     } else {
                         Text("EXTENDED_CONTEXT_DISABLED", bundle: .clawsy)

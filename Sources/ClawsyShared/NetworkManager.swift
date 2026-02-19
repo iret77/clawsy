@@ -642,14 +642,36 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         #if os(macOS)
         telemetry["deviceName"] = Host.current().localizedName ?? "Mac"
         telemetry["deviceModel"] = "Mac"
-        // In a real app, we'd use IOKit for battery/wifi, but let's provide placeholders
-        // for the UI/Handshake demonstration
-        telemetry["batteryLevel"] = -1 // Mac doesn't always have battery
+        
+        // 1. Active App & Window
+        if let frontApp = NSWorkspace.shared.frontmostApplication {
+            telemetry["activeApp"] = frontApp.localizedName ?? "Unknown"
+            // Window title requires Accessibility permissions, usually needs a bit more code, 
+            // but we can start with the app name.
+        }
+
+        // 2. Battery Status (IOKit)
+        let snapshot = IOPSCopyPowerSourcesInfo().takeRetainedValue()
+        let sources = IOPSCopyPowerSourcesList(snapshot).takeRetainedValue() as Array
+        for source in sources {
+            if let description = IOPSGetPowerSourceDescription(snapshot, source).takeUnretainedValue() as? [String: Any] {
+                if let capacity = description[kIOPSCurrentCapacityKey] as? Int,
+                   let maxCapacity = description[kIOPSMaxCapacityKey] as? Int {
+                    telemetry["batteryLevel"] = Float(capacity) / Float(maxCapacity)
+                    telemetry["isCharging"] = description[kIOPSPowerSourceStateKey] as? String == kIOPSACPowerValue
+                }
+            }
+        }
+
+        // 3. System Load / Thermal
+        telemetry["thermalState"] = ProcessInfo.processInfo.thermalState.rawValue // 0: nominal, 1: fair, 2: serious, 3: critical
+
         #elseif os(iOS)
         telemetry["deviceName"] = UIDevice.current.name
         telemetry["deviceModel"] = UIDevice.current.model
         UIDevice.current.isBatteryMonitoringEnabled = true
         telemetry["batteryLevel"] = UIDevice.current.batteryLevel
+        telemetry["isCharging"] = UIDevice.current.batteryState == .charging || UIDevice.current.batteryState == .full
         #endif
         
         return telemetry
