@@ -9,6 +9,7 @@ struct ContentView: View {
     
     @State private var showingSettings = false
     @State private var showingLog = false
+    @State private var showingMetadata = false
     @State private var showingScreenshotMenu = false
     @State private var showingCameraMenu = false
     
@@ -180,6 +181,17 @@ struct ContentView: View {
                 .popover(isPresented: $showingLog, arrowEdge: .trailing) {
                     DebugLogView(logText: network.rawLog, isPresented: $showingLog)
                         .frame(width: 400, height: 300)
+                }
+
+                // Last Metadata
+                Button(action: { showingMetadata.toggle() }) {
+                    MenuItemRow(icon: "info.bubble.fill", title: "LAST_METADATA", isEnabled: true)
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
+                .popover(isPresented: $showingMetadata, arrowEdge: .trailing) {
+                    MetadataView(network: network, isPresented: $showingMetadata)
+                        .frame(width: 350, height: 250)
                 }
                 
                 Divider().padding(.vertical, 4).opacity(0.5)
@@ -375,7 +387,7 @@ struct DebugLogView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("DEBUG_LOG_TITLE", bundle: .clawsy)
                         .font(.system(size: 15, weight: .bold))
-                    Text("v0.2.3 #122")
+                    Text("v0.2.4 #123")
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundColor(.secondary)
                 }
@@ -419,6 +431,79 @@ struct DebugLogView: View {
             }
         }
         .padding(16)
+    }
+}
+
+struct MetadataView: View {
+    @ObservedObject var network: NetworkManager
+    @Binding var isPresented: Bool
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label(title: { Text("LAST_METADATA", bundle: .clawsy) }, icon: { Image(systemName: "info.circle.fill") })
+                    .font(.system(size: 15, weight: .bold))
+                Spacer()
+                Button(action: { isPresented = false }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    let telemetry = NetworkManager.getTelemetry()
+                    
+                    MetadataRow(label: "Version", value: "0.2.4")
+                    MetadataRow(label: "Local Time", value: ISO8601DateFormatter().string(from: Date()))
+                    MetadataRow(label: "Timezone", value: TimeZone.current.identifier)
+                    
+                    if SharedConfig.extendedContextEnabled {
+                        Divider().padding(.vertical, 4)
+                        Text("EXTENDED_CONTEXT", bundle: .clawsy)
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.cyan)
+                        
+                        MetadataRow(label: "Device", value: telemetry["deviceName"] as? String ?? "Unknown")
+                        MetadataRow(label: "Model", value: telemetry["deviceModel"] as? String ?? "Unknown")
+                        
+                        if let battery = telemetry["batteryLevel"] as? Float, battery >= 0 {
+                            MetadataRow(label: "Battery", value: "\(Int(battery * 100))%")
+                        }
+                    } else {
+                        Text("EXTENDED_CONTEXT_DISABLED", bundle: .clawsy)
+                            .font(.system(size: 10, italic: true))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(4)
+            }
+            .padding(8)
+            .background(VisualEffectView(material: .popover, blendingMode: .withinWindow))
+            .cornerRadius(8)
+            
+            Text("METADATA_VIEW_DESC", bundle: .clawsy)
+                .font(.system(size: 9))
+                .foregroundColor(.secondary)
+        }
+        .padding(16)
+    }
+}
+
+struct MetadataRow: View {
+    var label: String
+    var value: String
+    
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.secondary)
+            Spacer()
+            Text(value)
+                .font(.system(size: 11, design: .monospaced))
+        }
     }
 }
 
