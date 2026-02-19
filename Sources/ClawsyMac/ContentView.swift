@@ -197,7 +197,7 @@ struct ContentView: View {
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
                 
-                Text("v0.2.3 #122")
+                Text("v0.2.4 #133")
                     .font(.system(size: 9, design: .monospaced))
                     .foregroundColor(.secondary.opacity(0.5))
                     .padding(.top, 4)
