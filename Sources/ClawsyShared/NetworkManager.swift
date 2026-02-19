@@ -4,6 +4,7 @@ import CryptoKit
 import SwiftUI
 import UserNotifications
 import os.log
+import IOKit.ps
 
 #if canImport(AppKit)
 import AppKit
@@ -657,7 +658,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
 
         // 2. Battery Status (IOKit)
         let snapshot = IOPSCopyPowerSourcesInfo().takeRetainedValue()
-        let sources = IOPSCopyPowerSourcesList(snapshot).takeRetainedValue() as Array
+        let sources = IOPSCopyPowerSourcesList(snapshot).takeRetainedValue() as [CFTypeRef]
         for source in sources {
             if let description = IOPSGetPowerSourceDescription(snapshot, source).takeUnretainedValue() as? [String: Any] {
                 if let capacity = description[kIOPSCurrentCapacityKey] as? Int,
