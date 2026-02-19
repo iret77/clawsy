@@ -60,23 +60,32 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         let contentView = ContentView().environmentObject(self)
         popover.contentViewController = NSHostingController(rootView: contentView)
         
-        // Register Global Hotkeys
+        // Register Global Hotkeys (local + global monitors)
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            if event.modifierFlags.contains([.command, .shift]) {
-                let char = event.charactersIgnoringModifiers?.uppercased() ?? ""
-                
-                if char == SharedConfig.quickSendHotkey {
-                    self.showQuickSend()
-                    return nil
-                }
-                
-                if char == SharedConfig.pushClipboardHotkey {
-                    self.handleGlobalPushClipboard()
-                    return nil
-                }
+            if self.processHotkey(event: event) {
+                return nil
             }
             return event
         }
+        NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
+            _ = self.processHotkey(event: event)
+        }
+    }
+    
+    private func processHotkey(event: NSEvent) -> Bool {
+        let required: NSEvent.ModifierFlags = [.command, .shift]
+        let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard mods.contains(required) else { return false }
+        let char = event.charactersIgnoringModifiers?.uppercased() ?? ""
+        if char == SharedConfig.quickSendHotkey {
+            self.showQuickSend()
+            return true
+        }
+        if char == SharedConfig.pushClipboardHotkey {
+            self.handleGlobalPushClipboard()
+            return true
+        }
+        return false
     }
     
     private func handleGlobalPushClipboard() {
