@@ -447,7 +447,8 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         let deviceId = self.deviceId
         
         // Protocol V2 components: version, deviceId, clientId, role, mode, clientVersion, ts, token, nonce
-        let components = ["v2", deviceId, "openclaw-macos", "node", "node", "0.2.4", String(tsMs), serverToken, nonce]
+        // Note: clientId MUST be 'openclaw-macos' (or similar recognized id) for standard Gateway logic.
+        let components = ["v2", deviceId, "openclaw-macos", "node", "node", "", String(tsMs), serverToken, nonce]
         let payloadString = components.joined(separator: "|")
         guard let payloadData = payloadString.data(using: .utf8) else { return }
         guard let signature = try? signingKey.signature(for: payloadData) else { return }
