@@ -13,6 +13,12 @@ public struct SharedConfig {
     
     public static var extendedContextEnabled: Bool { sharedDefaults.bool(forKey: "extendedContextEnabled") }
     
+    // Activity Profile (Compressed JSON string of daily activity ranges)
+    public static var activityProfile: String {
+        get { sharedDefaults.string(forKey: "activityProfile") ?? "{}" }
+        set { sharedDefaults.set(newValue, forKey: "activityProfile") }
+    }
+    
     // Hotkeys
     public static var quickSendHotkey: String { sharedDefaults.string(forKey: "quickSendHotkey") ?? "K" }
     public static var pushClipboardHotkey: String { sharedDefaults.string(forKey: "pushClipboardHotkey") ?? "V" }

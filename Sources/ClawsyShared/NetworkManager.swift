@@ -696,16 +696,24 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         if switchesPerMinute > 5 { moodScore -= 20 } // Hectic app switching
         if ProcessInfo.processInfo.thermalState.rawValue >= 2 { moodScore -= 15 } // Thermal stress
         
-        // Time/Day Context
+        // Time/Day Context with Personalized Activity Profile
         let calendar = Calendar.current
         let hour = calendar.component(.hour, from: now)
         let weekday = calendar.component(.weekday, from: now) // 1=Sun, 7=Sat
         
-        if hour < 8 || hour > 22 { moodScore -= 10 } // Tiredness factor
+        // Update Activity Profile (Learning the user's "normal")
+        NetworkManager.updateActivityProfile(hour: hour)
+        
+        // Check if current hour is "Normal" for this user
+        if !NetworkManager.isNormalActivityHour(hour: hour) {
+            moodScore -= 15 // Unusual activity time often implies pressure or urgency
+        }
+        
         if weekday == 1 || weekday == 7 { moodScore += 10 } // Weekend bonus
         
         telemetry["moodScore"] = max(0, min(100, moodScore))
         telemetry["appSwitchRate"] = switchesPerMinute
+        telemetry["isUnusualHour"] = !NetworkManager.isNormalActivityHour(hour: hour)
         
         #elseif os(iOS)
         telemetry["deviceName"] = UIDevice.current.name
@@ -716,5 +724,38 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         #endif
         
         return telemetry
+    }
+    
+    private static func updateActivityProfile(hour: Int) {
+        var profile: [String: Int] = [:]
+        if let data = SharedConfig.activityProfile.data(using: .utf8),
+           let existing = try? JSONSerialization.jsonObject(with: data) as? [String: Int] {
+            profile = existing
+        }
+        
+        let key = String(hour)
+        profile[key] = (profile[key] ?? 0) + 1
+        
+        let total = profile.values.reduce(0, +)
+        if total > 500 {
+            for (k, v) in profile { profile[k] = max(1, v / 2) }
+        }
+        
+        if let nextData = try? JSONSerialization.data(withJSONObject: profile),
+           let nextString = String(data: nextData, encoding: .utf8) {
+            SharedConfig.activityProfile = nextString
+        }
+    }
+    
+    private static func isNormalActivityHour(hour: Int) -> Bool {
+        guard let data = SharedConfig.activityProfile.data(using: .utf8),
+              let profile = try? JSONSerialization.jsonObject(with: data) as? [String: Int],
+              !profile.isEmpty else {
+            return true 
+        }
+        
+        let total = profile.values.reduce(0, +)
+        let count = profile[String(hour)] ?? 0
+        return Double(count) / Double(total) > 0.02
     }
 }
