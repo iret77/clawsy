@@ -438,8 +438,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         guard let signingKey = signingKey, let publicKey = publicKey else { return }
         let tsMs = Int64(Date().timeIntervalSince1970 * 1000)
         let deviceId = self.deviceId
-        let version = "0.2.4"
-        let components = ["v3", deviceId, "openclaw-macos", "node", "node", version, String(tsMs), serverToken, nonce]
+        
+        // Protocol V2 components: version, deviceId, clientId, role, mode, clientVersion, ts, token, nonce
+        let components = ["v2", deviceId, "openclaw-macos", "node", "node", "0.2.4", String(tsMs), serverToken, nonce]
         let payloadString = components.joined(separator: "|")
         guard let payloadData = payloadString.data(using: .utf8) else { return }
         guard let signature = try? signingKey.signature(for: payloadData) else { return }
@@ -448,23 +449,19 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         
         #if os(macOS)
         let platform = "macos"
-        let deviceName = Host.current().localizedName ?? "Mac"
         #elseif os(iOS)
         let platform = "ios"
-        let deviceName = UIDevice.current.name
         #elseif os(tvOS)
         let platform = "tvos"
-        let deviceName = UIDevice.current.name
         #else
         let platform = "unknown"
-        let deviceName = "Unknown Device"
         #endif
         
         let connectReq: [String: Any] = [
             "type": "req", "id": "1", "method": "connect",
             "params": [
                 "minProtocol": 3, "maxProtocol": 3,
-                "client": ["id": "openclaw-\(platform)", "version": version, "platform": platform, "mode": "node"],
+                "client": ["id": "openclaw-\(platform)", "version": "0.2.4", "platform": platform, "mode": "node"],
                 "role": "node", "caps": ["clipboard", "screen", "camera", "file", "location"], 
                 "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set", "location.get", "location.start", "location.stop", "location.add_smart"],
                 "permissions": ["clipboard.read": true, "clipboard.write": true],
