@@ -82,17 +82,25 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private func handleGlobalPushClipboard() {
         guard let network = networkManager, network.isConnected else { return }
         if let content = ClipboardManager.getClipboardContent() {
-            network.sendEvent(kind: "agent.request", payload: [
-                "message": "📋 Clipboard content:\n" + content,
-                "sessionKey": "clawsy-service",
-                "deliver": false,
-                "metadata": [
-                    "client": "clawsy-mac",
+            let envelope: [String: Any] = [
+                "clawsy_envelope": [
                     "version": "0.2.4",
-                    "localTime": ISO8601DateFormatter().string(from: Date())
+                    "type": "clipboard",
+                    "localTime": ISO8601DateFormatter().string(from: Date()),
+                    "tz": TimeZone.current.identifier,
+                    "content": content
                 ]
-            ])
-            self.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
+            ]
+            
+            if let jsonData = try? JSONSerialization.data(withJSONObject: envelope),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                network.sendEvent(kind: "agent.request", payload: [
+                    "message": jsonString,
+                    "sessionKey": "clawsy-service",
+                    "deliver": false
+                ])
+                self.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
+            }
         }
     }
     
@@ -148,18 +156,25 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 window.hasShadow = true
                 
                 let quickSendView = QuickSendView(onSend: { text in
-                    network.sendEvent(kind: "agent.request", payload: [
-                        "message": text,
-                        "sessionKey": "main",
-                        "deliver": true,
-                        "receipt": false,
-                        "metadata": [
-                            "client": "clawsy-mac",
+                    let envelope: [String: Any] = [
+                        "clawsy_envelope": [
                             "version": "0.2.4",
+                            "type": "quick_send",
                             "localTime": ISO8601DateFormatter().string(from: Date()),
-                            "tz": TimeZone.current.identifier
+                            "tz": TimeZone.current.identifier,
+                            "content": text
                         ]
-                    ])
+                    ]
+                    
+                    if let jsonData = try? JSONSerialization.data(withJSONObject: envelope),
+                       let jsonString = String(data: jsonData, encoding: .utf8) {
+                        network.sendEvent(kind: "agent.request", payload: [
+                            "message": jsonString,
+                            "sessionKey": "main",
+                            "deliver": true,
+                            "receipt": false
+                        ])
+                    }
                     self.hideQuickSend()
                 }, onCancel: {
                     self.hideQuickSend()

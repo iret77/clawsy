@@ -295,18 +295,25 @@ struct ContentView: View {
     
     func handleManualClipboardSend() {
         if let content = ClipboardManager.getClipboardContent() {
-            // Use agent.request for clipboard content too
-            network.sendEvent(kind: "agent.request", payload: [
-                "message": "📋 Clipboard content:\n" + content,
-                "sessionKey": "clawsy-service",
-                "deliver": false,
-                "metadata": [
-                    "client": "clawsy-mac",
+            let envelope: [String: Any] = [
+                "clawsy_envelope": [
                     "version": "0.2.4",
-                    "localTime": ISO8601DateFormatter().string(from: Date())
+                    "type": "clipboard",
+                    "localTime": ISO8601DateFormatter().string(from: Date()),
+                    "tz": TimeZone.current.identifier,
+                    "content": content
                 ]
-            ])
-            appDelegate.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
+            ]
+            
+            if let jsonData = try? JSONSerialization.data(withJSONObject: envelope),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                network.sendEvent(kind: "agent.request", payload: [
+                    "message": jsonString,
+                    "sessionKey": "clawsy-service",
+                    "deliver": false
+                ])
+                appDelegate.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
+            }
         }
     }
     
