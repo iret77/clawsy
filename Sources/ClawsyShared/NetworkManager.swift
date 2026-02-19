@@ -470,7 +470,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 "permissions": ["clipboard.read": true, "clipboard.write": true],
                 "auth": ["token": serverToken],
                 "device": [
-                    "id": deviceId, "publicKey": pubKeyB64, "signature": sigB64, "signedAt": tsMs, "nonce": nonce,
+                    "id": deviceId, "publicKey": pubKeyB64, "signature": sigB64, "signedAt": tsMs, "nonce": nonce
+                ],
+                "metadata": [
                     "name": deviceName, "tz": TimeZone.current.identifier, "localTime": ISO8601DateFormatter().string(from: Date())
                 ]
             ]
