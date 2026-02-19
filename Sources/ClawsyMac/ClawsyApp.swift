@@ -84,6 +84,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         if let content = ClipboardManager.getClipboardContent() {
             network.sendEvent(kind: "agent.request", payload: [
                 "message": "📋 Clipboard content:\n" + content,
+                "sessionKey": "main",
                 "deliver": true
             ])
             self.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
@@ -144,6 +145,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 let quickSendView = QuickSendView(onSend: { text in
                     network.sendEvent(kind: "agent.request", payload: [
                         "message": text,
+                        "sessionKey": "main",
                         "deliver": true,
                         "receipt": true
                     ])

@@ -184,7 +184,7 @@ struct ContentView: View {
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
                 
-                Text("v0.2.3 #121")
+                Text("v0.2.3 #122")
                     .font(.system(size: 9, design: .monospaced))
                     .foregroundColor(.secondary.opacity(0.5))
                     .padding(.top, 4)
@@ -292,6 +292,7 @@ struct ContentView: View {
             // Use agent.request for clipboard content too
             network.sendEvent(kind: "agent.request", payload: [
                 "message": "📋 Clipboard content:\n" + content,
+                "sessionKey": "main",
                 "deliver": true
             ])
             appDelegate.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
@@ -351,7 +352,7 @@ struct DebugLogView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("DEBUG_LOG_TITLE", bundle: .clawsy)
                         .font(.system(size: 15, weight: .bold))
-                    Text("v0.2.3 #121")
+                    Text("v0.2.3 #122")
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundColor(.secondary)
                 }
