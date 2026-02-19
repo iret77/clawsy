@@ -103,3 +103,11 @@
 "HOTKEYS" = "Hotkeys";
 "HOTKEY_QUICK_SEND" = "Quick Send";
 "HOTKEY_PUSH_CLIPBOARD" = "Push Clipboard";
+
+/* Metadata View */
+"LAST_METADATA" = "Last Metadata";
+"EXTENDED_CONTEXT" = "Extended Context";
+"EXTENDED_CONTEXT_DESC" = "Includes telemetry (battery, device) for more precise processing.";
+"EXTENDED_CONTEXT_HELP" = "When enabled, the agent sees additional details about your context (e.g. battery level).";
+"EXTENDED_CONTEXT_DISABLED" = "Extended context disabled.";
+"METADATA_VIEW_DESC" = "This data will be included in the next transmission.";

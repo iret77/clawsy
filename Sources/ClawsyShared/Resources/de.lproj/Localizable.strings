@@ -104,3 +104,11 @@
 "HOTKEYS" = "Tastenkürzel";
 "HOTKEY_QUICK_SEND" = "Quick Send";
 "HOTKEY_PUSH_CLIPBOARD" = "Clipboard senden";
+
+/* Metadata View */
+"LAST_METADATA" = "Letzte Metadaten";
+"EXTENDED_CONTEXT" = "Erweiterter Kontext";
+"EXTENDED_CONTEXT_DESC" = "Liefert Telemetriedaten (Akku, Gerät) zur präziseren Verarbeitung mit.";
+"EXTENDED_CONTEXT_HELP" = "Wenn aktiviert, sieht der Agent zusätzlich zum Text auch Details über deinen Arbeitskontext (z.B. Akkustand).";
+"EXTENDED_CONTEXT_DISABLED" = "Erweiterter Kontext deaktiviert.";
+"METADATA_VIEW_DESC" = "Diese Daten werden bei der nächsten Übertragung im Hintergrund mitgesendet.";
