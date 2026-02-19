@@ -84,8 +84,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         if let content = ClipboardManager.getClipboardContent() {
             network.sendEvent(kind: "agent.request", payload: [
                 "message": "📋 Clipboard content:\n" + content,
-                "sessionKey": "main",
-                "deliver": true
+                "sessionKey": "clawsy-service",
+                "deliver": false,
+                "metadata": [
+                    "client": "clawsy-mac",
+                    "version": "0.2.4",
+                    "localTime": ISO8601DateFormatter().string(from: Date())
+                ]
             ])
             self.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
         }
@@ -147,7 +152,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                         "message": text,
                         "sessionKey": "main",
                         "deliver": true,
-                        "receipt": true
+                        "receipt": false,
+                        "metadata": [
+                            "client": "clawsy-mac",
+                            "version": "0.2.4",
+                            "localTime": ISO8601DateFormatter().string(from: Date()),
+                            "tz": TimeZone.current.identifier
+                        ]
                     ])
                     self.hideQuickSend()
                 }, onCancel: {

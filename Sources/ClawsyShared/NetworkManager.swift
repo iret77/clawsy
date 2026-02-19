@@ -438,7 +438,8 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         guard let signingKey = signingKey, let publicKey = publicKey else { return }
         let tsMs = Int64(Date().timeIntervalSince1970 * 1000)
         let deviceId = self.deviceId
-        let components = ["v2", deviceId, "openclaw-macos", "node", "node", "", String(tsMs), serverToken, nonce]
+        let version = "0.2.4"
+        let components = ["v3", deviceId, "openclaw-macos", "node", "node", version, String(tsMs), serverToken, nonce]
         let payloadString = components.joined(separator: "|")
         guard let payloadData = payloadString.data(using: .utf8) else { return }
         guard let signature = try? signingKey.signature(for: payloadData) else { return }
@@ -463,12 +464,15 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             "type": "req", "id": "1", "method": "connect",
             "params": [
                 "minProtocol": 3, "maxProtocol": 3,
-                "client": ["id": "openclaw-\(platform)", "version": "0.2.3", "platform": platform, "mode": "node"],
+                "client": ["id": "openclaw-\(platform)", "version": version, "platform": platform, "mode": "node"],
                 "role": "node", "caps": ["clipboard", "screen", "camera", "file", "location"], 
                 "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set", "location.get", "location.start", "location.stop", "location.add_smart"],
                 "permissions": ["clipboard.read": true, "clipboard.write": true],
                 "auth": ["token": serverToken],
-                "device": ["id": deviceId, "publicKey": pubKeyB64, "signature": sigB64, "signedAt": tsMs, "nonce": nonce]
+                "device": [
+                    "id": deviceId, "publicKey": pubKeyB64, "signature": sigB64, "signedAt": tsMs, "nonce": nonce,
+                    "name": deviceName, "tz": TimeZone.current.identifier, "localTime": ISO8601DateFormatter().string(from: Date())
+                ]
             ]
         ]
         send(json: connectReq)
