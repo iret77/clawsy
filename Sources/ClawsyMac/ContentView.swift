@@ -432,6 +432,13 @@ struct MetadataView: View {
     @ObservedObject var network: NetworkManager
     @Binding var isPresented: Bool
     
+    func moodString(for score: Double) -> String {
+        if score < 30 { return "Stressed 😫" }
+        if score < 60 { return "Busy 😰" }
+        if score < 85 { return "Focused 👨‍💻" }
+        return "Flow 🌊"
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -479,15 +486,7 @@ struct MetadataView: View {
                         }
 
                         if let mood = telemetry["moodScore"] as? Double {
-                            let moodLabel: String
-                            let moodEmoji: String
-                            switch mood {
-                            case 0..<30: (moodLabel, moodEmoji) = ("Stressed", "😫")
-                            case 30..<60: (moodLabel, moodEmoji) = ("Busy", "😰")
-                            case 60..<85: (moodLabel, moodEmoji) = ("Focused", "👨‍💻")
-                            default: (moodLabel, moodEmoji) = ("Flow", "🌊")
-                            }
-                            MetadataRow(label: "User Mood", value: "\(moodLabel) \(moodEmoji)")
+                            MetadataRow(label: "User Mood", value: moodString(for: mood))
                         }
                     } else {
                         Text("EXTENDED_CONTEXT_DISABLED", bundle: .clawsy)
