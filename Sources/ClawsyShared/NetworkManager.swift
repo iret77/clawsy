@@ -306,10 +306,11 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
-            // Ensure log header is present
-            if self.rawLog.isEmpty {
+            // CRITICAL: Ensure log header is present at the very beginning of any activity
+            if self.rawLog.isEmpty || !self.rawLog.contains("Clawsy v0.2.4") {
                 let dateStr = ISO8601DateFormatter().string(from: Date())
-                self.rawLog = "[LOG START] \(dateStr) | Clawsy v0.2.4\n----------------------------------------\n"
+                let header = "[LOG START] \(dateStr) | Clawsy v0.2.4\n----------------------------------------\n"
+                self.rawLog = header + self.rawLog
             }
             
             switch event {
