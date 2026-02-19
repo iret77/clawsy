@@ -25,6 +25,11 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     @Published public var lastMessage = ""
     @Published public var rawLog = ""
     
+    // Mood Tracking State
+    private static var lastAppSwitchTime = Date()
+    private static var appSwitchCount = 0
+    private static var lastAppName = ""
+    
     private var socket: WebSocket?
     private var connectionWatchdog: Timer?
     private var signingKey: Curve25519.Signing.PrivateKey?
@@ -666,6 +671,42 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         // 3. System Load / Thermal
         telemetry["thermalState"] = ProcessInfo.processInfo.thermalState.rawValue // 0: nominal, 1: fair, 2: serious, 3: critical
 
+        // 4. Mood Analysis (Derived)
+        let now = Date()
+        if let frontApp = NSWorkspace.shared.frontmostApplication {
+            let currentAppName = frontApp.localizedName ?? ""
+            if currentAppName != lastAppName {
+                appSwitchCount += 1
+                lastAppName = currentAppName
+            }
+        }
+        
+        let timeSinceLastCheck = now.timeIntervalSince(lastAppSwitchTime)
+        let switchesPerMinute = Double(appSwitchCount) / (max(timeSinceLastCheck, 60) / 60.0)
+        
+        // Reset counter every 5 mins to keep it fresh
+        if timeSinceLastCheck > 300 {
+            appSwitchCount = 0
+            lastAppSwitchTime = now
+        }
+        
+        var moodScore = 70.0 // Default: Good/Neutral
+        
+        // Impact factors
+        if switchesPerMinute > 5 { moodScore -= 20 } // Hectic app switching
+        if ProcessInfo.processInfo.thermalState.rawValue >= 2 { moodScore -= 15 } // Thermal stress
+        
+        // Time/Day Context
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: now)
+        let weekday = calendar.component(.weekday, from: now) // 1=Sun, 7=Sat
+        
+        if hour < 8 || hour > 22 { moodScore -= 10 } // Tiredness factor
+        if weekday == 1 || weekday == 7 { moodScore += 10 } // Weekend bonus
+        
+        telemetry["moodScore"] = max(0, min(100, moodScore))
+        telemetry["appSwitchRate"] = switchesPerMinute
+        
         #elseif os(iOS)
         telemetry["deviceName"] = UIDevice.current.name
         telemetry["deviceModel"] = UIDevice.current.model

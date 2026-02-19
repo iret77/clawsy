@@ -477,6 +477,18 @@ struct MetadataView: View {
                                 MetadataRow(label: "Thermal", value: states[thermal])
                             }
                         }
+
+                        if let mood = telemetry["moodScore"] as? Double {
+                            let moodLabel: String
+                            let moodEmoji: String
+                            switch mood {
+                            case 0..<30: (moodLabel, moodEmoji) = ("Stressed", "😫")
+                            case 30..<60: (moodLabel, moodEmoji) = ("Busy", "😰")
+                            case 60..<85: (moodLabel, moodEmoji) = ("Focused", "👨‍💻")
+                            default: (moodLabel, moodEmoji) = ("Flow", "🌊")
+                            }
+                            MetadataRow(label: "User Mood", value: "\(moodLabel) \(moodEmoji)")
+                        }
                     } else {
                         Text("EXTENDED_CONTEXT_DISABLED", bundle: .clawsy)
                             .font(.system(size: 10).italic())
