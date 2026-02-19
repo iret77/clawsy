@@ -165,7 +165,13 @@ struct ContentView: View {
                 }
                 
                 // Debug Log
-                Button(action: { showingLog.toggle() }) {
+                Button(action: { 
+                    if network.rawLog.isEmpty {
+                        let dateStr = ISO8601DateFormatter().string(from: Date())
+                        network.rawLog = "[DEBUG] \(dateStr) | Clawsy v0.2.4\n"
+                    }
+                    showingLog.toggle() 
+                }) {
                     MenuItemRow(icon: "terminal.fill", title: "DEBUG_LOG", isEnabled: true)
                 }
                 .buttonStyle(.plain)

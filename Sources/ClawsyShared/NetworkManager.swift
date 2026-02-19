@@ -464,16 +464,23 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             "type": "req", "id": "1", "method": "connect",
             "params": [
                 "minProtocol": 3, "maxProtocol": 3,
-                "client": ["id": "openclaw-\(platform)", "version": version, "platform": platform, "mode": "node"],
+                "client": [
+                    "id": "openclaw-\(platform)", 
+                    "version": version, 
+                    "platform": platform, 
+                    "mode": "node",
+                    "metadata": [
+                        "name": deviceName, 
+                        "tz": TimeZone.current.identifier, 
+                        "localTime": ISO8601DateFormatter().string(from: Date())
+                    ]
+                ],
                 "role": "node", "caps": ["clipboard", "screen", "camera", "file", "location"], 
                 "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set", "location.get", "location.start", "location.stop", "location.add_smart"],
                 "permissions": ["clipboard.read": true, "clipboard.write": true],
                 "auth": ["token": serverToken],
                 "device": [
                     "id": deviceId, "publicKey": pubKeyB64, "signature": sigB64, "signedAt": tsMs, "nonce": nonce
-                ],
-                "metadata": [
-                    "name": deviceName, "tz": TimeZone.current.identifier, "localTime": ISO8601DateFormatter().string(from: Date())
                 ]
             ]
         ]
