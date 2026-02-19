@@ -473,7 +473,7 @@ struct MetadataView: View {
                         }
                     } else {
                         Text("EXTENDED_CONTEXT_DISABLED", bundle: .clawsy)
-                            .font(.system(size: 10, italic: true))
+                            .font(.system(size: 10).italic())
                             .foregroundColor(.secondary)
                     }
                 }
@@ -512,6 +512,7 @@ struct SettingsView: View {
     @Binding var serverPort: String
     @Binding var serverToken: String
     @Binding var sshUser: String
+    @AppStorage("extendedContextEnabled", store: SharedConfig.sharedDefaults) private var extendedContextEnabled = false
     @Binding var isPresented: Bool
     
     @AppStorage("useSshFallback", store: SharedConfig.sharedDefaults) private var useSshFallback = true
