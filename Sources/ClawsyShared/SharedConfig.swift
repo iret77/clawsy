@@ -11,6 +11,8 @@ public struct SharedConfig {
     public static var serverPort: String { sharedDefaults.string(forKey: "serverPort") ?? "18789" }
     public static var serverToken: String { sharedDefaults.string(forKey: "serverToken") ?? "" }
     
+    public static var extendedContextEnabled: Bool { sharedDefaults.bool(forKey: "extendedContextEnabled") }
+    
     // Hotkeys
     public static var quickSendHotkey: String { sharedDefaults.string(forKey: "quickSendHotkey") ?? "K" }
     public static var pushClipboardHotkey: String { sharedDefaults.string(forKey: "pushClipboardHotkey") ?? "V" }

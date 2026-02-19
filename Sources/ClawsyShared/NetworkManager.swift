@@ -628,4 +628,24 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
     
     private func base64UrlEncode(_ data: Data) -> String { return data.base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "") }
+
+    // Telemetry Helpers
+    public static func getTelemetry() -> [String: Any] {
+        var telemetry: [String: Any] = [:]
+        
+        #if os(macOS)
+        telemetry["deviceName"] = Host.current().localizedName ?? "Mac"
+        telemetry["deviceModel"] = "Mac"
+        // In a real app, we'd use IOKit for battery/wifi, but let's provide placeholders
+        // for the UI/Handshake demonstration
+        telemetry["batteryLevel"] = -1 // Mac doesn't always have battery
+        #elseif os(iOS)
+        telemetry["deviceName"] = UIDevice.current.name
+        telemetry["deviceModel"] = UIDevice.current.model
+        UIDevice.current.isBatteryMonitoringEnabled = true
+        telemetry["batteryLevel"] = UIDevice.current.batteryLevel
+        #endif
+        
+        return telemetry
+    }
 }

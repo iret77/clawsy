@@ -19,6 +19,7 @@ struct ContentView: View {
     @AppStorage("sshUser", store: SharedConfig.sharedDefaults) private var sshUser = ""
     @AppStorage("useSshFallback", store: SharedConfig.sharedDefaults) private var useSshFallback = true
     @AppStorage("sharedFolderPath", store: SharedConfig.sharedDefaults) private var sharedFolderPath = "~/Documents/Clawsy"
+    @AppStorage("extendedContextEnabled", store: SharedConfig.sharedDefaults) private var extendedContextEnabled = false
     
     // Alert States
     @State private var showingScreenshotAlert = false
@@ -295,15 +296,19 @@ struct ContentView: View {
     
     func handleManualClipboardSend() {
         if let content = ClipboardManager.getClipboardContent() {
-            let envelope: [String: Any] = [
-                "clawsy_envelope": [
-                    "version": "0.2.4",
-                    "type": "clipboard",
-                    "localTime": ISO8601DateFormatter().string(from: Date()),
-                    "tz": TimeZone.current.identifier,
-                    "content": content
-                ]
+            var envelopeData: [String: Any] = [
+                "version": "0.2.4",
+                "type": "clipboard",
+                "localTime": ISO8601DateFormatter().string(from: Date()),
+                "tz": TimeZone.current.identifier,
+                "content": content
             ]
+            
+            if SharedConfig.extendedContextEnabled {
+                envelopeData["telemetry"] = NetworkManager.getTelemetry()
+            }
+
+            let envelope: [String: Any] = ["clawsy_envelope": envelopeData]
             
             if let jsonData = try? JSONSerialization.data(withJSONObject: envelope),
                let jsonString = String(data: jsonData, encoding: .utf8) {
@@ -513,11 +518,6 @@ struct SettingsView: View {
                             Toggle("", isOn: $useSshFallback)
                                 .toggleStyle(.switch)
                                 .scaleEffect(0.7)
-                                .onChange(of: useSshFallback) { newValue in
-                                    // Force sync to UserDefaults
-                                    UserDefaults.standard.set(newValue, forKey: "useSshFallback")
-                                    UserDefaults.standard.synchronize()
-                                }
                         }
                         
                         TextField(text: $sshUser) {
@@ -528,6 +528,33 @@ struct SettingsView: View {
                         .disabled(!useSshFallback)
                         
                         Text("SSH_FALLBACK_DESC", bundle: .clawsy)
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+
+                    // Extended Context Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Label(title: { Text("EXTENDED_CONTEXT", bundle: .clawsy) }, icon: { Image(systemName: "chart.bar.doc.horizontal") })
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.cyan)
+                            
+                            Button(action: {
+                                // Info Popover logic could go here or just a help text
+                            }) {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 10))
+                            }
+                            .buttonStyle(.plain)
+                            .help(NSLocalizedString("EXTENDED_CONTEXT_HELP", bundle: .clawsy, comment: ""))
+
+                            Spacer()
+                            Toggle("", isOn: $extendedContextEnabled)
+                                .toggleStyle(.switch)
+                                .scaleEffect(0.7)
+                        }
+                        
+                        Text("EXTENDED_CONTEXT_DESC", bundle: .clawsy)
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                     }

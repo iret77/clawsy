@@ -82,15 +82,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private func handleGlobalPushClipboard() {
         guard let network = networkManager, network.isConnected else { return }
         if let content = ClipboardManager.getClipboardContent() {
-            let envelope: [String: Any] = [
-                "clawsy_envelope": [
-                    "version": "0.2.4",
-                    "type": "clipboard",
-                    "localTime": ISO8601DateFormatter().string(from: Date()),
-                    "tz": TimeZone.current.identifier,
-                    "content": content
-                ]
+            var envelopeData: [String: Any] = [
+                "version": "0.2.4",
+                "type": "clipboard",
+                "localTime": ISO8601DateFormatter().string(from: Date()),
+                "tz": TimeZone.current.identifier,
+                "content": content
             ]
+            
+            if SharedConfig.extendedContextEnabled {
+                envelopeData["telemetry"] = NetworkManager.getTelemetry()
+            }
+
+            let envelope: [String: Any] = ["clawsy_envelope": envelopeData]
             
             if let jsonData = try? JSONSerialization.data(withJSONObject: envelope),
                let jsonString = String(data: jsonData, encoding: .utf8) {
@@ -156,15 +160,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 window.hasShadow = true
                 
                 let quickSendView = QuickSendView(onSend: { text in
-                    let envelope: [String: Any] = [
-                        "clawsy_envelope": [
-                            "version": "0.2.4",
-                            "type": "quick_send",
-                            "localTime": ISO8601DateFormatter().string(from: Date()),
-                            "tz": TimeZone.current.identifier,
-                            "content": text
-                        ]
+                    var envelopeData: [String: Any] = [
+                        "version": "0.2.4",
+                        "type": "quick_send",
+                        "localTime": ISO8601DateFormatter().string(from: Date()),
+                        "tz": TimeZone.current.identifier,
+                        "content": text
                     ]
+                    
+                    if SharedConfig.extendedContextEnabled {
+                        envelopeData["telemetry"] = NetworkManager.getTelemetry()
+                    }
+
+                    let envelope: [String: Any] = ["clawsy_envelope": envelopeData]
                     
                     if let jsonData = try? JSONSerialization.data(withJSONObject: envelope),
                        let jsonString = String(data: jsonData, encoding: .utf8) {
