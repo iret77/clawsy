@@ -68,7 +68,15 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     
     public override init() {
         super.init()
-        self.signingKey = Curve25519.Signing.PrivateKey()
+        // Try to load existing key or generate new one
+        if let savedKeyData = SharedConfig.sharedDefaults.data(forKey: "nodePrivateKey"),
+           let key = try? Curve25519.Signing.PrivateKey(rawRepresentation: savedKeyData) {
+            self.signingKey = key
+        } else {
+            let newKey = Curve25519.Signing.PrivateKey()
+            self.signingKey = newKey
+            SharedConfig.sharedDefaults.set(newKey.rawRepresentation, forKey: "nodePrivateKey")
+        }
         self.publicKey = self.signingKey?.publicKey
         setupNotifications()
         setupLocation()
@@ -137,6 +145,10 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
 
     public func connect() {
         SharedConfig.sharedDefaults.synchronize()
+        
+        // Reset log on new manual connection attempt (keep header)
+        let dateStr = ISO8601DateFormatter().string(from: Date())
+        self.rawLog = "[LOG START] \(dateStr) | Clawsy v0.2.4\n----------------------------------------\n"
         
         let host = serverHost
         let token = serverToken
