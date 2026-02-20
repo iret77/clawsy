@@ -185,7 +185,7 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
                 .popover(isPresented: $showingMetadata, arrowEdge: .trailing) {
                     MetadataView(network: network, isPresented: $showingMetadata)
-                        .frame(width: 350, height: 250)
+                        .frame(width: 350, height: 320)
                 }
                 
                 Divider().padding(.vertical, 4).opacity(0.5)
@@ -468,7 +468,7 @@ struct MetadataView: View {
                         
                         let telemetry = NetworkManager.getTelemetry()
                         MetadataRow(label: "Device", value: telemetry["deviceName"] as? String ?? "Unknown")
-                        MetadataRow(label: "Model", value: telemetry["deviceModel"] as? String ?? "Unknown")
+                        // Model row removed to save space
                         
                         if let battery = telemetry["batteryLevel"] as? Float, battery >= 0 {
                             MetadataRow(label: "Battery", value: "\(Int(battery * 100))%\(telemetry["isCharging"] as? Bool == true ? " ⚡️" : "")")
@@ -496,6 +496,7 @@ struct MetadataView: View {
                 }
                 .padding(4)
             }
+            .scrollIndicators(.visible)
             .padding(8)
             .background(VisualEffectView(material: .popover, blendingMode: .withinWindow))
             .cornerRadius(8)
