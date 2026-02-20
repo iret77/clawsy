@@ -4,7 +4,7 @@ import AppKit
 class ScreenshotManager {
     
     static func takeScreenshot(interactive: Bool = false) -> String? {
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("clawsy_snap.png")
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("clawsy_snap.jpg")
         let path = tempURL.path
         
         // Remove existing
@@ -13,7 +13,7 @@ class ScreenshotManager {
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
         
-        var args = ["-x"] // No sound
+        var args = ["-x", "-t", "jpg"] // No sound, JPG format
         
         if interactive {
             // Using -s (selection) instead of -i (interactive) 

@@ -288,9 +288,9 @@ struct ContentView: View {
     func takeScreenshot() {
         if let b64 = ScreenshotManager.takeScreenshot(interactive: isScreenshotInteractive) {
             if let rid = pendingRequestId {
-                network.sendResponse(id: rid, result: ["format": "png", "base64": b64])
+                network.sendResponse(id: rid, result: ["format": "jpeg", "base64": b64])
             } else {
-                network.sendEvent(kind: "screenshot", payload: ["format": "png", "base64": b64])
+                network.sendEvent(kind: "screenshot", payload: ["format": "jpeg", "base64": b64])
                 appDelegate.showStatusHUD(icon: "camera.fill", title: "SCREENSHOT_SENT")
             }
         } else {
