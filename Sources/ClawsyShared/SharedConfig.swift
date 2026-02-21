@@ -19,9 +19,32 @@ public struct SharedConfig {
         set { sharedDefaults.set(newValue, forKey: "activityProfile") }
     }
     
+    // Persisted envelope for transparency view
+    public static var lastEnvelopeJSON: String {
+        get { sharedDefaults.string(forKey: "lastEnvelopeJSON") ?? "" }
+        set { sharedDefaults.set(newValue, forKey: "lastEnvelopeJSON") }
+    }
+    
     // Hotkeys
     public static var quickSendHotkey: String { sharedDefaults.string(forKey: "quickSendHotkey") ?? "K" }
     public static var pushClipboardHotkey: String { sharedDefaults.string(forKey: "pushClipboardHotkey") ?? "V" }
+    
+    // Version helpers
+    public static var shortVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
+    }
+    
+    public static var buildNumber: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0"
+    }
+    
+    public static var versionDisplay: String {
+        "v\(shortVersion) #\(buildNumber)"
+    }
+    
+    public static var logVersionDisplay: String {
+        "Clawsy v\(shortVersion)"
+    }
     
     public static func save(host: String, port: String, token: String) {
         let defaults = sharedDefaults

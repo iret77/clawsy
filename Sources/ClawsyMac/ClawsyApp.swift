@@ -10,7 +10,8 @@ struct ClawsyApp: App {
         Settings {
             VStack {
                 Text("SETTINGS_WINDOW_TITLE", bundle: .clawsy)
-                Text("VERSION_FORMAT 0.2.3", bundle: .clawsy)
+                let format = NSLocalizedString("VERSION_FORMAT %@", tableName: nil, bundle: .clawsy, value: "Clawsy %@", comment: "Version format string")
+                Text(String(format: format, SharedConfig.versionDisplay))
             }
             .frame(width: 300, height: 200)
         }
@@ -90,30 +91,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     
     private func handleGlobalPushClipboard() {
         guard let network = networkManager, network.isConnected else { return }
-        if let content = ClipboardManager.getClipboardContent() {
-            var envelopeData: [String: Any] = [
-                "version": "0.2.4",
-                "type": "clipboard",
-                "localTime": ISO8601DateFormatter().string(from: Date()),
-                "tz": TimeZone.current.identifier,
-                "content": content
-            ]
-            
-            if SharedConfig.extendedContextEnabled {
-                envelopeData["telemetry"] = NetworkManager.getTelemetry()
-            }
-
-            let envelope: [String: Any] = ["clawsy_envelope": envelopeData]
-            
-            if let jsonData = try? JSONSerialization.data(withJSONObject: envelope),
-               let jsonString = String(data: jsonData, encoding: .utf8) {
-                network.sendEvent(kind: "agent.request", payload: [
-                    "message": jsonString,
-                    "sessionKey": "clawsy-service",
-                    "deliver": false
-                ])
-                self.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
-            }
+        if let content = ClipboardManager.getClipboardContent(),
+           let jsonString = ClawsyEnvelopeBuilder.build(
+                type: "clipboard",
+                content: content,
+                includeTelemetry: SharedConfig.extendedContextEnabled) {
+            network.sendEvent(kind: "agent.request", payload: [
+                "message": jsonString,
+                "sessionKey": "clawsy-service",
+                "deliver": false
+            ])
+            self.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
         }
     }
     
@@ -169,22 +157,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 window.hasShadow = true
                 
                 let quickSendView = QuickSendView(onSend: { text in
-                    var envelopeData: [String: Any] = [
-                        "version": "0.2.4",
-                        "type": "quick_send",
-                        "localTime": ISO8601DateFormatter().string(from: Date()),
-                        "tz": TimeZone.current.identifier,
-                        "content": text
-                    ]
-                    
-                    if SharedConfig.extendedContextEnabled {
-                        envelopeData["telemetry"] = NetworkManager.getTelemetry()
-                    }
-
-                    let envelope: [String: Any] = ["clawsy_envelope": envelopeData]
-                    
-                    if let jsonData = try? JSONSerialization.data(withJSONObject: envelope),
-                       let jsonString = String(data: jsonData, encoding: .utf8) {
+                    if let jsonString = ClawsyEnvelopeBuilder.build(
+                        type: "quick_send",
+                        content: text,
+                        includeTelemetry: SharedConfig.extendedContextEnabled) {
                         network.sendEvent(kind: "agent.request", payload: [
                             "message": jsonString,
                             "sessionKey": "main",
@@ -271,7 +247,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
                 
                 // standard macOS behavior: popover should resign when other app/menu is clicked
-                // .transient behavior usually handles this, but explicit activation helps
+                // .transient behavior usually handles this, aber explicit activation helps
                 popover.contentViewController?.view.window?.makeKey()
             }
         }
