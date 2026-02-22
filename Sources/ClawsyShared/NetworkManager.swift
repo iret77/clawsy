@@ -595,7 +595,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         if let idStr = id as? String {
             if idStr.hasPrefix("inv:") {
                 let invocationId = String(idStr.dropFirst(4))
-                send(json: ["type": "req", "method": "node.invoke.result", "params": ["id": invocationId, "nodeId": self.deviceId, "ok": true, "payload": result]])
+                send(json: [
+                    "type": "req",
+                    "id": "node.invoke.result-\(UUID().uuidString.prefix(8))",
+                    "method": "node.invoke.result",
+                    "params": ["id": invocationId, "nodeId": self.deviceId, "ok": true, "payload": result]
+                ])
                 return
             } else if idStr.hasPrefix("wrap:") {
                 let actualIdStr = String(idStr.dropFirst(5))
@@ -618,7 +623,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         if let idStr = id as? String {
             if idStr.hasPrefix("inv:") {
                 let invocationId = String(idStr.dropFirst(4))
-                send(json: ["type": "req", "method": "node.invoke.result", "params": ["id": invocationId, "nodeId": self.deviceId, "ok": false, "error": ["code": "\(code)", "message": message]]])
+                send(json: [
+                    "type": "req",
+                    "id": "node.invoke.result-\(UUID().uuidString.prefix(8))",
+                    "method": "node.invoke.result",
+                    "params": ["id": invocationId, "nodeId": self.deviceId, "ok": false, "error": ["code": "\(code)", "message": message]]
+                ])
                 return
             } else if idStr.hasPrefix("wrap:") {
                 let actualIdStr = String(idStr.dropFirst(5))
