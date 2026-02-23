@@ -30,14 +30,14 @@ jobs:
         TAG_NAME=${GITHUB_REF#refs/tags/v}
         echo "Setting version to $TAG_NAME"
         
-        # Update Info.plist for ClawsyMac
-        /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $TAG_NAME" projects/clawsy/Info.plist
-        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" projects/clawsy/Info.plist
+        # Update Info.plist for ClawsyMac (Repo Root)
+        /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $TAG_NAME" Info.plist
+        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" Info.plist
         
-        # Update Info.plist for ClawsyMacShare (if needed, usually inherits but good to be safe)
-        if [ -f projects/clawsy/Sources/ClawsyMacShare/Info.plist ]; then
-           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $TAG_NAME" projects/clawsy/Sources/ClawsyMacShare/Info.plist
-           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" projects/clawsy/Sources/ClawsyMacShare/Info.plist
+        # Update Info.plist for ClawsyMacShare (if needed)
+        if [ -f Sources/ClawsyMacShare/Info.plist ]; then
+           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $TAG_NAME" Sources/ClawsyMacShare/Info.plist
+           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" Sources/ClawsyMacShare/Info.plist
         fi
 
     - name: Build and Package
