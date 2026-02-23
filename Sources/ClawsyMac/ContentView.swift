@@ -190,12 +190,6 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
-                
-                Text(SharedConfig.versionDisplay)
-                    .font(.system(size: 9, design: .monospaced))
-                    .foregroundColor(.secondary.opacity(0.5))
-                    .padding(.top, 4)
-                    .frame(maxWidth: .infinity)
             }
             .padding(6)
         }
