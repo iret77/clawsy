@@ -93,6 +93,18 @@ fi
 echo -n "APPL????" > "$CONTENTS_DIR/PkgInfo"
 
 # 5. Create Final Info.plist
+# Extract version from source Info.plist (which might have been patched by CI)
+SOURCE_PLIST="Info.plist"
+if [ -f "$SOURCE_PLIST" ]; then
+    VERSION_SHORT=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$SOURCE_PLIST" 2>/dev/null || echo "0.2.3")
+    VERSION_BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$SOURCE_PLIST" 2>/dev/null || echo "154")
+else
+    VERSION_SHORT="0.2.3"
+    VERSION_BUILD="154"
+fi
+
+echo "ℹ️ Using Version: $VERSION_SHORT ($VERSION_BUILD)"
+
 # Removing NSPrincipalClass as it can conflict with modern @main apps
 cat <<EOF > "$CONTENTS_DIR/Info.plist"
 <?xml version="1.0" encoding="UTF-8"?>
@@ -112,11 +124,11 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.2.3</string>
+    <string>$VERSION_SHORT</string>
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleVersion</key>
-    <string>154</string>
+    <string>$VERSION_BUILD</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
