@@ -71,6 +71,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
             _ = self.processHotkey(event: event)
         }
+        
+        // Auto-Check for Updates
+        UpdateManager.shared.checkForUpdates()
     }
     
     private func processHotkey(event: NSEvent) -> Bool {

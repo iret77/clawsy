@@ -514,6 +514,8 @@ struct SettingsView: View {
     @AppStorage("extendedContextEnabled", store: SharedConfig.sharedDefaults) private var extendedContextEnabled = false
     @Binding var isPresented: Bool
     
+    @ObservedObject var updateManager = UpdateManager.shared
+    
     @AppStorage("useSshFallback", store: SharedConfig.sharedDefaults) private var useSshFallback = true
     @AppStorage("sharedFolderPath", store: SharedConfig.sharedDefaults) private var sharedFolderPath = "~/Documents/Clawsy"
     @AppStorage("quickSendHotkey", store: SharedConfig.sharedDefaults) private var quickSendHotkey = "K"
@@ -690,6 +692,35 @@ struct SettingsView: View {
                                         pushClipboardHotkey = newValue.uppercased()
                                     }
                                 }
+                        }
+                    }
+                    
+                    // Updates Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label(title: { Text("UPDATES", bundle: .clawsy) }, icon: { Image(systemName: "arrow.triangle.2.circlepath") })
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.blue)
+                        
+                        HStack {
+                            Text("Current: \(SharedConfig.versionDisplay)")
+                                .font(.system(size: 11))
+                            
+                            Spacer()
+                            
+                            if updateManager.isChecking {
+                                ProgressView()
+                                    .scaleEffect(0.5)
+                            } else if updateManager.updateAvailable {
+                                Button("Install \(updateManager.updateVersion)") {
+                                    updateManager.downloadAndInstall()
+                                }
+                                .buttonStyle(.borderedProminent)
+                            } else {
+                                Button(action: { updateManager.checkForUpdates() }) {
+                                    Label(title: { Text("CHECK_NOW", bundle: .clawsy) }, icon: { Image(systemName: "arrow.clockwise") })
+                                }
+                                .buttonStyle(.bordered)
+                            }
                         }
                     }
                     
