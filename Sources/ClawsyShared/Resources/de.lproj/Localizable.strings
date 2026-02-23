@@ -116,3 +116,11 @@
 "EXTENDED_CONTEXT_HELP" = "Wenn aktiviert, sieht der Agent zusätzlich zum Text auch Details über deinen Arbeitskontext (z.B. Akkustand).";
 "EXTENDED_CONTEXT_DISABLED" = "Erweiterter Kontext deaktiviert.";
 "METADATA_VIEW_DESC" = "Diese Daten werden bei der nächsten Übertragung im Hintergrund mitgesendet.";
+
+/* Updates */
+"UPDATES" = "Updates";
+"CHECK_NOW" = "Jetzt prüfen";
+"INSTALL_UPDATE" = "Update installieren";
+"UPDATE_AVAILABLE %@" = "Update verfügbar: %@";
+"NO_UPDATES" = "Keine Updates verfügbar.";
+"CHECKING" = "Suche...";

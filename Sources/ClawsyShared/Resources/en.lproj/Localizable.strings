@@ -115,3 +115,11 @@
 "EXTENDED_CONTEXT_HELP" = "When enabled, the agent sees additional details about your context (e.g. battery level).";
 "EXTENDED_CONTEXT_DISABLED" = "Extended context disabled.";
 "METADATA_VIEW_DESC" = "This data will be included in the next transmission.";
+
+/* Updates */
+"UPDATES" = "Updates";
+"CHECK_NOW" = "Check Now";
+"INSTALL_UPDATE" = "Install Update";
+"UPDATE_AVAILABLE %@" = "Update Available: %@";
+"NO_UPDATES" = "No updates available.";
+"CHECKING" = "Checking...";
