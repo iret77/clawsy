@@ -96,6 +96,10 @@
 "CAMERA_PREVIEW_TITLE" = "Kameravorschau";
 "SEND_TO_AGENT" = "An Agenten senden";
 
+"SCREENSHOT_REQUEST" = "Bildschirmfoto-Anfrage";
+"REMOTE_USER_ASKING" = "Der Agent bittet um eine Aufnahme.";
+"SCREENSHOT_REQUEST_BODY" = "Modus wählen:";
+
 /* HUD */
 "CLIPBOARD_SENT" = "In die Cloud kopiert";
 "SCREENSHOT_SENT" = "Bild übertragen";

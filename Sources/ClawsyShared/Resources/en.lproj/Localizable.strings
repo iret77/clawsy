@@ -19,6 +19,10 @@
 "CAMERA_PREVIEW_TITLE" = "Camera Preview";
 "SEND_TO_AGENT" = "Send to Agent";
 
+"SCREENSHOT_REQUEST" = "Screenshot Request";
+"REMOTE_USER_ASKING" = "The agent is asking for a screen capture.";
+"SCREENSHOT_REQUEST_BODY" = "Choose capture mode:";
+
 /* Main Menu */
 "APP_NAME" = "Clawsy";
 "SCREENSHOT" = "Screenshot";

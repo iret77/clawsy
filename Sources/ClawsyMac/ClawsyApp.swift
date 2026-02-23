@@ -229,6 +229,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         showFloatingWindow(view: view, title: "File Sync", autosaveName: "ai.clawsy.FileWindow")
     }
 
+    func showScreenshotRequest(requestedInteractive: Bool, onConfirm: @escaping (Bool) -> Void, onCancel: @escaping () -> Void) {
+        let view = ScreenshotRequestWindow(
+            requestedInteractive: requestedInteractive,
+            onConfirm: { interactive in
+                onConfirm(interactive)
+                self.alertWindow?.close()
+            },
+            onCancel: {
+                onCancel()
+                self.alertWindow?.close()
+            }
+        )
+        showFloatingWindow(view: view, title: "Screenshot Request", autosaveName: "ai.clawsy.ScreenshotWindow")
+    }
+
     func showCameraPreview(image: NSImage, onConfirm: @escaping () -> Void, onCancel: @escaping () -> Void) {
         let view = CameraPreviewView(
             image: image,

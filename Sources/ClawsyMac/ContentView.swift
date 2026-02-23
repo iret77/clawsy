@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var showingMetadata = false
     @State private var showingScreenshotMenu = false
     @State private var showingCameraMenu = false
+    @State private var isScreenshotInteractive = false
     
     // Persistent Configuration (UI State only)
     @AppStorage("serverHost", store: SharedConfig.sharedDefaults) private var serverHost = "agenthost"
@@ -21,11 +22,6 @@ struct ContentView: View {
     @AppStorage("useSshFallback", store: SharedConfig.sharedDefaults) private var useSshFallback = true
     @AppStorage("sharedFolderPath", store: SharedConfig.sharedDefaults) private var sharedFolderPath = "~/Documents/Clawsy"
     @AppStorage("extendedContextEnabled", store: SharedConfig.sharedDefaults) private var extendedContextEnabled = false
-    
-    // Alert States
-    @State private var showingScreenshotAlert = false
-    @State private var isScreenshotInteractive = false
-    @State private var pendingRequestId: Any? = nil
     
     var body: some View {
         VStack(spacing: 0) {
@@ -74,8 +70,7 @@ struct ContentView: View {
                     VStack(spacing: 0) {
                         Button(action: {
                             showingScreenshotMenu = false
-                            self.isScreenshotInteractive = false
-                            self.requestScreenshot()
+                            self.takeScreenshotAndSend(interactive: false)
                         }) {
                             MenuItemRow(icon: "rectangle.dashed", title: "FULL_SCREEN", isEnabled: network.isConnected)
                         }
@@ -83,8 +78,7 @@ struct ContentView: View {
                         
                         Button(action: {
                             showingScreenshotMenu = false
-                            self.isScreenshotInteractive = true
-                            self.requestScreenshot()
+                            self.takeScreenshotAndSend(interactive: true)
                         }) {
                             MenuItemRow(icon: "plus.viewfinder", title: "INTERACTIVE_AREA", isEnabled: network.isConnected)
                         }
@@ -238,23 +232,6 @@ struct ContentView: View {
                 network.sendEvent(kind: "file.sync_triggered", payload: ["path": sharedFolderPath])
             }
         }
-        // Alerts/Popups
-        .alert(Text("ALERT_SCREENSHOT_TITLE", bundle: .clawsy), isPresented: $showingScreenshotAlert) {
-             Button(action: {
-                 if let rid = pendingRequestId {
-                     network.sendError(id: rid, code: -1, message: "User denied screenshot")
-                 }
-             }) {
-                 Text("ALERT_DENY", bundle: .clawsy)
-             }
-             Button(role: .destructive, action: {
-                 takeScreenshot()
-             }) {
-                 Text("ALERT_ALLOW", bundle: .clawsy)
-             }
-         } message: {
-             Text("ALERT_SCREENSHOT_BODY", bundle: .clawsy)
-         }
     }
     
     // --- Actions ---
@@ -280,23 +257,11 @@ struct ContentView: View {
         }
     }
     
-    func requestScreenshot() {
-        self.showingScreenshotAlert = true
-        self.pendingRequestId = nil
-    }
-    
-    func takeScreenshot() {
-        if let b64 = ScreenshotManager.takeScreenshot(interactive: isScreenshotInteractive) {
-            if let rid = pendingRequestId {
-                network.sendResponse(id: rid, result: ["format": "jpeg", "base64": b64])
-            } else {
-                network.sendEvent(kind: "screenshot", payload: ["format": "jpeg", "base64": b64])
-                appDelegate.showStatusHUD(icon: "camera.fill", title: "SCREENSHOT_SENT")
-            }
-        } else {
-            if let rid = pendingRequestId {
-                network.sendError(id: rid, code: -1, message: "Screenshot failed")
-            }
+    // Manual screenshot trigger
+    func takeScreenshotAndSend(interactive: Bool) {
+        if let b64 = ScreenshotManager.takeScreenshot(interactive: interactive) {
+            network.sendEvent(kind: "screenshot", payload: ["format": "jpeg", "base64": b64])
+            appDelegate.showStatusHUD(icon: "camera.fill", title: "SCREENSHOT_SENT")
         }
     }
     
@@ -330,10 +295,21 @@ struct ContentView: View {
     
     func setupCallbacks() {
         network.onScreenshotRequested = { interactive, requestId in
-            self.isScreenshotInteractive = interactive
-            self.pendingRequestId = requestId
-            self.showingScreenshotAlert = true
-            NSApp.activate(ignoringOtherApps: true)
+            DispatchQueue.main.async {
+                appDelegate.showScreenshotRequest(
+                    requestedInteractive: interactive,
+                    onConfirm: { userInteractive in
+                        if let b64 = ScreenshotManager.takeScreenshot(interactive: userInteractive) {
+                            network.sendResponse(id: requestId, result: ["format": "jpeg", "base64": b64])
+                        } else {
+                            network.sendError(id: requestId, code: -1, message: "Screenshot failed")
+                        }
+                    },
+                    onCancel: {
+                        network.sendError(id: requestId, code: -1, message: "User denied screenshot")
+                    }
+                )
+            }
         }
         
         network.onClipboardReadRequested = { requestId in
@@ -370,6 +346,11 @@ struct ContentView: View {
         }
     }
 }
+
+// ... DebugLogView, MetadataView, SettingsView remain unchanged (they are simple Views) ...
+// We need to include them in the file content or they will be lost if we overwrite.
+// Since the file is large and we want to be safe, I will include the full content.
+// WAIT: The previous read returned the FULL content. I will reuse the bottom part.
 
 struct DebugLogView: View {
     var logText: String
