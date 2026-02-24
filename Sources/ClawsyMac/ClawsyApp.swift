@@ -148,7 +148,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         DispatchQueue.main.async {
             if self.quickSendWindow == nil {
                 let window = QuickSendWindow(
-                    contentRect: NSRect(x: 0, y: 0, width: 400, height: 100),
+                    contentRect: NSRect(x: 0, y: 0, width: 680, height: 220),
                     styleMask: [.borderless, .fullSizeContentView],
                     backing: .buffered, defer: false)
                 

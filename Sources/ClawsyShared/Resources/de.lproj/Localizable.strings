@@ -124,3 +124,7 @@
 "UPDATE_AVAILABLE %@" = "Update verfügbar: %@";
 "NO_UPDATES" = "Keine Updates verfügbar.";
 "CHECKING" = "Suche...";
+
+/* Quick Send */
+"SEND" = "Senden";
+"CANCEL" = "Abbrechen";

@@ -8,11 +8,14 @@ struct QuickSendView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
+            // Main Input Area
+            HStack(spacing: 12) {
                 Image(systemName: "paperplane.fill")
-                    .foregroundColor(.accentColor)
+                    .font(.system(size: 20))
+                    .foregroundColor(.accentColor.opacity(0.8))
                 
                 TextField(NSLocalizedString("QUICK_SEND_PLACEHOLDER", bundle: .clawsy, comment: ""), text: $text)
+                    .font(.system(size: 20, weight: .light))
                     .textFieldStyle(.plain)
                     .focused($isFocused)
                     .onSubmit {
@@ -24,33 +27,46 @@ struct QuickSendView: View {
                 
                 if !text.isEmpty {
                     Button(action: { text = "" }) {
-                        Image(systemName: "delete.left.fill")
-                            .foregroundColor(.secondary)
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(.secondary.opacity(0.5))
                     }
                     .buttonStyle(.plain)
-                    .padding(.trailing, 4)
-                    .help("Clear text")
+                    .help("Clear")
                 }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
+            
+            // Footer / Hints
+            Divider()
+                .opacity(0.3)
+            
+            HStack {
+                Spacer()
                 
-                Button(action: { onCancel() }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
+                HStack(spacing: 16) {
+                    Label(NSLocalizedString("SEND", bundle: .clawsy, comment: ""), systemImage: "return")
+                    Label(NSLocalizedString("CANCEL", bundle: .clawsy, comment: ""), systemImage: "escape")
                 }
-                .buttonStyle(.plain)
-                .help("Close")
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .foregroundColor(.secondary.opacity(0.7))
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(VisualEffectView(material: .hudWindow, blendingMode: .withinWindow))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
-            )
-            .shadow(color: Color.black.opacity(0.2), radius: 10, y: 5)
+            .padding(.vertical, 8)
+            .background(Color.black.opacity(0.05))
         }
-        .frame(width: 450)
-        .padding(20)
+        .background(
+            VisualEffectView(material: .popover, blendingMode: .behindWindow)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+        )
+        .shadow(color: Color.black.opacity(0.3), radius: 20, y: 10)
+        .frame(width: 600)
+        .padding(40) // Padding for shadow
         .onAppear {
             isFocused = true
         }
