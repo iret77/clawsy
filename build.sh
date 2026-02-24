@@ -185,6 +185,13 @@ mkdir -p "$RESOURCES_DIR/de.lproj"
 cp Sources/ClawsyShared/Resources/en.lproj/Localizable.strings "$RESOURCES_DIR/en.lproj/"
 cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings "$RESOURCES_DIR/de.lproj/"
 
+# 8. Copy Update Installer Script
+if [ -f "scripts/update_installer.sh" ]; then
+    echo "📜 Packaging Update Installer..."
+    cp "scripts/update_installer.sh" "$RESOURCES_DIR/update_installer.sh"
+    chmod 755 "$RESOURCES_DIR/update_installer.sh"
+fi
+
 echo "🛡 Signing (Ad-hoc) - Final Sequoia Integrity Scrub..."
 # Sign each component from inside out
 codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
