@@ -59,14 +59,11 @@ struct QuickSendView: View {
         .background(
             VisualEffectView(material: .popover, blendingMode: .behindWindow)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
         )
-        .shadow(color: Color.black.opacity(0.3), radius: 20, y: 10)
-        .frame(width: 600)
-        .padding(40) // Padding for shadow
         .onAppear {
             isFocused = true
         }

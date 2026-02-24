@@ -148,7 +148,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         DispatchQueue.main.async {
             if self.quickSendWindow == nil {
                 let window = QuickSendWindow(
-                    contentRect: NSRect(x: 0, y: 0, width: 680, height: 220),
+                    contentRect: NSRect(x: 0, y: 0, width: 600, height: 120),
                     styleMask: [.borderless, .fullSizeContentView],
                     backing: .buffered, defer: false)
                 
@@ -157,6 +157,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 window.isMovableByWindowBackground = true
                 window.level = .floating
                 window.backgroundColor = .clear
+                window.isOpaque = false
                 window.hasShadow = true
                 
                 let quickSendView = QuickSendView(onSend: { text in
