@@ -148,7 +148,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         
         // Reset log on new manual connection attempt (keep header)
         let dateStr = ISO8601DateFormatter().string(from: Date())
-        self.rawLog = "[LOG START] \(dateStr) | Clawsy v0.2.4\n----------------------------------------\n"
+        self.rawLog = "[LOG START] \(dateStr) | Clawsy \(SharedConfig.versionDisplay)\n----------------------------------------\n"
         
         let host = serverHost
         let token = serverToken
@@ -325,9 +325,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             guard let self = self else { return }
             
             // CRITICAL: Ensure log header is present at the very beginning of any activity
-            if self.rawLog.isEmpty || !self.rawLog.contains("Clawsy v0.2.4") {
+            if self.rawLog.isEmpty || !self.rawLog.contains("Clawsy") {
                 let dateStr = ISO8601DateFormatter().string(from: Date())
-                let header = "[LOG START] \(dateStr) | Clawsy v0.2.4\n----------------------------------------\n"
+                let header = "[LOG START] \(dateStr) | Clawsy \(SharedConfig.versionDisplay)\n----------------------------------------\n"
                 self.rawLog = header + self.rawLog
             }
             
@@ -488,7 +488,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             "type": "req", "id": "1", "method": "connect",
             "params": [
                 "minProtocol": 3, "maxProtocol": 3,
-                "client": ["id": "openclaw-\(platform)", "version": "0.2.4", "platform": platform, "mode": "node"],
+                "client": ["id": "openclaw-\(platform)", "version": SharedConfig.versionDisplay, "platform": platform, "mode": "node"],
                 "role": "node", "caps": ["clipboard", "screen", "camera", "file", "location"], 
                 "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set", "location.get", "location.start", "location.stop", "location.add_smart"],
                 "permissions": ["clipboard.read": true, "clipboard.write": true],

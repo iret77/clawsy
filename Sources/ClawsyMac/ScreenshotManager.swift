@@ -56,6 +56,17 @@ class ScreenshotManager {
             
             // Check if file exists (user might have cancelled interactive mode with ESC)
             if FileManager.default.fileExists(atPath: path) {
+                // Post-process with sips to reduce size for network transmission
+                // -Z 2048 caps the largest dimension to 2048px (high enough for AI, small enough for JSON)
+                // -s formatOptions 75 sets the JPG compression quality to 75%
+                let sipsTask = Process()
+                sipsTask.executableURL = URL(fileURLWithPath: "/usr/bin/sips")
+                sipsTask.arguments = ["-Z", "2048", "-s", "formatOptions", "75", path]
+                
+                // We ignore sips errors - if it fails, we just send the original file
+                try? sipsTask.run()
+                sipsTask.waitUntilExit()
+
                 let data = try Data(contentsOf: tempURL)
                 try? FileManager.default.removeItem(atPath: path) // Cleanup
                 return data.base64EncodedString()
