@@ -464,6 +464,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                      self.isHandshakeComplete = false
                      self.connectionStatus = "STATUS_HANDSHAKE_FAILED"
                 }
+                }
             }
             return
         }
