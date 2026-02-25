@@ -53,26 +53,23 @@ As Clawsy is in active development, we recommend using the pre-built binaries:
 
 ## 🖥 Server-Side Setup (OpenClaw)
 
-To fully utilize Clawsy's features like Silent Clipboard Sync and Mood Analysis, your OpenClaw host needs to be prepared to handle the incoming data.
+To fully utilize Clawsy's features like Silent Clipboard Sync and Mood Analysis, your OpenClaw host needs to be prepared. We've made this super easy with a one-line installer.
 
-### 1. Enable Service Sessions
-Clawsy sends technical data (like clipboard syncs) to a dedicated session called `clawsy-service`. Ensure your agent's configuration allowlists this session target.
-
-### 2. Mood Analysis Integration
-To let your agent "feel" your mood, you can add a periodic task to your `HEARTBEAT.md` on the OpenClaw host. This allows the agent to analyze your recent interaction tone in the background.
-
-**Recommended `HEARTBEAT.md` snippet:**
-```markdown
-# TASK: Semantic Mood Analysis for Clawsy Ecosystem.
-# 1. Read the most recent messages from the user in this session.
-# 2. Analyze: Tonalitiy (relaxed/stressed), Wording (formal/casual), and Error/Typos.
-# 3. Write result as JSON to `memory/clawsy_mood.json`.
-# Format: {"semantic_mood": "...", "analyzed_at": "ISO-TIMESTAMP", "confidence": 0.9}
+### The Super Easy Way (Recommended)
+Run this command on your OpenClaw host (e.g., via SSH on your VPS):
+```bash
+curl -sSL https://raw.githubusercontent.com/iret77/clawsy/main/install_clawsy_server.sh | bash
 ```
+This script will:
+1.  **Configure `HEARTBEAT.md`**: Adds the automated semantic mood analysis task.
+2.  **Update `AGENTS.md`**: Teaches your agent how to interpret Clawsy's metadata envelopes.
+3.  **Initialize Memory**: Creates the necessary structures for mood tracking.
 
-### 3. Agent Awareness
-Add the following instruction to your `AGENTS.md` (or your agent's system prompt) to ensure it knows how to read Clawsy's metadata:
-> "Before each turn, check `memory/clawsy_mood.json` and look for `clawsy_envelope` JSON structures in the message history to gain local Mac context (Active App, Battery, etc.)."
+### Manual Setup (If you prefer)
+If you'd rather do it yourself:
+1.  **Enable Service Sessions**: Ensure your agent allowlists the `clawsy-service` session target.
+2.  **Add Mood Analysis**: Append the mood task to your `HEARTBEAT.md` (see script for details).
+3.  **Agent Awareness**: Add an instruction to `AGENTS.md` to check `memory/clawsy_mood.json` and look for `clawsy_envelope` JSON in the message history.
 
 ---
 
