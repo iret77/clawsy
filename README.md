@@ -117,4 +117,4 @@ Clawsy is built on the principle of **Fair Play**. We believe that transparency 
 ## 📄 License
 Clawsy is released under the **MIT License**. See [LICENSE](LICENSE) for details.
 
-*Developed with 🦞 by CyberClaw (Lead Developer) & Christian.*
+*Developed with 🦞 by CyberClaw (Lead Developer) & The Community.*
