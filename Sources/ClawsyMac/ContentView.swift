@@ -151,6 +151,7 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
                 .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
                     SettingsView(
+                        network: network,
                         serverHost: $serverHost,
                         serverPort: $serverPort,
                         serverToken: $serverToken,
@@ -173,7 +174,20 @@ struct ContentView: View {
 
                 // Last Metadata
                 Button(action: { showingMetadata.toggle() }) {
-                    MenuItemRow(icon: "info.bubble.fill", title: "LAST_METADATA", isEnabled: true)
+                    ZStack(alignment: .trailing) {
+                        MenuItemRow(icon: "info.bubble.fill", title: "LAST_METADATA", isEnabled: true)
+                        if network.isConnected {
+                            if network.isServerClawsyAware {
+                                Circle().fill(Color.green).frame(width: 6, height: 6)
+                                    .padding(.trailing, 16)
+                            } else {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.orange)
+                                    .font(.system(size: 10))
+                                    .padding(.trailing, 16)
+                            }
+                        }
+                    }
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
@@ -432,6 +446,7 @@ struct MetadataView: View {
                     let telemetry = NetworkManager.getTelemetry()
                     
                     MetadataRow(label: "Version", value: "0.2.4")
+                    MetadataRow(label: "Server Status", value: network.isServerClawsyAware ? "Ready (\\(network.serverVersion))" : "Basic")
                     MetadataRow(label: "Local Time", value: ISO8601DateFormatter().string(from: Date()))
                     MetadataRow(label: "Timezone", value: TimeZone.current.identifier)
                     

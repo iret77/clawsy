@@ -65,7 +65,10 @@ if ! grep -q "clawsy_envelope" AGENTS.md; then
 EOF
 fi
 
-# 4. Create placeholder for mood
+# 4. Create placeholder for mood and version tag
+echo -e "${GREEN}Tagging server version for Discovery Handshake...${NC}"
+echo "v0.3.2" > .clawsy_version
+
 if [ ! -f "memory/clawsy_mood.json" ]; then
     echo '{"semantic_mood": "neutral", "analyzed_at": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'", "confidence": 0.5}' > memory/clawsy_mood.json
 fi

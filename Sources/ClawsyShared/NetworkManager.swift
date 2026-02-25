@@ -25,6 +25,8 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     @Published public var connectionAttemptCount = 0
     @Published public var lastMessage = ""
     @Published public var rawLog = ""
+    @Published public var isServerClawsyAware = false
+    @Published public var serverVersion = "unknown"
     
     // Mood Tracking State
     private static var lastAppSwitchTime = Date()
@@ -380,6 +382,17 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         }
     }
 
+    private func checkServerAwareness() {
+        let requestId = "discovery-\(UUID().uuidString.prefix(4))"
+        let discoveryReq: [String: Any] = [
+            "type": "req",
+            "id": requestId,
+            "method": "file.get",
+            "params": ["name": ".clawsy_version"]
+        ]
+        send(json: discoveryReq)
+    }
+
     private func handleMessage(_ text: String) {
         guard let data = text.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
@@ -414,11 +427,28 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         
         let type = json["type"] as? String
         if type == "res" || type == "response" || type == "error" {
-            if let rid = rawId as? String, rid == "1" {
+            if let rid = rawId as? String {
+                if rid.hasPrefix("discovery-") {
+                    if let result = json["result"] as? [String: Any],
+                       let contentB64 = result["content"] as? String,
+                       let data = Data(base64Encoded: contentB64),
+                       let versionStr = String(data: data, encoding: .utf8) {
+                        self.isServerClawsyAware = true
+                        self.serverVersion = versionStr.trimmingCharacters(in: .whitespacesAndNewlines)
+                    } else {
+                        self.isServerClawsyAware = false
+                    }
+                    return
+                }
+                
+                if rid == "1" {
                 let payload = json["payload"] as? [String: Any]
                 if payload?["type"] as? String == "hello-ok" || json["result"] != nil {
                      self.isHandshakeComplete = true
                      self.connectionStatus = isUsingSshTunnel ? "STATUS_ONLINE_PAIRED_SSH" : "STATUS_ONLINE_PAIRED"
+                     
+                     // Trigger Discovery Check
+                     self.checkServerAwareness()
                      
                      // Check for pending one-shot
                      if let (kind, payload) = self.oneShotPayload {
