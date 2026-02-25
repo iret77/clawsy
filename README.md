@@ -51,6 +51,31 @@ As Clawsy is in active development, we recommend using the pre-built binaries:
 
 ---
 
+## 🖥 Server-Side Setup (OpenClaw)
+
+To fully utilize Clawsy's features like Silent Clipboard Sync and Mood Analysis, your OpenClaw host needs to be prepared to handle the incoming data.
+
+### 1. Enable Service Sessions
+Clawsy sends technical data (like clipboard syncs) to a dedicated session called `clawsy-service`. Ensure your agent's configuration allowlists this session target.
+
+### 2. Mood Analysis Integration
+To let your agent "feel" your mood, you can add a periodic task to your `HEARTBEAT.md` on the OpenClaw host. This allows the agent to analyze your recent interaction tone in the background.
+
+**Recommended `HEARTBEAT.md` snippet:**
+```markdown
+# TASK: Semantic Mood Analysis for Clawsy Ecosystem.
+# 1. Read the most recent messages from the user in this session.
+# 2. Analyze: Tonalitiy (relaxed/stressed), Wording (formal/casual), and Error/Typos.
+# 3. Write result as JSON to `memory/clawsy_mood.json`.
+# Format: {"semantic_mood": "...", "analyzed_at": "ISO-TIMESTAMP", "confidence": 0.9}
+```
+
+### 3. Agent Awareness
+Add the following instruction to your `AGENTS.md` (or your agent's system prompt) to ensure it knows how to read Clawsy's metadata:
+> "Before each turn, check `memory/clawsy_mood.json` and look for `clawsy_envelope` JSON structures in the message history to gain local Mac context (Active App, Battery, etc.)."
+
+---
+
 ## 👨‍💻 Development
 
 If you want to contribute or build from source:
