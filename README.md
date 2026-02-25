@@ -2,7 +2,7 @@
 
 **The secure bridge between your Mac and your OpenClaw agents.**
 
-Clawsy is a native macOS companion app designed to empower your [OpenClaw](https://github.com/openclaw/openclaw) virtual assistants with local context, seamless clipboard synchronization, and proactive system awareness. **Unlike generic interfaces, Clawsy is purpose-built to transform your Mac into an extension of your agent's brain, providing the deep hardware integration and "Fair Play" transparency that pro-users demand.**
+Clawsy is a native macOS companion app designed to empower your [OpenClaw](https://github.com/openclaw/openclaw) virtual assistants with local context, seamless clipboard synchronization, and proactive system awareness. **Don't just blindly hand over full system access to your AI. Clawsy bridges the gap smartly, giving your agent the deep context it needs while keeping you in absolute control through "Fair Play" transparency.**
 
 ![Version](https://img.shields.io/badge/version-0.3.2--alpha-orange)
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey)
