@@ -151,7 +151,6 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
                 .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
                     SettingsView(
-                        network: network,
                         serverHost: $serverHost,
                         serverPort: $serverPort,
                         serverToken: $serverToken,
@@ -443,8 +442,6 @@ struct MetadataView: View {
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
-                    let telemetry = NetworkManager.getTelemetry()
-                    
                     MetadataRow(label: "Version", value: "0.2.4")
                     MetadataRow(label: "Server Status", value: network.isServerClawsyAware ? "Ready (\\(network.serverVersion))" : "Basic")
                     MetadataRow(label: "Local Time", value: ISO8601DateFormatter().string(from: Date()))
