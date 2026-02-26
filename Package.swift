@@ -5,8 +5,8 @@ let package = Package(
     name: "Clawsy",
     defaultLocalization: "en",
     platforms: [
-        .macOS(.v13),
-        .iOS(.v16),
+        .macOS(.v14),
+        .iOS(.v17),
         .tvOS(.v16),
         .watchOS(.v9)
     ],
@@ -38,7 +38,11 @@ let package = Package(
         // macOS App
         .executableTarget(
             name: "ClawsyMac",
-            dependencies: ["ClawsyShared", "Starscream"],
+            dependencies: [
+                "ClawsyShared",
+                "Starscream",
+                .product(name: "Citadel", package: "Citadel")
+            ],
             path: "Sources/ClawsyMac",
             resources: [
                 .process("Assets.xcassets")
