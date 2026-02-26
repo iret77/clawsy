@@ -279,17 +279,6 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             return
         }
 
-        // Sandbox-safe: We MUST have an imported key in the app group container.
-        // The macOS sandbox blocks access to ~/.ssh/*, so relying on default keys
-        // or ssh-agent will fail. Detect this early and guide the user.
-        guard let keyPath = self.sshKeyPathIfAvailable() else {
-            DispatchQueue.main.async {
-                self.connectionStatus = "STATUS_SSH_KEY_MISSING"
-                self.rawLog += "\n[SSH] No imported SSH key found. Please import your key via Settings → SSH Fallback → Import SSH Key."
-            }
-            return
-        }
-
         DispatchQueue.main.async {
             self.connectionStatus = "STATUS_STARTING_SSH"
             self.rawLog += "\n[SSH] Starting ssh tunnel process…"
@@ -309,22 +298,18 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
             
-            // Sandbox-safe SSH options:
-            // - StrictHostKeyChecking=no: Don't try to write ~/.ssh/known_hosts (sandbox blocks it)
-            // - UserKnownHostsFile=/dev/null: Don't read/write known_hosts at all
-            // - LogLevel=ERROR: Suppress warnings about /dev/null known_hosts
-            // - IdentitiesOnly=yes: Only use the key we specify, don't probe ssh-agent
+            // Use ssh-agent for auth (works from sandbox via Unix socket).
+            // Never use an explicit -i flag pointing to ~/.ssh/ — sandbox blocks that.
+            // StrictHostKeyChecking=no + UserKnownHostsFile=/dev/null avoids known_hosts sandbox issue.
             let args = [
-                "-N",                                    // No remote command
+                "-NT",
                 "-o", "StrictHostKeyChecking=no",
                 "-o", "UserKnownHostsFile=/dev/null",
-                "-o", "LogLevel=ERROR",
-                "-o", "IdentitiesOnly=yes",
-                "-o", "ConnectTimeout=8",
-                "-o", "ServerAliveInterval=30",
+                "-o", "BatchMode=yes",
+                "-o", "ConnectTimeout=10",
+                "-o", "ServerAliveInterval=15",
                 "-o", "ServerAliveCountMax=3",
                 "-o", "ExitOnForwardFailure=yes",
-                "-i", keyPath,
                 "-p", sshPort,
                 "-L", "127.0.0.1:\(self.sshTunnelLocalPort):127.0.0.1:\(targetPort)",
                 "\(user)@\(host)"
