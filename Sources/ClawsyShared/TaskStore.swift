@@ -1,6 +1,5 @@
 import Foundation
 import Combine
-import ClawsyShared
 
 public struct ClawsyTask: Identifiable, Codable {
     public let id: UUID
@@ -58,7 +57,7 @@ public class TaskStore: ObservableObject {
         guard let url = sharedContainerURL?.appendingPathComponent("tasks.json"),
               let data = try? Data(contentsOf: url) else { return }
         do {
-            self.tasks = try JSONDecoder().decode([ClawsyTask].self)
+            self.tasks = try JSONDecoder().decode([ClawsyTask].self, from: data)
         } catch {
             print("Failed to load tasks: \(error)")
         }
