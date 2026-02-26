@@ -9,7 +9,7 @@ public class CameraManager: NSObject {
     
     public static func listCameras() -> [[String: Any]] {
         let discoverySession = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.builtInWideAngleCamera, .externalUnknown],
+            deviceTypes: [.builtInWideAngleCamera, .external],
             mediaType: .video,
             position: .unspecified
         )

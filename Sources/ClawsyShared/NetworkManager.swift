@@ -5,8 +5,6 @@ import SwiftUI
 import UserNotifications
 import os.log
 import IOKit.ps
-import Citadel
-import NIOSSH
 
 #if canImport(Network)
 import Network
@@ -46,7 +44,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     
     // SSH Tunnel Management (macOS only)
     #if os(macOS)
-    private var sshClient: CitadelClient?
+    private var sshProcess: Process?
     #endif
     private var isUsingSshTunnel = false
     
@@ -101,7 +99,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         center.delegate = self
         
         let revokeAction = UNNotificationAction(identifier: "REVOKE_PERMISSION",
-                                              title: NSLocalizedString("REVOKE_PERMISSION", bundle: .module, comment: ""),
+                                              title: NSLocalizedString("REVOKE_PERMISSION", bundle: .clawsy, comment: ""),
                                               options: [.destructive])
         
         let category = UNNotificationCategory(identifier: "FILE_SYNC",
@@ -283,52 +281,73 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
 
         DispatchQueue.main.async {
             self.connectionStatus = "STATUS_STARTING_SSH"
-            self.rawLog += "\n[SSH] Starting native tunnel…"
+            self.rawLog += "\n[SSH] Starting ssh tunnel process…"
         }
 
-        Task {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            // Kill any previous SSH tunnel process
+            self.sshProcess?.terminate()
+            self.sshProcess = nil
+            
             let (host, sshPortString) = self.parseSshHostAndPort(hostRaw)
-            let sshPort = Int(sshPortString ?? "22") ?? 22
+            let sshPort = sshPortString ?? "22"
+            let targetPort = port.isEmpty ? "18789" : port
+            
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
+            
+            var args = [
+                "-N",                                    // No remote command
+                "-o", "StrictHostKeyChecking=accept-new", // Accept new host keys
+                "-o", "ConnectTimeout=8",
+                "-o", "ServerAliveInterval=30",
+                "-o", "ServerAliveCountMax=3",
+                "-o", "ExitOnForwardFailure=yes",
+                "-p", sshPort,
+                "-L", "127.0.0.1:\(self.sshTunnelLocalPort):127.0.0.1:\(targetPort)"
+            ]
+            
+            // Use imported SSH key if available, otherwise rely on ssh-agent / default keys
+            if let keyPath = self.sshKeyPathIfAvailable() {
+                args += ["-i", keyPath]
+            }
+            
+            args.append("\(user)@\(host)")
+            
+            process.arguments = args
+            
+            // Capture stderr for diagnostics
+            let errorPipe = Pipe()
+            process.standardError = errorPipe
+            process.standardOutput = FileHandle.nullDevice
             
             do {
-                if let oldClient = self.sshClient {
-                    try? await oldClient.close()
-                }
-
-                let authentication: CitadelAuthentication
-                if let keyPath = self.sshKeyPathIfAvailable(),
-                   let keyData = try? Data(contentsOf: URL(fileURLWithPath: keyPath)) {
-                    let privateKey = try NIOSSHPrivateKey(buffer: .init(data: keyData))
-                    authentication = .privateKey(privateKey)
+                try process.run()
+                self.sshProcess = process
+                
+                // Wait a moment for the tunnel to establish
+                Thread.sleep(forTimeInterval: 2.0)
+                
+                if process.isRunning {
+                    DispatchQueue.main.async {
+                        self.rawLog += "\n[SSH] Tunnel ready on 127.0.0.1:\(self.sshTunnelLocalPort)"
+                        self.isUsingSshTunnel = true
+                        self.connect()
+                    }
                 } else {
-                    authentication = .agent
-                }
-
-                let client = try await CitadelClient.connect(
-                    host: host,
-                    port: sshPort,
-                    authentication: authentication,
-                    hostKeyValidator: .acceptAnything(),
-                    reconnect: .none
-                )
-                
-                self.sshClient = client
-                
-                let targetPort = Int(port) ?? 80
-                
-                try await client.localForward(
-                    from: .init(host: "127.0.0.1", port: Int(self.sshTunnelLocalPort)),
-                    to: .init(host: "127.0.0.1", port: targetPort)
-                )
-                
-                DispatchQueue.main.async {
-                    self.rawLog += "\n[SSH] Native tunnel ready on 127.0.0.1:\(self.sshTunnelLocalPort)"
-                    self.isUsingSshTunnel = true
-                    self.connect()
+                    let errData = errorPipe.fileHandleForReading.availableData
+                    let errStr = String(data: errData, encoding: .utf8) ?? "Unknown error"
+                    DispatchQueue.main.async {
+                        self.rawLog += "\n[SSH] Process exited (code \(process.terminationStatus)): \(errStr)"
+                        self.connectionStatus = "STATUS_SSH_FAILED"
+                        self.isUsingSshTunnel = false
+                    }
                 }
             } catch {
                 DispatchQueue.main.async {
-                    self.rawLog += "\n[SSH] Failed: \(error.localizedDescription)"
+                    self.rawLog += "\n[SSH] Failed to start: \(error.localizedDescription)"
                     self.connectionStatus = "STATUS_SSH_FAILED"
                     self.isUsingSshTunnel = false
                 }
@@ -354,11 +373,8 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         socket = nil
         
         #if os(macOS)
-        let client = self.sshClient
-        Task {
-            try? await client?.close()
-        }
-        self.sshClient = nil
+        sshProcess?.terminate()
+        sshProcess = nil
         #endif
         isUsingSshTunnel = false
         
@@ -663,7 +679,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
             self.sendAck(id: id)
             let executeGet = {
-                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .module, comment: ""), body: String(format: NSLocalizedString("NOTIFICATION_BODY_DOWNLOADING", bundle: .module, comment: ""), name), isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
+                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: String(format: NSLocalizedString("NOTIFICATION_BODY_DOWNLOADING", bundle: .clawsy, comment: ""), name), isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
                 DispatchQueue.global(qos: .userInitiated).async {
                     if let b64 = ClawsyFileManager.readFile(at: fullPath) { self.sendResponse(id: id, result: ["content": b64, "name": name]) } else { self.sendError(id: id, code: -32000, message: "Failed to read file") }
                 }
@@ -674,7 +690,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
             self.sendAck(id: id)
             let executeSet = {
-                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .module, comment: ""), body: String(format: NSLocalizedString("NOTIFICATION_BODY_UPLOADING", bundle: .module, comment: ""), name), isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
+                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: String(format: NSLocalizedString("NOTIFICATION_BODY_UPLOADING", bundle: .clawsy, comment: ""), name), isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
                 DispatchQueue.global(qos: .userInitiated).async {
                     if ClawsyFileManager.writeFile(at: fullPath, base64Content: content) { self.sendResponse(id: id, result: ["status": "ok", "name": name]) } else { self.sendError(id: id, code: -32000, message: "Failed to write file") }
                 }
@@ -685,7 +701,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
             self.sendAck(id: id)
             let executeDelete = {
-                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .module, comment: ""), body: "Deleted: \(name)", isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
+                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: "Deleted: \(name)", isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
                 DispatchQueue.global(qos: .userInitiated).async {
                     if ClawsyFileManager.deleteFile(at: fullPath) { self.sendResponse(id: id, result: ["status": "ok", "name": name]) } else { self.sendError(id: id, code: -32000, message: "Failed to delete file") }
                 }
@@ -696,7 +712,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
             self.sendAck(id: id)
             let executeRename = {
-                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .module, comment: ""), body: "Renamed: \(name) -> \(newName)", isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
+                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: "Renamed: \(name) -> \(newName)", isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
                 DispatchQueue.global(qos: .userInitiated).async {
                     if ClawsyFileManager.renameFile(at: fullPath, to: newName) { self.sendResponse(id: id, result: ["status": "ok", "name": newName]) } else { self.sendError(id: id, code: -32000, message: "Failed to rename file") }
                 }
