@@ -164,7 +164,7 @@ class UpdateManager: ObservableObject {
         guard !updateVersion.isEmpty else { return }
         print("⬇️ Starting download for \(updateVersion)...")
         
-        let url = URL(string: "https://api.github.com/repos/\(githubRepo)/releases/latest")!
+        let url = URL(string: "https://api.github.com/repos/\(githubRepo)/releases/tags/\(updateVersion)")!
         URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
             guard let data = data, let release = try? JSONDecoder().decode(Release.self, from: data) else { return }
             
