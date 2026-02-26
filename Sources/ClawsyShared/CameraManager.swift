@@ -33,6 +33,23 @@ public class CameraManager: NSObject {
     }
     
     public static func takePhoto(deviceId: String?, completion: @escaping (String?) -> Void) {
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        if status == .notDetermined {
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                if granted {
+                    self.executeCapture(deviceId: deviceId, completion: completion)
+                } else {
+                    completion(nil)
+                }
+            }
+        } else if status == .authorized {
+            self.executeCapture(deviceId: deviceId, completion: completion)
+        } else {
+            completion(nil)
+        }
+    }
+    
+    private static func executeCapture(deviceId: String?, completion: @escaping (String?) -> Void) {
         let device: AVCaptureDevice?
         
         if let deviceId = deviceId {

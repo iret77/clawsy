@@ -112,7 +112,7 @@ struct ContentView: View {
                     VStack(spacing: 0) {
                         Button(action: {
                             showingCameraMenu = false
-                            network.sendEvent(kind: "camera.trigger", payload: ["action": "snap"])
+                            self.takePhotoAndSend()
                         }) {
                             MenuItemRow(icon: "camera.fill", title: "TAKE_PHOTO", isEnabled: network.isConnected)
                         }
@@ -269,6 +269,22 @@ struct ContentView: View {
         if let b64 = ScreenshotManager.takeScreenshot(interactive: interactive) {
             network.sendEvent(kind: "screenshot", payload: ["format": "jpeg", "base64": b64])
             appDelegate.showStatusHUD(icon: "camera.fill", title: "SCREENSHOT_SENT")
+        }
+    }
+    
+    // Manual camera trigger
+    func takePhotoAndSend() {
+        CameraManager.takePhoto(deviceId: nil) { b64 in
+            if let b64 = b64 {
+                network.sendEvent(kind: "camera.photo", payload: ["format": "jpeg", "base64": b64])
+                DispatchQueue.main.async {
+                    appDelegate.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT")
+                }
+            } else {
+                DispatchQueue.main.async {
+                    appDelegate.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "CAPTURE_FAILED")
+                }
+            }
         }
     }
     
