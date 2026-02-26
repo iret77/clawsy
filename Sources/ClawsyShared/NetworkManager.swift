@@ -664,6 +664,16 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                          "params": ["requestId": requestId, "silent": true]
                      ]
                      self.send(json: pairReq)
+                } else if let errorObj = json["error"] as? [String: Any],
+                          let errorCode = errorObj["code"] as? String,
+                          (errorCode == "AUTH_TOKEN_MISMATCH" || errorCode == "INVALID_REQUEST") {
+                     // Stored deviceToken is stale (gateway restarted). Clear it and retry with master token.
+                     self.rawLog += "\n[AUTH] Token mismatch – clearing deviceToken, retrying with master token"
+                     self.deviceToken = nil
+                     self.disconnect()
+                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                         self.connect()
+                     }
                 } else if json["error"] != nil {
                      self.isHandshakeComplete = false
                      self.connectionStatus = "STATUS_HANDSHAKE_FAILED"
