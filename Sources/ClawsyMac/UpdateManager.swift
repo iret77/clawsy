@@ -9,6 +9,7 @@ class UpdateManager: ObservableObject {
     @Published var updateVersion: String = ""
     @Published var downloadProgress: Double = 0.0
     @Published var isChecking: Bool = false
+    @Published var isInstalling: Bool = false
     
     private let githubRepo = "iret77/clawsy"
     private var periodicTimer: Timer?
@@ -179,9 +180,12 @@ class UpdateManager: ObservableObject {
     }
     
     private func downloadAsset(url: URL, filename: String) {
-        let task = URLSession.shared.downloadTask(with: url) { localURL, response, error in
+        DispatchQueue.main.async { self.isInstalling = true; self.downloadProgress = 0.0 }
+        let task = URLSession.shared.downloadTask(with: url) { [weak self] localURL, response, error in
+            guard let self = self else { return }
             guard let localURL = localURL, error == nil else {
                 print("❌ Download failed: \(error?.localizedDescription ?? "Unknown")")
+                DispatchQueue.main.async { self.isInstalling = false }
                 return
             }
             
@@ -193,13 +197,21 @@ class UpdateManager: ObservableObject {
                     try fileManager.removeItem(at: destURL)
                 }
                 try fileManager.moveItem(at: localURL, to: destURL)
+                DispatchQueue.main.async { self.downloadProgress = 0.9 }
                 print("✅ Downloaded to: \(destURL.path)")
-                
                 self.unzipAndInstall(fileURL: destURL)
             } catch {
                 print("❌ File move error: \(error)")
+                DispatchQueue.main.async { self.isInstalling = false }
             }
         }
+        // Track download progress
+        let observation = task.progress.observe(\.fractionCompleted) { [weak self] progress, _ in
+            DispatchQueue.main.async {
+                self?.downloadProgress = min(progress.fractionCompleted * 0.9, 0.9)
+            }
+        }
+        _ = observation // retain
         task.resume()
     }
     
@@ -280,6 +292,11 @@ class UpdateManager: ObservableObject {
             try task.run()
         } catch {
             print("❌ Failed to launch update script: \(error)")
+            // Fallback: open GitHub releases page so user can install manually
+            DispatchQueue.main.async {
+                NSWorkspace.shared.open(URL(string: "https://github.com/iret77/clawsy/releases/latest")!)
+                self.isInstalling = false
+            }
             return
         }
 

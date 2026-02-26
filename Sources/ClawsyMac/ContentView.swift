@@ -845,6 +845,14 @@ struct SettingsView: View {
                             if updateManager.isChecking {
                                 ProgressView()
                                     .scaleEffect(0.5)
+                            } else if updateManager.isInstalling {
+                                HStack(spacing: 6) {
+                                    ProgressView(value: updateManager.downloadProgress)
+                                        .frame(width: 80)
+                                    Text("\(Int(updateManager.downloadProgress * 100))%")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
+                                }
                             } else if updateManager.updateAvailable {
                                 Button(String(format: NSLocalizedString("INSTALL_VERSION %@", bundle: .clawsy, comment: ""), updateManager.updateVersion)) {
                                     updateManager.downloadAndInstall()
