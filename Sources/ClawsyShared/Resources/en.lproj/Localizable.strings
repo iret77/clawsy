@@ -60,6 +60,7 @@
 "STATUS_STARTING_SSH" = "Starting SSH Tunnel...";
 "STATUS_SSH_FAILED" = "SSH Tunnel Failed";
 "STATUS_SSH_USER_MISSING" = "SSH User Required";
+"STATUS_SSH_KEY_MISSING" = "SSH Key Required";
 
 /* Alerts */
 "ALERT_SCREENSHOT_TITLE" = "Allow Screenshot?";

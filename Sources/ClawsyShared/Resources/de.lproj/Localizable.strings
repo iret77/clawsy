@@ -53,6 +53,7 @@
 "STATUS_STARTING_SSH" = "SSH-Tunnel wird gestartet...";
 "STATUS_SSH_FAILED" = "SSH-Tunnel fehlgeschlagen";
 "STATUS_SSH_USER_MISSING" = "SSH-Benutzer erforderlich";
+"STATUS_SSH_KEY_MISSING" = "SSH-Schlüssel erforderlich";
 
 /* Alerts */
 "ALERT_SCREENSHOT_TITLE" = "Screenshot erlauben?";

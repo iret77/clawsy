@@ -56,6 +56,7 @@
 "STATUS_STARTING_SSH" = "Iniciando túnel SSH...";
 "STATUS_SSH_FAILED" = "Fallo en el túnel SSH";
 "STATUS_SSH_USER_MISSING" = "Usuario SSH requerido";
+"STATUS_SSH_KEY_MISSING" = "Clave SSH requerida";
 
 /* Alerts */
 "ALERT_SCREENSHOT_TITLE" = "¿Permitir captura?";

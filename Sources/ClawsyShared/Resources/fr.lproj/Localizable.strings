@@ -56,6 +56,7 @@
 "STATUS_STARTING_SSH" = "Démarrage du tunnel SSH...";
 "STATUS_SSH_FAILED" = "Échec du tunnel SSH";
 "STATUS_SSH_USER_MISSING" = "Utilisateur SSH requis";
+"STATUS_SSH_KEY_MISSING" = "Clé SSH requise";
 
 /* Alerts */
 "ALERT_SCREENSHOT_TITLE" = "Autoriser la capture ?";
