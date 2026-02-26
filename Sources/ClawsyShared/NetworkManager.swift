@@ -289,22 +289,24 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             
             // --- Bug fix: clean up previous SSH process and free port 18790 ---
             if let prev = self.sshProcess {
-                prev.terminate()
+                // SIGKILL — immediate, no graceful shutdown, port released instantly
+                kill(prev.processIdentifier, SIGKILL)
                 prev.waitUntilExit()
                 self.sshProcess = nil
             }
             
-            // Kill any stale process holding the tunnel port
+            // Also kill any leftover SSH process from a previous Clawsy session
+            // holding the tunnel port (lsof works for our own processes in sandbox)
             let killPortProc = Process()
             killPortProc.executableURL = URL(fileURLWithPath: "/bin/sh")
-            killPortProc.arguments = ["-c", "lsof -ti tcp:\(self.sshTunnelLocalPort) | xargs kill -9 2>/dev/null || true"]
+            killPortProc.arguments = ["-c", "lsof -ti tcp:\(self.sshTunnelLocalPort) 2>/dev/null | xargs kill -9 2>/dev/null; true"]
             killPortProc.standardOutput = FileHandle.nullDevice
             killPortProc.standardError = FileHandle.nullDevice
             try? killPortProc.run()
             killPortProc.waitUntilExit()
             
             // Give the OS time to release the port
-            Thread.sleep(forTimeInterval: 1.0)
+            Thread.sleep(forTimeInterval: 1.5)
             // --- End port cleanup ---
             
             let (host, sshPortString) = self.parseSshHostAndPort(hostRaw)
@@ -397,7 +399,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         socket = nil
         
         #if os(macOS)
-        sshProcess?.terminate()
+        if let proc = sshProcess {
+            kill(proc.processIdentifier, SIGKILL)
+        }
         sshProcess = nil
         #endif
         isUsingSshTunnel = false
