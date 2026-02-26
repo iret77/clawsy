@@ -848,7 +848,7 @@ struct SettingsView: View {
                                 .buttonStyle(.borderedProminent)
                                 .tint(.green)
                             } else {
-                                Button(action: { updateManager.checkForUpdates() }) {
+                                Button(action: { updateManager.checkForUpdates(silent: false) }) {
                                     Label(title: { Text("CHECK_NOW", bundle: .clawsy) }, icon: { Image(systemName: "arrow.clockwise") })
                                 }
                                 .buttonStyle(.bordered)

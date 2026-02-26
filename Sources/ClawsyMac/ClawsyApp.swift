@@ -91,8 +91,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             _ = self.processHotkey(event: event)
         }
         
-        // Auto-Check for Updates
-        UpdateManager.shared.checkForUpdates()
+        // Auto-Check for Updates (silent = background, shows notification if update found)
+        UpdateManager.shared.checkForUpdates(silent: true)
+        UpdateManager.shared.startPeriodicChecks()
     }
     
     private func processHotkey(event: NSEvent) -> Bool {

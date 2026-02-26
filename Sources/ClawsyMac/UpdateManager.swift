@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import UserNotifications
 
 class UpdateManager: ObservableObject {
     static let shared = UpdateManager()
@@ -10,6 +11,16 @@ class UpdateManager: ObservableObject {
     @Published var isChecking: Bool = false
     
     private let githubRepo = "iret77/clawsy"
+    private var periodicTimer: Timer?
+    
+    /// Interval for automatic background update checks (4 hours)
+    private let checkInterval: TimeInterval = 4 * 60 * 60
+    
+    /// Track last version we sent a notification for to avoid spamming
+    private var lastNotifiedVersion: String {
+        get { UserDefaults.standard.string(forKey: "lastNotifiedUpdateVersion") ?? "" }
+        set { UserDefaults.standard.set(newValue, forKey: "lastNotifiedUpdateVersion") }
+    }
     
     struct Release: Codable {
         let tagName: String
@@ -31,8 +42,42 @@ class UpdateManager: ObservableObject {
         }
     }
     
-    func checkForUpdates(channel: String = "release") {
-        print("🔍 Checking for updates on channel: \(channel)...")
+    // MARK: - Periodic Checks
+    
+    /// Start a repeating timer that checks for updates every 4 hours.
+    /// Safe to call multiple times — will not create duplicate timers.
+    func startPeriodicChecks() {
+        guard periodicTimer == nil else { return }
+        periodicTimer = Timer.scheduledTimer(withTimeInterval: checkInterval, repeats: true) { [weak self] _ in
+            self?.checkForUpdates(silent: true)
+        }
+        // Keep timer alive even when the run loop is tracking UI events
+        if let timer = periodicTimer {
+            RunLoop.main.add(timer, forMode: .common)
+        }
+        print("🔄 Periodic update checks started (every 4h)")
+    }
+    
+    // MARK: - Notification Permission
+    
+    /// Request notification permission independently (may run before NetworkManager).
+    private func ensureNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if let error = error {
+                print("⚠️ Notification permission error: \(error)")
+            }
+        }
+    }
+    
+    // MARK: - Update Check
+    
+    /// Check for updates.
+    /// - Parameters:
+    ///   - silent: If `true`, this is an automatic background check — show a macOS notification when an update is found.
+    ///             If `false` (default), this is a manual user-triggered check — only update the published properties (no notification).
+    ///   - channel: Release channel (currently unused, reserved for future beta/stable split).
+    func checkForUpdates(silent: Bool = false, channel: String = "release") {
+        print("🔍 Checking for updates (silent: \(silent), channel: \(channel))...")
         DispatchQueue.main.async { self.isChecking = true }
         
         let url = URL(string: "https://api.github.com/repos/\(githubRepo)/releases/latest")!
@@ -40,6 +85,8 @@ class UpdateManager: ObservableObject {
         
         URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             DispatchQueue.main.async { self?.isChecking = false }
+            
+            guard let self = self else { return }
             
             guard let data = data, error == nil else {
                 print("❌ Update check failed: \(error?.localizedDescription ?? "Unknown error")")
@@ -55,11 +102,18 @@ class UpdateManager: ObservableObject {
                 let remote = release.tagName.replacingOccurrences(of: "v", with: "")
                 let local = currentVersion.replacingOccurrences(of: "v", with: "")
                 
-                if self?.isVersion(remote, newerThan: local) == true {
+                if self.isVersion(remote, newerThan: local) {
                     DispatchQueue.main.async {
                         print("✅ Update found: \(release.tagName)")
-                        self?.updateAvailable = true
-                        self?.updateVersion = release.tagName
+                        self.updateAvailable = true
+                        self.updateVersion = release.tagName
+                    }
+                    
+                    // Fire macOS notification only for automatic (silent) checks
+                    // and only if we haven't already notified for this version
+                    if silent && self.lastNotifiedVersion != release.tagName {
+                        self.sendUpdateNotification(version: release.tagName)
+                        self.lastNotifiedVersion = release.tagName
                     }
                 } else {
                     print("✅ Clawsy is up to date.")
@@ -68,6 +122,31 @@ class UpdateManager: ObservableObject {
                 print("❌ JSON Decode error: \(error)")
             }
         }.resume()
+    }
+    
+    // MARK: - macOS Notification
+    
+    private func sendUpdateNotification(version: String) {
+        ensureNotificationPermission()
+        
+        let content = UNMutableNotificationContent()
+        content.title = "Clawsy Update verfügbar"
+        content.body = "Version \(version) ist bereit. Einstellungen öffnen zum Installieren."
+        content.sound = .default
+        
+        let request = UNNotificationRequest(
+            identifier: "clawsy-update-\(version)",
+            content: content,
+            trigger: nil  // deliver immediately
+        )
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("❌ Failed to send update notification: \(error)")
+            } else {
+                print("🔔 Update notification sent for \(version)")
+            }
+        }
     }
     
     private func isVersion(_ remote: String, newerThan local: String) -> Bool {

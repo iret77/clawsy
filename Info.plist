@@ -9,9 +9,9 @@
     <key>CFBundleIdentifier</key>
     <string>com.openclaw.Clawsy</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.4.10</string>
+    <string>0.4.11</string>
     <key>CFBundleVersion</key>
-    <string>128</string>
+    <string>129</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleSignature</key>
