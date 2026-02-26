@@ -606,6 +606,14 @@ struct SettingsView: View {
             panel.message = NSLocalizedString("SELECT_SHARED_FOLDER", bundle: .clawsy, comment: "")
             panel.resolvesAliases = true
             
+            // Fix: Start at current folder or Home
+            if !sharedFolderPath.isEmpty {
+                let resolved = sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
+                panel.directoryURL = URL(fileURLWithPath: resolved)
+            } else {
+                panel.directoryURL = URL(fileURLWithPath: NSHomeDirectory())
+            }
+
             NSApp.activate(ignoringOtherApps: true)
             
             panel.begin { response in
@@ -713,7 +721,22 @@ struct SettingsView: View {
                         .font(.system(.body, design: .monospaced))
                         .disabled(!useSshFallback)
                         .opacity(useSshFallback ? 1.0 : 0.5)
-                        
+
+                        HStack(spacing: 10) {
+                            Button("Import SSH Key…") { selectSshKey() }
+                                .disabled(!useSshFallback)
+
+                            Button("Remove") { removeSshKey() }
+                                .disabled(!useSshFallback || !sshKeyInstalled)
+
+                            Spacer()
+
+                            Text(sshKeyInstalled ? "Key: Installed" : "Key: Not set")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                        }
+                        .opacity(useSshFallback ? 1.0 : 0.5)
+
                         Text("SSH_FALLBACK_DESC", bundle: .clawsy)
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)

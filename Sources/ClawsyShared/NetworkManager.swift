@@ -5,6 +5,12 @@ import SwiftUI
 import UserNotifications
 import os.log
 import IOKit.ps
+import Citadel
+import NIOSSH
+
+#if canImport(Network)
+import Network
+#endif
 
 #if canImport(AppKit)
 import AppKit
@@ -40,7 +46,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     
     // SSH Tunnel Management (macOS only)
     #if os(macOS)
-    private var sshProcess: Process?
+    private var sshClient: CitadelClient?
     #endif
     private var isUsingSshTunnel = false
     
@@ -148,9 +154,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     public func connect() {
         SharedConfig.sharedDefaults.synchronize()
         
-        // Reset log on new manual connection attempt (keep header)
-        let dateStr = ISO8601DateFormatter().string(from: Date())
-        self.rawLog = "[LOG START] \(dateStr) | Clawsy \(SharedConfig.versionDisplay)\n----------------------------------------\n"
+        // Reset log only for the very first attempt in a connection cycle.
+        // Important: SSH fallback may call connect() again; keep logs so we can debug tunnel startup.
+        if connectionAttemptCount == 0 || self.rawLog.isEmpty {
+            let dateStr = ISO8601DateFormatter().string(from: Date())
+            self.rawLog = "[LOG START] \(dateStr) | Clawsy \(SharedConfig.versionDisplay)\n----------------------------------------\n"
+        }
         
         let host = serverHost
         let token = serverToken
@@ -199,17 +208,22 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
 
     private func attemptConnection(to url: URL) {
         connectionWatchdog?.invalidate()
-        connectionWatchdog = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { [weak self] _ in
+
+        // SSH tunnel startup + first WS connect can legitimately take longer than 5s.
+        // Treat the watchdog as an overall connect budget.
+        let watchdogSeconds: TimeInterval = self.isUsingSshTunnel ? 12.0 : 8.0
+
+        connectionWatchdog = Timer.scheduledTimer(withTimeInterval: watchdogSeconds, repeats: false) { [weak self] _ in
             guard let self = self, !self.isConnected else { return }
             DispatchQueue.main.async {
-                self.rawLog += "\n[WSS] Watchdog Timeout (5s)"
+                self.rawLog += "\n[WSS] Watchdog Timeout (\(Int(watchdogSeconds))s)"
                 self.handleConnectionFailure(err: NSError(domain: "ai.clawsy", code: -1, userInfo: [NSLocalizedDescriptionKey: "Connection Timeout (Watchdog)"]))
             }
         }
-        
+
         var request = URLRequest(url: url)
-        request.timeoutInterval = 5
-        
+        request.timeoutInterval = watchdogSeconds
+
         let newSocket = WebSocket(request: request)
         newSocket.delegate = self
         self.socket = newSocket
@@ -240,69 +254,84 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
     
     #if os(macOS)
-    private func startSshTunnel() {
-        DispatchQueue.main.async {
-            let host = self.serverHost
-            let user = self.sshUser
-            let port = self.serverPort
-            
-            guard !user.isEmpty else {
-                self.connectionStatus = "STATUS_SSH_USER_MISSING"
-                return
-            }
-            
-            let remoteTarget = "\(user)@\(host)"
-            let tunnelSpec = "127.0.0.1:18790:127.0.0.1:\(port)"
-            
-            let controlPath: String
-            if let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.ai.openclaw.clawsy") {
-                controlPath = groupURL.appendingPathComponent("clawsy_ssh.sock").path
-            } else {
-                controlPath = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("clawsy_ssh.sock").path
-            }
-            
-            self.connectionStatus = "STATUS_STARTING_SSH"
-            self.sshProcess?.terminate()
-            
-            // Cleanly kill existing tunnel using the control socket
-            let killProcess = Process()
-            killProcess.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
-            killProcess.arguments = ["-O", "exit", "-S", controlPath, remoteTarget]
-            try? killProcess.run()
-            killProcess.waitUntilExit()
+    private let sshTunnelLocalPort: UInt16 = 18790
 
-            self.isUsingSshTunnel = false
-            
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
-            process.arguments = [
-                "-NT",
-                "-L", tunnelSpec,
-                remoteTarget,
-                "-o", "ConnectTimeout=10",
-                "-o", "BatchMode=yes",
-                "-o", "StrictHostKeyChecking=no",
-                "-o", "ExitOnForwardFailure=yes",
-                "-o", "ControlMaster=auto",
-                "-o", "ControlPath=\(controlPath)",
-                "-o", "ServerAliveInterval=15"
-            ]
+    private func sshKeyPathIfAvailable() -> String? {
+        guard let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedConfig.appGroup) else { return nil }
+        let keyURL = groupURL.appendingPathComponent("clawsy_ssh_key")
+        return FileManager.default.fileExists(atPath: keyURL.path) ? keyURL.path : nil
+    }
+
+    private func parseSshHostAndPort(_ host: String) -> (host: String, port: String?) {
+        // Accept "example.com:2222" (common) — best effort. IPv6 users should omit ":port".
+        let parts = host.split(separator: ":")
+        if parts.count == 2, let p = Int(parts[1]), p > 0 && p < 65536 {
+            return (String(parts[0]), String(p))
+        }
+        return (host, nil)
+    }
+
+    private func startSshTunnel() {
+        let hostRaw = self.serverHost
+        let user = self.sshUser
+        let port = self.serverPort
+
+        guard !user.isEmpty else {
+            DispatchQueue.main.async { self.connectionStatus = "STATUS_SSH_USER_MISSING" }
+            return
+        }
+
+        DispatchQueue.main.async {
+            self.connectionStatus = "STATUS_STARTING_SSH"
+            self.rawLog += "\n[SSH] Starting native tunnel…"
+        }
+
+        Task {
+            let (host, sshPortString) = self.parseSshHostAndPort(hostRaw)
+            let sshPort = Int(sshPortString ?? "22") ?? 22
             
             do {
-                try process.run()
-                self.sshProcess = process
-                DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
-                    if let proc = self.sshProcess, proc.isRunning {
-                        self.isUsingSshTunnel = true
-                        self.connect()
-                    } else {
-                        self.isUsingSshTunnel = false
-                        self.connectionStatus = "STATUS_SSH_FAILED"
-                    }
+                if let oldClient = self.sshClient {
+                    try? await oldClient.close()
+                }
+
+                let authentication: CitadelAuthentication
+                if let keyPath = self.sshKeyPathIfAvailable(),
+                   let keyData = try? Data(contentsOf: URL(fileURLWithPath: keyPath)) {
+                    let privateKey = try NIOSSHPrivateKey(buffer: .init(data: keyData))
+                    authentication = .privateKey(privateKey)
+                } else {
+                    authentication = .agent
+                }
+
+                let client = try await CitadelClient.connect(
+                    host: host,
+                    port: sshPort,
+                    authentication: authentication,
+                    hostKeyValidator: .acceptAnything(),
+                    reconnect: .none
+                )
+                
+                self.sshClient = client
+                
+                let targetPort = Int(port) ?? 80
+                
+                try await client.localForward(
+                    from: .init(host: "127.0.0.1", port: Int(self.sshTunnelLocalPort)),
+                    to: .init(host: "127.0.0.1", port: targetPort)
+                )
+                
+                DispatchQueue.main.async {
+                    self.rawLog += "\n[SSH] Native tunnel ready on 127.0.0.1:\(self.sshTunnelLocalPort)"
+                    self.isUsingSshTunnel = true
+                    self.connect()
                 }
             } catch {
-                self.connectionStatus = "STATUS_SSH_FAILED"
-                self.isUsingSshTunnel = false
+                DispatchQueue.main.async {
+                    self.rawLog += "\n[SSH] Failed: \(error.localizedDescription)"
+                    self.connectionStatus = "STATUS_SSH_FAILED"
+                    self.isUsingSshTunnel = false
+                }
             }
         }
     }
@@ -325,8 +354,11 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         socket = nil
         
         #if os(macOS)
-        sshProcess?.terminate()
-        sshProcess = nil
+        let client = self.sshClient
+        Task {
+            try? await client?.close()
+        }
+        self.sshClient = nil
         #endif
         isUsingSshTunnel = false
         
