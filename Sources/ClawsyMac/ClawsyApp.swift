@@ -36,6 +36,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var hudWindow: NSWindow?
     var networkManager: NetworkManager?
     
+    func applicationWillTerminate(_ notification: Notification) {
+        // Explicitly disconnect and kill SSH tunnel process.
+        // Without sandbox, child processes are no longer auto-killed on app exit.
+        networkManager?.disconnect()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Resolve sandbox bookmark for Shared Folder early
         SharedConfig.resolveBookmark()
