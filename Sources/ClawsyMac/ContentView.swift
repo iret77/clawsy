@@ -598,29 +598,41 @@ struct SettingsView: View {
     @AppStorage("pushClipboardHotkey", store: SharedConfig.sharedDefaults) private var pushClipboardHotkey = "V"
     
     func selectFolder() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.message = NSLocalizedString("SELECT_SHARED_FOLDER", bundle: .clawsy, comment: "")
-        panel.resolvesAliases = true
-        
-        // Use asynch version to prevent blocking the SwiftUI main thread in popovers
-        panel.begin { response in
-            if response == .OK {
-                if let url = panel.url {
-                    // 1. String path for UI
+        DispatchQueue.main.async {
+            let panel = NSOpenPanel()
+            panel.canChooseFiles = false
+            panel.canChooseDirectories = true
+            panel.allowsMultipleSelection = false
+            panel.message = NSLocalizedString("SELECT_SHARED_FOLDER", bundle: .clawsy, comment: "")
+            panel.resolvesAliases = true
+            
+            NSApp.activate(ignoringOtherApps: true)
+            
+            panel.begin { response in
+                if response == .OK {
+                    guard let url = panel.url else { return }
+                    
                     var path = url.path
                     let home = NSHomeDirectory()
                     if path.hasPrefix(home) {
                         path = path.replacingOccurrences(of: home, with: "~")
                     }
-                    sharedFolderPath = path
                     
-                    // 2. Security Scoped Bookmark for Sandbox Persistence
                     do {
                         let data = try url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
-                        SharedConfig.sharedFolderBookmark = data
+                        
+                        // Stop old access if any
+                        SharedConfig.resolvedFolderUrl?.stopAccessingSecurityScopedResource()
+                        
+                        // Start new access
+                        if url.startAccessingSecurityScopedResource() {
+                            SharedConfig.resolvedFolderUrl = url
+                        }
+                        
+                        DispatchQueue.main.async {
+                            SharedConfig.sharedFolderBookmark = data
+                            self.sharedFolderPath = path
+                        }
                     } catch {
                         print("Failed to create bookmark: \(error)")
                     }

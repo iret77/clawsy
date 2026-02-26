@@ -163,6 +163,10 @@ cat <<EOF > "$SHARE_EXT_BUNDLE/Contents/Info.plist"
     <string>Clawsy Share</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
+    <key>CFBundleShortVersionString</key>
+    <string>$VERSION_SHORT</string>
+    <key>CFBundleVersion</key>
+    <string>$VERSION_BUILD</string>
     <key>NSExtension</key>
     <dict>
         <key>NSExtensionAttributes</key>

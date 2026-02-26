@@ -8,21 +8,21 @@ public struct SharedConfig {
         
         // --- BUILT-IN MIGRATION LOGIC (v0.4.5) ---
         // If the new group defaults are empty but old data exists, migrate it once.
-        if groupDefaults.string(forKey: "serverHost") == nil {
+        if !groupDefaults.bool(forKey: "migrationV1Done") {
             let standard = UserDefaults.standard
-            if let oldHost = standard.string(forKey: "serverHost") {
-                groupDefaults.set(oldHost, forKey: "serverHost")
-                groupDefaults.set(standard.string(forKey: "serverPort"), forKey: "serverPort")
-                groupDefaults.set(standard.string(forKey: "serverToken"), forKey: "serverToken")
-                groupDefaults.set(standard.bool(forKey: "extendedContextEnabled"), forKey: "extendedContextEnabled")
-                groupDefaults.set(standard.string(forKey: "sshUser"), forKey: "sshUser")
-                groupDefaults.set(standard.bool(forKey: "useSshFallback"), forKey: "useSshFallback")
-                groupDefaults.set(standard.string(forKey: "sharedFolderPath"), forKey: "sharedFolderPath")
-                if let oldBookmark = standard.data(forKey: "sharedFolderBookmark") {
-                    groupDefaults.set(oldBookmark, forKey: "sharedFolderBookmark")
-                }
-                groupDefaults.synchronize()
-            }
+            if let oldHost = standard.string(forKey: "serverHost") { groupDefaults.set(oldHost, forKey: "serverHost") }
+            if let oldPort = standard.string(forKey: "serverPort") { groupDefaults.set(oldPort, forKey: "serverPort") }
+            if let oldToken = standard.string(forKey: "serverToken") { groupDefaults.set(oldToken, forKey: "serverToken") }
+            groupDefaults.set(standard.bool(forKey: "extendedContextEnabled"), forKey: "extendedContextEnabled")
+            if let oldUser = standard.string(forKey: "sshUser") { groupDefaults.set(oldUser, forKey: "sshUser") }
+            groupDefaults.set(standard.bool(forKey: "useSshFallback"), forKey: "useSshFallback")
+            if let oldPath = standard.string(forKey: "sharedFolderPath") { groupDefaults.set(oldPath, forKey: "sharedFolderPath") }
+            if let oldBookmark = standard.data(forKey: "sharedFolderBookmark") { groupDefaults.set(oldBookmark, forKey: "sharedFolderBookmark") }
+            if let oldQuick = standard.string(forKey: "quickSendHotkey") { groupDefaults.set(oldQuick, forKey: "quickSendHotkey") }
+            if let oldPush = standard.string(forKey: "pushClipboardHotkey") { groupDefaults.set(oldPush, forKey: "pushClipboardHotkey") }
+            
+            groupDefaults.set(true, forKey: "migrationV1Done")
+            groupDefaults.synchronize()
         }
         return groupDefaults
     }
@@ -60,7 +60,11 @@ public struct SharedConfig {
         defaults.synchronize()
     }
     
+    public static var resolvedFolderUrl: URL? = nil
+
+    @discardableResult
     public static func resolveBookmark() -> URL? {
+        if let existing = resolvedFolderUrl { return existing }
         guard let data = sharedFolderBookmark else { return nil }
         var isStale = false
         do {
@@ -69,7 +73,10 @@ public struct SharedConfig {
                 let newData = try url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
                 sharedFolderBookmark = newData
             }
-            if url.startAccessingSecurityScopedResource() { return url }
+            if url.startAccessingSecurityScopedResource() { 
+                resolvedFolderUrl = url
+                return url 
+            }
             return nil
         } catch {
             return nil

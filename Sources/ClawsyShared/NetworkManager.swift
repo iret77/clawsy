@@ -252,14 +252,16 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             }
             
             let remoteTarget = "\(user)@\(host)"
-            let tunnelSpec = "18790:127.0.0.1:\(port)"
+            let tunnelSpec = "127.0.0.1:18790:127.0.0.1:\(port)"
+            let controlPath = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("clawsy_ssh.sock").path
             
             self.connectionStatus = "STATUS_STARTING_SSH"
             self.sshProcess?.terminate()
             
+            // Cleanly kill existing tunnel using the control socket
             let killProcess = Process()
-            killProcess.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-            killProcess.arguments = ["bash", "-c", "lsof -t -i:18790 | xargs kill -9"]
+            killProcess.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
+            killProcess.arguments = ["-O", "exit", "-S", controlPath, remoteTarget]
             try? killProcess.run()
             killProcess.waitUntilExit()
 
@@ -267,7 +269,18 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
-            process.arguments = ["-NT", "-L", tunnelSpec, remoteTarget, "-o", "ConnectTimeout=10", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "ExitOnForwardFailure=yes"]
+            process.arguments = [
+                "-NT",
+                "-L", tunnelSpec,
+                remoteTarget,
+                "-o", "ConnectTimeout=10",
+                "-o", "BatchMode=yes",
+                "-o", "StrictHostKeyChecking=no",
+                "-o", "ExitOnForwardFailure=yes",
+                "-o", "ControlMaster=auto",
+                "-o", "ControlPath=\(controlPath)",
+                "-o", "ServerAliveInterval=15"
+            ]
             
             do {
                 try process.run()

@@ -37,6 +37,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var networkManager: NetworkManager?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Resolve sandbox bookmark for Shared Folder early
+        SharedConfig.resolveBookmark()
+        
         // Single Instance Check
         let bundleID = Bundle.main.bundleIdentifier ?? "com.openclaw.Clawsy"
         let runningApps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
