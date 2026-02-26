@@ -603,15 +603,13 @@ struct SettingsView: View {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.message = NSLocalizedString("SELECT_SHARED_FOLDER", bundle: .clawsy, comment: "")
-        
         panel.resolvesAliases = true
-        panel.canDownloadUbiquitousContents = true
-        panel.canResolveUbiquitousConflicts = true
         
+        // Use asynch version to prevent blocking the SwiftUI main thread in popovers
         panel.begin { response in
             if response == .OK {
                 if let url = panel.url {
-                    // 1. Persist path as string (for UI)
+                    // 1. String path for UI
                     var path = url.path
                     let home = NSHomeDirectory()
                     if path.hasPrefix(home) {
@@ -619,10 +617,10 @@ struct SettingsView: View {
                     }
                     sharedFolderPath = path
                     
-                    // 2. Create Security Scoped Bookmark (for sandbox access)
+                    // 2. Security Scoped Bookmark for Sandbox Persistence
                     do {
-                        let bookmarkData = try url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
-                        SharedConfig.sharedFolderBookmark = bookmarkData
+                        let data = try url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
+                        SharedConfig.sharedFolderBookmark = data
                     } catch {
                         print("Failed to create bookmark: \(error)")
                     }

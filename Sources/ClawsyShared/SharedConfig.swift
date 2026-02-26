@@ -6,7 +6,8 @@ public struct SharedConfig {
     public static var sharedDefaults: UserDefaults {
         let groupDefaults = UserDefaults(suiteName: appGroup) ?? .standard
         
-        // Migration Bridge: From old standard defaults to the new App Group container
+        // --- BUILT-IN MIGRATION LOGIC (v0.4.5) ---
+        // If the new group defaults are empty but old data exists, migrate it once.
         if groupDefaults.string(forKey: "serverHost") == nil {
             let standard = UserDefaults.standard
             if let oldHost = standard.string(forKey: "serverHost") {
@@ -17,20 +18,21 @@ public struct SharedConfig {
                 groupDefaults.set(standard.string(forKey: "sshUser"), forKey: "sshUser")
                 groupDefaults.set(standard.bool(forKey: "useSshFallback"), forKey: "useSshFallback")
                 groupDefaults.set(standard.string(forKey: "sharedFolderPath"), forKey: "sharedFolderPath")
-                groupDefaults.set(standard.data(forKey: "sharedFolderBookmark"), forKey: "sharedFolderBookmark")
+                if let oldBookmark = standard.data(forKey: "sharedFolderBookmark") {
+                    groupDefaults.set(oldBookmark, forKey: "sharedFolderBookmark")
+                }
                 groupDefaults.synchronize()
             }
         }
-        
         return groupDefaults
     }
     
-    // Gateway settings
     public static var serverHost: String { sharedDefaults.string(forKey: "serverHost") ?? "" }
     public static var serverPort: String { sharedDefaults.string(forKey: "serverPort") ?? "18789" }
     public static var serverToken: String { sharedDefaults.string(forKey: "serverToken") ?? "" }
+    public static var sshUser: String { sharedDefaults.string(forKey: "sshUser") ?? "" }
+    public static var useSshFallback: Bool { sharedDefaults.bool(forKey: "useSshFallback") }
     
-    // Shared folder settings
     public static var sharedFolderPath: String {
         get { sharedDefaults.string(forKey: "sharedFolderPath") ?? "" }
         set { sharedDefaults.set(newValue, forKey: "sharedFolderPath") }
@@ -43,22 +45,12 @@ public struct SharedConfig {
     
     public static var extendedContextEnabled: Bool { sharedDefaults.bool(forKey: "extendedContextEnabled") }
     
-    // Hotkeys
     public static var quickSendHotkey: String { sharedDefaults.string(forKey: "quickSendHotkey") ?? "K" }
     public static var pushClipboardHotkey: String { sharedDefaults.string(forKey: "pushClipboardHotkey") ?? "V" }
     
-    // Versioning
-    public static var shortVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
-    }
-    
-    public static var buildNumber: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0"
-    }
-    
-    public static var versionDisplay: String {
-        "v\(shortVersion) #\(buildNumber)"
-    }
+    public static var shortVersion: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.5" }
+    public static var buildNumber: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1" }
+    public static var versionDisplay: String { "v\(shortVersion) #\(buildNumber)" }
     
     public static func save(host: String, port: String, token: String) {
         let defaults = sharedDefaults
@@ -68,7 +60,6 @@ public struct SharedConfig {
         defaults.synchronize()
     }
     
-    // Sandbox Security Access
     public static func resolveBookmark() -> URL? {
         guard let data = sharedFolderBookmark else { return nil }
         var isStale = false
@@ -78,13 +69,9 @@ public struct SharedConfig {
                 let newData = try url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
                 sharedFolderBookmark = newData
             }
-            if url.startAccessingSecurityScopedResource() {
-                return url
-            } else {
-                return nil
-            }
+            if url.startAccessingSecurityScopedResource() { return url }
+            return nil
         } catch {
-            print("Failed to resolve bookmark: \(error)")
             return nil
         }
     }
