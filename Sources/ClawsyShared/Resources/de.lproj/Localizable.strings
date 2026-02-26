@@ -73,7 +73,7 @@
 "SHARED_FOLDER" = "Gemeinsamer Ordner";
 "PATH" = "Pfad";
 "SHARED_FOLDER_DESC" = "Nur Dateien in diesem Ordner sind für den Agenten sichtbar.";
-"VIBRANT_SECURE" = "Stabil & Verschlüsselt.";
+"VIBRANT_SECURE" = "Daten bleiben lokal.";
 "DONE" = "Fertig";
 
 /* Settings Window */
@@ -128,7 +128,7 @@
 "CURRENT_VERSION %@" = "Aktuelle Version: %@";
 
 /* SSH Key */
-"IMPORT_SSH_KEY" = "SSH-Schlüssel importieren…";
+"IMPORT_SSH_KEY" = "Importieren…";
 "REMOVE_SSH_KEY" = "Entfernen";
 "KEY_INSTALLED" = "Schlüssel: Installiert";
 "KEY_NOT_SET" = "Schlüssel: Nicht gesetzt";

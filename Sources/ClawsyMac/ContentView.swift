@@ -723,11 +723,15 @@ struct SettingsView: View {
                         .opacity(useSshFallback ? 1.0 : 0.5)
 
                         HStack(spacing: 10) {
-                            Button(NSLocalizedString("IMPORT_SSH_KEY", bundle: .clawsy, comment: "")) { selectSshKey() }
-                                .disabled(!useSshFallback)
+                            Button { selectSshKey() } label: {
+                                Label(NSLocalizedString("IMPORT_SSH_KEY", bundle: .clawsy, comment: ""), systemImage: "key.fill")
+                            }
+                            .disabled(!useSshFallback)
 
-                            Button(NSLocalizedString("REMOVE_SSH_KEY", bundle: .clawsy, comment: "")) { removeSshKey() }
-                                .disabled(!useSshFallback || !sshKeyInstalled)
+                            Button { removeSshKey() } label: {
+                                Label(NSLocalizedString("REMOVE_SSH_KEY", bundle: .clawsy, comment: ""), systemImage: "trash")
+                            }
+                            .disabled(!useSshFallback || !sshKeyInstalled)
 
                             Spacer()
 
