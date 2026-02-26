@@ -37,6 +37,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var networkManager: NetworkManager?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Single Instance Check
+        let bundleID = Bundle.main.bundleIdentifier ?? "com.openclaw.Clawsy"
+        let runningApps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+        
+        if runningApps.count > 1 {
+            // Already running, try to bring the existing one to the front
+            for app in runningApps {
+                if app != NSRunningApplication.current {
+                    app.activate(options: [.activateIgnoringOtherApps, .activateAllWindows])
+                    break
+                }
+            }
+            NSApp.terminate(nil)
+            return
+        }
+
         // Create Status Bar Item
         statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
