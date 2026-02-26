@@ -271,9 +271,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     /// Finds a free TCP port on localhost by binding to port 0.
     /// Returns the assigned port number, or nil on failure.
     private func findFreePort() -> UInt16? {
-        let sock = socket(AF_INET, SOCK_STREAM, 0)
+        let sock = Darwin.socket(AF_INET, SOCK_STREAM, 0)
         guard sock >= 0 else { return nil }
-        defer { close(sock) }
+        defer { Darwin.close(sock) }
 
         var addr = sockaddr_in()
         addr.sin_family = sa_family_t(AF_INET)
@@ -283,7 +283,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
 
         let bound = withUnsafePointer(to: &addr) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                bind(sock, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+                Darwin.bind(sock, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
             }
         }
         guard bound == 0 else { return nil }
@@ -292,7 +292,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         var len = socklen_t(MemoryLayout<sockaddr_in>.size)
         let got = withUnsafeMutablePointer(to: &assignedAddr) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                getsockname(sock, $0, &len)
+                Darwin.getsockname(sock, $0, &len)
             }
         }
         guard got == 0 else { return nil }
