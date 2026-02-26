@@ -298,7 +298,7 @@ struct ContentView: View {
     func handleManualClipboardSend() {
         if let content = ClipboardManager.getClipboardContent() {
             var envelopeData: [String: Any] = [
-                "version": "0.2.4",
+                "version": SharedConfig.versionDisplay,
                 "type": "clipboard",
                 "localTime": ISO8601DateFormatter().string(from: Date()),
                 "tz": TimeZone.current.identifier,
@@ -507,7 +507,7 @@ struct MetadataView: View {
             // Content
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    MetadataRow(label: "Version", value: "0.2.4")
+                    MetadataRow(label: "Version", value: SharedConfig.versionDisplay)
                     MetadataRow(label: "Server Status", value: network.isServerClawsyAware ? "Ready (\(network.serverVersion))" : "Basic")
                     MetadataRow(label: "Local Time", value: ISO8601DateFormatter().string(from: Date()))
                     MetadataRow(label: "Timezone", value: TimeZone.current.identifier)
