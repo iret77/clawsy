@@ -604,22 +604,28 @@ struct SettingsView: View {
         panel.allowsMultipleSelection = false
         panel.message = NSLocalizedString("SELECT_SHARED_FOLDER", bundle: .clawsy, comment: "")
         
-        // Finalized flags for unrestricted navigation
         panel.resolvesAliases = true
-        panel.treatsFilePackagesAsDirectories = false
         panel.canDownloadUbiquitousContents = true
         panel.canResolveUbiquitousConflicts = true
         
-        DispatchQueue.main.async {
-            panel.becomeKey()
-            if panel.runModal() == .OK {
+        panel.begin { response in
+            if response == .OK {
                 if let url = panel.url {
+                    // 1. Persist path as string (for UI)
                     var path = url.path
                     let home = NSHomeDirectory()
                     if path.hasPrefix(home) {
                         path = path.replacingOccurrences(of: home, with: "~")
                     }
                     sharedFolderPath = path
+                    
+                    // 2. Create Security Scoped Bookmark (for sandbox access)
+                    do {
+                        let bookmarkData = try url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
+                        SharedConfig.sharedFolderBookmark = bookmarkData
+                    } catch {
+                        print("Failed to create bookmark: \(error)")
+                    }
                 }
             }
         }
