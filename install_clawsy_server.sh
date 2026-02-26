@@ -62,6 +62,7 @@ if ! grep -q "clawsy_envelope" AGENTS.md; then
 - **Context Awareness:** Clawsy (Mac App) sends metadata in messages wrapped in a `clawsy_envelope` JSON object.
 - **Mood Data:** Check `memory/clawsy_mood.json` for current semantic mood analysis.
 - **Workflow:** When you see a `clawsy_envelope` (Active App, Battery, Thermal), use this data to tailor your response tone and depth.
+- **Shared Folder Automations:** When Clawsy sends a `file.sync_triggered` event (or mentions a path), check that directory for a `.clawsy` file using `nodes.invoke` (`file.get`). If it exists, read its instructions and apply them to new/unprocessed files in that directory. Maintain a `memory/clawsy_processed.json` to track processed files and prevent infinite loops.
 EOF
 fi
 
