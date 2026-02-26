@@ -120,10 +120,17 @@
 /* Updates */
 "UPDATES" = "Updates";
 "CHECK_NOW" = "Check Now";
-"INSTALL_UPDATE" = "Install Update";
+"INSTALL_VERSION %@" = "Install %@";
 "UPDATE_AVAILABLE %@" = "Update Available: %@";
 "NO_UPDATES" = "No updates available.";
 "CHECKING" = "Checking...";
+"CURRENT_VERSION %@" = "Current: %@";
+
+/* SSH Key */
+"IMPORT_SSH_KEY" = "Import SSH Key…";
+"REMOVE_SSH_KEY" = "Remove";
+"KEY_INSTALLED" = "Key: Installed";
+"KEY_NOT_SET" = "Key: Not set";
 
 /* Quick Send */
 "SEND" = "Send";

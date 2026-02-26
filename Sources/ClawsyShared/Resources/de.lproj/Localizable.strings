@@ -121,10 +121,17 @@
 /* Updates */
 "UPDATES" = "Updates";
 "CHECK_NOW" = "Jetzt prüfen";
-"INSTALL_UPDATE" = "Update installieren";
+"INSTALL_VERSION %@" = "Installieren %@";
 "UPDATE_AVAILABLE %@" = "Update verfügbar: %@";
 "NO_UPDATES" = "Keine Updates verfügbar.";
 "CHECKING" = "Suche...";
+"CURRENT_VERSION %@" = "Aktuell: %@";
+
+/* SSH Key */
+"IMPORT_SSH_KEY" = "SSH-Schlüssel importieren…";
+"REMOVE_SSH_KEY" = "Entfernen";
+"KEY_INSTALLED" = "Schlüssel: Installiert";
+"KEY_NOT_SET" = "Schlüssel: Nicht gesetzt";
 
 /* Quick Send */
 "SEND" = "Senden";

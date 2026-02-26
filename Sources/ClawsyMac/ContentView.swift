@@ -723,15 +723,15 @@ struct SettingsView: View {
                         .opacity(useSshFallback ? 1.0 : 0.5)
 
                         HStack(spacing: 10) {
-                            Button("Import SSH Key…") { selectSshKey() }
+                            Button(NSLocalizedString("IMPORT_SSH_KEY", bundle: .clawsy, comment: "")) { selectSshKey() }
                                 .disabled(!useSshFallback)
 
-                            Button("Remove") { removeSshKey() }
+                            Button(NSLocalizedString("REMOVE_SSH_KEY", bundle: .clawsy, comment: "")) { removeSshKey() }
                                 .disabled(!useSshFallback || !sshKeyInstalled)
 
                             Spacer()
 
-                            Text(sshKeyInstalled ? "Key: Installed" : "Key: Not set")
+                            Text(NSLocalizedString(sshKeyInstalled ? "KEY_INSTALLED" : "KEY_NOT_SET", bundle: .clawsy, comment: ""))
                                 .font(.system(size: 10))
                                 .foregroundColor(.secondary)
                         }
@@ -832,7 +832,7 @@ struct SettingsView: View {
                             .foregroundColor(.blue)
                         
                         HStack {
-                            Text("Current: \(SharedConfig.versionDisplay)")
+                            Text(String(format: NSLocalizedString("CURRENT_VERSION %@", bundle: .clawsy, comment: ""), SharedConfig.versionDisplay))
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(.secondary)
                             
@@ -842,7 +842,7 @@ struct SettingsView: View {
                                 ProgressView()
                                     .scaleEffect(0.5)
                             } else if updateManager.updateAvailable {
-                                Button("Install \(updateManager.updateVersion)") {
+                                Button(String(format: NSLocalizedString("INSTALL_VERSION %@", bundle: .clawsy, comment: ""), updateManager.updateVersion)) {
                                     updateManager.downloadAndInstall()
                                 }
                                 .buttonStyle(.borderedProminent)
