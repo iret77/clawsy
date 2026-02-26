@@ -201,7 +201,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         
         var targetUrlStr: String
         if isUsingSshTunnel {
-            targetUrlStr = "ws://127.0.0.1:18790"
+            targetUrlStr = "ws://127.0.0.1:\(sshTunnelLocalPort)"
         } else {
             let scheme = (host.contains("localhost") || host.contains("127.0.0.1")) ? "ws" : "wss"
             targetUrlStr = "\(scheme)://\(host):\(serverPort)"
@@ -266,7 +266,38 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
     
     #if os(macOS)
-    private let sshTunnelLocalPort: UInt16 = 18790
+    private var sshTunnelLocalPort: UInt16 = 18790
+
+    /// Finds a free TCP port on localhost by binding to port 0.
+    /// Returns the assigned port number, or nil on failure.
+    private func findFreePort() -> UInt16? {
+        let sock = socket(AF_INET, SOCK_STREAM, 0)
+        guard sock >= 0 else { return nil }
+        defer { close(sock) }
+
+        var addr = sockaddr_in()
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_port = 0
+        addr.sin_addr.s_addr = UInt32(INADDR_LOOPBACK).bigEndian
+        addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+
+        let bound = withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                bind(sock, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+        guard bound == 0 else { return nil }
+
+        var assignedAddr = sockaddr_in()
+        var len = socklen_t(MemoryLayout<sockaddr_in>.size)
+        let got = withUnsafeMutablePointer(to: &assignedAddr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                getsockname(sock, $0, &len)
+            }
+        }
+        guard got == 0 else { return nil }
+        return UInt16(bigEndian: assignedAddr.sin_port)
+    }
 
     private func sshKeyPathIfAvailable() -> String? {
         guard let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedConfig.appGroup) else { return nil }
@@ -322,7 +353,15 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             // Give the OS time to release the port
             Thread.sleep(forTimeInterval: 1.5)
             // --- End port cleanup ---
-            
+
+            // Find a free local port for this tunnel session
+            if let freePort = self.findFreePort() {
+                self.sshTunnelLocalPort = freePort
+                DispatchQueue.main.async {
+                    self.rawLog += "\n[SSH] Using dynamic local port: \(freePort)"
+                }
+            }
+
             let (host, sshPortString) = self.parseSshHostAndPort(hostRaw)
             let sshPort = sshPortString ?? "22"
             let targetPort = port.isEmpty ? "18789" : port
