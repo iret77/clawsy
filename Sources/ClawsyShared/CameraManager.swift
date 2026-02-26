@@ -73,8 +73,11 @@ public class CameraManager: NSObject {
             
             captureSession.startRunning()
             
-            let settings = AVCapturePhotoSettings()
-            photoOutput.capturePhoto(with: settings, delegate: delegate)
+            // Give the camera hardware a moment to initialize before snapping
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                let settings = AVCapturePhotoSettings()
+                photoOutput.capturePhoto(with: settings, delegate: delegate)
+            }
             
             // Keep delegate alive
             objc_setAssociatedObject(photoOutput, "delegate", delegate, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
