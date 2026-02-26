@@ -393,9 +393,21 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         send(json: discoveryReq)
     }
 
+    public var onTaskUpdate: ((String, String, Double, String) -> Void)?
+
     private func handleMessage(_ text: String) {
         guard let data = text.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+
+        // 1. Task Update (agent.status)
+        if let kind = json["kind"] as? String, kind == "agent.status",
+           let payload = json["payload"] as? [String: Any] {
+            let agent = payload["agentName"] as? String ?? "Unknown"
+            let title = payload["title"] as? String ?? ""
+            let progress = payload["progress"] as? Double ?? 0.0
+            let status = payload["statusText"] as? String ?? ""
+            onTaskUpdate?(agent, title, progress, status)
+        }
 
         let rawId = json["id"]
         let isValidId: Bool
