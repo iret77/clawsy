@@ -287,9 +287,25 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             
-            // Kill any previous SSH tunnel process
-            self.sshProcess?.terminate()
-            self.sshProcess = nil
+            // --- Bug fix: clean up previous SSH process and free port 18790 ---
+            if let prev = self.sshProcess {
+                prev.terminate()
+                prev.waitUntilExit()
+                self.sshProcess = nil
+            }
+            
+            // Kill any stale process holding the tunnel port
+            let killPortProc = Process()
+            killPortProc.executableURL = URL(fileURLWithPath: "/bin/sh")
+            killPortProc.arguments = ["-c", "lsof -ti tcp:\(self.sshTunnelLocalPort) | xargs kill -9 2>/dev/null || true"]
+            killPortProc.standardOutput = FileHandle.nullDevice
+            killPortProc.standardError = FileHandle.nullDevice
+            try? killPortProc.run()
+            killPortProc.waitUntilExit()
+            
+            // Give the OS time to release the port
+            Thread.sleep(forTimeInterval: 1.0)
+            // --- End port cleanup ---
             
             let (host, sshPortString) = self.parseSshHostAndPort(hostRaw)
             let sshPort = sshPortString ?? "22"
@@ -298,11 +314,20 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
             
-            // Use ssh-agent for auth (works from sandbox via Unix socket).
-            // Never use an explicit -i flag pointing to ~/.ssh/ — sandbox blocks that.
-            // StrictHostKeyChecking=no + UserKnownHostsFile=/dev/null avoids known_hosts sandbox issue.
-            let args = [
-                "-NT",
+            // Build SSH arguments.
+            // If the user imported an SSH key (stored in the app group container),
+            // pass it via -i so SSH uses it. Do NOT add IdentitiesOnly=yes — that
+            // would block ssh-agent fallback when no imported key is present.
+            var args = ["-NT"]
+            
+            if let keyPath = self.sshKeyPathIfAvailable() {
+                args += ["-i", keyPath]
+                DispatchQueue.main.async {
+                    self.rawLog += "\n[SSH] Using imported key: \(keyPath)"
+                }
+            }
+            
+            args += [
                 "-o", "StrictHostKeyChecking=no",
                 "-o", "UserKnownHostsFile=/dev/null",
                 "-o", "BatchMode=yes",
