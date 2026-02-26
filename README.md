@@ -39,7 +39,7 @@ Empower your agent to see what you see:
 *   **Instant Screenshots:** Quickly capture and send your screen to the agent for analysis or debugging.
 *   **Native Camera Integration:** Use your Mac's camera to snap photos directly into the chat context.
 
-### 📂 Smart Manifests & Automation (.clawsy)
+### 📁 Shared Workspace & Automations (.clawsy)
 Bridge the gap between local files and your remote agent:
 *   **Deep Folder Sync:** A dedicated local folder that synchronizes seamlessly with your OpenClaw workspace, powered by recursive macOS `FSEvents`.
 *   **Double-Click to Edit:** Just double-click a `.clawsy` file in any folder to open the native **Rule Editor**. No JSON editing required.
