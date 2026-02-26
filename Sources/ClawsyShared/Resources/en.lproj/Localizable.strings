@@ -120,11 +120,11 @@
 /* Updates */
 "UPDATES" = "Updates";
 "CHECK_NOW" = "Check Now";
-"INSTALL_VERSION %@" = "Install %@";
+"INSTALL_VERSION %@" = "Install Version %@";
 "UPDATE_AVAILABLE %@" = "Update Available: %@";
-"NO_UPDATES" = "No updates available.";
-"CHECKING" = "Checking...";
-"CURRENT_VERSION %@" = "Current: %@";
+"NO_UPDATES" = "Clawsy is up to date.";
+"CHECKING" = "Checking…";
+"CURRENT_VERSION %@" = "Installed: %@";
 
 /* SSH Key */
 "IMPORT_SSH_KEY" = "Import SSH Key…";

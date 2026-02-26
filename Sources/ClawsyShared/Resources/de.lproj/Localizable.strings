@@ -43,14 +43,14 @@
 /* Status */
 "STATUS_CONNECTED" = "Verbunden";
 "STATUS_DISCONNECTED" = "Getrennt";
-"STATUS_CONNECTING %lld" = "Verbinde (Versuch %lld)...";
+"STATUS_CONNECTING %lld" = "Verbinde (Versuch %lld)…";
 "STATUS_OFFLINE_REFUSED" = "Offline (Server verweigert)";
 "STATUS_OFFLINE_TIMEOUT" = "Offline (Zeitüberschreitung)";
 "STATUS_ERROR" = "Fehler";
 "STATUS_ONLINE_PAIRED" = "Online (Verbunden)";
 "STATUS_ONLINE_PAIRED_SSH" = "Online (Verbunden über SSH)";
 "STATUS_HANDSHAKE_FAILED" = "Handshake fehlgeschlagen";
-"STATUS_STARTING_SSH" = "SSH-Tunnel wird gestartet...";
+"STATUS_STARTING_SSH" = "SSH-Tunnel wird gestartet…";
 "STATUS_SSH_FAILED" = "SSH-Tunnel fehlgeschlagen";
 "STATUS_SSH_USER_MISSING" = "SSH-Benutzer erforderlich";
 "STATUS_SSH_KEY_MISSING" = "SSH-Schlüssel erforderlich";
@@ -69,7 +69,7 @@
 "TOKEN" = "Token";
 "SSH_USER" = "SSH-Benutzer";
 "SSH_FALLBACK" = "SSH-Fallback";
-"SSH_FALLBACK_DESC" = "Automatischer Port-Tunnel (18789) bei Verbindungsfehlern.";
+"SSH_FALLBACK_DESC" = "Automatischer SSH-Tunnel bei Verbindungsfehlern.";
 "SHARED_FOLDER" = "Gemeinsamer Ordner";
 "PATH" = "Pfad";
 "SHARED_FOLDER_DESC" = "Nur Dateien in diesem Ordner sind für den Agenten sichtbar.";
@@ -108,7 +108,7 @@
 /* Settings Addition */
 "HOTKEYS" = "Tastenkürzel";
 "HOTKEY_QUICK_SEND" = "Quick Send";
-"HOTKEY_PUSH_CLIPBOARD" = "Clipboard senden";
+"HOTKEY_PUSH_CLIPBOARD" = "Zwischenablage senden";
 
 /* Metadata View */
 "LAST_METADATA" = "Letzte Metadaten";
@@ -121,11 +121,11 @@
 /* Updates */
 "UPDATES" = "Updates";
 "CHECK_NOW" = "Jetzt prüfen";
-"INSTALL_VERSION %@" = "Installieren %@";
+"INSTALL_VERSION %@" = "Version %@ installieren";
 "UPDATE_AVAILABLE %@" = "Update verfügbar: %@";
-"NO_UPDATES" = "Keine Updates verfügbar.";
-"CHECKING" = "Suche...";
-"CURRENT_VERSION %@" = "Aktuell: %@";
+"NO_UPDATES" = "Clawsy ist aktuell.";
+"CHECKING" = "Wird geprüft…";
+"CURRENT_VERSION %@" = "Aktuelle Version: %@";
 
 /* SSH Key */
 "IMPORT_SSH_KEY" = "SSH-Schlüssel importieren…";
