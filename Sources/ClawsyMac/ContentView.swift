@@ -23,6 +23,8 @@ struct ContentView: View {
     @AppStorage("sharedFolderPath", store: SharedConfig.sharedDefaults) private var sharedFolderPath = "~/Documents/Clawsy"
     @AppStorage("extendedContextEnabled", store: SharedConfig.sharedDefaults) private var extendedContextEnabled = false
     
+    @State private var fileWatcher: FileWatcher?
+    
     var body: some View {
         VStack(spacing: 0) {
             // --- Header & Status ---
@@ -232,6 +234,11 @@ struct ContentView: View {
                 network.configure(host: serverHost, port: serverPort, token: serverToken, sshUser: sshUser, fallback: useSshFallback)
                 network.connect()
             }
+            
+            setupFileWatcher()
+        }
+        .onChange(of: sharedFolderPath) { _ in
+            setupFileWatcher()
         }
         .onChange(of: network.isHandshakeComplete) { newValue in
             if newValue {
@@ -314,6 +321,26 @@ struct ContentView: View {
                 appDelegate.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
             }
         }
+    }
+    
+    func setupFileWatcher() {
+        fileWatcher?.stop()
+        let resolvedPath = sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
+        guard !sharedFolderPath.isEmpty, ClawsyFileManager.folderExists(at: resolvedPath) else { return }
+        
+        let watcher = FileWatcher(url: URL(fileURLWithPath: resolvedPath))
+        watcher.callback = { changedPath in
+            // Extract relative path for the agent
+            let relativePath = changedPath.replacingOccurrences(of: resolvedPath, with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            
+            // Debounce/Throttle could be added here, but for now we send the event
+            network.sendEvent(kind: "file.sync_triggered", payload: [
+                "path": sharedFolderPath,
+                "changedPath": relativePath
+            ])
+        }
+        watcher.start()
+        self.fileWatcher = watcher
     }
     
     func setupCallbacks() {

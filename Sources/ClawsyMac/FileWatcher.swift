@@ -1,11 +1,11 @@
 import Foundation
+import CoreServices
 
 class FileWatcher {
-    private var fileDescriptor: Int32 = -1
-    private var source: DispatchSourceFileSystemObject?
+    private var stream: FSEventStreamRef?
     private let queue = DispatchQueue(label: "ai.clawsy.filewatcher")
     private let url: URL
-    var callback: (() -> Void)?
+    var callback: ((String) -> Void)? // Now returns the changed path
 
     init(url: URL) {
         self.url = url
@@ -14,27 +14,53 @@ class FileWatcher {
     func start() {
         stop()
         
-        fileDescriptor = open(url.path, O_EVTONLY)
-        guard fileDescriptor != -1 else { return }
+        let path = url.path as NSString
+        let pathsToWatch = [path] as CFArray
         
-        source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fileDescriptor, eventMask: .write, queue: queue)
+        var context = FSEventStreamContext(
+            version: 0,
+            info: UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()),
+            retain: nil,
+            release: nil,
+            copyDescription: nil
+        )
         
-        source?.setEventHandler { [weak self] in
-            self?.callback?()
+        let flags = UInt32(kFSEventStreamCreateFlagUseCFTypes | kFSEventStreamCreateFlagFileEvents)
+        
+        stream = FSEventStreamCreate(
+            kCFAllocatorDefault,
+            { (streamRef, clientCallBackInfo, numEvents, eventPaths, eventFlags, eventIds) in
+                guard let clientCallBackInfo = clientCallBackInfo else { return }
+                let watcher = Unmanaged<FileWatcher>.fromOpaque(clientCallBackInfo).takeUnretainedValue()
+                
+                guard let paths = unsafeBitCast(eventPaths, to: NSArray.self) as? [String] else { return }
+                
+                for path in paths {
+                    // Ignore .DS_Store and .clawsy changes to avoid infinite loops
+                    if path.hasSuffix(".DS_Store") || path.hasSuffix(".clawsy") { continue }
+                    watcher.callback?(path)
+                }
+            },
+            &context,
+            pathsToWatch,
+            FSEventStreamEventId(kFSEventStreamEventIdSinceNow),
+            1.0, // Latency
+            flags
+        )
+        
+        if let stream = stream {
+            FSEventStreamSetDispatchQueue(stream, queue)
+            FSEventStreamStart(stream)
         }
-        
-        source?.setCancelHandler { [weak self] in
-            guard let self = self else { return }
-            close(self.fileDescriptor)
-            self.fileDescriptor = -1
-        }
-        
-        source?.resume()
     }
 
     func stop() {
-        source?.cancel()
-        source = nil
+        if let stream = stream {
+            FSEventStreamStop(stream)
+            FSEventStreamInvalidate(stream)
+            FSEventStreamRelease(stream)
+            self.stream = nil
+        }
     }
 
     deinit {
