@@ -15,16 +15,14 @@ let package = Package(
         .library(name: "ClawsyMacShare", type: .dynamic, targets: ["ClawsyMacShare"])
     ],
     dependencies: [
-        .package(url: "https://github.com/daltoniam/Starscream.git", from: "4.0.0"),
-        .package(url: "https://github.com/orlandos-nl/Citadel.git", from: "0.4.0")
+        .package(url: "https://github.com/daltoniam/Starscream.git", from: "4.0.0")
     ],
     targets: [
         // Shared logic for all platforms
         .target(
             name: "ClawsyShared",
             dependencies: [
-                "Starscream",
-                .product(name: "Citadel", package: "Citadel")
+                "Starscream"
             ],
             path: "Sources/ClawsyShared",
             resources: [
@@ -40,8 +38,7 @@ let package = Package(
             name: "ClawsyMac",
             dependencies: [
                 "ClawsyShared",
-                "Starscream",
-                .product(name: "Citadel", package: "Citadel")
+                "Starscream"
             ],
             path: "Sources/ClawsyMac",
             resources: [
