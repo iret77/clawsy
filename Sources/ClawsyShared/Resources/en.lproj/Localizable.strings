@@ -135,3 +135,8 @@
 /* Quick Send */
 "SEND" = "Send";
 "CANCEL" = "Cancel";
+
+/* Node Pairing */
+"STATUS_PAIRING" = "Pairing…";
+"STATUS_PAIRING_PENDING" = "Awaiting pairing approval…";
+"STATUS_PAIRING_REJECTED" = "Pairing rejected";

@@ -72,6 +72,20 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
     private var sharedFolderPath: String { SharedConfig.sharedDefaults.string(forKey: "sharedFolderPath") ?? "~/Documents/Clawsy" }
     
+    // Device token for node pairing (per-host)
+    private var deviceTokenKey: String { "clawsy_device_token_\(serverHost)" }
+    private var deviceToken: String? {
+        get { SharedConfig.sharedDefaults.string(forKey: deviceTokenKey) }
+        set {
+            if let val = newValue {
+                SharedConfig.sharedDefaults.set(val, forKey: deviceTokenKey)
+            } else {
+                SharedConfig.sharedDefaults.removeObject(forKey: deviceTokenKey)
+            }
+            SharedConfig.sharedDefaults.synchronize()
+        }
+    }
+    
     public override init() {
         super.init()
         // Try to load existing key or generate new one
@@ -522,6 +536,27 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             return
         }
         
+        if event == "node.pair.requested" {
+            self.connectionStatus = "STATUS_PAIRING_PENDING"
+            self.rawLog += "\n[PAIR] Pairing pending – awaiting admin approval"
+            return
+        }
+        
+        if event == "node.pair.resolved" {
+            if let payload = json["payload"] as? [String: Any] {
+                let approved = payload["approved"] as? Bool ?? false
+                if approved, let dt = payload["deviceToken"] as? String {
+                    self.deviceToken = dt
+                    self.rawLog += "\n[PAIR] Pairing approved – reconnecting with deviceToken"
+                    self.connect()
+                } else {
+                    self.connectionStatus = "STATUS_PAIRING_REJECTED"
+                    self.rawLog += "\n[PAIR] Pairing rejected"
+                }
+            }
+            return
+        }
+        
         if event == "node.invoke.request", let payload = json["payload"] as? [String: Any], let invocationId = payload["id"] as? String {
             let command = payload["command"] as? String ?? ""
             var innerParams: [String: Any] = [:]
@@ -554,6 +589,17 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                      self.isHandshakeComplete = true
                      self.connectionStatus = isUsingSshTunnel ? "STATUS_ONLINE_PAIRED_SSH" : "STATUS_ONLINE_PAIRED"
                      
+                     // Store deviceToken from hello-ok if present
+                     if let result = json["result"] as? [String: Any],
+                        let auth = result["auth"] as? [String: Any],
+                        let dt = auth["deviceToken"] as? String {
+                         self.deviceToken = dt
+                     } else if let p = payload,
+                               let auth = p["auth"] as? [String: Any],
+                               let dt = auth["deviceToken"] as? String {
+                         self.deviceToken = dt
+                     }
+                     
                      // Trigger Discovery Check
                      self.checkServerAwareness()
                      
@@ -567,6 +613,18 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                              self.disconnect()
                          }
                      }
+                } else if let errorObj = json["error"] as? [String: Any],
+                          let errorCode = errorObj["code"] as? String, errorCode == "NOT_PAIRED" {
+                     // Extract requestId and send pairing request
+                     let details = errorObj["details"] as? [String: Any]
+                     let requestId = details?["requestId"] as? String ?? ""
+                     self.connectionStatus = "STATUS_PAIRING"
+                     self.rawLog += "\n[PAIR] NOT_PAIRED – sending node.pair.request (requestId: \(requestId))"
+                     let pairReq: [String: Any] = [
+                         "type": "req", "id": "2", "method": "node.pair.request",
+                         "params": ["requestId": requestId, "silent": true]
+                     ]
+                     self.send(json: pairReq)
                 } else if json["error"] != nil {
                      self.isHandshakeComplete = false
                      self.connectionStatus = "STATUS_HANDSHAKE_FAILED"
@@ -605,7 +663,8 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         
         // Protocol V2 components: version, deviceId, clientId, role, mode, clientVersion, ts, token, nonce
         // Note: clientId MUST be 'openclaw-macos' (or similar recognized id) for standard Gateway logic.
-        let components = ["v2", deviceId, "openclaw-macos", "node", "node", "", String(tsMs), serverToken, nonce]
+        let authToken = deviceToken ?? serverToken
+        let components = ["v2", deviceId, "openclaw-macos", "node", "node", "", String(tsMs), authToken, nonce]
         let payloadString = components.joined(separator: "|")
         guard let payloadData = payloadString.data(using: .utf8) else { return }
         guard let signature = try? signingKey.signature(for: payloadData) else { return }
@@ -630,7 +689,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 "role": "node", "caps": ["clipboard", "screen", "camera", "file", "location"], 
                 "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set", "location.get", "location.start", "location.stop", "location.add_smart"],
                 "permissions": ["clipboard.read": true, "clipboard.write": true],
-                "auth": ["token": serverToken],
+                "auth": ["token": authToken],
                 "device": [
                     "id": deviceId, "publicKey": pubKeyB64, "signature": sigB64, "signedAt": tsMs, "nonce": nonce
                 ]

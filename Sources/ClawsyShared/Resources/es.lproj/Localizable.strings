@@ -88,3 +88,8 @@
 "NO_DATA" = "No hay datos recibidos.";
 "SELECT_TEXT_COPY" = "Selecciona el texto para copiar.";
 "COPY_ALL" = "Copiar todo";
+
+/* Node Pairing */
+"STATUS_PAIRING" = "Emparejando…";
+"STATUS_PAIRING_PENDING" = "Esperando aprobación…";
+"STATUS_PAIRING_REJECTED" = "Emparejamiento rechazado";
