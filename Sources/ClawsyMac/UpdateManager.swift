@@ -244,24 +244,130 @@ class UpdateManager: ObservableObject {
         }
     }
 
-    func installUpdate(at path: String) {
-        let scriptPath = Bundle.main.path(forResource: "update_installer", ofType: "sh") ?? "/tmp/update_installer.sh"
+    func installUpdate(at newAppPath: String) {
+        let targetPath = Bundle.main.bundlePath
+        let scriptPath = "/tmp/clawsy_updater.sh"
+        let launchdLabel = "ai.clawsy.updater"
         
-        guard FileManager.default.fileExists(atPath: scriptPath) else {
-            print("❌ update_installer.sh not found in bundle!")
+        print("🔄 Preparing update: '\(newAppPath)' → '\(targetPath)'")
+        
+        // Generate the update script inline (no bundled resource needed).
+        // The script waits for the app to quit, swaps the bundle, and relaunches.
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let plistPath = "\(home)/Library/LaunchAgents/\(launchdLabel).plist"
+        
+        let script = """
+        #!/bin/bash
+        sleep 2
+        rm -rf "\(targetPath)"
+        mv "\(newAppPath)" "\(targetPath)"
+        xattr -cr "\(targetPath)"
+        open "\(targetPath)"
+        launchctl remove \(launchdLabel) 2>/dev/null
+        rm -f \(scriptPath)
+        rm -f \(plistPath)
+        """
+        
+        do {
+            try script.write(toFile: scriptPath, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptPath)
+        } catch {
+            print("❌ Failed to write update script: \(error)")
             return
         }
         
-        _ = try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptPath)
+        // Strategy 1: `launchctl submit` — schedules a launchd job outside the sandbox
+        let submitted = launchctlSubmit(label: launchdLabel, scriptPath: scriptPath)
         
-        let targetPath = Bundle.main.bundlePath
-        print("🔄 Running installer: \(scriptPath) '\(path)' '\(targetPath)'")
+        if !submitted {
+            // Strategy 2: Write a LaunchAgent plist and load it
+            print("⚠️ launchctl submit failed, falling back to LaunchAgent plist...")
+            let plistLoaded = loadLaunchAgentPlist(label: launchdLabel, scriptPath: scriptPath)
+            if !plistLoaded {
+                print("❌ Both launchctl strategies failed. Update aborted.")
+                return
+            }
+        }
         
-        let task = Process()
-        task.launchPath = "/bin/bash"
-        task.arguments = [scriptPath, path, targetPath]
-        
-        try? task.run()
+        print("🚀 Update scheduled. Terminating app...")
         NSApp.terminate(nil)
+    }
+    
+    /// Try `launchctl submit -l <label> -- /bin/bash <script>`.
+    /// Returns `true` if the process launched without error.
+    private func launchctlSubmit(label: String, scriptPath: String) -> Bool {
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+        proc.arguments = ["submit", "-l", label, "--", "/bin/bash", scriptPath]
+        
+        do {
+            try proc.run()
+            proc.waitUntilExit()
+            if proc.terminationStatus == 0 {
+                print("✅ launchctl submit succeeded")
+                return true
+            } else {
+                print("⚠️ launchctl submit exited with status \(proc.terminationStatus)")
+                return false
+            }
+        } catch {
+            print("⚠️ launchctl submit threw: \(error)")
+            return false
+        }
+    }
+    
+    /// Write a LaunchAgent plist to ~/Library/LaunchAgents and load it.
+    /// Returns `true` on success.
+    private func loadLaunchAgentPlist(label: String, scriptPath: String) -> Bool {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let agentsDir = "\(home)/Library/LaunchAgents"
+        let plistPath = "\(agentsDir)/\(label).plist"
+        
+        // Ensure ~/Library/LaunchAgents exists
+        try? FileManager.default.createDirectory(atPath: agentsDir, withIntermediateDirectories: true)
+        
+        let plist = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>Label</key>
+            <string>\(label)</string>
+            <key>ProgramArguments</key>
+            <array>
+                <string>/bin/bash</string>
+                <string>\(scriptPath)</string>
+            </array>
+            <key>RunAtLoad</key>
+            <true/>
+        </dict>
+        </plist>
+        """
+        
+        do {
+            try plist.write(toFile: plistPath, atomically: true, encoding: .utf8)
+        } catch {
+            print("❌ Failed to write LaunchAgent plist: \(error)")
+            return false
+        }
+        
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+        proc.arguments = ["load", plistPath]
+        
+        do {
+            try proc.run()
+            proc.waitUntilExit()
+            if proc.terminationStatus == 0 {
+                print("✅ LaunchAgent plist loaded")
+                return true
+            } else {
+                print("⚠️ launchctl load exited with status \(proc.terminationStatus)")
+                return false
+            }
+        } catch {
+            print("❌ launchctl load threw: \(error)")
+            return false
+        }
     }
 }
