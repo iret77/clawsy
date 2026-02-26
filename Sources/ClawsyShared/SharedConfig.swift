@@ -1,10 +1,27 @@
 import Foundation
 
 public struct SharedConfig {
-    public static let appGroup = "group.ai.clawsy"
+    public static let appGroup = "group.ai.openclaw.clawsy"
     
     public static var sharedDefaults: UserDefaults {
-        return UserDefaults(suiteName: appGroup) ?? .standard
+        let groupDefaults = UserDefaults(suiteName: appGroup) ?? .standard
+        
+        // Migration Check: If group defaults are empty, try to migrate from standard
+        if groupDefaults.string(forKey: "serverHost") == nil {
+            let standard = UserDefaults.standard
+            if let oldHost = standard.string(forKey: "serverHost") {
+                groupDefaults.set(oldHost, forKey: "serverHost")
+                groupDefaults.set(standard.string(forKey: "serverPort"), forKey: "serverPort")
+                groupDefaults.set(standard.string(forKey: "serverToken"), forKey: "serverToken")
+                groupDefaults.set(standard.bool(forKey: "extendedContextEnabled"), forKey: "extendedContextEnabled")
+                groupDefaults.set(standard.string(forKey: "sshUser"), forKey: "sshUser")
+                groupDefaults.set(standard.bool(forKey: "useSshFallback"), forKey: "useSshFallback")
+                groupDefaults.set(standard.string(forKey: "sharedFolderPath"), forKey: "sharedFolderPath")
+                groupDefaults.synchronize()
+            }
+        }
+        
+        return groupDefaults
     }
     
     public static var serverHost: String { sharedDefaults.string(forKey: "serverHost") ?? "" }
