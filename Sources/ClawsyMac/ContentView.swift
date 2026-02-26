@@ -380,8 +380,9 @@ struct DebugLogView: View {
     @Binding var isPresented: Bool
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("DEBUG_LOG_TITLE", bundle: .clawsy)
                         .font(.system(size: 15, weight: .bold))
@@ -392,32 +393,41 @@ struct DebugLogView: View {
                 Spacer()
                 Button(action: { isPresented = false }) {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
                         .font(.system(size: 16))
+                        .foregroundColor(.secondary.opacity(0.8))
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.top, 2)
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
             
+            Divider().opacity(0.3)
+            
+            // Log Content
             ScrollView {
                 if logText.isEmpty {
                     Text("NO_DATA", bundle: .clawsy)
                         .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
                 } else {
                     Text(logText)
                         .font(.system(.caption, design: .monospaced))
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .textSelection(.enabled)
+                        .padding()
                 }
             }
-            .padding(8)
-            .background(VisualEffectView(material: .popover, blendingMode: .withinWindow))
-            .cornerRadius(4)
+            .background(Color.black.opacity(0.05))
             
+            Divider().opacity(0.3)
+            
+            // Footer
             HStack {
                 Text("SELECT_TEXT_COPY", bundle: .clawsy)
-                    .font(.caption2)
+                    .font(.system(size: 11))
                     .foregroundColor(.secondary)
                 Spacer()
                 Button(action: {
@@ -426,9 +436,13 @@ struct DebugLogView: View {
                 }) {
                     Text("COPY_ALL", bundle: .clawsy)
                 }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(Color.black.opacity(0.02))
         }
-        .padding(16)
     }
 }
 
@@ -444,34 +458,41 @@ struct MetadataView: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack(alignment: .center) {
                 Label(title: { Text("LAST_METADATA", bundle: .clawsy) }, icon: { Image(systemName: "info.circle.fill") })
                     .font(.system(size: 15, weight: .bold))
                 Spacer()
                 Button(action: { isPresented = false }) {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary.opacity(0.8))
                 }
                 .buttonStyle(.plain)
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
             
+            Divider().opacity(0.3)
+            
+            // Content
             ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 12) {
                     MetadataRow(label: "Version", value: "0.2.4")
-                    MetadataRow(label: "Server Status", value: network.isServerClawsyAware ? "Ready (\\(network.serverVersion))" : "Basic")
+                    MetadataRow(label: "Server Status", value: network.isServerClawsyAware ? "Ready (\(network.serverVersion))" : "Basic")
                     MetadataRow(label: "Local Time", value: ISO8601DateFormatter().string(from: Date()))
                     MetadataRow(label: "Timezone", value: TimeZone.current.identifier)
                     
                     if SharedConfig.extendedContextEnabled {
-                        Divider().padding(.vertical, 4)
+                        Divider().padding(.vertical, 4).opacity(0.3)
                         Text("EXTENDED_CONTEXT", bundle: .clawsy)
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.cyan)
                         
                         let telemetry = NetworkManager.getTelemetry()
                         MetadataRow(label: "Device", value: telemetry["deviceName"] as? String ?? "Unknown")
-                        // Model row removed to save space
                         
                         if let battery = telemetry["batteryLevel"] as? Float, battery >= 0 {
                             MetadataRow(label: "Battery", value: "\(Int(battery * 100))%\(telemetry["isCharging"] as? Bool == true ? " ⚡️" : "")")
@@ -495,20 +516,26 @@ struct MetadataView: View {
                         Text("EXTENDED_CONTEXT_DISABLED", bundle: .clawsy)
                             .font(.system(size: 10).italic())
                             .foregroundColor(.secondary)
+                            .padding(.top, 4)
                     }
                 }
-                .padding(4)
+                .padding(20)
             }
-            .scrollIndicators(.visible)
-            .padding(8)
-            .background(VisualEffectView(material: .popover, blendingMode: .withinWindow))
-            .cornerRadius(8)
+            .background(Color.black.opacity(0.05))
             
-            Text("METADATA_VIEW_DESC", bundle: .clawsy)
-                .font(.system(size: 9))
-                .foregroundColor(.secondary)
+            Divider().opacity(0.3)
+            
+            // Footer
+            HStack {
+                Text("METADATA_VIEW_DESC", bundle: .clawsy)
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(Color.black.opacity(0.02))
         }
-        .padding(16)
     }
 }
 
@@ -572,30 +599,35 @@ struct SettingsView: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack(alignment: .center) {
                 Text("SETTINGS_TITLE", bundle: .clawsy)
                     .font(.system(size: 15, weight: .bold))
                 Spacer()
                 Button(action: { isPresented = false }) {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
                         .font(.system(size: 16))
+                        .foregroundColor(.secondary.opacity(0.8))
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.top, 2) 
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
 
+            Divider().opacity(0.3)
             
+            // Content
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 24) {
                     // Gateway Section
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         Label(title: { Text("GATEWAY", bundle: .clawsy) }, icon: { Image(systemName: "antenna.radiowaves.left.and.right") })
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.blue)
                         
-                        HStack {
+                        HStack(spacing: 8) {
                             TextField(text: $serverHost) {
                                 Text("HOST", bundle: .clawsy)
                             }
@@ -617,11 +649,13 @@ struct SettingsView: View {
                         .font(.system(.body, design: .monospaced))
                     }
                     
+                    Divider().opacity(0.3)
+                    
                     // SSH Fallback Section
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             Label(title: { Text("SSH_FALLBACK", bundle: .clawsy) }, icon: { Image(systemName: "lock.shield") })
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(.orange)
                             Spacer()
                             Toggle("", isOn: $useSshFallback)
@@ -635,26 +669,29 @@ struct SettingsView: View {
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
                         .disabled(!useSshFallback)
+                        .opacity(useSshFallback ? 1.0 : 0.5)
                         
                         Text("SSH_FALLBACK_DESC", bundle: .clawsy)
-                            .font(.system(size: 10))
+                            .font(.system(size: 11))
                             .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
 
+                    Divider().opacity(0.3)
+
                     // Extended Context Section
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             Label(title: { Text("EXTENDED_CONTEXT", bundle: .clawsy) }, icon: { Image(systemName: "chart.bar.doc.horizontal") })
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(.cyan)
                             
-                            Button(action: {
-                                // Info Popover logic could go here or just a help text
-                            }) {
+                            Button(action: {}) {
                                 Image(systemName: "info.circle")
-                                    .font(.system(size: 10))
+                                    .font(.system(size: 12))
                             }
                             .buttonStyle(.plain)
+                            .foregroundColor(.secondary)
                             .help(NSLocalizedString("EXTENDED_CONTEXT_HELP", bundle: .clawsy, comment: ""))
 
                             Spacer()
@@ -664,14 +701,17 @@ struct SettingsView: View {
                         }
                         
                         Text("EXTENDED_CONTEXT_DESC", bundle: .clawsy)
-                            .font(.system(size: 10))
+                            .font(.system(size: 11))
                             .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     
+                    Divider().opacity(0.3)
+                    
                     // Hotkeys Section
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 12) {
                         Label(title: { Text("HOTKEYS", bundle: .clawsy) }, icon: { Image(systemName: "keyboard") })
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.purple)
                         
                         HStack {
@@ -679,12 +719,12 @@ struct SettingsView: View {
                                 .font(.system(size: 12))
                             Spacer()
                             Text("⌘ + ⇧ +")
-                                .font(.system(size: 12))
+                                .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(.secondary)
                             TextField("", text: $quickSendHotkey)
                                 .textFieldStyle(.roundedBorder)
-                                .font(.system(.body, design: .monospaced))
-                                .frame(width: 40)
+                                .font(.system(.body, design: .monospaced, weight: .bold))
+                                .frame(width: 44)
                                 .multilineTextAlignment(.center)
                                 .onChange(of: quickSendHotkey) { newValue in
                                     if newValue.count > 1 {
@@ -700,12 +740,12 @@ struct SettingsView: View {
                                 .font(.system(size: 12))
                             Spacer()
                             Text("⌘ + ⇧ +")
-                                .font(.system(size: 12))
+                                .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(.secondary)
                             TextField("", text: $pushClipboardHotkey)
                                 .textFieldStyle(.roundedBorder)
-                                .font(.system(.body, design: .monospaced))
-                                .frame(width: 40)
+                                .font(.system(.body, design: .monospaced, weight: .bold))
+                                .frame(width: 44)
                                 .multilineTextAlignment(.center)
                                 .onChange(of: pushClipboardHotkey) { newValue in
                                     if newValue.count > 1 {
@@ -717,15 +757,18 @@ struct SettingsView: View {
                         }
                     }
                     
+                    Divider().opacity(0.3)
+                    
                     // Updates Section
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         Label(title: { Text("UPDATES", bundle: .clawsy) }, icon: { Image(systemName: "arrow.triangle.2.circlepath") })
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.blue)
                         
                         HStack {
                             Text("Current: \(SharedConfig.versionDisplay)")
-                                .font(.system(size: 11))
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
                             
                             Spacer()
                             
@@ -737,6 +780,7 @@ struct SettingsView: View {
                                     updateManager.downloadAndInstall()
                                 }
                                 .buttonStyle(.borderedProminent)
+                                .tint(.green)
                             } else {
                                 Button(action: { updateManager.checkForUpdates() }) {
                                     Label(title: { Text("CHECK_NOW", bundle: .clawsy) }, icon: { Image(systemName: "arrow.clockwise") })
@@ -746,20 +790,23 @@ struct SettingsView: View {
                         }
                     }
                     
+                    Divider().opacity(0.3)
+                    
                     // File Sync Section
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         Label(title: { Text("SHARED_FOLDER", bundle: .clawsy) }, icon: { Image(systemName: "folder.badge.plus") })
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.green)
                         
                         // Path display
                         Text(sharedFolderPath.isEmpty ? "None" : sharedFolderPath)
-                            .font(.system(.body, design: .monospaced))
-                            .padding(.horizontal, 10)
-                            .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
-                            .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-                            .cornerRadius(6)
-                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.1), lineWidth: 1))
+                            .font(.system(size: 11, design: .monospaced))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.black.opacity(0.05))
+                            .cornerRadius(8)
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.1), lineWidth: 0.5))
                             .foregroundColor(.primary)
                         
                         HStack(spacing: 8) {
@@ -782,26 +829,28 @@ struct SettingsView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 10) // Prevents focus ring clipping and adds breathing room
-                .padding(.vertical, 4)
+                .padding(20)
             }
+            .background(Color.black.opacity(0.02))
             
-            Divider()
+            Divider().opacity(0.3)
             
+            // Footer
             HStack {
                 Text("VIBRANT_SECURE", bundle: .clawsy)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
                 
                 Spacer()
                 
                 Text("Auto-saves")
-                    .font(.system(size: 10))
+                    .font(.system(size: 11))
                     .foregroundColor(.secondary.opacity(0.5))
             }
-            .padding(.bottom, 4)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(Color.black.opacity(0.03))
         }
-        .padding(20)
-        .background(VisualEffectView(material: .popover, blendingMode: .withinWindow))
+        .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
     }
 }
