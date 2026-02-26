@@ -253,7 +253,13 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             
             let remoteTarget = "\(user)@\(host)"
             let tunnelSpec = "127.0.0.1:18790:127.0.0.1:\(port)"
-            let controlPath = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("clawsy_ssh.sock").path
+            
+            let controlPath: String
+            if let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.ai.openclaw.clawsy") {
+                controlPath = groupURL.appendingPathComponent("clawsy_ssh.sock").path
+            } else {
+                controlPath = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("clawsy_ssh.sock").path
+            }
             
             self.connectionStatus = "STATUS_STARTING_SSH"
             self.sshProcess?.terminate()
