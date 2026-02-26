@@ -40,6 +40,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         // Resolve sandbox bookmark for Shared Folder early
         SharedConfig.resolveBookmark()
         
+        // Kill any orphaned SSH tunnel process from a previous session holding port 18790
+        let cleanup = Process()
+        cleanup.executableURL = URL(fileURLWithPath: "/bin/sh")
+        cleanup.arguments = ["-c", "lsof -ti tcp:18790 2>/dev/null | xargs kill -9 2>/dev/null; true"]
+        cleanup.standardOutput = FileHandle.nullDevice
+        cleanup.standardError = FileHandle.nullDevice
+        try? cleanup.run()
+        cleanup.waitUntilExit()
+        
         // Single Instance Check
         let bundleID = Bundle.main.bundleIdentifier ?? "com.openclaw.Clawsy"
         let runningApps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
