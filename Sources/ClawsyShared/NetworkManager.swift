@@ -589,8 +589,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             
         case "file.list":
             self.sendAck(id: id)
+            let subPath = params["subPath"] as? String ?? ""
             DispatchQueue.global(qos: .userInitiated).async {
-                let files = ClawsyFileManager.listFiles(at: baseDir)
+                let files = ClawsyFileManager.listFiles(at: baseDir, subPath: subPath)
                 let result = files.map { ["name": $0.name, "isDirectory": $0.isDirectory, "size": $0.size, "modified": $0.modified.timeIntervalSince1970] }
                 self.sendResponse(id: id, result: ["files": result, "path": self.sharedFolderPath])
             }
@@ -616,6 +617,28 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 }
             }
             if let expiry = filePermissionExpiry, expiry > Date() { executeSet() } else { onFileSyncRequested?(name, "Upload", { duration in if let duration = duration { self.filePermissionExpiry = Date().addingTimeInterval(duration) }; executeSet() }, { self.sendError(id: id, code: -1, message: "User denied file write") }) }
+        case "file.delete":
+            guard let name = params["name"] as? String else { sendError(id: id, code: -32602, message: "Missing 'name' parameter"); return }
+            let fullPath = (baseDir as NSString).appendingPathComponent(name)
+            self.sendAck(id: id)
+            let executeDelete = {
+                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .module, comment: ""), body: "Deleted: \(name)", isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
+                DispatchQueue.global(qos: .userInitiated).async {
+                    if ClawsyFileManager.deleteFile(at: fullPath) { self.sendResponse(id: id, result: ["status": "ok", "name": name]) } else { self.sendError(id: id, code: -32000, message: "Failed to delete file") }
+                }
+            }
+            if let expiry = filePermissionExpiry, expiry > Date() { executeDelete() } else { onFileSyncRequested?(name, "Delete", { duration in if let duration = duration { self.filePermissionExpiry = Date().addingTimeInterval(duration) }; executeDelete() }, { self.sendError(id: id, code: -1, message: "User denied file delete") }) }
+        case "file.rename":
+            guard let name = params["name"] as? String, let newName = params["newName"] as? String else { sendError(id: id, code: -32602, message: "Missing 'name' or 'newName' parameter"); return }
+            let fullPath = (baseDir as NSString).appendingPathComponent(name)
+            self.sendAck(id: id)
+            let executeRename = {
+                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .module, comment: ""), body: "Renamed: \(name) -> \(newName)", isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
+                DispatchQueue.global(qos: .userInitiated).async {
+                    if ClawsyFileManager.renameFile(at: fullPath, to: newName) { self.sendResponse(id: id, result: ["status": "ok", "name": newName]) } else { self.sendError(id: id, code: -32000, message: "Failed to rename file") }
+                }
+            }
+            if let expiry = filePermissionExpiry, expiry > Date() { executeRename() } else { onFileSyncRequested?(name, "Rename to \(newName)", { duration in if let duration = duration { self.filePermissionExpiry = Date().addingTimeInterval(duration) }; executeRename() }, { self.sendError(id: id, code: -1, message: "User denied file rename") }) }
         default: sendError(id: id, code: -32601, message: "Method not found")
         }
     }
