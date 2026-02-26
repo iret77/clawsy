@@ -14,8 +14,8 @@ Clawsy is a native macOS companion app designed to empower your [OpenClaw](https
 
 ### 🚀 Quick Send
 Instant communication with your agent directly from your menu bar. 
-*   **Silent Interaction:** Uses `receipt: false` to ensure a clean, distraction-free chat experience.
-*   **Rich Metadata:** Automatically attaches context like local time, timezone, and device info.
+*   **Seamless Interaction:** Quickly send commands or thoughts without switching apps.
+*   **Rich Metadata:** Automatically attaches context like local time, battery status, and device info so your agent always knows your current environment.
 
 ### 📋 Smart Clipboard Sync
 Keep your agent in the loop without cluttering your main chat.
