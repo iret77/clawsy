@@ -199,6 +199,12 @@ cat <<EOF > "$SHARE_EXT_BUNDLE/Contents/Info.plist"
 </plist>
 EOF
 
+# 7a. Bundle CLAWSY.md (agent documentation) into app Resources
+if [ -f "CLAWSY.md" ]; then
+    cp "CLAWSY.md" "$RESOURCES_DIR/CLAWSY.md"
+    echo "✅ Bundled CLAWSY.md into app resources"
+fi
+
 # 7. Copy Localizations (redundant but safe)
 mkdir -p "$RESOURCES_DIR/en.lproj"
 mkdir -p "$RESOURCES_DIR/de.lproj"

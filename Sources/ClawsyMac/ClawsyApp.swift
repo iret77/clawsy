@@ -43,6 +43,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Install CLAWSY.md into OpenClaw workspace on first launch (or if outdated)
+        installClawsyDocumentation()
+
         // Resolve sandbox bookmark for Shared Folder early
         SharedConfig.resolveBookmark()
         
@@ -311,6 +314,35 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         // Close popover when user clicks away or switches apps
         if popover.isShown {
             popover.performClose(nil)
+        }
+    }
+
+    /// Copies CLAWSY.md from app bundle into the OpenClaw workspace so agents
+    /// automatically have access to the documentation on first launch.
+    private func installClawsyDocumentation() {
+        guard let bundledDoc = Bundle.main.url(forResource: "CLAWSY", withExtension: "md") else { return }
+
+        // Find OpenClaw workspace: ~/.openclaw/workspace/
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let workspace = home.appendingPathComponent(".openclaw/workspace")
+        let destination = workspace.appendingPathComponent("CLAWSY.md")
+
+        // Only copy if workspace exists
+        guard FileManager.default.fileExists(atPath: workspace.path) else { return }
+
+        // Copy if missing or if bundled version is newer (check by app version)
+        let versionKey = "clawsy_doc_version_installed"
+        let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+        let installedVersion = UserDefaults.standard.string(forKey: versionKey) ?? ""
+
+        if !FileManager.default.fileExists(atPath: destination.path) || installedVersion != currentVersion {
+            try? FileManager.default.copyItem(at: bundledDoc, to: destination)
+            // Overwrite if exists
+            if FileManager.default.fileExists(atPath: destination.path) && installedVersion != currentVersion {
+                try? FileManager.default.removeItem(at: destination)
+                try? FileManager.default.copyItem(at: bundledDoc, to: destination)
+            }
+            UserDefaults.standard.set(currentVersion, forKey: versionKey)
         }
     }
 }
