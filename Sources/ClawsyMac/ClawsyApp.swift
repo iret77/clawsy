@@ -219,7 +219,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                         type: "quick_send",
                         content: text,
                         includeTelemetry: SharedConfig.extendedContextEnabled) {
-                        network.sendDeeplink(message: jsonString, sessionKey: "main")
+                        // Full envelope → clawsy-service (context storage)
+                        network.sendDeeplink(message: jsonString, sessionKey: "clawsy-service")
+                        // Trigger → main session (agent responds, quoting the message)
+                        let trigger: [String: Any] = ["clawsy_envelope": [
+                            "type": "quick_send_trigger",
+                            "message": text
+                        ]]
+                        if let triggerData = try? JSONSerialization.data(withJSONObject: trigger),
+                           let triggerString = String(data: triggerData, encoding: .utf8) {
+                            network.sendDeeplink(message: triggerString, sessionKey: "main")
+                        }
                     }
                     self.hideQuickSend()
                 }, onCancel: {
