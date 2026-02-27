@@ -1119,22 +1119,25 @@ struct SettingsView: View {
             // Footer
             VStack(spacing: 0) {
                 Divider().opacity(0.3)
-                HStack(spacing: 8) {
+                HStack(spacing: 4) {
+                    // Icon-only buttons with tooltips — avoids text wrapping
                     Button(action: { onShowDebugLog?() }) {
-                        Label(NSLocalizedString("DEBUG_LOG", bundle: .clawsy, comment: ""), systemImage: "terminal.fill")
-                            .font(.system(size: 11))
+                        Image(systemName: "terminal.fill")
+                            .font(.system(size: 13))
+                            .frame(width: 28, height: 28)
                     }
                     .buttonStyle(.plain)
                     .foregroundColor(.secondary)
-
-                    Divider().frame(height: 14)
+                    .help(NSLocalizedString("DEBUG_LOG", bundle: .clawsy, comment: ""))
 
                     Button(action: { onShowOnboarding?() }) {
-                        Label(NSLocalizedString("SETUP", bundle: .clawsy, comment: ""), systemImage: "checklist")
-                            .font(.system(size: 11))
+                        Image(systemName: "checklist")
+                            .font(.system(size: 13))
+                            .frame(width: 28, height: 28)
                     }
                     .buttonStyle(.plain)
                     .foregroundColor(.secondary)
+                    .help(NSLocalizedString("SETUP", bundle: .clawsy, comment: ""))
 
                     Spacer()
 
@@ -1142,8 +1145,8 @@ struct SettingsView: View {
                         .font(.system(size: 10))
                         .foregroundColor(.secondary.opacity(0.5))
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 6)
                 .background(Color.black.opacity(0.03))
             }
         }
