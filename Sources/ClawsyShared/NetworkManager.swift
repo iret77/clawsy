@@ -331,7 +331,21 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     private func sshKeyPathIfAvailable() -> String? {
         guard let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedConfig.appGroup) else { return nil }
         let keyURL = groupURL.appendingPathComponent("clawsy_ssh_key")
-        return FileManager.default.fileExists(atPath: keyURL.path) ? keyURL.path : nil
+        guard FileManager.default.fileExists(atPath: keyURL.path) else { return nil }
+
+        // SSH requires key files to be chmod 0600 — copy to /tmp with correct permissions
+        let tmpPath = NSTemporaryDirectory() + "clawsy_ssh_key_\(ProcessInfo.processInfo.processIdentifier)"
+        let tmpURL = URL(fileURLWithPath: tmpPath)
+        do {
+            if FileManager.default.fileExists(atPath: tmpPath) {
+                try FileManager.default.removeItem(at: tmpURL)
+            }
+            try FileManager.default.copyItem(at: keyURL, to: tmpURL)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: tmpPath)
+            return tmpPath
+        } catch {
+            return keyURL.path  // fallback to original
+        }
     }
 
     private func parseSshHostAndPort(_ host: String) -> (host: String, port: String?) {
