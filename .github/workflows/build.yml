@@ -47,8 +47,9 @@ jobs:
 
     - name: Zip App
       run: |
+        cp CLAWSY.md .build/app/CLAWSY.md
         cd .build/app
-        zip -r ../../Clawsy.app.zip Clawsy.app
+        zip -r ../../Clawsy.app.zip Clawsy.app CLAWSY.md
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
