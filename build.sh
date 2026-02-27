@@ -98,8 +98,15 @@ echo "📦 Locating and embedding Shared Resource Bundle..."
 # SPM generates a bundle for resources. We MUST include it.
 SHARED_BUNDLE=$(find "$BUILD_DIR" -name "Clawsy_ClawsyShared.bundle" -type d | head -n 1)
 if [ -d "$SHARED_BUNDLE" ]; then
+    # Always overwrite with freshly built bundle (no stale cache)
+    rm -rf "$RESOURCES_DIR/Clawsy_ClawsyShared.bundle"
     cp -R "$SHARED_BUNDLE" "$RESOURCES_DIR/"
-    echo "✅ Embedded ClawsyShared bundle"
+    # Overwrite strings inside the bundle with the current source (belt + suspenders)
+    cp Sources/ClawsyShared/Resources/en.lproj/Localizable.strings \
+       "$RESOURCES_DIR/Clawsy_ClawsyShared.bundle/en.lproj/Localizable.strings" 2>/dev/null || true
+    cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings \
+       "$RESOURCES_DIR/Clawsy_ClawsyShared.bundle/de.lproj/Localizable.strings" 2>/dev/null || true
+    echo "✅ Embedded ClawsyShared bundle (strings refreshed)"
 else
     echo "❌ Error: Could not find Shared Resource Bundle. App will crash at startup."
     exit 1
