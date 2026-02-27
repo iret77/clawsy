@@ -541,20 +541,62 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         send(json: discoveryReq)
     }
 
-    public var onTaskUpdate: ((String, String, Double, String) -> Void)?
+    /// (agentName, title, progress, statusText, runId?)
+    public var onTaskUpdate: ((String, String, Double, String, String?) -> Void)?
+    /// Called when all tasks for a runId should be marked complete
+    public var onTaskCompleteRun: ((String) -> Void)?
 
     private func handleMessage(_ text: String) {
         guard let data = text.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
 
-        // 1. Task Update (agent.status)
+        // 1a. Native Gateway agent events (type: "agent")
+        if let type = json["type"] as? String, type == "agent",
+           let stream = json["stream"] as? String,
+           let eventData = json["data"] as? [String: Any] {
+            let runId = json["runId"] as? String ?? "unknown"
+            let sessionKey = json["sessionKey"] as? String ?? "Agent"
+            let agentName = sessionKey.split(separator: ":").last.map(String.init) ?? "Agent"
+
+            switch stream {
+            case "tool":
+                let toolName = eventData["name"] as? String ?? "tool"
+                let phase = eventData["phase"] as? String ?? ""
+                if phase == "start" || phase.isEmpty {
+                    // Build a short status from input
+                    var statusText = ""
+                    if let input = eventData["input"] as? [String: Any] {
+                        let desc = input.map { "\($0.key)=\($0.value)" }.joined(separator: " ")
+                        statusText = String(desc.prefix(60))
+                    }
+                    onTaskUpdate?(agentName, toolName, 0.0, statusText, runId)
+                } else if phase == "end" {
+                    onTaskUpdate?(agentName, toolName, 1.0, "✓", runId)
+                }
+
+            case "lifecycle":
+                let phase = eventData["phase"] as? String ?? ""
+                if phase == "end" {
+                    onTaskCompleteRun?(runId)
+                } else if phase == "error" {
+                    let errorMsg = eventData["text"] as? String ?? "Fehler"
+                    onTaskUpdate?(agentName, "Error", 1.0, String(errorMsg.prefix(60)), runId)
+                    onTaskCompleteRun?(runId)
+                }
+
+            default:
+                break
+            }
+        }
+
+        // 1b. Legacy Task Update (agent.status) — backward compatibility
         if let kind = json["kind"] as? String, kind == "agent.status",
            let payload = json["payload"] as? [String: Any] {
             let agent = payload["agentName"] as? String ?? "Unknown"
             let title = payload["title"] as? String ?? ""
             let progress = payload["progress"] as? Double ?? 0.0
             let status = payload["statusText"] as? String ?? ""
-            onTaskUpdate?(agent, title, progress, status)
+            onTaskUpdate?(agent, title, progress, status, nil)
         }
 
         let rawId = json["id"]
