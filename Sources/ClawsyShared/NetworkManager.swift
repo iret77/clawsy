@@ -918,9 +918,10 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
     
     /// Send a screenshot as an agent.deeplink with image attachment so the Gateway
-    /// routes it into the active agent session.
+    /// routes it into the dedicated clawsy-service session (not the main chat).
     public func sendScreenshot(base64: String, mimeType: String = "image/jpeg") {
         let payload: [String: Any] = [
+            "sessionKey": "clawsy-service",
             "message": "📸 Screenshot von \(Host.current().localizedName ?? "Mac")",
             "attachments": [
                 [
@@ -940,6 +941,28 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             "params": [
                 "event": "agent.deeplink",
                 "payloadJSON": payloadJSON
+            ]
+        ]
+        send(json: frame)
+    }
+
+    /// Send an event routed to the dedicated clawsy-service session (silent, no main chat spam)
+    public func sendServiceEvent(message: String, payload: [String: Any] = [:]) {
+        var deeplink: [String: Any] = [
+            "sessionKey": "clawsy-service",
+            "message": message
+        ]
+        if !payload.isEmpty, let payloadData = try? JSONSerialization.data(withJSONObject: payload),
+           let payloadStr = String(data: payloadData, encoding: .utf8) {
+            deeplink["payloadJSON"] = payloadStr
+        }
+        let frame: [String: Any] = [
+            "type": "req",
+            "id": "event-\(UUID().uuidString.prefix(8))",
+            "method": "node.event",
+            "params": [
+                "event": "agent.deeplink",
+                "payloadJSON": (try? String(data: JSONSerialization.data(withJSONObject: deeplink), encoding: .utf8)) ?? "{}"
             ]
         ]
         send(json: frame)

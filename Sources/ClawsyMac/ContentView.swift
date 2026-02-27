@@ -338,7 +338,7 @@ struct ContentView: View {
     func takePhotoAndSend() {
         CameraManager.takePhoto(deviceId: nil) { b64 in
             if let b64 = b64 {
-                network.sendEvent(kind: "camera.photo", payload: ["format": "jpeg", "base64": b64])
+                network.sendScreenshot(base64: b64, mimeType: "image/jpeg")
                 DispatchQueue.main.async {
                     appDelegate.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT")
                 }
