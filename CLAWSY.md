@@ -117,6 +117,57 @@ v0.2.x (Februar 2026)
 
 ---
 
+## Mission Control — Agent-Status anzeigen
+
+Der Agent kann laufende Tasks in der Clawsy MissionControl anzeigen indem er eine `.agent_status.json` in den Shared Folder schreibt.
+
+### Format
+```json
+{
+  "updatedAt": "2026-02-27T01:30:00.000Z",
+  "tasks": [
+    {
+      "id": "uuid",
+      "agentName": "CyberClaw",
+      "title": "Clawsy v0.4.17 bauen",
+      "progress": 0.6,
+      "statusText": "Kompiliere FinderSync Extension..."
+    }
+  ]
+}
+```
+
+### Schreiben via nodes tool
+```python
+import json, base64, uuid
+from datetime import datetime, timezone
+
+status = {
+  "updatedAt": datetime.now(timezone.utc).isoformat(),
+  "tasks": [{
+    "id": str(uuid.uuid4()),
+    "agentName": "CyberClaw",
+    "title": "Mein Task",
+    "progress": 0.5,
+    "statusText": "Schritt 2 von 4..."
+  }]
+}
+content = base64.b64encode(json.dumps(status).encode()).decode()
+nodes(action="invoke", invokeCommand="file.set",
+      invokeParamsJson=json.dumps({"name": ".agent_status.json", "content": content}))
+```
+
+### Verhalten
+- FileWatcher erkennt Änderung → MissionControl aktualisiert sofort
+- `updatedAt` älter als 60 Sekunden → Tasks werden automatisch geleert
+- `progress >= 1.0` → Task verschwindet nach 10 Sekunden
+- `.agent_status.json` wird nie durch Folder-Regeln verarbeitet (System-Datei)
+
+### Wichtig
+Der Agent schreibt diese Datei selbst — **keine Änderungen an OpenClaw nötig**.
+
+---
+
 ## .clawsy Manifest-Dateien
 
 Im Shared Folder (`~/Documents/Clawsy`) und allen Unterordnern existiert eine versteckte `.clawsy`-Datei (JSON). Diese wird **automatisch von der App angelegt** — der User muss sie nie manuell erstellen oder berühren.
