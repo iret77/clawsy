@@ -189,3 +189,5 @@
 "ONBOARDING_SKIP" = "Later";
 "ONBOARDING_DONE" = "Done";
 "RULE_NOTIFY_TITLE" = "Clawsy Rule triggered";
+"ONBOARDING_ACCESSIBILITY_RESTART_HINT" = "Permission granted — please restart Clawsy to activate it.";
+"ONBOARDING_RESTART" = "Restart Now";
