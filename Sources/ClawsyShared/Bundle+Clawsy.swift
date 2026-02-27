@@ -2,27 +2,27 @@ import Foundation
 
 public extension Bundle {
     static var clawsy: Bundle {
-        // Fallback logic for manual builds without standard SPM bundle accessors
-        #if DEBUG
-        return .main
-        #else
-        // Try to find the bundle manually if Bundle.module is missing or crashing
-        let bundleName = "Clawsy_ClawsyShared.bundle"
-        let candidates = [
-            Bundle.main.resourceURL,
-            Bundle.main.bundleURL,
-            Bundle.main.url(forResource: "Clawsy_ClawsyShared", withExtension: "bundle")?.deletingLastPathComponent(),
-            Bundle.main.url(forResource: "ClawsyMac", withExtension: "bundle")?.deletingLastPathComponent()
+        // 1. Try SPM-generated bundle (works in DEBUG + some Release configs)
+        let bundleName = "Clawsy_ClawsyShared"
+        let candidates: [URL?] = [
+            Bundle.main.resourceURL?.appendingPathComponent("\(bundleName).bundle"),
+            Bundle.main.bundleURL.appendingPathComponent("\(bundleName).bundle"),
+            Bundle.main.resourceURL?.appendingPathComponent("Contents/Resources/\(bundleName).bundle"),
+            Bundle(for: BundleLocator.self).resourceURL?.appendingPathComponent("\(bundleName).bundle"),
+            Bundle(for: BundleLocator.self).bundleURL.appendingPathComponent("\(bundleName).bundle")
         ]
-        
-        for candidate in candidates {
-            let bundlePath = candidate?.appendingPathComponent(bundleName)
-            if let bundle = bundlePath.flatMap(Bundle.init(url:)) {
+
+        for url in candidates.compactMap({ $0 }) {
+            if let bundle = Bundle(url: url), bundle.resourceURL != nil {
                 return bundle
             }
         }
-        
-        return .main // Desperate fallback
-        #endif
+
+        // 2. Fall back to main bundle — build.sh copies Localizable.strings
+        //    directly into Contents/Resources/{en,de}.lproj/ so .main always works.
+        return .main
     }
 }
+
+// Used only for bundle lookup — do not remove
+private class BundleLocator {}

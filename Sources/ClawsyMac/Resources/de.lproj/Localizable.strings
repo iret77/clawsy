@@ -1,0 +1,209 @@
+"FILE_SYNC_REQUEST" = "Dateisynchronisierung";
+"AGENT_WANTS_TO" = "Der Agent möchte eine Datei %@.";
+"LOCATION" = "Ort: %@";
+"DENY" = "Ablehnen";
+"ALLOW" = "%@ erlauben";
+"ALLOW_ONCE" = "Nur dieses Mal";
+"ALLOW_1H" = "Für 1 Stunde";
+"ALLOW_DAY" = "Für den Rest des Tages";
+"NOTIFICATION_TITLE" = "Clawsy Dateisync";
+"NOTIFICATION_BODY_DOWNLOADING" = "Lade herunter: %@";
+"NOTIFICATION_BODY_UPLOADING" = "Lade hoch: %@";
+"REVOKE_PERMISSION" = "Zugriff widerrufen";
+"CLIPBOARD_SYNC" = "Zwischenablage-Sync";
+"CHAR_COUNT %lld" = "%lld Zeichen";
+"COPY_LOCAL" = "Lokal kopieren";
+"CLIPBOARD_WANTS_WRITE" = "Der Agent möchte in deine Zwischenablage schreiben:";
+"CLIPBOARD_WANTS_READ" = "Der Agent möchte deine Zwischenablage lesen.";
+
+/* Main Menu */
+"APP_NAME" = "Clawsy";
+"SCREENSHOT" = "Screenshot";
+"FULL_SCREEN" = "Vollbild";
+"INTERACTIVE_AREA" = "Interaktiver Bereich";
+"PUSH_CLIPBOARD" = "Zwischenablage senden";
+"COPY_TO_AGENT" = "Zum Agenten kopieren";
+"QUICK_SEND" = "Quick Send";
+"SEND_AND_FORGET" = "Text an Agenten senden";
+"QUICK_SEND_PLACEHOLDER" = "Schicke etwas an OpenClaw...";
+"SENDING_TO_OPENCLAW" = "Sende an OpenClaw...";
+"SHARE_SUCCESS" = "Erfolgreich geteilt";
+"SHARE_FAILED" = "Teilen fehlgeschlagen";
+"FILE_SYNC" = "Dateisync";
+"MANAGED_FOLDER" = "Verwalteter Ordner";
+"CAMERA" = "Kamera";
+"TAKE_PHOTO" = "Foto aufnehmen";
+"LIST_CAMERAS" = "Kameras auflisten";
+"CONNECT" = "Verbinden";
+"DISCONNECT" = "Trennen";
+"SETTINGS" = "Einstellungen...";
+"DEBUG_LOG" = "Debug-Protokoll";
+"QUIT" = "Beenden";
+
+/* Status */
+"STATUS_CONNECTED" = "Verbunden";
+"STATUS_DISCONNECTED" = "Getrennt";
+"STATUS_CONNECTING %lld" = "Verbinde (Versuch %lld)…";
+"STATUS_OFFLINE_REFUSED" = "Offline (Server verweigert)";
+"STATUS_OFFLINE_TIMEOUT" = "Offline (Zeitüberschreitung)";
+"STATUS_ERROR" = "Fehler";
+"STATUS_ONLINE_PAIRED" = "Online (Verbunden)";
+"STATUS_ONLINE_PAIRED_SSH" = "Online (Verbunden über SSH)";
+"STATUS_HANDSHAKE_FAILED" = "Handshake fehlgeschlagen";
+"STATUS_STARTING_SSH" = "SSH-Tunnel wird gestartet…";
+"STATUS_SSH_FAILED" = "SSH-Tunnel fehlgeschlagen";
+"STATUS_SSH_USER_MISSING" = "SSH-Benutzer erforderlich";
+"STATUS_SSH_KEY_MISSING" = "SSH-Schlüssel erforderlich";
+
+/* Alerts */
+"ALERT_SCREENSHOT_TITLE" = "Screenshot erlauben?";
+"ALERT_SCREENSHOT_BODY" = "Der Agent möchte deinen Bildschirm sehen.";
+"ALERT_DENY" = "Ablehnen";
+"ALERT_ALLOW" = "Erlauben";
+
+/* Settings */
+"SETTINGS_TITLE" = "Einstellungen";
+"GATEWAY" = "Gateway";
+"HOST" = "Host / IP";
+"PORT" = "Port";
+"TOKEN" = "Token";
+"SSH_USER" = "SSH-Benutzer";
+"SSH_FALLBACK" = "SSH-Fallback";
+"SSH_FALLBACK_DESC" = "Automatischer SSH-Tunnel bei Verbindungsfehlern.";
+"SHARED_FOLDER" = "Gemeinsamer Ordner";
+"PATH" = "Pfad";
+"SHARED_FOLDER_DESC" = "Nur Dateien in diesem Ordner sind für den Agenten sichtbar.";
+"VIBRANT_SECURE" = "Daten bleiben lokal.";
+"DONE" = "Fertig";
+
+/* Settings Window */
+"SETTINGS_WINDOW_TITLE" = "Clawsy Einstellungen";
+"VERSION_FORMAT %@" = "Version %@";
+
+/* Debug Log */
+"DEBUG_LOG_TITLE" = "Netzwerk-Protokoll";
+"NO_DATA" = "Noch keine Daten empfangen.";
+"SELECT_TEXT_COPY" = "Text zum Kopieren auswählen.";
+"COPY_ALL" = "Alles kopieren";
+
+/* Shared Folder */
+"FOLDER_MISSING_TITLE" = "Ordner nicht gefunden";
+"FOLDER_MISSING_BODY" = "Der konfigurierte Ordner existiert nicht mehr: %@. Die Einstellung wurde zurückgesetzt.";
+"SELECT_SHARED_FOLDER" = "Gemeinsamen Ordner auswählen";
+"SELECT_FOLDER_BUTTON" = "Ordner wählen...";
+"SHOW_IN_FINDER" = "Im Finder zeigen";
+
+/* Camera Preview */
+"CAMERA_PREVIEW_TITLE" = "Kameravorschau";
+"SEND_TO_AGENT" = "An Agenten senden";
+
+"SCREENSHOT_REQUEST" = "Bildschirmfoto-Anfrage";
+"REMOTE_USER_ASKING" = "Der Agent bittet um eine Aufnahme.";
+"SCREENSHOT_REQUEST_BODY" = "Modus wählen:";
+
+/* HUD */
+"CLIPBOARD_SENT" = "In die Cloud kopiert";
+"SCREENSHOT_SENT" = "Bild übertragen";
+
+/* Settings Addition */
+"HOTKEYS" = "Tastenkürzel";
+"HOTKEY_QUICK_SEND" = "Quick Send";
+"HOTKEY_PUSH_CLIPBOARD" = "Zwischenablage senden";
+
+/* Metadata View */
+"LAST_METADATA" = "Letzte Metadaten";
+"EXTENDED_CONTEXT" = "Erweiterter Kontext";
+"EXTENDED_CONTEXT_DESC" = "Liefert Telemetriedaten (Akku, Gerät) zur präziseren Verarbeitung mit.";
+"EXTENDED_CONTEXT_HELP" = "Wenn aktiviert, sieht der Agent zusätzlich zum Text auch Details über deinen Arbeitskontext (z.B. Akkustand).";
+"EXTENDED_CONTEXT_DISABLED" = "Erweiterter Kontext deaktiviert.";
+"METADATA_VIEW_DESC" = "Diese Daten werden bei der nächsten Übertragung im Hintergrund mitgesendet.";
+
+/* Updates */
+"UPDATES" = "Updates";
+"CHECK_NOW" = "Jetzt prüfen";
+"INSTALL_VERSION %@" = "%@ installieren";
+"UPDATE_AVAILABLE %@" = "Update verfügbar: %@";
+"NO_UPDATES" = "Clawsy ist aktuell.";
+"CHECKING" = "Wird geprüft…";
+"CURRENT_VERSION %@" = "Aktuelle Version: %@";
+
+/* SSH Key */
+"IMPORT_SSH_KEY" = "Importieren…";
+"REMOVE_SSH_KEY" = "Entfernen";
+"KEY_INSTALLED" = "Schlüssel: Installiert";
+"KEY_NOT_SET" = "Schlüssel: Nicht gesetzt";
+
+/* Quick Send */
+"SEND" = "Senden";
+"CANCEL" = "Abbrechen";
+
+/* Node Pairing */
+"STATUS_PAIRING" = "Kopplung…";
+"STATUS_PAIRING_PENDING" = "Warte auf Kopplung…";
+"STATUS_PAIRING_REJECTED" = "Kopplung abgelehnt";
+"STATUS_PAIRING_TIMEOUT" = "Kopplung – Zeitüberschreitung";
+
+"MISSION_CONTROL_TITLE" = "Aufgaben-Übersicht";
+"WAITING_FOR_TASKS" = "Warte auf Aufgaben…";
+
+/* Share Extension */
+"SHARE_ERROR_NO_DATA" = "Kein Inhalt zum Teilen vorhanden.";
+"SHARE_ERROR_SEND_FAILED" = "Senden an OpenClaw fehlgeschlagen. Prüfe die Verbindungseinstellungen.";
+
+/* FinderSync Extension */
+"FINDERSYNC_RULES" = "Regeln für diesen Ordner…";
+"FINDERSYNC_SEND_STATUS" = "Status & Telemetrie senden";
+"FINDERSYNC_RUN_ACTIONS" = "Ordner-Aktionen ausführen";
+
+/* Rule Editor */
+"RULE_EDITOR_TITLE" = "Regeln für Ordner";
+"RULE_EDITOR_EMPTY" = "Noch keine Regeln";
+"RULE_EDITOR_EMPTY_HINT" = "Neue Regel hinzufügen, um Aktionen bei Datei-Ereignissen auszulösen.";
+"RULE_ADD" = "Regel hinzufügen";
+"RULE_COUNT %lld" = "%lld Regel(n)";
+"RULE_NEW" = "Neue Regel";
+"RULE_EDIT" = "Regel bearbeiten";
+"RULE_TRIGGER" = "Auslöser";
+"RULE_TRIGGER_FILE_ADDED" = "Datei hinzugefügt";
+"RULE_TRIGGER_FILE_CHANGED" = "Datei geändert";
+"RULE_TRIGGER_MANUAL" = "Manuell";
+"RULE_ACTION" = "Aktion";
+"RULE_ACTION_SEND_TO_AGENT" = "An Agent senden";
+"RULE_ACTION_NOTIFY" = "Benachrichtigung";
+"RULE_PROMPT_PREFIX" = "Prompt-Präfix (optional)";
+"RULE_SAVE" = "Speichern";
+
+/* Onboarding */
+"SETUP" = "Einrichtungsassistent";
+"ONBOARDING_TITLE" = "Willkommen bei Clawsy";
+"ONBOARDING_SUBTITLE" = "Ein paar Schritte, um das Beste aus Clawsy herauszuholen.";
+"ONBOARDING_APP_LOCATION" = "App-Speicherort";
+"ONBOARDING_APP_LOCATION_DESC" = "Clawsy muss in /Applications liegen, damit Erweiterungen funktionieren.";
+"ONBOARDING_MOVE_TO_APPS" = "Im Finder zeigen";
+"ONBOARDING_ACCESSIBILITY" = "Bedienungshilfen";
+"ONBOARDING_ACCESSIBILITY_DESC" = "Erforderlich für globale Tastenkürzel (Quick Send, Zwischenablage).";
+"ONBOARDING_OPEN_SETTINGS" = "Zugriff erlauben";
+"ONBOARDING_FINDERSYNC" = "Finder-Erweiterung";
+"ONBOARDING_FINDERSYNC_DESC" = "Ermöglicht Rechtsklick-Aktionen auf Ordner.";
+"ONBOARDING_ENABLE" = "Aktivieren";
+"ONBOARDING_OPTIONAL" = "optional";
+"ONBOARDING_SKIP" = "Später";
+"ONBOARDING_DONE" = "Fertig";
+"RULE_NOTIFY_TITLE" = "Clawsy Regel ausgelöst";
+"ONBOARDING_ACCESSIBILITY_RESTART_HINT" = "Berechtigung erteilt – bitte starte Clawsy neu, damit sie aktiv wird.";
+"ONBOARDING_RESTART" = "Jetzt neu starten";
+"ONBOARDING_ACCESSIBILITY_SKIP_RESTART" = "Ich habe Zugriff erteilt, ohne Neustart fortfahren →";
+"MISSION_CONTROL_EMPTY" = "Keine aktiven Aufgaben";
+"MISSION_CONTROL_EMPTY_HINT" = "Aufgaben erscheinen hier, sobald ein Agent arbeitet.\nDer Agent schreibt dazu in .agent_status.json im geteilten Ordner.";
+"FILESYNC_TITLE" = "Dateizugriff angefragt";
+"FILESYNC_WINDOW_TITLE" = "Clawsy — Dateizugriff";
+"OP_UPLOAD" = "Hochladen";
+"OP_DOWNLOAD" = "Herunterladen";
+"OP_DELETE" = "Löschen";
+"AGENT_WANTS_TO_OP" = "Der Agent möchte die Datei „%@" %@.";
+"FILENAME_AGENT_STATUS" = "Agentenstatus (intern)";
+"ALLOW_LIMITED" = "Zeitlich erlauben…";
+"ALLOW_UPLOAD" = "Hochladen erlauben";
+"ALLOW_DOWNLOAD" = "Herunterladen erlauben";
+"ALLOW_DELETE" = "Löschen erlauben";
+"ALLOW_GENERIC" = "Erlauben";
