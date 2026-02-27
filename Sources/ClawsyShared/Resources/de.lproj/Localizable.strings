@@ -189,3 +189,4 @@
 "ONBOARDING_OPTIONAL" = "optional";
 "ONBOARDING_SKIP" = "Später";
 "ONBOARDING_DONE" = "Fertig";
+"RULE_NOTIFY_TITLE" = "Clawsy Regel ausgelöst";

@@ -411,10 +411,45 @@ struct ContentView: View {
                 taskStore.loadFromFile(fileURL)
                 return
             }
-            
+
             // Extract relative path for the agent
             let relativePath = changedPath.replacingOccurrences(of: resolvedPath, with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-            
+
+            // --- .clawsy Rule Matching ---
+            let changedURL = URL(fileURLWithPath: changedPath)
+            let fileName = changedURL.lastPathComponent
+            let parentFolder = changedURL.deletingLastPathComponent().path
+
+            // Skip hidden files and .clawsy manifests themselves
+            if !fileName.hasPrefix(".") {
+                let matchedRules = ClawsyManifestManager.matchingRules(for: fileName, in: parentFolder, trigger: "file_added")
+                for rule in matchedRules {
+                    switch rule.action {
+                    case "send_to_agent":
+                        let message = rule.prompt.isEmpty
+                            ? "📂 Neue Datei: \(relativePath)"
+                            : "\(rule.prompt)\n\nDatei: \(relativePath)"
+                        network.sendServiceEvent(message: message, payload: [
+                            "trigger": "file_added",
+                            "fileName": fileName,
+                            "relativePath": relativePath,
+                            "ruleId": rule.id
+                        ])
+                    case "notify":
+                        DispatchQueue.main.async {
+                            let content = UNMutableNotificationContent()
+                            content.title = NSLocalizedString("RULE_NOTIFY_TITLE", bundle: .clawsy, comment: "")
+                            content.body = rule.prompt.isEmpty ? fileName : "\(rule.prompt): \(fileName)"
+                            content.sound = .default
+                            let req = UNNotificationRequest(identifier: "rule-\(rule.id)-\(UUID().uuidString.prefix(8))", content: content, trigger: nil)
+                            UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
+                        }
+                    default:
+                        break
+                    }
+                }
+            }
+
             // Debounce/Throttle could be added here, but for now we send the event
             network.sendEvent(kind: "file.sync_triggered", payload: [
                 "path": sharedFolderPath,
