@@ -171,3 +171,20 @@
 "RULE_ACTION_NOTIFY" = "Notification";
 "RULE_PROMPT_PREFIX" = "Prompt prefix (optional)";
 "RULE_SAVE" = "Save";
+
+/* Onboarding */
+"SETUP" = "Setup Assistant";
+"ONBOARDING_TITLE" = "Welcome to Clawsy";
+"ONBOARDING_SUBTITLE" = "A few steps to get the most out of Clawsy.";
+"ONBOARDING_APP_LOCATION" = "App Location";
+"ONBOARDING_APP_LOCATION_DESC" = "Clawsy must be in /Applications for extensions to work.";
+"ONBOARDING_MOVE_TO_APPS" = "Show in Finder";
+"ONBOARDING_ACCESSIBILITY" = "Accessibility";
+"ONBOARDING_ACCESSIBILITY_DESC" = "Required for global hotkeys (Quick Send, Push Clipboard).";
+"ONBOARDING_OPEN_SETTINGS" = "Grant Access";
+"ONBOARDING_FINDERSYNC" = "Finder Extension";
+"ONBOARDING_FINDERSYNC_DESC" = "Enables right-click actions on folders.";
+"ONBOARDING_ENABLE" = "Enable";
+"ONBOARDING_OPTIONAL" = "optional";
+"ONBOARDING_SKIP" = "Later";
+"ONBOARDING_DONE" = "Done";

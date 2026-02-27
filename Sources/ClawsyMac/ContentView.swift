@@ -16,6 +16,8 @@ struct ContentView: View {
     @State private var showingScreenshotMenu = false
     @State private var showingCameraMenu = false
     @State private var isScreenshotInteractive = false
+    @State private var showingOnboarding = false
+    @AppStorage("onboardingCompleted") private var onboardingCompleted = false
     
     // Persistent Configuration (UI State only)
     @AppStorage("serverHost", store: SharedConfig.sharedDefaults) private var serverHost = "agenthost"
@@ -203,6 +205,13 @@ struct ContentView: View {
                     MissionControlView(taskStore: taskStore)
                 }
 
+                // Setup / Onboarding
+                Button(action: { showingOnboarding = true }) {
+                    MenuItemRow(icon: "checklist", title: "SETUP", isEnabled: true)
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
+
                 Divider().padding(.vertical, 4).opacity(0.5)
                 
                 // Quit
@@ -255,6 +264,11 @@ struct ContentView: View {
                 }
             }
             
+            // Show onboarding on first launch
+            if !onboardingCompleted {
+                showingOnboarding = true
+            }
+            
             // Auto-connect if configured
             if !serverHost.isEmpty && !serverToken.isEmpty {
                 network.configure(host: serverHost, port: serverPort, token: serverToken, sshUser: sshUser, fallback: useSshFallback)
@@ -282,6 +296,12 @@ struct ContentView: View {
                     set: { if !$0 { ruleEditorFolderPath = nil } }
                 ))
             }
+        }
+        .sheet(isPresented: $showingOnboarding) {
+            OnboardingView(
+                isPresented: $showingOnboarding,
+                onboardingCompleted: $onboardingCompleted
+            )
         }
     }
     

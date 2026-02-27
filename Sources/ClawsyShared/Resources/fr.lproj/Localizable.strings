@@ -93,3 +93,20 @@
 "STATUS_PAIRING" = "Appairage…";
 "STATUS_PAIRING_PENDING" = "En attente d'approbation…";
 "STATUS_PAIRING_REJECTED" = "Appairage refusé";
+
+/* Onboarding */
+"SETUP" = "Assistant de configuration";
+"ONBOARDING_TITLE" = "Bienvenue dans Clawsy";
+"ONBOARDING_SUBTITLE" = "Quelques étapes pour tirer le meilleur parti de Clawsy.";
+"ONBOARDING_APP_LOCATION" = "Emplacement de l'app";
+"ONBOARDING_APP_LOCATION_DESC" = "Clawsy doit être dans /Applications pour que les extensions fonctionnent.";
+"ONBOARDING_MOVE_TO_APPS" = "Afficher dans le Finder";
+"ONBOARDING_ACCESSIBILITY" = "Accessibilité";
+"ONBOARDING_ACCESSIBILITY_DESC" = "Requis pour les raccourcis globaux (Quick Send, Presse-papiers).";
+"ONBOARDING_OPEN_SETTINGS" = "Autoriser l'accès";
+"ONBOARDING_FINDERSYNC" = "Extension Finder";
+"ONBOARDING_FINDERSYNC_DESC" = "Active les actions par clic droit sur les dossiers.";
+"ONBOARDING_ENABLE" = "Activer";
+"ONBOARDING_OPTIONAL" = "optionnel";
+"ONBOARDING_SKIP" = "Plus tard";
+"ONBOARDING_DONE" = "Terminé";

@@ -172,3 +172,20 @@
 "RULE_ACTION_NOTIFY" = "Benachrichtigung";
 "RULE_PROMPT_PREFIX" = "Prompt-Präfix (optional)";
 "RULE_SAVE" = "Speichern";
+
+/* Onboarding */
+"SETUP" = "Einrichtungsassistent";
+"ONBOARDING_TITLE" = "Willkommen bei Clawsy";
+"ONBOARDING_SUBTITLE" = "Ein paar Schritte, um das Beste aus Clawsy herauszuholen.";
+"ONBOARDING_APP_LOCATION" = "App-Speicherort";
+"ONBOARDING_APP_LOCATION_DESC" = "Clawsy muss in /Applications liegen, damit Erweiterungen funktionieren.";
+"ONBOARDING_MOVE_TO_APPS" = "Im Finder zeigen";
+"ONBOARDING_ACCESSIBILITY" = "Bedienungshilfen";
+"ONBOARDING_ACCESSIBILITY_DESC" = "Erforderlich für globale Tastenkürzel (Quick Send, Zwischenablage).";
+"ONBOARDING_OPEN_SETTINGS" = "Zugriff erlauben";
+"ONBOARDING_FINDERSYNC" = "Finder-Erweiterung";
+"ONBOARDING_FINDERSYNC_DESC" = "Ermöglicht Rechtsklick-Aktionen auf Ordner.";
+"ONBOARDING_ENABLE" = "Aktivieren";
+"ONBOARDING_OPTIONAL" = "optional";
+"ONBOARDING_SKIP" = "Später";
+"ONBOARDING_DONE" = "Fertig";
