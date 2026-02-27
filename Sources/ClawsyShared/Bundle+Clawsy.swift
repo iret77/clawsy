@@ -3,37 +3,44 @@ import Foundation
 public extension Bundle {
     /// Returns the bundle containing Clawsy's localized strings.
     ///
-    /// In release builds, strings live in `Clawsy_ClawsyShared.bundle`
-    /// which build.sh embeds into Contents/Resources/.
-    /// Bundle.main is kept as last-resort fallback.
+    /// Strategy (release builds via build.sh):
+    ///   build.sh copies lproj directories directly into Contents/Resources/
+    ///   so Bundle.main resolves localized strings natively — no sub-bundle needed.
+    ///
+    /// Strategy (debug / SPM builds):
+    ///   SPM generates Clawsy_ClawsyShared.bundle with lproj resources;
+    ///   we locate it as a fallback.
     static var clawsy: Bundle {
-        #if DEBUG
-        // Debug builds: SPM puts resources in Bundle.module, but .main works too
-        return findSharedBundle() ?? .main
-        #else
-        // Release builds: must find Clawsy_ClawsyShared.bundle explicitly
-        // because Bundle.main does not resolve lproj strings for SPM executables
-        // packaged via custom build scripts.
-        return findSharedBundle() ?? .main
-        #endif
+        // Fast path: if Bundle.main already has our strings, use it.
+        // This works in release .app bundles where build.sh copies lproj dirs
+        // directly into Contents/Resources/.
+        if Bundle.main.path(forResource: "Localizable", ofType: "strings") != nil {
+            return .main
+        }
+        // Fallback: SPM-generated resource bundle (debug builds, or if main lookup fails)
+        if let shared = findSharedBundle() {
+            return shared
+        }
+        // Last resort — at least NSLocalizedString will return the key itself
+        return .main
     }
 
     private static func findSharedBundle() -> Bundle? {
         let name = "Clawsy_ClawsyShared.bundle"
         let candidates: [URL] = [
-            // Standard location when build.sh embeds it
             Bundle.main.resourceURL?.appendingPathComponent(name),
-            // Fallback: next to the executable
             Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/\(name)"),
-            // SPM build directory (debug builds)
             Bundle(for: _BundleToken.self).resourceURL?.appendingPathComponent(name),
             Bundle(for: _BundleToken.self).bundleURL.appendingPathComponent(name),
         ].compactMap { $0 }
 
         for url in candidates {
-            if let bundle = Bundle(url: url),
-               bundle.path(forResource: "Localizable", ofType: "strings") != nil {
-                return bundle
+            if let bundle = Bundle(url: url) {
+                // Accept the bundle if it has Localizable.strings in any localization
+                if bundle.path(forResource: "Localizable", ofType: "strings") != nil
+                    || bundle.path(forResource: "Localizable", ofType: "strings", inDirectory: nil, forLocalization: "en") != nil {
+                    return bundle
+                }
             }
         }
         return nil

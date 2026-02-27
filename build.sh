@@ -107,6 +107,17 @@ if [ -d "$SHARED_BUNDLE" ]; then
     cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings \
        "$RESOURCES_DIR/Clawsy_ClawsyShared.bundle/de.lproj/Localizable.strings" 2>/dev/null || true
     echo "✅ Embedded ClawsyShared bundle (strings refreshed)"
+
+# --- 📦 Direct lproj copy into Resources (primary localization path) ---
+# Bundle.main resolves strings from Contents/Resources/*.lproj natively.
+# This is the most reliable approach for SPM executables packaged as .app bundles.
+echo "📦 Copying lproj directories directly into Resources/..."
+for LPROJ_DIR in Sources/ClawsyShared/Resources/*.lproj; do
+    LPROJ_NAME=$(basename "$LPROJ_DIR")
+    mkdir -p "$RESOURCES_DIR/$LPROJ_NAME"
+    cp "$LPROJ_DIR/Localizable.strings" "$RESOURCES_DIR/$LPROJ_NAME/Localizable.strings"
+done
+echo "✅ lproj directories copied to Resources/ (Bundle.main will find them)"
 else
     echo "❌ Error: Could not find Shared Resource Bundle. App will crash at startup."
     exit 1
