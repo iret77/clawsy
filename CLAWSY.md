@@ -32,7 +32,7 @@ Mac (Clawsy App) ──SSH-Tunnel──▶ agenthost:18789 (OpenClaw Gateway WS)
 
 - Direkter WSS schlägt immer fehl (Gateway nicht extern erreichbar)
 - SSH-Key: importiert via Clawsy → Einstellungen → SSH-Fallback → "Importieren…"
-- SSH-User: `claw` (auf agenthost)
+- SSH-User: konfigurierbar in den App-Einstellungen
 - Tunnel-Port: **dynamisch** ab v0.4.16 (OS-assigned via `bind(port=0)`)
 - App Group Container: `group.ai.openclaw.clawsy`
 - App Sandbox: **deaktiviert** (GitHub-Distribution, nicht App Store)

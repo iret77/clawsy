@@ -10,4 +10,4 @@ echo "🔐 Ad-hoc signing $APP_NAME.app..."
 codesign --force --options runtime --deep --sign "-" "$APP_BUNDLE"
 
 echo "✅ Ad-hoc signing complete."
-echo "⚠️ Note: Christian might still need to right-click -> Open to bypass Gatekeeper (unnotarized)."
+echo "⚠️ Note: You may still need to right-click -> Open to bypass Gatekeeper (unnotarized)."
