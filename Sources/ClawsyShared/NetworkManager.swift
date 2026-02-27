@@ -812,6 +812,13 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             }
         case "file.get":
             guard let name = params["name"] as? String else { sendError(id: id, code: -32602, message: "Missing 'name' parameter"); return }
+            // System files are answered automatically without user interaction or notifications
+            if name == ".clawsy_version" {
+                self.sendAck(id: id)
+                let versionData = SharedConfig.versionDisplay.data(using: .utf8) ?? Data()
+                self.sendResponse(id: id, result: ["content": versionData.base64EncodedString(), "name": name])
+                return
+            }
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
             self.sendAck(id: id)
             let executeGet = {
