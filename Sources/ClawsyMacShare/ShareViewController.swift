@@ -17,7 +17,7 @@ class ShareViewController: NSViewController {
         view.addSubview(visualEffect)
         
         // Header
-        let label = NSTextField(labelWithString: "Sending to OpenClaw...")
+        let label = NSTextField(labelWithString: NSLocalizedString("SENDING_TO_OPENCLAW", bundle: .clawsy, comment: ""))
         label.font = .systemFont(ofSize: 13, weight: .semibold)
         label.alignment = .center
         label.frame = NSRect(x: 0, y: 140, width: 300, height: 20)
@@ -48,7 +48,7 @@ class ShareViewController: NSViewController {
                     self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
                 case .failure(let error):
                     let alert = NSAlert()
-                    alert.messageText = "Clawsy Share Failed"
+                    alert.messageText = NSLocalizedString("SHARE_FAILED", bundle: .clawsy, comment: "")
                     alert.informativeText = error.localizedDescription
                     alert.runModal()
                     self.extensionContext?.cancelRequest(withError: error)

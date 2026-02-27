@@ -2,9 +2,18 @@ import Foundation
 
 public class ShareHandler {
     
-    public enum ShareError: Error {
+    public enum ShareError: LocalizedError {
         case noData
         case failedToSend
+        
+        public var errorDescription: String? {
+            switch self {
+            case .noData:
+                return NSLocalizedString("SHARE_ERROR_NO_DATA", bundle: .clawsy, comment: "")
+            case .failedToSend:
+                return NSLocalizedString("SHARE_ERROR_SEND_FAILED", bundle: .clawsy, comment: "")
+            }
+        }
     }
     
     public static func handleSharedItems(_ items: [NSExtensionItem], network: NetworkManager, completion: @escaping (Result<Void, Error>) -> Void) {
@@ -84,7 +93,7 @@ public class ShareHandler {
                 return
             }
             
-            network.sendOneShot(kind: "share", payload: finalContent) { success in
+            network.sendOneShot(kind: "clawsy.share", payload: finalContent) { success in
                 if success {
                     completion(.success(()))
                 } else {

@@ -143,3 +143,29 @@
 
 "MISSION_CONTROL_TITLE" = "Task Overview";
 "WAITING_FOR_TASKS" = "Waiting for tasks…";
+
+/* Share Extension */
+"SHARE_ERROR_NO_DATA" = "No content to share.";
+"SHARE_ERROR_SEND_FAILED" = "Failed to send to OpenClaw. Check your connection settings.";
+
+/* FinderSync Extension */
+"FINDERSYNC_RULES" = "Rules for this folder…";
+"FINDERSYNC_SEND_STATUS" = "Send Status & Telemetry";
+"FINDERSYNC_RUN_ACTIONS" = "Run Folder Actions";
+
+/* Rule Editor */
+"RULE_EDITOR_TITLE" = "Folder Rules";
+"RULE_EDITOR_EMPTY" = "No rules yet";
+"RULE_EDITOR_EMPTY_HINT" = "Add a rule to trigger actions on file events.";
+"RULE_ADD" = "Add Rule";
+"RULE_COUNT %lld" = "%lld rule(s)";
+"RULE_NEW" = "New Rule";
+"RULE_EDIT" = "Edit Rule";
+"RULE_TRIGGER" = "Trigger";
+"RULE_TRIGGER_FILE_ADDED" = "File added";
+"RULE_TRIGGER_FILE_CHANGED" = "File changed";
+"RULE_TRIGGER_MANUAL" = "Manual";
+"RULE_ACTION" = "Action";
+"RULE_ACTION_SEND_TO_AGENT" = "Send to Agent";
+"RULE_ACTION_NOTIFY" = "Notification";
+"RULE_PROMPT_PREFIX" = "Prompt prefix (optional)";
