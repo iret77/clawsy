@@ -43,9 +43,7 @@ let package = Package(
             ],
             path: "Sources/ClawsyMac",
             resources: [
-                .process("Assets.xcassets"),
-                .process("Resources/en.lproj"),
-                .process("Resources/de.lproj")
+                .process("Assets.xcassets")
             ]
         ),
         
