@@ -93,34 +93,25 @@ if command -v actool &> /dev/null; then
         --output-partial-info-plist "$BUILD_DIR/partial.plist"
 fi
 
-# --- 📦 Critical Fix: Resource Bundles ---
-echo "📦 Locating and embedding Shared Resource Bundle..."
-# SPM generates a bundle for resources. We MUST include it.
-SHARED_BUNDLE=$(find "$BUILD_DIR" -name "Clawsy_ClawsyShared.bundle" -type d | head -n 1)
-if [ -d "$SHARED_BUNDLE" ]; then
-    # Always overwrite with freshly built bundle (no stale cache)
-    rm -rf "$RESOURCES_DIR/Clawsy_ClawsyShared.bundle"
-    cp -R "$SHARED_BUNDLE" "$RESOURCES_DIR/"
-    # Overwrite strings inside the bundle with the current source (belt + suspenders)
-    cp Sources/ClawsyShared/Resources/en.lproj/Localizable.strings \
-       "$RESOURCES_DIR/Clawsy_ClawsyShared.bundle/en.lproj/Localizable.strings" 2>/dev/null || true
-    cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings \
-       "$RESOURCES_DIR/Clawsy_ClawsyShared.bundle/de.lproj/Localizable.strings" 2>/dev/null || true
-    echo "✅ Embedded ClawsyShared bundle (strings refreshed)"
-
-# --- 📦 Direct lproj copy into Resources (primary localization path) ---
-# Bundle.main resolves strings from Contents/Resources/*.lproj natively.
-# This is the most reliable approach for SPM executables packaged as .app bundles.
-echo "📦 Copying lproj directories directly into Resources/..."
+# --- 📦 Localizations: copy lproj into Resources/ ---
+# Bundle.main resolves strings from Contents/Resources/*.lproj when
+# Info.plist declares CFBundleDevelopmentRegion + CFBundleLocalizations.
+echo "📦 Copying lproj directories into Resources/..."
 for LPROJ_DIR in Sources/ClawsyShared/Resources/*.lproj; do
     LPROJ_NAME=$(basename "$LPROJ_DIR")
     mkdir -p "$RESOURCES_DIR/$LPROJ_NAME"
     cp "$LPROJ_DIR/Localizable.strings" "$RESOURCES_DIR/$LPROJ_NAME/Localizable.strings"
 done
-echo "✅ lproj directories copied to Resources/ (Bundle.main will find them)"
+echo "✅ lproj directories copied to Resources/"
+
+# --- 📦 SPM Resource Bundle (for debug fallback) ---
+SHARED_BUNDLE=$(find "$BUILD_DIR" -name "Clawsy_ClawsyShared.bundle" -type d | head -n 1)
+if [ -d "$SHARED_BUNDLE" ]; then
+    rm -rf "$RESOURCES_DIR/Clawsy_ClawsyShared.bundle"
+    cp -R "$SHARED_BUNDLE" "$RESOURCES_DIR/"
+    echo "✅ Embedded ClawsyShared bundle"
 else
-    echo "❌ Error: Could not find Shared Resource Bundle. App will crash at startup."
-    exit 1
+    echo "⚠️  ClawsyShared bundle not found (strings rely on direct lproj copy)"
 fi
 
 # 4. Create PkgInfo
@@ -151,8 +142,15 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>$BUNDLE_ID</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>de</string>
+    </array>
     <key>CFBundleName</key>
     <string>$APP_NAME</string>
     <key>CFBundlePackageType</key>
@@ -189,6 +187,8 @@ cat <<EOF > "$SHARE_EXT_BUNDLE/Contents/Info.plist"
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
     <key>CFBundleExecutable</key>
     <string>ClawsyShare</string>
     <key>CFBundleIdentifier</key>
@@ -223,11 +223,7 @@ if [ -f "CLAWSY.md" ]; then
     echo "✅ Bundled CLAWSY.md into app resources"
 fi
 
-# 7. Copy Localizations (redundant but safe)
-mkdir -p "$RESOURCES_DIR/en.lproj"
-mkdir -p "$RESOURCES_DIR/de.lproj"
-cp Sources/ClawsyShared/Resources/en.lproj/Localizable.strings "$RESOURCES_DIR/en.lproj/"
-cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings "$RESOURCES_DIR/de.lproj/"
+
 
 
 # 8. Copy Update Installer Script
@@ -243,6 +239,8 @@ cat <<EOF > "$FINDERSYNC_BUNDLE/Contents/Info.plist"
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
     <key>CFBundleExecutable</key>
     <string>ClawsyFinderSync</string>
     <key>CFBundleIdentifier</key>

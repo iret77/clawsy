@@ -3,47 +3,25 @@ import Foundation
 public extension Bundle {
     /// Returns the bundle containing Clawsy's localized strings.
     ///
-    /// Strategy (release builds via build.sh):
-    ///   build.sh copies lproj directories directly into Contents/Resources/
-    ///   so Bundle.main resolves localized strings natively — no sub-bundle needed.
+    /// In release builds, build.sh copies lproj directories into Contents/Resources/
+    /// and Info.plist declares CFBundleDevelopmentRegion + CFBundleLocalizations,
+    /// so Bundle.main resolves localized strings natively.
     ///
-    /// Strategy (debug / SPM builds):
-    ///   SPM generates Clawsy_ClawsyShared.bundle with lproj resources;
-    ///   we locate it as a fallback.
+    /// In SPM debug builds, we fall back to the generated Clawsy_ClawsyShared.bundle.
     static var clawsy: Bundle {
-        // Fast path: if Bundle.main already has our strings, use it.
-        // This works in release .app bundles where build.sh copies lproj dirs
-        // directly into Contents/Resources/.
+        // Release builds: Bundle.main has our strings directly
         if Bundle.main.path(forResource: "Localizable", ofType: "strings") != nil {
             return .main
         }
-        // Fallback: SPM-generated resource bundle (debug builds, or if main lookup fails)
-        if let shared = findSharedBundle() {
-            return shared
-        }
-        // Last resort — at least NSLocalizedString will return the key itself
-        return .main
-    }
-
-    private static func findSharedBundle() -> Bundle? {
+        // SPM debug fallback
         let name = "Clawsy_ClawsyShared.bundle"
-        let candidates: [URL] = [
-            Bundle.main.resourceURL?.appendingPathComponent(name),
-            Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/\(name)"),
-            Bundle(for: _BundleToken.self).resourceURL?.appendingPathComponent(name),
-            Bundle(for: _BundleToken.self).bundleURL.appendingPathComponent(name),
-        ].compactMap { $0 }
-
-        for url in candidates {
-            if let bundle = Bundle(url: url) {
-                // Accept the bundle if it has Localizable.strings in any localization
-                if bundle.path(forResource: "Localizable", ofType: "strings") != nil
-                    || bundle.path(forResource: "Localizable", ofType: "strings", inDirectory: nil, forLocalization: "en") != nil {
-                    return bundle
-                }
+        for base in [Bundle.main.resourceURL, Bundle(for: _BundleToken.self).resourceURL].compactMap({ $0 }) {
+            if let b = Bundle(url: base.appendingPathComponent(name)),
+               b.path(forResource: "Localizable", ofType: "strings") != nil {
+                return b
             }
         }
-        return nil
+        return .main
     }
 }
 
