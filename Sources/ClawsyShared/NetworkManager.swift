@@ -194,6 +194,11 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 filePreview = "UNREADABLE"
             }
 
+            // Try NSDictionary directly (bypasses NSBundle localization)
+            let dictDirect = NSDictionary(contentsOfFile: deStringsPath)
+            let testDict = dictDirect?["APP_NAME"] as? String ?? "DICT_FAIL(\(dictDirect == nil ? "nil" : "\(dictDirect!.count)keys"))"
+            let testFirst = dictDirect?["FILE_SYNC_REQUEST"] as? String ?? "NOT_FOUND"
+
             // Bundle.clawsy test
             let clawsyBundle = Bundle.clawsy
             let testClawsy = clawsyBundle.localizedString(forKey: "APP_NAME", value: "MISSING", table: nil)
@@ -209,6 +214,8 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
 [APP_NAME/clawsy] → \(testClawsy)
 [FILE] \(deStringsPath)
 [CONTENT] \(filePreview)
+[DICT/APP_NAME] → \(testDict)
+[DICT/FILE_SYNC_REQUEST] → \(testFirst)
 ----------------------------------------
 
 """
