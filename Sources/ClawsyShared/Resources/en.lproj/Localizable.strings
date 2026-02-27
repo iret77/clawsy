@@ -169,3 +169,4 @@
 "RULE_ACTION_SEND_TO_AGENT" = "Send to Agent";
 "RULE_ACTION_NOTIFY" = "Notification";
 "RULE_PROMPT_PREFIX" = "Prompt prefix (optional)";
+"RULE_SAVE" = "Save";

@@ -27,7 +27,7 @@ struct RuleEditorView: View {
                 Image(systemName: "folder.badge.gearshape")
                     .foregroundColor(.accentColor)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Regeln für Ordner")
+                    Text("RULE_EDITOR_TITLE", bundle: .clawsy)
                         .font(.system(size: 13, weight: .semibold))
                     Text(folderDisplayName)
                         .font(.system(size: 11))
@@ -51,10 +51,10 @@ struct RuleEditorView: View {
                     Image(systemName: "list.bullet.rectangle")
                         .font(.system(size: 28))
                         .foregroundColor(.secondary.opacity(0.4))
-                    Text("Noch keine Regeln")
+                    Text("RULE_EDITOR_EMPTY", bundle: .clawsy)
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
-                    Text("Neue Regel hinzufügen, um Aktionen bei Datei-Ereignissen auszulösen.")
+                    Text("RULE_EDITOR_EMPTY_HINT", bundle: .clawsy)
                         .font(.system(size: 11))
                         .foregroundColor(.secondary.opacity(0.7))
                         .multilineTextAlignment(.center)
@@ -86,15 +86,19 @@ struct RuleEditorView: View {
                     let newRule = ClawsyRule()
                     editingRule = newRule
                 }) {
-                    Label("Regel hinzufügen", systemImage: "plus.circle.fill")
-                        .font(.system(size: 12))
+                    Label {
+                        Text("RULE_ADD", bundle: .clawsy)
+                    } icon: {
+                        Image(systemName: "plus.circle.fill")
+                    }
+                    .font(.system(size: 12))
                 }
                 .buttonStyle(.plain)
                 .foregroundColor(.accentColor)
 
                 Spacer()
 
-                Text("\(manifest.rules.count) Regel\(manifest.rules.count == 1 ? "" : "n")")
+                Text("RULE_COUNT \(manifest.rules.count)", bundle: .clawsy)
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
@@ -188,38 +192,42 @@ struct RuleEditSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(isNew ? "Neue Regel" : "Regel bearbeiten")
+            Text(isNew ? String(localized: "RULE_NEW", bundle: .clawsy) : String(localized: "RULE_EDIT", bundle: .clawsy))
                 .font(.headline)
                 .padding(.top, 4)
 
             Form {
-                Picker("Auslöser", selection: $rule.trigger) {
-                    Text("Datei hinzugefügt").tag("file_added")
-                    Text("Datei geändert").tag("file_changed")
-                    Text("Manuell").tag("manual")
+                Picker(String(localized: "RULE_TRIGGER", bundle: .clawsy), selection: $rule.trigger) {
+                    Text("RULE_TRIGGER_FILE_ADDED", bundle: .clawsy).tag("file_added")
+                    Text("RULE_TRIGGER_FILE_CHANGED", bundle: .clawsy).tag("file_changed")
+                    Text("RULE_TRIGGER_MANUAL", bundle: .clawsy).tag("manual")
                 }
 
                 TextField("Filter (z.B. *.pdf)", text: $rule.filter)
                     .font(.system(.body, design: .monospaced))
 
-                Picker("Aktion", selection: $rule.action) {
-                    Text("An Agent senden").tag("send_to_agent")
-                    Text("Benachrichtigung").tag("notify")
+                Picker(String(localized: "RULE_ACTION", bundle: .clawsy), selection: $rule.action) {
+                    Text("RULE_ACTION_SEND_TO_AGENT", bundle: .clawsy).tag("send_to_agent")
+                    Text("RULE_ACTION_NOTIFY", bundle: .clawsy).tag("notify")
                 }
 
                 if rule.action == "send_to_agent" {
-                    TextField("Prompt-Präfix (optional)", text: $rule.prompt)
+                    TextField(String(localized: "RULE_PROMPT_PREFIX", bundle: .clawsy), text: $rule.prompt)
                 }
             }
             .formStyle(.grouped)
 
             HStack {
-                Button("Abbrechen") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
+                Button(action: { dismiss() }) {
+                    Text("CANCEL", bundle: .clawsy)
+                }
+                .keyboardShortcut(.cancelAction)
                 Spacer()
-                Button("Speichern") {
+                Button(action: {
                     onSave(rule)
                     dismiss()
+                }) {
+                    Text("RULE_SAVE", bundle: .clawsy)
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)

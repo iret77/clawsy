@@ -170,3 +170,4 @@
 "RULE_ACTION_SEND_TO_AGENT" = "An Agent senden";
 "RULE_ACTION_NOTIFY" = "Benachrichtigung";
 "RULE_PROMPT_PREFIX" = "Prompt-Präfix (optional)";
+"RULE_SAVE" = "Speichern";
