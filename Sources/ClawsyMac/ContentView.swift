@@ -904,25 +904,6 @@ struct SettingsView: View {
                         .disabled(!useSshFallback)
                         .opacity(useSshFallback ? 1.0 : 0.5)
 
-                        HStack(spacing: 10) {
-                            Button { selectSshKey() } label: {
-                                Label(NSLocalizedString("IMPORT_SSH_KEY", bundle: .clawsy, comment: ""), systemImage: "key.fill")
-                            }
-                            .disabled(!useSshFallback)
-
-                            Button { removeSshKey() } label: {
-                                Label(NSLocalizedString("REMOVE_SSH_KEY", bundle: .clawsy, comment: ""), systemImage: "trash")
-                            }
-                            .disabled(!useSshFallback || !sshKeyInstalled)
-
-                            Spacer()
-
-                            Text(NSLocalizedString(sshKeyInstalled ? "KEY_INSTALLED" : "KEY_NOT_SET", bundle: .clawsy, comment: ""))
-                                .font(.system(size: 10))
-                                .foregroundColor(.secondary)
-                        }
-                        .opacity(useSshFallback ? 1.0 : 0.5)
-
                         Text("SSH_FALLBACK_DESC", bundle: .clawsy)
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
@@ -1153,61 +1134,4 @@ struct SettingsView: View {
         .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
     }
     
-    // MARK: - SSH Key Management
-    
-    private var sshKeyInstalled: Bool {
-        guard let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedConfig.appGroup) else { return false }
-        let keyURL = groupURL.appendingPathComponent("clawsy_ssh_key")
-        return FileManager.default.fileExists(atPath: keyURL.path)
-    }
-    
-    private func selectSshKey() {
-        DispatchQueue.main.async {
-            let panel = NSOpenPanel()
-            panel.canChooseFiles = true
-            panel.canChooseDirectories = false
-            panel.allowsMultipleSelection = false
-            panel.message = "Select your SSH private key"
-            panel.prompt = "Import"
-            panel.showsHiddenFiles = true
-            
-            // Start in ~/.ssh by default
-            let sshDir = NSHomeDirectory() + "/.ssh"
-            if FileManager.default.fileExists(atPath: sshDir) {
-                panel.directoryURL = URL(fileURLWithPath: sshDir)
-            }
-            
-            NSApp.activate(ignoringOtherApps: true)
-            
-            panel.begin { response in
-                guard response == .OK, let url = panel.url else { return }
-                
-                guard let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedConfig.appGroup) else {
-                    print("Failed to get app group container")
-                    return
-                }
-                
-                let destURL = groupURL.appendingPathComponent("clawsy_ssh_key")
-                
-                do {
-                    // Remove existing key if present
-                    if FileManager.default.fileExists(atPath: destURL.path) {
-                        try FileManager.default.removeItem(at: destURL)
-                    }
-                    try FileManager.default.copyItem(at: url, to: destURL)
-                    // Set restrictive permissions
-                    try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: destURL.path)
-                    print("SSH key imported successfully")
-                } catch {
-                    print("Failed to import SSH key: \(error)")
-                }
-            }
-        }
-    }
-    
-    private func removeSshKey() {
-        guard let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedConfig.appGroup) else { return }
-        let keyURL = groupURL.appendingPathComponent("clawsy_ssh_key")
-        try? FileManager.default.removeItem(at: keyURL)
-    }
 }

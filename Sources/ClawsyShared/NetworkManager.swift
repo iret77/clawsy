@@ -329,32 +329,15 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
 
     private func sshKeyPathIfAvailable() -> String? {
-        guard let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedConfig.appGroup) else { return nil }
-        let keyURL = groupURL.appendingPathComponent("clawsy_ssh_key")
-        guard FileManager.default.fileExists(atPath: keyURL.path) else { return nil }
-
-        // Validate: must be non-empty
-        let attrs = try? FileManager.default.attributesOfItem(atPath: keyURL.path)
-        let size = attrs?[.size] as? Int ?? 0
-        guard size > 0 else {
-            // Phantom file — remove it so SSH falls back to ~/.ssh/
-            try? FileManager.default.removeItem(at: keyURL)
-            return nil
-        }
-
-        // SSH requires key files to be chmod 0600 — copy to /tmp with correct permissions
-        let tmpPath = NSTemporaryDirectory() + "clawsy_ssh_key_\(ProcessInfo.processInfo.processIdentifier)"
-        let tmpURL = URL(fileURLWithPath: tmpPath)
-        do {
-            if FileManager.default.fileExists(atPath: tmpPath) {
-                try FileManager.default.removeItem(at: tmpURL)
+        // Key import was removed — SSH uses ~/.ssh/ defaults automatically.
+        // Clean up any leftover phantom key files from old versions.
+        if let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedConfig.appGroup) {
+            let keyURL = groupURL.appendingPathComponent("clawsy_ssh_key")
+            if FileManager.default.fileExists(atPath: keyURL.path) {
+                try? FileManager.default.removeItem(at: keyURL)
             }
-            try FileManager.default.copyItem(at: keyURL, to: tmpURL)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: tmpPath)
-            return tmpPath
-        } catch {
-            return nil  // don't pass broken key — let SSH use ~/.ssh/ defaults
         }
+        return nil
     }
 
     private func parseSshHostAndPort(_ host: String) -> (host: String, port: String?) {
