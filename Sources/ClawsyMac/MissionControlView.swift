@@ -86,13 +86,15 @@ struct MissionControlView: View {
     }
 }
 
-// MARK: - Model Badge Color
+// MARK: - Model Badge Color (by provider prefix)
 
 private func modelBadgeColor(for model: String?) -> Color {
-    guard let model = model?.lowercased() else { return .gray }
-    if model.contains("opus") { return .orange }
-    if model.contains("sonnet") { return .blue }
-    return .gray
+    guard let m = model?.lowercased() else { return .secondary }
+    if m.hasPrefix("anthropic/") || m.contains("claude") { return Color(red: 0.6, green: 0.4, blue: 0.9) }
+    if m.hasPrefix("openai/") || m.contains("gpt") { return .green }
+    if m.hasPrefix("google/") || m.contains("gemini") { return .blue }
+    if m.hasPrefix("meta/") || m.contains("llama") { return .orange }
+    return .secondary
 }
 
 // MARK: - Progress Bar Gradient
