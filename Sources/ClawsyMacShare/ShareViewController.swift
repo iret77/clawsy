@@ -34,7 +34,7 @@ class ShareViewController: NSViewController {
 
         // Configure NetworkManager with credentials from shared App Group defaults
         let host = SharedConfig.serverHost
-        let port = Int(SharedConfig.serverPort) ?? 18789
+        let port = SharedConfig.serverPort
         let token = SharedConfig.serverToken
         let sshUser = SharedConfig.sshUser
         let useSsh = SharedConfig.useSshFallback
