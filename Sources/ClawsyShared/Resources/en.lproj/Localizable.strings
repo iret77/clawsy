@@ -192,3 +192,5 @@
 "ONBOARDING_ACCESSIBILITY_RESTART_HINT" = "Permission granted — please restart Clawsy to activate it.";
 "ONBOARDING_RESTART" = "Restart Now";
 "ONBOARDING_ACCESSIBILITY_SKIP_RESTART" = "I've granted access, skip restart →";
+"MISSION_CONTROL_EMPTY" = "No active tasks";
+"MISSION_CONTROL_EMPTY_HINT" = "Tasks appear here when an agent is working.\nThe agent writes to .agent_status.json in your shared folder.";

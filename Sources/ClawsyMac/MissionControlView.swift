@@ -3,26 +3,50 @@ import ClawsyShared
 
 struct MissionControlView: View {
     @ObservedObject var taskStore: TaskStore
-    
+    @State private var hasWaited = false
+
     var body: some View {
         VStack(spacing: 12) {
             HStack {
                 Text("MISSION_CONTROL_TITLE", bundle: .clawsy)
                     .font(.headline)
                 Spacer()
-                Image(systemName: "lobster.fill")
+                Image(systemName: "pawprint.fill")
                     .foregroundColor(.accentColor)
             }
-            
+
             if taskStore.tasks.isEmpty {
-                VStack(spacing: 12) {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                    Text("WAITING_FOR_TASKS", bundle: .clawsy)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                if hasWaited {
+                    // Empty state — no tasks running
+                    VStack(spacing: 10) {
+                        Image(systemName: "tray")
+                            .font(.system(size: 32))
+                            .foregroundColor(.secondary.opacity(0.5))
+                        Text("MISSION_CONTROL_EMPTY", bundle: .clawsy)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Text("MISSION_CONTROL_EMPTY_HINT", bundle: .clawsy)
+                            .font(.caption)
+                            .foregroundColor(.secondary.opacity(0.7))
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxHeight: .infinity)
+                } else {
+                    // Brief loading state (max 3s)
+                    VStack(spacing: 12) {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("WAITING_FOR_TASKS", bundle: .clawsy)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxHeight: .infinity)
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                            if taskStore.tasks.isEmpty { hasWaited = true }
+                        }
+                    }
                 }
-                .frame(maxHeight: .infinity)
             } else {
                 ScrollView {
                     VStack(spacing: 8) {
@@ -37,6 +61,9 @@ struct MissionControlView: View {
         .padding()
         .frame(width: 320, height: 400)
         .background(VisualEffectView(material: .sidebar, blendingMode: .behindWindow))
+        .onChange(of: taskStore.tasks.isEmpty) { isEmpty in
+            if !isEmpty { hasWaited = false }
+        }
     }
 }
 
