@@ -227,6 +227,8 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         // Treat the watchdog as an overall connect budget.
         let watchdogSeconds: TimeInterval = self.isUsingSshTunnel ? 12.0 : 8.0
 
+        rawLog += "\n[WSS] Connecting to \(url.absoluteString) (watchdog: \(Int(watchdogSeconds))s)"
+
         connectionWatchdog = Timer.scheduledTimer(withTimeInterval: watchdogSeconds, repeats: false) { [weak self] _ in
             guard let self = self, !self.isConnected else { return }
             DispatchQueue.main.async {
@@ -487,21 +489,30 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             }
             
             switch event {
-            case .connected(_):
+            case .connected(let headers):
+                self.rawLog += "\n[WSS] Connected (headers: \(headers.count))"
                 self.connectionWatchdog?.invalidate()
                 self.connectionWatchdog = nil
                 self.isConnected = true
                 self.connectionStatus = "STATUS_CONNECTED"
                 self.connectionAttemptCount = 0
-            case .disconnected(_, _):
+            case .disconnected(let reason, let code):
+                self.rawLog += "\n[WSS] Disconnected: \(reason) (code: \(code))"
                 self.isConnected = false
                 self.connectionStatus = "STATUS_DISCONNECTED"
             case .text(let string):
                 self.rawLog += "\nIN: \(string)"
                 self.handleMessage(string)
             case .error(let err):
+                self.rawLog += "\n[WSS] Error: \(err?.localizedDescription ?? "nil")"
                 self.isConnected = false
                 self.handleConnectionFailure(err: err)
+            case .viabilityChanged(let viable):
+                self.rawLog += "\n[WSS] Viability: \(viable)"
+            case .reconnectSuggested(let suggested):
+                self.rawLog += "\n[WSS] ReconnectSuggested: \(suggested)"
+            case .pong:
+                break
             default: break
             }
         }
