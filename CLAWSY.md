@@ -166,6 +166,24 @@ nodes(action="invoke", invokeCommand="file.set",
 ### Wichtig
 Der Agent schreibt diese Datei selbst — **keine Änderungen an OpenClaw nötig**.
 
+### Geplant: clawsy-service Session als bidirektionaler Kontrollkanal
+Die `.agent_status.json`-Methode funktioniert für einfache Statusanzeige. Für erweiterte Features (Pause/Resume/Cancel) ist die clawsy-service Session der richtige Ansatz:
+
+**Agent → Clawsy** (Status-Push):
+```python
+sessions_send(sessionKey="clawsy-service", message=json.dumps({
+    "type": "task_status",
+    "tasks": [{"id": "abc", "title": "Build läuft", "progress": 0.4}]
+}))
+```
+
+**Clawsy → Agent** (Steuerung):
+- User drückt ⏸ in MissionControl → Clawsy schreibt `{"action":"pause","taskId":"abc"}` in clawsy-service
+- Agent pollt clawsy-service während langer Tasks → reagiert auf pause/resume/cancel
+- Kein File-IO, echter Rückkanal, keine OpenClaw-Änderungen nötig
+
+Noch nicht implementiert — ersetzt `.agent_status.json` wenn Pause/Resume gebraucht wird.
+
 ---
 
 ## .clawsy Manifest-Dateien
