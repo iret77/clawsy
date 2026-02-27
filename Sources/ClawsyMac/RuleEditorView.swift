@@ -238,4 +238,4 @@ struct RuleEditSheet: View {
     }
 }
 
-extension ClawsyRule: Identifiable {}
+

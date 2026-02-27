@@ -58,7 +58,10 @@ let package = Package(
         .target(
             name: "ClawsyFinderSync",
             dependencies: ["ClawsyShared"],
-            path: "Sources/ClawsyFinderSync"
+            path: "Sources/ClawsyFinderSync",
+            linkerSettings: [
+                .linkedFramework("FinderSync")
+            ]
         ),
         
         // iOS App Placeholder

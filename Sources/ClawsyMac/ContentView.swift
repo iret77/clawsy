@@ -178,13 +178,7 @@ struct ContentView: View {
 
                 // Last Metadata
                 Button(action: { showingMetadata.toggle() }) {
-                    ZStack(alignment: .trailing) {
-                        MenuItemRow(icon: "info.bubble.fill", title: "LAST_METADATA", isEnabled: true)
-                        if network.isConnected {
-                            Circle().fill(Color.green).frame(width: 6, height: 6)
-                                .padding(.trailing, 16)
-                        }
-                    }
+                    MenuItemRow(icon: "info.bubble.fill", title: "LAST_METADATA", isEnabled: true)
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)

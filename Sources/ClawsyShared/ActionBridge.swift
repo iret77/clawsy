@@ -1,7 +1,7 @@
 import Foundation
 
 /// Shared communication layer between FinderSync extension and main app.
-/// Uses App Group container + Darwin notifications.
+/// Uses App Group container + DistributedNotificationCenter (cross-process).
 public struct PendingAction: Codable {
     public let id: String
     public let kind: String       // "open_rule_editor" | "send_telemetry" | "run_actions"
@@ -17,7 +17,7 @@ public struct PendingAction: Codable {
 }
 
 public class ActionBridge {
-    public static let darwinNotificationName = "ai.clawsy.pendingAction" as CFString
+    private static let notificationName = Notification.Name("ai.clawsy.pendingAction")
 
     private static var pendingActionURL: URL? {
         guard let container = FileManager.default.containerURL(
@@ -32,11 +32,8 @@ public class ActionBridge {
         if let data = try? JSONEncoder().encode(action) {
             try? data.write(to: url, options: .atomic)
         }
-        // Wake the main app via Darwin notification
-        CFNotificationCenterPostNotification(
-            CFNotificationCenterGetDarwinNotifyCenter(),
-            CFNotificationName(darwinNotificationName),
-            nil, nil, true
+        DistributedNotificationCenter.default().postNotificationName(
+            notificationName, object: nil, userInfo: nil, deliverImmediately: true
         )
     }
 
@@ -50,12 +47,12 @@ public class ActionBridge {
         return action
     }
 
-    /// Main app registers for Darwin notifications
+    /// Main app registers for cross-process notifications from FinderSync
     public static func observe(callback: @escaping () -> Void) {
-        let center = CFNotificationCenterGetDarwinNotifyCenter()
-        let observer = Unmanaged.passRetained(callback as AnyObject).toOpaque()
-        CFNotificationCenterAddObserver(center, observer, { _, _, _, _, _ in
-            DispatchQueue.main.async { callback() }
-        }, darwinNotificationName, nil, .deliverImmediately)
+        DistributedNotificationCenter.default().addObserver(
+            forName: notificationName, object: nil, queue: .main
+        ) { _ in
+            callback()
+        }
     }
 }
