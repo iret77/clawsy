@@ -13,6 +13,7 @@ MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 PLUGINS_DIR="$CONTENTS_DIR/PlugIns"
 SHARE_EXT_BUNDLE="$PLUGINS_DIR/ClawsyShare.appex"
+FINDERSYNC_BUNDLE="$PLUGINS_DIR/ClawsyFinderSync.appex"
 
 echo "🧹 Cleaning up..."
 rm -rf "$BUILD_DIR/app"
@@ -20,6 +21,8 @@ mkdir -p "$MACOS_DIR"
 mkdir -p "$RESOURCES_DIR"
 mkdir -p "$SHARE_EXT_BUNDLE/Contents/MacOS"
 mkdir -p "$SHARE_EXT_BUNDLE/Contents/Resources"
+mkdir -p "$FINDERSYNC_BUNDLE/Contents/MacOS"
+mkdir -p "$FINDERSYNC_BUNDLE/Contents/Resources"
 
 echo "🦞 Building Clawsy Ecosystem (Release)..."
 # Build for universal (includes arm64 and x86_64)
@@ -38,6 +41,19 @@ elif [ -f "$RELEASE_DIR/ClawsyMacShare" ]; then
      cp "$RELEASE_DIR/ClawsyMacShare" "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
 fi
 chmod 755 "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
+
+# 2b. Copy FinderSync Extension Binary
+if [ -f "$RELEASE_DIR/libClawsyFinderSync.dylib" ]; then
+    cp "$RELEASE_DIR/libClawsyFinderSync.dylib" "$FINDERSYNC_BUNDLE/Contents/MacOS/ClawsyFinderSync"
+elif [ -f "$RELEASE_DIR/ClawsyFinderSync" ]; then
+    cp "$RELEASE_DIR/ClawsyFinderSync" "$FINDERSYNC_BUNDLE/Contents/MacOS/ClawsyFinderSync"
+fi
+if [ -f "$FINDERSYNC_BUNDLE/Contents/MacOS/ClawsyFinderSync" ]; then
+    chmod 755 "$FINDERSYNC_BUNDLE/Contents/MacOS/ClawsyFinderSync"
+    echo "✅ FinderSync extension binary copied"
+else
+    echo "⚠️  FinderSync binary not found – extension will be missing"
+fi
 
 # 3. Handle Icons and Assets
 echo "🎨 Packaging Icons and Assets..."
@@ -196,10 +212,43 @@ if [ -f "scripts/update_installer.sh" ]; then
     chmod 755 "$RESOURCES_DIR/update_installer.sh"
 fi
 
+# 6b. FinderSync Extension Info.plist
+cat <<EOF > "$FINDERSYNC_BUNDLE/Contents/Info.plist"
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>ClawsyFinderSync</string>
+    <key>CFBundleIdentifier</key>
+    <string>$BUNDLE_ID.FinderSync</string>
+    <key>CFBundleName</key>
+    <string>Clawsy</string>
+    <key>CFBundlePackageType</key>
+    <string>XPC!</string>
+    <key>CFBundleShortVersionString</key>
+    <string>$VERSION_SHORT</string>
+    <key>CFBundleVersion</key>
+    <string>$VERSION_BUILD</string>
+    <key>NSExtension</key>
+    <dict>
+        <key>NSExtensionPointIdentifier</key>
+        <string>com.apple.FinderSync</string>
+        <key>NSExtensionPrincipalClass</key>
+        <string>ClawsyFinderSync.FinderSyncExtension</string>
+    </dict>
+</dict>
+</plist>
+EOF
+
 echo "🛡 Signing (Ad-hoc) - Final Sequoia Integrity Scrub..."
 # Sign each component from inside out
 codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
 codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE"
+if [ -f "$FINDERSYNC_BUNDLE/Contents/MacOS/ClawsyFinderSync" ]; then
+    codesign --force --options runtime --entitlements Sources/ClawsyFinderSync/ClawsyFinderSync.entitlements --sign - "$FINDERSYNC_BUNDLE/Contents/MacOS/ClawsyFinderSync"
+    codesign --force --options runtime --entitlements Sources/ClawsyFinderSync/ClawsyFinderSync.entitlements --sign - "$FINDERSYNC_BUNDLE"
+fi
 codesign --force --options runtime --entitlements ClawsyMac.entitlements --sign - "$MACOS_DIR/$APP_NAME"
 # The most important step: The deep sign that creates the final CodeResources
 codesign --force --deep --options runtime --entitlements ClawsyMac.entitlements --sign - "$APP_BUNDLE"

@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var showingLog = false
     @State private var showingMetadata = false
     @State private var showingMissionControl = false
+    @State private var ruleEditorFolderPath: String? = nil
     @State private var showingScreenshotMenu = false
     @State private var showingCameraMenu = false
     @State private var isScreenshotInteractive = false
@@ -244,6 +245,21 @@ struct ContentView: View {
             network.onTaskUpdate = { agent, title, progress, status in
                 taskStore.updateTask(agentName: agent, title: title, progress: progress, statusText: status)
             }
+
+            // Auto-provision .clawsy files in shared folder
+            if !sharedFolderPath.isEmpty {
+                let resolved = sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
+                DispatchQueue.global(qos: .background).async {
+                    ClawsyManifestManager.provisionAll(in: resolved)
+                }
+            }
+
+            // Listen for FinderSync actions via Darwin notification
+            ActionBridge.observe {
+                if let action = ActionBridge.consumeAction() {
+                    handleFinderSyncAction(action)
+                }
+            }
             
             // Auto-connect if configured
             if !serverHost.isEmpty && !serverToken.isEmpty {
@@ -262,10 +278,39 @@ struct ContentView: View {
                 network.sendEvent(kind: "file.sync_triggered", payload: ["path": sharedFolderPath])
             }
         }
+        .sheet(isPresented: Binding(
+            get: { ruleEditorFolderPath != nil },
+            set: { if !$0 { ruleEditorFolderPath = nil } }
+        )) {
+            if let folderPath = ruleEditorFolderPath {
+                RuleEditorView(folderPath: folderPath, isPresented: Binding(
+                    get: { ruleEditorFolderPath != nil },
+                    set: { if !$0 { ruleEditorFolderPath = nil } }
+                ))
+            }
+        }
     }
     
     // --- Actions ---
     
+    func handleFinderSyncAction(_ action: PendingAction) {
+        switch action.kind {
+        case "open_rule_editor":
+            ruleEditorFolderPath = action.folderPath
+        case "send_telemetry":
+            if network.isConnected {
+                let telemetry = NetworkManager.getTelemetry()
+                network.sendEvent(kind: "clawsy.telemetry", payload: telemetry)
+            }
+        case "run_actions":
+            if network.isConnected {
+                network.sendEvent(kind: "clawsy.run_folder_actions", payload: ["folderPath": action.folderPath])
+            }
+        default:
+            break
+        }
+    }
+
     func getStatusColor() -> Color {
         if network.isConnected { return .green }
         if network.connectionStatus.contains("CONNECTING") || network.connectionStatus.contains("STARTING") { return .orange }

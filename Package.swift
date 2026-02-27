@@ -12,7 +12,8 @@ let package = Package(
     ],
     products: [
         .executable(name: "ClawsyMac", targets: ["ClawsyMac"]),
-        .library(name: "ClawsyMacShare", type: .dynamic, targets: ["ClawsyMacShare"])
+        .library(name: "ClawsyMacShare", type: .dynamic, targets: ["ClawsyMacShare"]),
+        .library(name: "ClawsyFinderSync", type: .dynamic, targets: ["ClawsyFinderSync"])
     ],
     dependencies: [
         .package(url: "https://github.com/daltoniam/Starscream.git", from: "4.0.0")
@@ -51,6 +52,13 @@ let package = Package(
             name: "ClawsyMacShare",
             dependencies: ["ClawsyShared", "Starscream"],
             path: "Sources/ClawsyMacShare"
+        ),
+
+        // macOS FinderSync Extension
+        .target(
+            name: "ClawsyFinderSync",
+            dependencies: ["ClawsyShared"],
+            path: "Sources/ClawsyFinderSync"
         ),
         
         // iOS App Placeholder
