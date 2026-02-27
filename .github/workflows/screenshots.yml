@@ -26,8 +26,13 @@ jobs:
       - name: Run screenshot mode
         run: |
           mkdir -p docs/screenshots
-          BINARY=$(find .build -name "ClawsyMac" -type f | grep -v "\.o$" | head -1)
-          echo "Found binary: $BINARY"
+          # swift build puts the binary at .build/debug/<ProductName>
+          BINARY=$(swift build --target ClawsyMac -Xswiftc -DSCREENSHOT_MODE --show-bin-path 2>/dev/null)/ClawsyMac
+          echo "Binary path: $BINARY"
+          if [ ! -f "$BINARY" ]; then
+            BINARY=$(find .build -name "ClawsyMac" -not -name "*.o" -not -name "*.d" -type f | head -1)
+            echo "Fallback binary: $BINARY"
+          fi
           "$BINARY" --screenshot
 
       - name: Validate screenshots (no broken string keys)
