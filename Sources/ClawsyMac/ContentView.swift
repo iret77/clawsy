@@ -202,7 +202,7 @@ struct ContentView: View {
                 // Mission Control (Task Overview)
                 Button(action: { showingMissionControl.toggle() }) {
                     ZStack(alignment: .trailing) {
-                        MenuItemRow(icon: "list.bullet.rectangle.fill", title: "MISSION_CONTROL_TITLE", isEnabled: true)
+                        MenuItemRow(icon: "list.bullet.clipboard", title: "MISSION_CONTROL_TITLE", isEnabled: true)
                         if !taskStore.tasks.isEmpty {
                             Circle().fill(Color.accentColor).frame(width: 6, height: 6)
                                 .padding(.trailing, 16)
