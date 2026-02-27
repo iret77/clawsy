@@ -140,3 +140,6 @@
 "STATUS_PAIRING" = "Pairing…";
 "STATUS_PAIRING_PENDING" = "Awaiting pairing approval…";
 "STATUS_PAIRING_REJECTED" = "Pairing rejected";
+
+"MISSION_CONTROL_TITLE" = "Task Overview";
+"WAITING_FOR_TASKS" = "Waiting for tasks…";

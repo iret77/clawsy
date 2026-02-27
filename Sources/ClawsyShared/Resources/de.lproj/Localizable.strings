@@ -141,3 +141,6 @@
 "STATUS_PAIRING" = "Kopplung…";
 "STATUS_PAIRING_PENDING" = "Warte auf Kopplung…";
 "STATUS_PAIRING_REJECTED" = "Kopplung abgelehnt";
+
+"MISSION_CONTROL_TITLE" = "Aufgaben-Übersicht";
+"WAITING_FOR_TASKS" = "Warte auf Aufgaben…";

@@ -5,11 +5,13 @@ import ClawsyShared
 struct ContentView: View {
     // Use Shared Network Manager
     @StateObject private var network = NetworkManager()
+    @StateObject private var taskStore = TaskStore()
     @EnvironmentObject var appDelegate: AppDelegate
     
     @State private var showingSettings = false
     @State private var showingLog = false
     @State private var showingMetadata = false
+    @State private var showingMissionControl = false
     @State private var showingScreenshotMenu = false
     @State private var showingCameraMenu = false
     @State private var isScreenshotInteractive = false
@@ -190,6 +192,22 @@ struct ContentView: View {
                         .frame(width: 350, height: 320)
                 }
                 
+                // Mission Control (Task Overview)
+                Button(action: { showingMissionControl.toggle() }) {
+                    ZStack(alignment: .trailing) {
+                        MenuItemRow(icon: "list.bullet.rectangle.fill", title: "MISSION_CONTROL_TITLE", isEnabled: true)
+                        if !taskStore.tasks.isEmpty {
+                            Circle().fill(Color.accentColor).frame(width: 6, height: 6)
+                                .padding(.trailing, 16)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
+                .popover(isPresented: $showingMissionControl, arrowEdge: .trailing) {
+                    MissionControlView(taskStore: taskStore)
+                }
+
                 Divider().padding(.vertical, 4).opacity(0.5)
                 
                 // Quit
@@ -220,6 +238,11 @@ struct ContentView: View {
                         UNUserNotificationCenter.current().add(request)
                     }
                 }
+            }
+            
+            // Wire up task updates
+            network.onTaskUpdate = { agent, title, progress, status in
+                taskStore.updateTask(agentName: agent, title: title, progress: progress, statusText: status)
             }
             
             // Auto-connect if configured
