@@ -1,10 +1,10 @@
 # CLAWSY.md — Clawsy Mac Companion App
 
-Clawsy ist Christians macOS Companion App. Sie gibt dem Agenten direkten Zugriff auf sein MacBook — Screenshots, Kamera, Zwischenablage, Dateien und mehr. Nutze diese Fähigkeiten proaktiv für eine bessere UX.
+Clawsy ist Die macOS Companion App. Sie gibt dem Agenten direkten Zugriff auf das MacBook des Users — Screenshots, Kamera, Zwischenablage, Dateien und mehr. Nutze diese Fähigkeiten proaktiv für eine bessere UX.
 
 **Aktuelle stabile Version:** v0.4.17  
 **Repo:** `iret77/clawsy` (GitHub, öffentlich)  
-**Build:** GitHub Actions (Christian baut NICHTS lokal — immer via CI/CD)
+**Build:** GitHub Actions (niemals lokal bauen — immer via CI/CD)
 
 ---
 
@@ -12,12 +12,12 @@ Clawsy ist Christians macOS Companion App. Sie gibt dem Agenten direkten Zugriff
 
 | Fähigkeit | Wann nutzen |
 |-----------|-------------|
-| **Screenshot** | Wenn Christian fragt was auf dem Bildschirm ist, UI-Probleme debuggen, visuelles Feedback |
+| **Screenshot** | Wenn der User fragt was auf dem Bildschirm ist, UI-Probleme debuggen, visuelles Feedback |
 | **Kamera** | Wenn er etwas zeigen will, Kontext über seine Umgebung |
 | **Zwischenablage lesen** | Wenn er "schau mal was ich kopiert habe" sagt oder Text teilen will |
 | **Zwischenablage schreiben** | Code/Text direkt in seine Zwischenablage pushen — sehr nützlich! |
 | **Quick Send** | Text direkt an den Agenten senden (er tippt, du empfängst) |
-| **Dateien** | Dateien lesen/schreiben im konfigurierten Shared Folder (`~/Documents/Clawsy`) |
+| **Dateien** | Dateien lesen/schreiben im konfigurierten Shared Folder (dem konfigurierten Shared Folder) |
 | **FinderSync** | Rechtsklick auf Ordner → "Clawsy >" Untermenü → Regeln/Telemetrie/Aktionen |
 
 **Grundregel:** Wenn Clawsy verbunden ist und es die UX verbessert — nutze es. Frag nicht erst ob du dürftest.
@@ -54,7 +54,7 @@ nodes(action="invoke", invokeCommand="screen.capture")
 nodes(action="invoke", invokeCommand="clipboard.read")
 nodes(action="invoke", invokeCommand="clipboard.write", invokeParamsJson='{"text":"..."}')
 nodes(action="invoke", invokeCommand="camera.snap", invokeParamsJson='{"facing":"front"}')
-nodes(action="invoke", invokeCommand="file.list", invokeParamsJson='{"path":"/Users/cwendler/Documents/Clawsy"}')
+nodes(action="invoke", invokeCommand="file.list", invokeParamsJson='{"path": "."}')
 nodes(action="invoke", invokeCommand="file.get", invokeParamsJson='{"name":"report.pdf"}')
 ```
 
@@ -64,7 +64,7 @@ Verfügbare Kommandos: `screen.capture`, `clipboard.read`, `clipboard.write`, `c
 
 ## clawsy_envelope — Eingehende Nachrichten
 
-Wenn Christian Quick Send nutzt, kommt folgendes JSON als Message:
+Wenn der User Quick Send nutzt, kommt folgendes JSON als Message:
 
 ```json
 {
@@ -75,7 +75,7 @@ Wenn Christian Quick Send nutzt, kommt folgendes JSON als Message:
     "localTime": "2026-02-27T01:09:22.609Z",
     "tz": "Europe/Berlin",
     "telemetry": {
-      "deviceName": "MacBook Pro M4 von Christian",
+      "deviceName": "<Gerätename>",
       "deviceModel": "Mac",
       "batteryLevel": 0.51,
       "isCharging": false,
@@ -92,7 +92,7 @@ Wenn Christian Quick Send nutzt, kommt folgendes JSON als Message:
 **Telemetrie nutzen:**
 - `thermalState > 1` → Mac läuft heiß, keine komplexen Tasks vorschlagen
 - `batteryLevel < 0.2` → auf Akkustand hinweisen wenn relevant
-- `moodScore < 40` → Christian ist gestresst/beschäftigt, kurz halten
+- `moodScore < 40` → User ist gestresst/beschäftigt, kurz halten
 - `isUnusualHour: true` → ungewöhnliche Zeit, vorsichtig sein
 
 ---
@@ -188,7 +188,7 @@ Noch nicht implementiert — ersetzt `.agent_status.json` wenn Pause/Resume gebr
 
 ## .clawsy Manifest-Dateien
 
-Im Shared Folder (`~/Documents/Clawsy`) und allen Unterordnern existiert eine versteckte `.clawsy`-Datei (JSON). Diese wird **automatisch von der App angelegt** — der User muss sie nie manuell erstellen oder berühren.
+Im Shared Folder (dem konfigurierten Shared Folder) und allen Unterordnern existiert eine versteckte `.clawsy`-Datei (JSON). Diese wird **automatisch von der App angelegt** — der User muss sie nie manuell erstellen oder berühren.
 
 ```json
 {
@@ -262,12 +262,22 @@ Clawsy erscheint im macOS Share Sheet. Dateien/Text aus jeder App können direkt
 
 ---
 
-## Device-Info (Christians MacBook)
+## Node ermitteln
 
-- **Device ID:** `731fa2e610292b52723a8b3f9da53929b9c432de415abbd9a3fe755ae39f0d7c`
-- **Name:** MacBook Pro M4 von Christian
-- **Mac Username:** `cwendler`
-- **Shared Folder:** `/Users/cwendler/Documents/Clawsy`
+Nutze `nodes(action="status")` um den verbundenen Node zu finden:
+
+```python
+nodes(action="status")
+# → Liste aller verbundenen Nodes; wähle den mit platform="macos" und connected=true
+# → Merke dir die nodeId für alle weiteren Aufrufe
+```
+
+Den Shared Folder-Pfad findest du via:
+```python
+nodes(action="invoke", node="<nodeId>", invokeCommand="file.list",
+      invokeParamsJson='{"path": "."}')
+# Clawsy konfiguriert den Shared Folder in den App-Einstellungen (Standard: ~/Documents/Clawsy)
+```
 
 ---
 
@@ -295,3 +305,26 @@ ClawsyFinderSync (Extension)
 ClawsyMacShare (Extension)
 └── ShareViewController.swift — macOS Share Sheet
 ```
+
+## .agent_info.json — Modell-Anzeige im Header
+
+Clawsy zeigt das aktuelle Chat-Modell im Popover-Header an (unter dem Verbindungsstatus).
+Der Agent schreibt dazu eine `.agent_info.json` in den Shared Folder:
+
+```python
+import json, base64
+from datetime import datetime, timezone
+
+info = {
+    "agentName": "CyberClaw",
+    "model": "claude-sonnet-4-6",
+    "updatedAt": datetime.now(timezone.utc).isoformat()
+}
+content = base64.b64encode(json.dumps(info).encode()).decode()
+nodes(action="invoke", node="<nodeId>", invokeCommand="file.set",
+      invokeParamsJson=json.dumps({"name": ".agent_info.json", "content": content}))
+```
+
+- Silent write (kein Dialog) — in der Allowlist zusammen mit `.agent_status.json`
+- FileWatcher erkennt Änderung → Header aktualisiert sofort
+- Empfehlung: beim Session-Start schreiben, dann bei Modell-Wechsel
