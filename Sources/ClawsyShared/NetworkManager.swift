@@ -274,6 +274,46 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
 
     /// Finds a free TCP port on localhost by binding to port 0.
     /// Returns the assigned port number, or nil on failure.
+    /// Returns true if a TCP connection to host:port can be established (non-blocking probe).
+    private func isTcpPortOpen(host: String, port: UInt16) -> Bool {
+        let sock = Darwin.socket(AF_INET, SOCK_STREAM, 0)
+        guard sock >= 0 else { return false }
+        defer { Darwin.close(sock) }
+
+        // Set non-blocking so we don't hang
+        var flags = fcntl(sock, F_GETFL, 0)
+        fcntl(sock, F_SETFL, flags | O_NONBLOCK)
+
+        var addr = sockaddr_in()
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_port = port.bigEndian
+        addr.sin_addr.s_addr = inet_addr(host)
+        addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+
+        let result = withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Darwin.connect(sock, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+
+        if result == 0 { return true }
+        if errno != EINPROGRESS { return false }
+
+        // Wait up to 400ms for connection via select()
+        var writeSet = fd_set()
+        _fd_zero(&writeSet)
+        _fd_set(sock, &writeSet)
+        var timeout = timeval(tv_sec: 0, tv_usec: 400_000)
+        let selected = Darwin.select(sock + 1, nil, &writeSet, nil, &timeout)
+        guard selected > 0 else { return false }
+
+        // Check for socket-level error
+        var soErr: Int32 = 0
+        var soErrLen = socklen_t(MemoryLayout<Int32>.size)
+        getsockopt(sock, SOL_SOCKET, SO_ERROR, &soErr, &soErrLen)
+        return soErr == 0
+    }
+
     private func findFreePort() -> UInt16? {
         let sock = Darwin.socket(AF_INET, SOCK_STREAM, 0)
         guard sock >= 0 else { return nil }
@@ -409,13 +449,23 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             do {
                 try process.run()
                 self.sshProcess = process
-                
-                // Wait a moment for the tunnel to establish
-                Thread.sleep(forTimeInterval: 2.0)
-                
-                if process.isRunning {
+
+                // Poll until the tunnel port is actually accepting connections (max 20s)
+                let tunnelPort = self.sshTunnelLocalPort
+                var tunnelReady = false
+                let deadline = Date().addingTimeInterval(20.0)
+                while Date() < deadline {
+                    Thread.sleep(forTimeInterval: 0.5)
+                    guard process.isRunning else { break }
+                    if self.isTcpPortOpen(host: "127.0.0.1", port: tunnelPort) {
+                        tunnelReady = true
+                        break
+                    }
+                }
+
+                if tunnelReady {
                     DispatchQueue.main.async {
-                        self.rawLog += "\n[SSH] Tunnel ready on 127.0.0.1:\(self.sshTunnelLocalPort)"
+                        self.rawLog += "\n[SSH] Tunnel ready on 127.0.0.1:\(tunnelPort)"
                         self.isUsingSshTunnel = true
                         self.connect()
                     }
@@ -423,7 +473,8 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                     let errData = errorPipe.fileHandleForReading.availableData
                     let errStr = String(data: errData, encoding: .utf8) ?? "Unknown error"
                     DispatchQueue.main.async {
-                        self.rawLog += "\n[SSH] Process exited (code \(process.terminationStatus)): \(errStr)"
+                        let reason = process.isRunning ? "Port never opened (timeout 20s)" : "Process exited (code \(process.terminationStatus)): \(errStr)"
+                        self.rawLog += "\n[SSH] Tunnel failed: \(reason)"
                         self.connectionStatus = "STATUS_SSH_FAILED"
                         self.isUsingSshTunnel = false
                     }
