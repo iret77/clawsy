@@ -11,7 +11,7 @@ struct MissionControlView: View {
                 Text("MISSION_CONTROL_TITLE", bundle: .clawsy)
                     .font(.headline)
                 Spacer()
-                Image(systemName: "pawprint.fill")
+                Image(systemName: "list.bullet.clipboard")
                     .foregroundColor(.accentColor)
             }
 
