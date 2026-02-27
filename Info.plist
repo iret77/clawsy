@@ -26,5 +26,12 @@
     <true/>
     <key>NSCameraUsageDescription</key>
     <string>Clawsy needs camera access to send snapshots to your AI agent when requested.</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>de</string>
+    </array>
 </dict>
 </plist>
