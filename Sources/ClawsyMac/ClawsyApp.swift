@@ -219,8 +219,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                         type: "quick_send",
                         content: text,
                         includeTelemetry: SharedConfig.extendedContextEnabled) {
-                        // agent.deeplink routes the message into the main session
-                        network.sendDeeplink(message: jsonString, sessionKey: "main")
+                        network.sendDeeplink(message: jsonString, sessionKey: "clawsy-service")
                     }
                     self.hideQuickSend()
                 }, onCancel: {
