@@ -223,16 +223,7 @@ mkdir -p "$RESOURCES_DIR/en.lproj"
 mkdir -p "$RESOURCES_DIR/de.lproj"
 cp Sources/ClawsyShared/Resources/en.lproj/Localizable.strings "$RESOURCES_DIR/en.lproj/"
 cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings "$RESOURCES_DIR/de.lproj/"
-plutil -convert binary1 "$RESOURCES_DIR/en.lproj/Localizable.strings" && echo "✅ Compiled en strings" || echo "⚠️  plutil failed for en"
-plutil -convert binary1 "$RESOURCES_DIR/de.lproj/Localizable.strings" && echo "✅ Compiled de strings" || echo "⚠️  plutil failed for de"
-
-# Also compile strings inside the SPM sub-bundle (same reason)
-for LPROJ in "$RESOURCES_DIR/Clawsy_ClawsyShared.bundle/Contents/Resources"/*.lproj; do
-    STRINGS="$LPROJ/Localizable.strings"
-    if [ -f "$STRINGS" ]; then
-        plutil -convert binary1 "$STRINGS" && echo "✅ Compiled $(basename $LPROJ) in sub-bundle" || true
-    fi
-done
+echo "✅ Strings copied as UTF-8 (plutil not needed — NSBundle reads text .strings natively)"
 
 # 8. Copy Update Installer Script
 if [ -f "scripts/update_installer.sh" ]; then
