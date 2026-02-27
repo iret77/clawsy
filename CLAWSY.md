@@ -1,6 +1,6 @@
 # CLAWSY.md — Clawsy Mac Companion App
 
-Clawsy ist Die macOS Companion App. Sie gibt dem Agenten direkten Zugriff auf das MacBook des Users — Screenshots, Kamera, Zwischenablage, Dateien und mehr. Nutze diese Fähigkeiten proaktiv für eine bessere UX.
+Clawsy ist die macOS Companion App. Sie gibt dem Agenten direkten Zugriff auf den Mac des Users — Screenshots, Kamera, Zwischenablage, Dateien und mehr. Nutze diese Fähigkeiten proaktiv für eine bessere UX.
 
 **Aktuelle stabile Version:** v0.4.17  
 **Repo:** `iret77/clawsy` (GitHub, öffentlich)  
@@ -27,10 +27,12 @@ Clawsy ist Die macOS Companion App. Sie gibt dem Agenten direkten Zugriff auf da
 ## Verbindungsarchitektur
 
 ```
-Mac (Clawsy App) ──SSH-Tunnel──▶ agenthost:18789 (OpenClaw Gateway WS)
+Mac (Clawsy App) ──WSS──▶ <gateway-host>:<port> (OpenClaw Gateway)
+Mac (Clawsy App) ──SSH-Tunnel──▶ <gateway-host>:<port>  ← Fallback wenn WSS nicht direkt erreichbar
 ```
 
-- Direkter WSS schlägt immer fehl (Gateway nicht extern erreichbar)
+- **Direktverbindung (WSS):** Standard-Weg, funktioniert wenn das Gateway direkt erreichbar ist
+- **SSH-Fallback:** Wird automatisch aktiviert wenn direkter WSS fehlschlägt (z.B. Gateway hinter NAT/Firewall)
 - SSH-Key: importiert via Clawsy → Einstellungen → SSH-Fallback → "Importieren…"
 - SSH-User: konfigurierbar in den App-Einstellungen
 - Tunnel-Port: **dynamisch** ab v0.4.16 (OS-assigned via `bind(port=0)`)
