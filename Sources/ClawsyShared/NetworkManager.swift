@@ -1160,7 +1160,14 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
 
     private func send(json: [String: Any]) {
         guard let data = try? JSONSerialization.data(withJSONObject: json), let text = String(data: data, encoding: .utf8) else { return }
-        socket?.write(string: text)
+        // Starscream write must happen on the main thread
+        if Thread.isMainThread {
+            socket?.write(string: text)
+        } else {
+            DispatchQueue.main.async { [weak self] in
+                self?.socket?.write(string: text)
+            }
+        }
     }
     
     private func base64UrlEncode(_ data: Data) -> String { return data.base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "") }
