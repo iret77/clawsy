@@ -194,3 +194,15 @@
 "ONBOARDING_ACCESSIBILITY_SKIP_RESTART" = "I've granted access, skip restart →";
 "MISSION_CONTROL_EMPTY" = "No active tasks";
 "MISSION_CONTROL_EMPTY_HINT" = "Tasks appear here when an agent is working.\nThe agent writes to .agent_status.json in your shared folder.";
+"FILESYNC_TITLE" = "File Access Request";
+"FILESYNC_WINDOW_TITLE" = "Clawsy — File Access";
+"OP_UPLOAD" = "Upload";
+"OP_DOWNLOAD" = "Download";
+"OP_DELETE" = "Delete";
+"AGENT_WANTS_TO_OP" = "The agent wants to %@ the file \"%@\".";
+"FILENAME_AGENT_STATUS" = "Agent Status (internal)";
+"ALLOW_LIMITED" = "Allow for…";
+"ALLOW_UPLOAD" = "Allow Upload";
+"ALLOW_DOWNLOAD" = "Allow Download";
+"ALLOW_DELETE" = "Allow Delete";
+"ALLOW_GENERIC" = "Allow";

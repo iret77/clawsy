@@ -195,3 +195,15 @@
 "ONBOARDING_ACCESSIBILITY_SKIP_RESTART" = "Ich habe Zugriff erteilt, ohne Neustart fortfahren →";
 "MISSION_CONTROL_EMPTY" = "Keine aktiven Aufgaben";
 "MISSION_CONTROL_EMPTY_HINT" = "Aufgaben erscheinen hier, sobald ein Agent arbeitet.\nDer Agent schreibt dazu in .agent_status.json im geteilten Ordner.";
+"FILESYNC_TITLE" = "Dateizugriff angefragt";
+"FILESYNC_WINDOW_TITLE" = "Clawsy — Dateizugriff";
+"OP_UPLOAD" = "Hochladen";
+"OP_DOWNLOAD" = "Herunterladen";
+"OP_DELETE" = "Löschen";
+"AGENT_WANTS_TO_OP" = "Der Agent möchte die Datei „%@" %@.";
+"FILENAME_AGENT_STATUS" = "Agentenstatus (intern)";
+"ALLOW_LIMITED" = "Zeitlich erlauben…";
+"ALLOW_UPLOAD" = "Hochladen erlauben";
+"ALLOW_DOWNLOAD" = "Herunterladen erlauben";
+"ALLOW_DELETE" = "Löschen erlauben";
+"ALLOW_GENERIC" = "Erlauben";

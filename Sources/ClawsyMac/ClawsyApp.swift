@@ -277,7 +277,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             onConfirm: { duration in onConfirm(duration); self.alertWindow?.close() },
             onCancel: { onCancel(); self.alertWindow?.close() }
         )
-        showFloatingWindow(view: view, title: "File Sync", autosaveName: "ai.clawsy.FileWindow")
+        showFloatingWindow(view: view, title: NSLocalizedString("FILESYNC_WINDOW_TITLE", bundle: .clawsy, comment: ""), autosaveName: "ai.clawsy.FileWindow")
     }
 
     func showScreenshotRequest(requestedInteractive: Bool, onConfirm: @escaping (Bool) -> Void, onCancel: @escaping () -> Void) {
