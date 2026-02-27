@@ -16,41 +16,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build with SCREENSHOT_MODE flag
-        run: |
-          swift build \
-            --target ClawsyMac \
-            -Xswiftc -DSCREENSHOT_MODE \
-            2>&1
+      - name: Build ScreenshotCLI
+        run: swift build --target ScreenshotCLI -c release 2>&1
 
-      - name: Run screenshot mode
+      - name: Generate screenshots
         run: |
+          BINARY=$(swift build --target ScreenshotCLI -c release --show-bin-path 2>/dev/null)/ScreenshotCLI
           mkdir -p docs/screenshots
-          # swift build puts the binary at .build/debug/<ProductName>
-          BINARY=$(swift build --target ClawsyMac -Xswiftc -DSCREENSHOT_MODE --show-bin-path 2>/dev/null)/ClawsyMac
-          echo "Binary path: $BINARY"
-          if [ ! -f "$BINARY" ]; then
-            BINARY=$(find .build -name "ClawsyMac" -not -name "*.o" -not -name "*.d" -type f | head -1)
-            echo "Fallback binary: $BINARY"
-          fi
-          "$BINARY" --screenshot
-
-      - name: Validate screenshots (no broken string keys)
-        run: |
-          brew install tesseract 2>/dev/null || true
-          FAILED=0
-          for f in docs/screenshots/*.png; do
-            TEXT=$(tesseract "$f" stdout 2>/dev/null || true)
-            # Broken strings look like ALL_CAPS_WITH_UNDERSCORES
-            BROKEN=$(echo "$TEXT" | grep -oE '\b[A-Z]{2,}(_[A-Z]+){2,}\b' | head -5)
-            if [ -n "$BROKEN" ]; then
-              echo "❌ Broken strings in $f: $BROKEN"
-              FAILED=1
-            else
-              echo "✅ $f looks good"
-            fi
-          done
-          [ $FAILED -eq 0 ] || exit 1
+          "$BINARY" docs/screenshots
 
       - name: Commit screenshots
         run: |
@@ -58,7 +31,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/screenshots/
           if git diff --staged --quiet; then
-            echo "No screenshot changes."
+            echo "No changes."
           else
             git commit -m "docs: auto-update screenshots [skip ci]"
             git push

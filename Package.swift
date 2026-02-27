@@ -66,6 +66,13 @@ let package = Package(
             ]
         ),
         
+        // Screenshot CLI — renders all views headlessly via ImageRenderer
+        .executableTarget(
+            name: "ScreenshotCLI",
+            dependencies: [],
+            path: "Sources/ScreenshotCLI"
+        ),
+
         // iOS App Placeholder
         .target(
             name: "ClawsyIOS",
