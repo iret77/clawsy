@@ -108,8 +108,8 @@ struct ContentView: View {
                 // Clipboard
                 Button(action: handleManualClipboardSend) {
                     MenuItemRow(icon: "doc.on.clipboard", title: "PUSH_CLIPBOARD",
-                                shortcut: "⌘⇧\(SharedConfig.pushClipboardHotkey)",
-                                isEnabled: network.isConnected)
+                                isEnabled: network.isConnected,
+                                shortcut: "⌘⇧\(SharedConfig.pushClipboardHotkey)")
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
@@ -117,8 +117,8 @@ struct ContentView: View {
                 // Quick Send
                 Button(action: { appDelegate.showQuickSend() }) {
                     MenuItemRow(icon: "paperplane.fill", title: "QUICK_SEND",
-                                shortcut: "⌘⇧\(SharedConfig.quickSendHotkey)",
-                                isEnabled: network.isConnected)
+                                isEnabled: network.isConnected,
+                                shortcut: "⌘⇧\(SharedConfig.quickSendHotkey)")
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
