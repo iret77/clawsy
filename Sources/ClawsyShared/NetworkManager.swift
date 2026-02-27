@@ -980,6 +980,21 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
 
     /// Send an event routed to the dedicated clawsy-service session (silent, no main chat spam)
+    /// Send a message to any session via agent.deeplink.
+    public func sendDeeplink(message: String, sessionKey: String) {
+        let deeplink: [String: Any] = ["sessionKey": sessionKey, "message": message]
+        let frame: [String: Any] = [
+            "type": "req",
+            "id": "event-\(UUID().uuidString.prefix(8))",
+            "method": "node.event",
+            "params": [
+                "event": "agent.deeplink",
+                "payloadJSON": (try? String(data: JSONSerialization.data(withJSONObject: deeplink), encoding: .utf8)) ?? "{}"
+            ]
+        ]
+        send(json: frame)
+    }
+
     public func sendServiceEvent(message: String, payload: [String: Any] = [:]) {
         var deeplink: [String: Any] = [
             "sessionKey": "clawsy-service",

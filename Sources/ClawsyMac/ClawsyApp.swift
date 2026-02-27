@@ -219,12 +219,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                         type: "quick_send",
                         content: text,
                         includeTelemetry: SharedConfig.extendedContextEnabled) {
-                        network.sendEvent(kind: "agent.request", payload: [
-                            "message": jsonString,
-                            "sessionKey": "main",
-                            "deliver": true,
-                            "receipt": false
-                        ])
+                        // agent.deeplink routes the message into the main session
+                        network.sendDeeplink(message: jsonString, sessionKey: "main")
                     }
                     self.hideQuickSend()
                 }, onCancel: {
