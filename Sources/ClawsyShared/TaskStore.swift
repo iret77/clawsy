@@ -8,14 +8,37 @@ public struct ClawsyTask: Identifiable, Codable {
     public var progress: Double
     public var statusText: String
     public var timestamp: Date
+    public var model: String?
+    public var startedAt: Date?
+    public var isPaused: Bool
     
-    public init(id: UUID = UUID(), agentName: String, title: String, progress: Double, statusText: String, timestamp: Date = Date()) {
+    public init(id: UUID = UUID(), agentName: String, title: String, progress: Double, statusText: String, timestamp: Date = Date(), model: String? = nil, startedAt: Date? = nil, isPaused: Bool = false) {
         self.id = id
         self.agentName = agentName
         self.title = title
         self.progress = progress
         self.statusText = statusText
         self.timestamp = timestamp
+        self.model = model
+        self.startedAt = startedAt
+        self.isPaused = isPaused
+    }
+}
+
+/// Control action written to `pending_control.json` in the App Group container.
+public struct PendingControl: Codable {
+    public let action: String      // "pause" | "resume" | "request_detail"
+    public let taskId: String
+    public var title: String?
+    public let timestamp: String
+    
+    public init(action: String, taskId: String, title: String? = nil) {
+        self.action = action
+        self.taskId = taskId
+        self.title = title
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        self.timestamp = formatter.string(from: Date())
     }
 }
 
@@ -45,9 +68,31 @@ public class TaskStore: ObservableObject {
         }
     }
     
+    /// Toggle pause state for a task (optimistic UI) and write control file.
+    public func togglePause(for taskId: UUID) {
+        guard let index = tasks.firstIndex(where: { $0.id == taskId }) else { return }
+        tasks[index].isPaused.toggle()
+        let action = tasks[index].isPaused ? "pause" : "resume"
+        let control = PendingControl(action: action, taskId: taskId.uuidString)
+        writeControl(control)
+        saveToSharedContainer()
+    }
+    
+    /// Request detail for a task and write control file.
+    public func requestDetail(for task: ClawsyTask) {
+        let control = PendingControl(action: "request_detail", taskId: task.id.uuidString, title: task.title)
+        writeControl(control)
+    }
+    
+    private func writeControl(_ control: PendingControl) {
+        guard let url = sharedContainerURL?.appendingPathComponent("pending_control.json") else { return }
+        if let data = try? JSONEncoder().encode(control) {
+            try? data.write(to: url, options: .atomic)
+        }
+    }
+    
     /// Schedule automatic removal of a completed task after 10 seconds
     private func scheduleRemoval(for taskId: UUID) {
-        // Cancel any existing timer
         removalTimers[taskId]?.cancel()
         let work = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
@@ -76,33 +121,43 @@ public class TaskStore: ObservableObject {
                 let title: String
                 let progress: Double
                 let statusText: String
+                let model: String?
+                let startedAt: String?
             }
         }
         
         guard let status = try? JSONDecoder().decode(StatusFile.self, from: data) else { return }
         
-        // Parse updatedAt as ISO8601
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         guard let updatedDate = formatter.date(from: status.updatedAt) ?? ISO8601DateFormatter().date(from: status.updatedAt) else { return }
         
         DispatchQueue.main.async {
-            // If stale (>60s), clear tasks
             if Date().timeIntervalSince(updatedDate) > 60 {
                 self.tasks.removeAll()
                 self.saveToSharedContainer()
                 return
             }
             
-            // Replace tasks with file contents
+            // Preserve local isPaused state across reloads
+            let pausedIds = Set(self.tasks.filter { $0.isPaused }.map { $0.id })
+            
             self.tasks = status.tasks.map { entry in
-                ClawsyTask(
-                    id: UUID(uuidString: entry.id) ?? UUID(),
+                let taskId = UUID(uuidString: entry.id) ?? UUID()
+                var startDate: Date? = nil
+                if let s = entry.startedAt {
+                    startDate = formatter.date(from: s) ?? ISO8601DateFormatter().date(from: s)
+                }
+                return ClawsyTask(
+                    id: taskId,
                     agentName: entry.agentName,
                     title: entry.title,
                     progress: entry.progress,
                     statusText: entry.statusText,
-                    timestamp: updatedDate
+                    timestamp: updatedDate,
+                    model: entry.model,
+                    startedAt: startDate,
+                    isPaused: pausedIds.contains(taskId)
                 )
             }
             self.saveToSharedContainer()
