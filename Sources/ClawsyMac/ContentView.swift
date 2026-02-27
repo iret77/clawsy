@@ -29,6 +29,8 @@ struct ContentView: View {
     @AppStorage("extendedContextEnabled", store: SharedConfig.sharedDefaults) private var extendedContextEnabled = false
     
     @State private var fileWatcher: FileWatcher?
+    @State private var agentModel: String? = nil
+    @State private var agentName: String? = nil
     
     var body: some View {
         VStack(spacing: 0) {
@@ -40,15 +42,23 @@ struct ContentView: View {
                     
                     Group {
                         if network.connectionStatus == "STATUS_CONNECTING" {
-                            // Dynamic string interpolation for connection attempts
                             Text("STATUS_CONNECTING \(network.connectionAttemptCount)", bundle: .clawsy)
                         } else {
-                            // Standard localization for static status keys
                             Text(LocalizedStringKey(network.connectionStatus), bundle: .clawsy)
                         }
                     }
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
+
+                    if let model = agentModel {
+                        HStack(spacing: 3) {
+                            Image(systemName: "brain")
+                                .font(.system(size: 9))
+                            Text(model)
+                                .font(.system(size: 10))
+                        }
+                        .foregroundColor(.secondary.opacity(0.8))
+                    }
                 }
                 
                 Spacer()
@@ -401,6 +411,18 @@ struct ContentView: View {
             if changedPath.hasSuffix(".agent_status.json") {
                 let fileURL = URL(fileURLWithPath: changedPath)
                 taskStore.loadFromFile(fileURL)
+                return
+            }
+
+            // Check if this is the agent info file (model/session info)
+            if changedPath.hasSuffix(".agent_info.json") {
+                if let data = try? Data(contentsOf: URL(fileURLWithPath: changedPath)),
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    DispatchQueue.main.async {
+                        agentModel = json["model"] as? String
+                        agentName = json["agentName"] as? String
+                    }
+                }
                 return
             }
 

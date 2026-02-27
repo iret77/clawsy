@@ -864,7 +864,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 }
             }
             // System-internal files are always allowed silently — no permission dialog
-            let silentWriteAllowlist: Set<String> = [".agent_status.json", ".clawsy_version"]
+            let silentWriteAllowlist: Set<String> = [".agent_status.json", ".agent_info.json", ".clawsy_version"]
             if silentWriteAllowlist.contains(name) {
                 executeSet()
             } else if let expiry = filePermissionExpiry, expiry > Date() {
