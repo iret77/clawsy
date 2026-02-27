@@ -156,6 +156,13 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
         <key>NSAllowsArbitraryLoads</key>
         <true/>
     </dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>de</string>
+    </array>
 </dict>
 </plist>
 EOF
