@@ -333,6 +333,15 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         let keyURL = groupURL.appendingPathComponent("clawsy_ssh_key")
         guard FileManager.default.fileExists(atPath: keyURL.path) else { return nil }
 
+        // Validate: must be non-empty
+        let attrs = try? FileManager.default.attributesOfItem(atPath: keyURL.path)
+        let size = attrs?[.size] as? Int ?? 0
+        guard size > 0 else {
+            // Phantom file — remove it so SSH falls back to ~/.ssh/
+            try? FileManager.default.removeItem(at: keyURL)
+            return nil
+        }
+
         // SSH requires key files to be chmod 0600 — copy to /tmp with correct permissions
         let tmpPath = NSTemporaryDirectory() + "clawsy_ssh_key_\(ProcessInfo.processInfo.processIdentifier)"
         let tmpURL = URL(fileURLWithPath: tmpPath)
@@ -344,7 +353,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: tmpPath)
             return tmpPath
         } catch {
-            return keyURL.path  // fallback to original
+            return nil  // don't pass broken key — let SSH use ~/.ssh/ defaults
         }
     }
 
@@ -422,6 +431,10 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 args += ["-i", keyPath]
                 DispatchQueue.main.async {
                     self.rawLog += "\n[SSH] Using imported key: \(keyPath)"
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self.rawLog += "\n[SSH] No imported key — using ~/.ssh/ defaults"
                 }
             }
             
