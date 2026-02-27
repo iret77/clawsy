@@ -228,7 +228,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                         ]]
                         if let triggerData = try? JSONSerialization.data(withJSONObject: trigger),
                            let triggerString = String(data: triggerData, encoding: .utf8) {
-                            network.sendDeeplink(message: triggerString, sessionKey: "main")
+                            network.sendDeeplink(message: triggerString, sessionKey: "main", deliver: true)
                         }
                     }
                     self.hideQuickSend()

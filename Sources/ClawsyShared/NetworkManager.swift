@@ -975,12 +975,13 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         send(json: ["type": "res", "id": id, "error": ["code": code, "message": message]])
     }
     
-    /// Send a screenshot as an agent.deeplink with image attachment so the Gateway
-    /// routes it into the dedicated clawsy-service session (not the main chat).
+    /// Send a screenshot via agent.request into clawsy-service (silent, no main chat delivery).
     public func sendScreenshot(base64: String, mimeType: String = "image/jpeg") {
         let payload: [String: Any] = [
             "sessionKey": "clawsy-service",
             "message": "📸 Screenshot von \(Host.current().localizedName ?? "Mac")",
+            "deliver": false,
+            "receipt": false,
             "attachments": [
                 [
                     "type": "image",
@@ -997,7 +998,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             "id": "event-\(UUID().uuidString.prefix(8))",
             "method": "node.event",
             "params": [
-                "event": "agent.deeplink",
+                "event": "agent.request",
                 "payloadJSON": payloadJSON
             ]
         ]
@@ -1005,40 +1006,31 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
 
     /// Send an event routed to the dedicated clawsy-service session (silent, no main chat spam)
-    /// Send a message to any session via agent.deeplink.
-    public func sendDeeplink(message: String, sessionKey: String) {
-        let deeplink: [String: Any] = ["sessionKey": sessionKey, "message": message]
+    /// Send a message to any session via agent.request.
+    /// deliver=true → agent processes AND delivers reply via configured channel (e.g. Telegram)
+    /// deliver=false → agent processes silently, no channel delivery
+    public func sendDeeplink(message: String, sessionKey: String, deliver: Bool = false) {
+        let params: [String: Any] = [
+            "sessionKey": sessionKey,
+            "message": message,
+            "deliver": deliver,
+            "receipt": false
+        ]
         let frame: [String: Any] = [
             "type": "req",
             "id": "event-\(UUID().uuidString.prefix(8))",
             "method": "node.event",
             "params": [
-                "event": "agent.deeplink",
-                "payloadJSON": (try? String(data: JSONSerialization.data(withJSONObject: deeplink), encoding: .utf8)) ?? "{}"
+                "event": "agent.request",
+                "payloadJSON": (try? String(data: JSONSerialization.data(withJSONObject: params), encoding: .utf8)) ?? "{}"
             ]
         ]
         send(json: frame)
     }
 
+    /// Send a message to clawsy-service session (silent, no Telegram delivery).
     public func sendServiceEvent(message: String, payload: [String: Any] = [:]) {
-        var deeplink: [String: Any] = [
-            "sessionKey": "clawsy-service",
-            "message": message
-        ]
-        if !payload.isEmpty, let payloadData = try? JSONSerialization.data(withJSONObject: payload),
-           let payloadStr = String(data: payloadData, encoding: .utf8) {
-            deeplink["payloadJSON"] = payloadStr
-        }
-        let frame: [String: Any] = [
-            "type": "req",
-            "id": "event-\(UUID().uuidString.prefix(8))",
-            "method": "node.event",
-            "params": [
-                "event": "agent.deeplink",
-                "payloadJSON": (try? String(data: JSONSerialization.data(withJSONObject: deeplink), encoding: .utf8)) ?? "{}"
-            ]
-        ]
-        send(json: frame)
+        sendDeeplink(message: message, sessionKey: "clawsy-service", deliver: false)
     }
 
     public func sendEvent(kind: String, payload: Any) {
