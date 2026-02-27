@@ -28,6 +28,23 @@ jobs:
           mkdir -p docs/screenshots
           .build/debug/ClawsyMac --screenshot
 
+      - name: Validate screenshots (no broken string keys)
+        run: |
+          brew install tesseract 2>/dev/null || true
+          FAILED=0
+          for f in docs/screenshots/*.png; do
+            TEXT=$(tesseract "$f" stdout 2>/dev/null || true)
+            # Broken strings look like ALL_CAPS_WITH_UNDERSCORES
+            BROKEN=$(echo "$TEXT" | grep -oE '\b[A-Z]{2,}(_[A-Z]+){2,}\b' | head -5)
+            if [ -n "$BROKEN" ]; then
+              echo "❌ Broken strings in $f: $BROKEN"
+              FAILED=1
+            else
+              echo "✅ $f looks good"
+            fi
+          done
+          [ $FAILED -eq 0 ] || exit 1
+
       - name: Commit screenshots
         run: |
           git config user.name  "github-actions[bot]"
