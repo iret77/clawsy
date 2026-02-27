@@ -329,7 +329,7 @@ struct ContentView: View {
     // Manual screenshot trigger
     func takeScreenshotAndSend(interactive: Bool) {
         if let b64 = ScreenshotManager.takeScreenshot(interactive: interactive) {
-            network.sendEvent(kind: "screenshot", payload: ["format": "jpeg", "base64": b64])
+            network.sendScreenshot(base64: b64, mimeType: "image/jpeg")
             appDelegate.showStatusHUD(icon: "camera.fill", title: "SCREENSHOT_SENT")
         }
     }

@@ -917,6 +917,34 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         send(json: ["type": "res", "id": id, "error": ["code": code, "message": message]])
     }
     
+    /// Send a screenshot as an agent.deeplink with image attachment so the Gateway
+    /// routes it into the active agent session.
+    public func sendScreenshot(base64: String, mimeType: String = "image/jpeg") {
+        let payload: [String: Any] = [
+            "message": "📸 Screenshot von \(Host.current().localizedName ?? "Mac")",
+            "attachments": [
+                [
+                    "type": "image",
+                    "mimeType": mimeType,
+                    "fileName": "screenshot.jpg",
+                    "content": base64
+                ]
+            ]
+        ]
+        let payloadJSON = (try? JSONSerialization.data(withJSONObject: payload))
+            .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+        let frame: [String: Any] = [
+            "type": "req",
+            "id": "event-\(UUID().uuidString.prefix(8))",
+            "method": "node.event",
+            "params": [
+                "event": "agent.deeplink",
+                "payloadJSON": payloadJSON
+            ]
+        ]
+        send(json: frame)
+    }
+
     public func sendEvent(kind: String, payload: Any) {
         // Enforce type: req with method: node.event to bypass 
         // current Gateway limitations accepting type: event frames after handshake.
