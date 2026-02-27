@@ -1033,6 +1033,59 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         sendDeeplink(message: message, sessionKey: "clawsy-service", deliver: false)
     }
 
+    /// Send a camera photo: stores in clawsy-service (context) AND triggers main chat delivery.
+    public func sendPhoto(base64: String, deviceName: String = "Kamera") {
+        // 1. Store in clawsy-service for agent context (silent)
+        let storagePayload: [String: Any] = [
+            "sessionKey": "clawsy-service",
+            "message": "📷 Kamerafoto von \(Host.current().localizedName ?? "Mac") (\(deviceName))",
+            "deliver": false,
+            "receipt": false,
+            "attachments": [
+                [
+                    "type": "image",
+                    "mimeType": "image/jpeg",
+                    "fileName": "photo.jpg",
+                    "content": base64
+                ]
+            ]
+        ]
+        let storageJSON = (try? JSONSerialization.data(withJSONObject: storagePayload))
+            .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+        let storageFrame: [String: Any] = [
+            "type": "req",
+            "id": "event-\(UUID().uuidString.prefix(8))",
+            "method": "node.event",
+            "params": ["event": "agent.request", "payloadJSON": storageJSON]
+        ]
+        send(json: storageFrame)
+
+        // 2. Trigger main session with the photo (delivered to Telegram)
+        let mainPayload: [String: Any] = [
+            "sessionKey": "main",
+            "message": "📷 Kamerafoto von Clawsy (\(deviceName))",
+            "deliver": true,
+            "receipt": false,
+            "attachments": [
+                [
+                    "type": "image",
+                    "mimeType": "image/jpeg",
+                    "fileName": "photo.jpg",
+                    "content": base64
+                ]
+            ]
+        ]
+        let mainJSON = (try? JSONSerialization.data(withJSONObject: mainPayload))
+            .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+        let mainFrame: [String: Any] = [
+            "type": "req",
+            "id": "event-\(UUID().uuidString.prefix(8))",
+            "method": "node.event",
+            "params": ["event": "agent.request", "payloadJSON": mainJSON]
+        ]
+        send(json: mainFrame)
+    }
+
     public func sendEvent(kind: String, payload: Any) {
         // Enforce type: req with method: node.event to bypass 
         // current Gateway limitations accepting type: event frames after handshake.

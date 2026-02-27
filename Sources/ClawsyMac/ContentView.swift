@@ -140,24 +140,21 @@ struct ContentView: View {
                         if cameras.isEmpty {
                             MenuItemRow(icon: "list.bullet", title: "NO_CAMERAS_FOUND", isEnabled: false)
                         } else {
-                            ForEach(cameras, id: \.self) { cam in
+                            ForEach(cameras.indices, id: \.self) { idx in
+                                let cam = cameras[idx]
+                                let camId = cam["id"] as? String ?? ""
+                                let camName = cam["name"] as? String ?? "Kamera \(idx + 1)"
                                 Button(action: {
                                     showingCameraMenu = false
-                                    CameraManager.takePhoto(deviceId: cam) { b64 in
+                                    CameraManager.takePhoto(deviceId: camId) { b64 in
                                         guard let b64 = b64 else { return }
-                                        let envelope: [String: Any] = ["clawsy_envelope": [
-                                            "type": "camera",
-                                            "image": b64,
-                                            "deviceId": cam,
-                                            "localTime": ISO8601DateFormatter().string(from: Date())
-                                        ]]
-                                        if let json = try? JSONSerialization.data(withJSONObject: envelope),
-                                           let str = String(data: json, encoding: .utf8) {
-                                            network.sendServiceEvent(message: str)
+                                        network.sendPhoto(base64: b64, deviceName: camName)
+                                        DispatchQueue.main.async {
+                                            appDelegate.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT")
                                         }
                                     }
                                 }) {
-                                    MenuItemRow(icon: "camera.fill", title: cam, isEnabled: network.isConnected)
+                                    MenuItemRow(icon: "camera.fill", title: camName, isEnabled: network.isConnected)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -409,7 +406,7 @@ struct ContentView: View {
     func takePhotoAndSend() {
         CameraManager.takePhoto(deviceId: nil) { b64 in
             if let b64 = b64 {
-                network.sendScreenshot(base64: b64, mimeType: "image/jpeg")
+                network.sendPhoto(base64: b64)
                 DispatchQueue.main.async {
                     appDelegate.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT")
                 }
