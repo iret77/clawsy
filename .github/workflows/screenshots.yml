@@ -26,7 +26,9 @@ jobs:
       - name: Run screenshot mode
         run: |
           mkdir -p docs/screenshots
-          .build/debug/ClawsyMac --screenshot
+          BINARY=$(find .build -name "ClawsyMac" -type f | grep -v "\.o$" | head -1)
+          echo "Found binary: $BINARY"
+          "$BINARY" --screenshot
 
       - name: Validate screenshots (no broken string keys)
         run: |
