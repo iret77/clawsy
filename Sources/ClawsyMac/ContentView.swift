@@ -962,9 +962,28 @@ struct SettingsView: View {
                     
                     // Hotkeys Section
                     VStack(alignment: .leading, spacing: 12) {
-                        Label(title: { Text("HOTKEYS", bundle: .clawsy) }, icon: { Image(systemName: "keyboard") })
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.purple)
+                        HStack(alignment: .center) {
+                            Label(title: { Text("HOTKEYS", bundle: .clawsy) }, icon: { Image(systemName: "keyboard") })
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.purple)
+                            Spacer()
+                            // Accessibility status badge + grant button
+                            if AXIsProcessTrusted() {
+                                Label(NSLocalizedString("ACCESSIBILITY_GRANTED", bundle: .clawsy, comment: ""), systemImage: "checkmark.circle.fill")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.green)
+                            } else {
+                                Button(action: {
+                                    NSApp.delegate.flatMap { $0 as? AppDelegate }?.requestAccessibilityPermission()
+                                }) {
+                                    Label(NSLocalizedString("GRANT_ACCESSIBILITY", bundle: .clawsy, comment: ""), systemImage: "exclamationmark.shield.fill")
+                                        .font(.system(size: 11))
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.orange)
+                                .controlSize(.small)
+                            }
+                        }
                         
                         HStack {
                             Text("HOTKEY_QUICK_SEND", bundle: .clawsy)

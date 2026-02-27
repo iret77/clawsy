@@ -130,24 +130,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     }
     
     private func registerGlobalHotkeyMonitor() {
-        let trusted = AXIsProcessTrusted()
-        if trusted {
-            NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
-                _ = self.processHotkey(event: event)
-            }
-        } else {
-            // Request Accessibility permission (shows system dialog on first run)
-            let options: [String: Any] = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as String: true]
-            AXIsProcessTrustedWithOptions(options as CFDictionary)
-            // Retry after a short delay (user may have just granted permission)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
-                if AXIsProcessTrusted() {
-                    NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
-                        _ = self.processHotkey(event: event)
-                    }
-                }
-            }
+        // Always register the monitor — it fires only when Accessibility is granted.
+        // Do NOT auto-prompt on startup: macOS revokes permission on every binary update,
+        // so prompting every launch is annoying. User can grant via Settings button instead.
+        NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            _ = self?.processHotkey(event: event)
         }
+    }
+
+    /// Call this when the user explicitly clicks "Grant Accessibility" in Settings.
+    func requestAccessibilityPermission() {
+        let options = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as String: true] as CFDictionary
+        AXIsProcessTrustedWithOptions(options)
     }
 
     private func processHotkey(event: NSEvent) -> Bool {

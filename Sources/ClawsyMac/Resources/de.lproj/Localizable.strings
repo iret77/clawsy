@@ -210,3 +210,6 @@
 "ALLOW_DOWNLOAD" = "Herunterladen erlauben";
 "ALLOW_DELETE" = "Löschen erlauben";
 "ALLOW_GENERIC" = "Erlauben";
+
+"ACCESSIBILITY_GRANTED" = "Bedienungshilfen erlaubt";
+"GRANT_ACCESSIBILITY" = "Bedienungshilfen erlauben";

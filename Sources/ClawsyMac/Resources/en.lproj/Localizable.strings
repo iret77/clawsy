@@ -209,3 +209,6 @@
 "ALLOW_DOWNLOAD" = "Allow Download";
 "ALLOW_DELETE" = "Allow Delete";
 "ALLOW_GENERIC" = "Allow";
+
+"ACCESSIBILITY_GRANTED" = "Accessibility granted";
+"GRANT_ACCESSIBILITY" = "Grant Accessibility";
