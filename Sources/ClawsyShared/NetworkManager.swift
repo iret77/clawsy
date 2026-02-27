@@ -863,7 +863,15 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                     if ClawsyFileManager.writeFile(at: fullPath, base64Content: content) { self.sendResponse(id: id, result: ["status": "ok", "name": name]) } else { self.sendError(id: id, code: -32000, message: "Failed to write file") }
                 }
             }
-            if let expiry = filePermissionExpiry, expiry > Date() { executeSet() } else { onFileSyncRequested?(name, "Upload", { duration in if let duration = duration { self.filePermissionExpiry = Date().addingTimeInterval(duration) }; executeSet() }, { self.sendError(id: id, code: -1, message: "User denied file write") }) }
+            // System-internal files are always allowed silently — no permission dialog
+            let silentWriteAllowlist: Set<String> = [".agent_status.json", ".clawsy_version"]
+            if silentWriteAllowlist.contains(name) {
+                executeSet()
+            } else if let expiry = filePermissionExpiry, expiry > Date() {
+                executeSet()
+            } else {
+                onFileSyncRequested?(name, "Upload", { duration in if let duration = duration { self.filePermissionExpiry = Date().addingTimeInterval(duration) }; executeSet() }, { self.sendError(id: id, code: -1, message: "User denied file write") })
+            }
         case "file.delete":
             guard let name = params["name"] as? String else { sendError(id: id, code: -32602, message: "Missing 'name' parameter"); return }
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
