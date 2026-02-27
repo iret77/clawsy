@@ -179,40 +179,50 @@ class UpdateManager: ObservableObject {
         }.resume()
     }
     
+    /// Active download session & delegate — stored as instance vars so ARC doesn't release them.
+    private var downloadDelegate: DownloadDelegate?
+    private var downloadSession: URLSession?
+
     private func downloadAsset(url: URL, filename: String) {
         DispatchQueue.main.async { self.isInstalling = true; self.downloadProgress = 0.0 }
-        let task = URLSession.shared.downloadTask(with: url) { [weak self] localURL, response, error in
-            guard let self = self else { return }
-            guard let localURL = localURL, error == nil else {
-                print("❌ Download failed: \(error?.localizedDescription ?? "Unknown")")
-                DispatchQueue.main.async { self.isInstalling = false }
-                return
-            }
-            
-            let fileManager = FileManager.default
-            let destURL = fileManager.temporaryDirectory.appendingPathComponent(filename)
-            
-            do {
-                if fileManager.fileExists(atPath: destURL.path) {
-                    try fileManager.removeItem(at: destURL)
+
+        let delegate = DownloadDelegate(
+            filename: filename,
+            onProgress: { [weak self] fraction in
+                DispatchQueue.main.async {
+                    self?.downloadProgress = min(fraction * 0.9, 0.9)
                 }
-                try fileManager.moveItem(at: localURL, to: destURL)
-                DispatchQueue.main.async { self.downloadProgress = 0.9 }
-                print("✅ Downloaded to: \(destURL.path)")
-                self.unzipAndInstall(fileURL: destURL)
-            } catch {
-                print("❌ File move error: \(error)")
-                DispatchQueue.main.async { self.isInstalling = false }
+            },
+            onComplete: { [weak self] localURL, error in
+                guard let self = self else { return }
+                guard let localURL = localURL, error == nil else {
+                    print("❌ Download failed: \(error?.localizedDescription ?? "Unknown")")
+                    DispatchQueue.main.async { self.isInstalling = false }
+                    return
+                }
+
+                let fileManager = FileManager.default
+                let destURL = fileManager.temporaryDirectory.appendingPathComponent(filename)
+
+                do {
+                    if fileManager.fileExists(atPath: destURL.path) {
+                        try fileManager.removeItem(at: destURL)
+                    }
+                    try fileManager.moveItem(at: localURL, to: destURL)
+                    DispatchQueue.main.async { self.downloadProgress = 0.9 }
+                    print("✅ Downloaded to: \(destURL.path)")
+                    self.unzipAndInstall(fileURL: destURL)
+                } catch {
+                    print("❌ File move error: \(error)")
+                    DispatchQueue.main.async { self.isInstalling = false }
+                }
             }
-        }
-        // Track download progress
-        let observation = task.progress.observe(\.fractionCompleted) { [weak self] progress, _ in
-            DispatchQueue.main.async {
-                self?.downloadProgress = min(progress.fractionCompleted * 0.9, 0.9)
-            }
-        }
-        _ = observation // retain
-        task.resume()
+        )
+
+        self.downloadDelegate = delegate
+        let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+        self.downloadSession = session
+        session.downloadTask(with: url).resume()
     }
     
     private func unzipAndInstall(fileURL: URL) {
@@ -267,7 +277,7 @@ class UpdateManager: ObservableObject {
         // parent app exits its sandbox is torn down, allowing the orphaned bash
         // process to replace the app bundle and relaunch cleanly.
         let script = """
-        #!/bin/bash
+        #!/bin/sh
         sleep 2
         rm -rf "\(targetPath)"
         mv "\(newAppPath)" "\(targetPath)"
@@ -281,6 +291,19 @@ class UpdateManager: ObservableObject {
             try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptPath)
         } catch {
             print("❌ Failed to write update script: \(error)")
+            DispatchQueue.main.async {
+                NSWorkspace.shared.open(URL(string: "https://github.com/\(self.githubRepo)/releases/latest")!)
+                self.isInstalling = false
+            }
+            return
+        }
+
+        guard FileManager.default.fileExists(atPath: scriptPath) else {
+            print("❌ Update script not found at \(scriptPath) after write")
+            DispatchQueue.main.async {
+                NSWorkspace.shared.open(URL(string: "https://github.com/\(self.githubRepo)/releases/latest")!)
+                self.isInstalling = false
+            }
             return
         }
 
@@ -302,5 +325,35 @@ class UpdateManager: ObservableObject {
 
         print("🚀 Update script running. Terminating app...")
         NSApp.terminate(nil)
+    }
+}
+
+// MARK: - URLSessionDownloadDelegate for live progress
+
+private class DownloadDelegate: NSObject, URLSessionDownloadDelegate {
+    let filename: String
+    let onProgress: (Double) -> Void
+    let onComplete: (URL?, Error?) -> Void
+
+    init(filename: String, onProgress: @escaping (Double) -> Void, onComplete: @escaping (URL?, Error?) -> Void) {
+        self.filename = filename
+        self.onProgress = onProgress
+        self.onComplete = onComplete
+    }
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+        onComplete(location, nil)
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        if let error = error {
+            onComplete(nil, error)
+        }
+    }
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+        guard totalBytesExpectedToWrite > 0 else { return }
+        let fraction = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
+        onProgress(fraction)
     }
 }
