@@ -178,15 +178,8 @@ struct ContentView: View {
                     ZStack(alignment: .trailing) {
                         MenuItemRow(icon: "info.bubble.fill", title: "LAST_METADATA", isEnabled: true)
                         if network.isConnected {
-                            if network.isServerClawsyAware {
-                                Circle().fill(Color.green).frame(width: 6, height: 6)
-                                    .padding(.trailing, 16)
-                            } else {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.orange)
-                                    .font(.system(size: 10))
-                                    .padding(.trailing, 16)
-                            }
+                            Circle().fill(Color.green).frame(width: 6, height: 6)
+                                .padding(.trailing, 16)
                         }
                     }
                 }
