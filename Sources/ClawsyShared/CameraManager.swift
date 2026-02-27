@@ -50,58 +50,53 @@ public class CameraManager: NSObject {
     }
     
     private static func executeCapture(deviceId: String?, completion: @escaping (String?) -> Void) {
-        let device: AVCaptureDevice?
-        
-        if let deviceId = deviceId {
-            device = AVCaptureDevice(uniqueID: deviceId)
-        } else {
-            device = AVCaptureDevice.default(for: .video)
-        }
-        
-        guard let captureDevice = device else {
-            completion(nil)
-            return
-        }
-        
-        do {
-            let input = try AVCaptureDeviceInput(device: captureDevice)
-            let captureSession = AVCaptureSession()
-            captureSession.sessionPreset = .photo
-            
-            if captureSession.canAddInput(input) {
+        // AVCaptureSession.startRunning() MUST NOT run on the main thread
+        DispatchQueue.global(qos: .userInitiated).async {
+            let device: AVCaptureDevice?
+            if let deviceId = deviceId, !deviceId.isEmpty {
+                device = AVCaptureDevice(uniqueID: deviceId)
+            } else {
+                device = AVCaptureDevice.default(for: .video)
+            }
+
+            guard let captureDevice = device else {
+                completion(nil)
+                return
+            }
+
+            do {
+                let input = try AVCaptureDeviceInput(device: captureDevice)
+                let captureSession = AVCaptureSession()
+                captureSession.sessionPreset = .photo
+
+                guard captureSession.canAddInput(input) else { completion(nil); return }
                 captureSession.addInput(input)
-            } else {
-                completion(nil)
-                return
-            }
-            
-            let photoOutput = AVCapturePhotoOutput()
-            if captureSession.canAddOutput(photoOutput) {
+
+                let photoOutput = AVCapturePhotoOutput()
+                guard captureSession.canAddOutput(photoOutput) else { completion(nil); return }
                 captureSession.addOutput(photoOutput)
-            } else {
+
+                let delegate = PhotoCaptureDelegate { data in
+                    captureSession.stopRunning()
+                    completion(data?.base64EncodedString())
+                }
+
+                // Keep session + delegate alive until photo is delivered
+                objc_setAssociatedObject(photoOutput, "session",  captureSession, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+                objc_setAssociatedObject(photoOutput, "delegate", delegate,       .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+
+                captureSession.startRunning()
+
+                // Give the camera hardware a moment to warm up, then snap
+                DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 1.0) {
+                    let settings = AVCapturePhotoSettings()
+                    photoOutput.capturePhoto(with: settings, delegate: delegate)
+                }
+
+            } catch {
+                print("Camera Error: \(error)")
                 completion(nil)
-                return
             }
-            
-            let delegate = PhotoCaptureDelegate { data in
-                captureSession.stopRunning()
-                completion(data?.base64EncodedString())
-            }
-            
-            captureSession.startRunning()
-            
-            // Give the camera hardware a moment to initialize before snapping
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                let settings = AVCapturePhotoSettings()
-                photoOutput.capturePhoto(with: settings, delegate: delegate)
-            }
-            
-            // Keep delegate alive
-            objc_setAssociatedObject(photoOutput, "delegate", delegate, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-            
-        } catch {
-            print("Camera Error: \(error)")
-            completion(nil)
         }
     }
 }
