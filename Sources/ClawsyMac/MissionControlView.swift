@@ -5,19 +5,39 @@ struct MissionControlView: View {
     @ObservedObject var taskStore: TaskStore
     @State private var hasWaited = false
 
+    private var allPaused: Bool {
+        !taskStore.tasks.isEmpty && taskStore.tasks.allSatisfy(\.isPaused)
+    }
+
     var body: some View {
         VStack(spacing: 12) {
+            // Header
             HStack {
-                Text("MISSION_CONTROL_TITLE", bundle: .clawsy)
-                    .font(.headline)
+                if taskStore.tasks.isEmpty {
+                    Text("MISSION_CONTROL_TITLE", bundle: .clawsy)
+                        .font(.headline)
+                } else {
+                    Text(String(format: NSLocalizedString("MISSION_CONTROL_TITLE_COUNT", bundle: .clawsy, comment: ""), taskStore.tasks.count))
+                        .font(.headline)
+                }
                 Spacer()
                 Image(systemName: "list.bullet.clipboard")
                     .foregroundColor(.accentColor)
             }
 
+            if allPaused {
+                HStack(spacing: 4) {
+                    Image(systemName: "pause.circle.fill")
+                        .font(.caption2)
+                        .foregroundColor(.yellow)
+                    Text("MISSION_CONTROL_ALL_PAUSED", bundle: .clawsy)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
             if taskStore.tasks.isEmpty {
                 if hasWaited {
-                    // Empty state — no tasks running
                     VStack(spacing: 10) {
                         Image(systemName: "tray")
                             .font(.system(size: 32))
@@ -32,7 +52,6 @@ struct MissionControlView: View {
                     }
                     .frame(maxHeight: .infinity)
                 } else {
-                    // Brief loading state (max 3s)
                     VStack(spacing: 12) {
                         ProgressView()
                             .scaleEffect(0.8)
@@ -67,83 +86,140 @@ struct MissionControlView: View {
     }
 }
 
+// MARK: - Model Badge Color
+
+private func modelBadgeColor(for model: String?) -> Color {
+    guard let model = model?.lowercased() else { return .gray }
+    if model.contains("opus") { return .orange }
+    if model.contains("sonnet") { return .blue }
+    return .gray
+}
+
+// MARK: - Progress Bar Gradient
+
+private func progressGradient(for progress: Double) -> LinearGradient {
+    let endColor: Color = progress > 0.8 ? .green : .blue
+    return LinearGradient(
+        colors: [.blue, endColor],
+        startPoint: .leading,
+        endPoint: .trailing
+    )
+}
+
+// MARK: - TaskRowView
+
 struct TaskRowView: View {
     let task: ClawsyTask
     @ObservedObject var taskStore: TaskStore
     @State private var elapsed: TimeInterval = 0
-    
+    @State private var isHovering = false
+    @State private var animatedProgress: Double = 0
+
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-    
+
+    private var isComplete: Bool { task.progress >= 1.0 }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            // Row 1: Progress bar + percentage
-            HStack(spacing: 8) {
-                ProgressView(value: task.progress)
-                    .progressViewStyle(.linear)
-                    .tint(task.isPaused ? .yellow : .accentColor)
-                
-                Text("\(Int(task.progress * 100))%")
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundColor(.secondary)
-                    .frame(width: 32, alignment: .trailing)
-            }
-            
-            // Row 2: Title
-            Text(task.title)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .lineLimit(1)
-            
-            // Row 3: Status text + buttons
-            HStack {
-                Text(task.statusText)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+        VStack(alignment: .leading, spacing: 6) {
+            // Row 1: Title + model badge
+            HStack(spacing: 6) {
+                Text(task.title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
                     .lineLimit(1)
-                
+
                 Spacer()
-                
-                Button {
-                    taskStore.togglePause(for: task.id)
-                } label: {
-                    Image(systemName: task.isPaused ? "play.fill" : "pause.fill")
-                        .font(.system(size: 10))
-                        .frame(width: 20, height: 20)
-                }
-                .buttonStyle(.plain)
-                .help(task.isPaused ? "Resume" : "Pause")
-                
-                Button {
-                    taskStore.requestDetail(for: task)
-                } label: {
-                    Image(systemName: "info.circle")
-                        .font(.system(size: 10))
-                        .frame(width: 20, height: 20)
-                }
-                .buttonStyle(.plain)
-                .help("Details")
-            }
-            
-            // Row 4: model + elapsed time
-            HStack {
+
                 if let model = task.model {
                     Text(model)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 9, weight: .semibold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(modelBadgeColor(for: task.model).opacity(0.2))
+                        .foregroundColor(modelBadgeColor(for: task.model))
+                        .cornerRadius(4)
                 }
-                
-                if task.model != nil {
-                    Text("•")
+            }
+
+            // Row 2: Progress bar or checkmark
+            if isComplete {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                        .font(.system(size: 14))
+                    Text("MISSION_CONTROL_COMPLETE", bundle: .clawsy)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.green)
+                    Spacer()
                 }
-                
+            } else {
+                HStack(spacing: 8) {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(Color.primary.opacity(0.1))
+                                .frame(height: 6)
+                            Capsule()
+                                .fill(progressGradient(for: animatedProgress))
+                                .frame(width: geo.size.width * CGFloat(animatedProgress), height: 6)
+                        }
+                    }
+                    .frame(height: 6)
+
+                    Text("\(Int(task.progress * 100))%")
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .frame(width: 32, alignment: .trailing)
+                }
+            }
+
+            // Row 3: Status text + hover buttons
+            HStack(spacing: 4) {
+                Text(task.statusText)
+                    .font(.caption)
+                    .italic()
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+
+                Spacer()
+
+                if isHovering && !isComplete {
+                    Button {
+                        taskStore.togglePause(for: task.id)
+                    } label: {
+                        Image(systemName: task.isPaused ? "play.fill" : "pause.fill")
+                            .font(.system(size: 10))
+                            .frame(width: 20, height: 20)
+                    }
+                    .buttonStyle(.plain)
+                    .help(task.isPaused ? "Resume" : "Pause")
+                    .transition(.opacity)
+
+                    Button {
+                        taskStore.requestDetail(for: task)
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 10))
+                            .frame(width: 20, height: 20)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Details")
+                    .transition(.opacity)
+                }
+            }
+
+            // Row 4: elapsed time + agent badge
+            HStack(spacing: 4) {
+                Image(systemName: "clock")
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary)
                 Text(formatElapsed(elapsed))
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundColor(.secondary)
-                
+
                 Spacer()
-                
+
                 Text(task.agentName)
                     .font(.caption2)
                     .fontWeight(.bold)
@@ -154,12 +230,24 @@ struct TaskRowView: View {
             }
         }
         .padding(8)
-        .frame(maxHeight: 70)
-        .background(Color.primary.opacity(0.05))
+        .background(Color.primary.opacity(isHovering ? 0.08 : 0.05))
         .cornerRadius(8)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovering = hovering
+            }
+        }
         .onAppear {
             if let started = task.startedAt {
                 elapsed = Date().timeIntervalSince(started)
+            }
+            withAnimation(.easeInOut(duration: 0.5)) {
+                animatedProgress = task.progress
+            }
+        }
+        .onChange(of: task.progress) { newValue in
+            withAnimation(.easeInOut(duration: 0.4)) {
+                animatedProgress = newValue
             }
         }
         .onReceive(timer) { _ in
@@ -170,7 +258,7 @@ struct TaskRowView: View {
             }
         }
     }
-    
+
     private func formatElapsed(_ interval: TimeInterval) -> String {
         let totalSeconds = Int(max(0, interval))
         let minutes = totalSeconds / 60

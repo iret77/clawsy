@@ -144,6 +144,9 @@
 "STATUS_PAIRING_TIMEOUT" = "Kopplung – Zeitüberschreitung";
 
 "MISSION_CONTROL_TITLE" = "Aufgaben-Übersicht";
+"MISSION_CONTROL_TITLE_COUNT" = "Aufgaben-Übersicht (%d)";
+"MISSION_CONTROL_ALL_PAUSED" = "Alle Aufgaben pausiert";
+"MISSION_CONTROL_COMPLETE" = "Abgeschlossen";
 "WAITING_FOR_TASKS" = "Warte auf Aufgaben…";
 
 /* Share Extension */

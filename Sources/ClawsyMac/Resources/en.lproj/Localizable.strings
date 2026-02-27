@@ -143,6 +143,9 @@
 "STATUS_PAIRING_TIMEOUT" = "Pairing timed out";
 
 "MISSION_CONTROL_TITLE" = "Task Overview";
+"MISSION_CONTROL_TITLE_COUNT" = "Task Overview (%d)";
+"MISSION_CONTROL_ALL_PAUSED" = "All tasks paused";
+"MISSION_CONTROL_COMPLETE" = "Complete";
 "WAITING_FOR_TASKS" = "Waiting for tasks…";
 
 /* Share Extension */
