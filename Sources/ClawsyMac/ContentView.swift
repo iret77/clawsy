@@ -107,14 +107,18 @@ struct ContentView: View {
 
                 // Clipboard
                 Button(action: handleManualClipboardSend) {
-                    MenuItemRow(icon: "doc.on.clipboard", title: "PUSH_CLIPBOARD", subtitle: "COPY_TO_AGENT", isEnabled: network.isConnected)
+                    MenuItemRow(icon: "doc.on.clipboard", title: "PUSH_CLIPBOARD",
+                                shortcut: "⌘⇧\(SharedConfig.pushClipboardHotkey)",
+                                isEnabled: network.isConnected)
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
 
                 // Quick Send
                 Button(action: { appDelegate.showQuickSend() }) {
-                    MenuItemRow(icon: "paperplane.fill", title: "QUICK_SEND", subtitle: "SEND_AND_FORGET", isEnabled: network.isConnected)
+                    MenuItemRow(icon: "paperplane.fill", title: "QUICK_SEND",
+                                shortcut: "⌘⇧\(SharedConfig.quickSendHotkey)",
+                                isEnabled: network.isConnected)
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
@@ -177,45 +181,8 @@ struct ContentView: View {
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
 
-                // Settings
-                Button(action: { showingSettings.toggle() }) {
-                    MenuItemRow(icon: "gearshape.fill", title: "SETTINGS", isEnabled: true, shortcut: "⌘,")
-                }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity)
-                .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
-                    SettingsView(
-                        serverHost: $serverHost,
-                        serverPort: $serverPort,
-                        serverToken: $serverToken,
-                        sshUser: $sshUser,
-                        isPresented: $showingSettings
-                    )
-                    .frame(width: 380)
-                }
-                
-                // Debug Log
-                Button(action: { showingLog.toggle() }) {
-                    MenuItemRow(icon: "terminal.fill", title: "DEBUG_LOG", isEnabled: true)
-                }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity)
-                .popover(isPresented: $showingLog, arrowEdge: .trailing) {
-                    DebugLogView(logText: network.rawLog, isPresented: $showingLog)
-                        .frame(width: 400, height: 300)
-                }
+                Divider().padding(.vertical, 4).opacity(0.5)
 
-                // Last Metadata
-                Button(action: { showingMetadata.toggle() }) {
-                    MenuItemRow(icon: "info.bubble.fill", title: "LAST_METADATA", isEnabled: true)
-                }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity)
-                .popover(isPresented: $showingMetadata, arrowEdge: .trailing) {
-                    MetadataView(network: network, isPresented: $showingMetadata)
-                        .frame(width: 350, height: 320)
-                }
-                
                 // Mission Control (Task Overview)
                 Button(action: { showingMissionControl.toggle() }) {
                     ZStack(alignment: .trailing) {
@@ -232,12 +199,51 @@ struct ContentView: View {
                     MissionControlView(taskStore: taskStore)
                 }
 
-                // Setup / Onboarding
-                Button(action: { appDelegate.openOnboardingWindow(onboardingCompleted: $onboardingCompleted) }) {
-                    MenuItemRow(icon: "checklist", title: "SETUP", isEnabled: true)
+                // Last Metadata
+                Button(action: { showingMetadata.toggle() }) {
+                    MenuItemRow(icon: "info.bubble.fill", title: "LAST_METADATA", isEnabled: true)
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
+                .popover(isPresented: $showingMetadata, arrowEdge: .trailing) {
+                    MetadataView(network: network, isPresented: $showingMetadata)
+                        .frame(width: 350, height: 320)
+                }
+
+                // Settings (contains Debug Log + Setup Wizard inside)
+                Button(action: { showingSettings.toggle() }) {
+                    MenuItemRow(icon: "gearshape.fill", title: "SETTINGS", isEnabled: true, shortcut: "⌘,")
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
+                .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
+                    SettingsView(
+                        serverHost: $serverHost,
+                        serverPort: $serverPort,
+                        serverToken: $serverToken,
+                        sshUser: $sshUser,
+                        isPresented: $showingSettings,
+                        onShowDebugLog: {
+                            showingSettings = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { showingLog = true }
+                        },
+                        onShowOnboarding: {
+                            showingSettings = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                appDelegate.openOnboardingWindow(onboardingCompleted: $onboardingCompleted)
+                            }
+                        }
+                    )
+                    .frame(width: 380)
+                }
+                // Debug Log popover (triggered from Settings)
+                .background(
+                    Color.clear
+                        .popover(isPresented: $showingLog, arrowEdge: .trailing) {
+                            DebugLogView(logText: network.rawLog, isPresented: $showingLog)
+                                .frame(width: 400, height: 300)
+                        }
+                )
 
                 Divider().padding(.vertical, 4).opacity(0.5)
                 
@@ -763,6 +769,8 @@ struct SettingsView: View {
     @Binding var sshUser: String
     @AppStorage("extendedContextEnabled", store: SharedConfig.sharedDefaults) private var extendedContextEnabled = false
     @Binding var isPresented: Bool
+    var onShowDebugLog: (() -> Void)? = nil
+    var onShowOnboarding: (() -> Void)? = nil
     
     @ObservedObject var updateManager = UpdateManager.shared
     
@@ -1090,20 +1098,35 @@ struct SettingsView: View {
             Divider().opacity(0.3)
             
             // Footer
-            HStack {
-                Text("VIBRANT_SECURE", bundle: .clawsy)
-                    .font(.system(size: 11, weight: .medium))
+            VStack(spacing: 0) {
+                Divider().opacity(0.3)
+                HStack(spacing: 8) {
+                    Button(action: { onShowDebugLog?() }) {
+                        Label(NSLocalizedString("DEBUG_LOG", bundle: .clawsy, comment: ""), systemImage: "terminal.fill")
+                            .font(.system(size: 11))
+                    }
+                    .buttonStyle(.plain)
                     .foregroundColor(.secondary)
-                
-                Spacer()
-                
-                Text("Auto-saves")
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary.opacity(0.5))
+
+                    Divider().frame(height: 14)
+
+                    Button(action: { onShowOnboarding?() }) {
+                        Label(NSLocalizedString("SETUP", bundle: .clawsy, comment: ""), systemImage: "checklist")
+                            .font(.system(size: 11))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.secondary)
+
+                    Spacer()
+
+                    Text("VIBRANT_SECURE", bundle: .clawsy)
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary.opacity(0.5))
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .background(Color.black.opacity(0.03))
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(Color.black.opacity(0.03))
         }
         .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
     }

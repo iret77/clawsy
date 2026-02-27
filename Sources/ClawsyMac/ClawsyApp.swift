@@ -113,9 +113,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             }
             return event
         }
-        NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
-            _ = self.processHotkey(event: event)
-        }
+        // Global monitor requires Accessibility permission — request it and register
+        self.registerGlobalHotkeyMonitor()
         
         // Auto-Check for Updates (silent = background, shows notification if update found)
         UpdateManager.shared.checkForUpdates(silent: true)
@@ -130,6 +129,27 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         }
     }
     
+    private func registerGlobalHotkeyMonitor() {
+        let trusted = AXIsProcessTrusted()
+        if trusted {
+            NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
+                _ = self.processHotkey(event: event)
+            }
+        } else {
+            // Request Accessibility permission (shows system dialog on first run)
+            let options: [String: Any] = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as String: true]
+            AXIsProcessTrustedWithOptions(options as CFDictionary)
+            // Retry after a short delay (user may have just granted permission)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                if AXIsProcessTrusted() {
+                    NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
+                        _ = self.processHotkey(event: event)
+                    }
+                }
+            }
+        }
+    }
+
     private func processHotkey(event: NSEvent) -> Bool {
         let required: NSEvent.ModifierFlags = [.command, .shift]
         let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
