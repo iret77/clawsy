@@ -388,6 +388,13 @@ struct ContentView: View {
         
         let watcher = FileWatcher(url: URL(fileURLWithPath: resolvedPath))
         watcher.callback = { changedPath in
+            // Check if this is the agent status file
+            if changedPath.hasSuffix(".agent_status.json") {
+                let fileURL = URL(fileURLWithPath: changedPath)
+                taskStore.loadFromFile(fileURL)
+                return
+            }
+            
             // Extract relative path for the agent
             let relativePath = changedPath.replacingOccurrences(of: resolvedPath, with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             

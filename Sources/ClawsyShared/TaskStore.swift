@@ -81,6 +81,54 @@ public class TaskStore: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: work)
     }
     
+    /// Load tasks from a `.agent_status.json` file in the shared folder.
+    /// If `updatedAt` is older than 60 seconds, clears tasks instead.
+    public func loadFromFile(_ url: URL) {
+        guard let data = try? Data(contentsOf: url) else { return }
+        
+        struct StatusFile: Decodable {
+            let updatedAt: String
+            let tasks: [TaskEntry]
+            
+            struct TaskEntry: Decodable {
+                let id: String
+                let agentName: String
+                let title: String
+                let progress: Double
+                let statusText: String
+            }
+        }
+        
+        guard let status = try? JSONDecoder().decode(StatusFile.self, from: data) else { return }
+        
+        // Parse updatedAt as ISO8601
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        guard let updatedDate = formatter.date(from: status.updatedAt) ?? ISO8601DateFormatter().date(from: status.updatedAt) else { return }
+        
+        DispatchQueue.main.async {
+            // If stale (>60s), clear tasks
+            if Date().timeIntervalSince(updatedDate) > 60 {
+                self.tasks.removeAll()
+                self.saveToSharedContainer()
+                return
+            }
+            
+            // Replace tasks with file contents
+            self.tasks = status.tasks.map { entry in
+                ClawsyTask(
+                    id: UUID(uuidString: entry.id) ?? UUID(),
+                    agentName: entry.agentName,
+                    title: entry.title,
+                    progress: entry.progress,
+                    statusText: entry.statusText,
+                    timestamp: updatedDate
+                )
+            }
+            self.saveToSharedContainer()
+        }
+    }
+    
     private func saveToSharedContainer() {
         guard let url = sharedContainerURL?.appendingPathComponent("tasks.json") else { return }
         do {

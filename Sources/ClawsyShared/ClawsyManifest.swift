@@ -94,6 +94,8 @@ public class ClawsyManifestManager {
 
     /// Evaluates rules for a newly added file, returns matching rules
     public static func matchingRules(for fileName: String, in folderPath: String, trigger: String = "file_added") -> [ClawsyRule] {
+        // Exclude agent status file from rule matching
+        if fileName == ".agent_status.json" { return [] }
         guard let manifest = read(for: folderPath) else { return [] }
         return manifest.rules.filter { rule in
             rule.trigger == trigger && matchesGlob(rule.filter, fileName: fileName)
