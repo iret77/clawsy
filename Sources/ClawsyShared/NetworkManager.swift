@@ -171,7 +171,24 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         // Important: SSH fallback may call connect() again; keep logs so we can debug tunnel startup.
         if connectionAttemptCount == 0 || self.rawLog.isEmpty {
             let dateStr = ISO8601DateFormatter().string(from: Date())
-            self.rawLog = "[LOG START] \(dateStr) | Clawsy \(SharedConfig.versionDisplay)\n----------------------------------------\n"
+            // Bundle diagnostics — helps debug i18n issues
+            let bundlePath = Bundle.main.bundlePath
+            let resURL = Bundle.main.resourceURL?.path ?? "nil"
+            let hasDeStrings = Bundle.main.path(forResource: "Localizable", ofType: "strings", inDirectory: "de.lproj") != nil
+            let hasEnStrings = Bundle.main.path(forResource: "Localizable", ofType: "strings", inDirectory: "en.lproj") != nil
+            let localizations = Bundle.main.localizations.joined(separator: ",")
+            let preferred = Bundle.main.preferredLocalizations.first ?? "nil"
+            let testKey = Bundle.main.localizedString(forKey: "APP_NAME", value: "MISSING", table: nil)
+            self.rawLog = """
+[LOG START] \(dateStr) | Clawsy \(SharedConfig.versionDisplay)
+[BUNDLE] \(bundlePath)
+[RESOURCES] \(resURL)
+[LOCALIZATIONS] \(localizations) | preferred: \(preferred)
+[DE_STRINGS] \(hasDeStrings) | [EN_STRINGS] \(hasEnStrings)
+[APP_NAME lookup] → \(testKey)
+----------------------------------------
+
+"""
         }
         
         let host = serverHost
