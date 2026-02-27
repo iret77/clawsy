@@ -98,13 +98,17 @@ struct FileSyncRequestWindow: View {
 
             // Footer Action Bar
             HStack(spacing: 12) {
-                Button(LocalizedStringKey("DENY")) { onCancel() }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color.black.opacity(0.1))
-                    .cornerRadius(8)
-                    .keyboardShortcut(.escape, modifiers: [])
+                Button(action: { onCancel() }) {
+                    Label(NSLocalizedString("DENY", bundle: .clawsy, comment: ""), systemImage: "xmark")
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.black.opacity(0.1))
+                .cornerRadius(8)
+                .keyboardShortcut(.escape, modifiers: [])
 
                 Spacer()
 
@@ -124,14 +128,18 @@ struct FileSyncRequestWindow: View {
                 .background(Color.secondary.opacity(0.15))
                 .cornerRadius(8)
 
-                Button(confirmLabel) { onConfirm(nil) }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(operation == "Delete" ? Color.red : Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                    .keyboardShortcut(.return, modifiers: [])
+                Button(action: { onConfirm(nil) }) {
+                    Label(confirmLabel, systemImage: operationIcon)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(operation == "Delete" ? Color.red : Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(8)
+                .keyboardShortcut(.return, modifiers: [])
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 16)
