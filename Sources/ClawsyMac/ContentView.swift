@@ -264,10 +264,7 @@ struct ContentView: View {
                 }
             }
             
-            // Show onboarding on first launch
-            if !onboardingCompleted {
-                appDelegate.openOnboardingWindow(onboardingCompleted: $onboardingCompleted)
-            }
+
             
             // Auto-connect if configured
             if !serverHost.isEmpty && !serverToken.isEmpty {

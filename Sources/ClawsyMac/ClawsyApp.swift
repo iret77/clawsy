@@ -113,6 +113,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         // Auto-Check for Updates (silent = background, shows notification if update found)
         UpdateManager.shared.checkForUpdates(silent: true)
         UpdateManager.shared.startPeriodicChecks()
+
+        // Show onboarding on very first launch (before user ever clicks the menu bar icon)
+        let onboardingCompleted = UserDefaults.standard.bool(forKey: "onboardingCompleted")
+        if !onboardingCompleted {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.openOnboardingWindowDirect()
+            }
+        }
     }
     
     private func processHotkey(event: NSEvent) -> Bool {
@@ -296,13 +304,25 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         showFloatingWindow(view: view, title: "Camera Preview", autosaveName: "ai.clawsy.CameraWindow")
     }
     
+    /// Called from ContentView (has SwiftUI binding)
     func openOnboardingWindow(onboardingCompleted: Binding<Bool>) {
+        openOnboardingWindowInternal(onComplete: { onboardingCompleted.wrappedValue = true })
+    }
+
+    /// Called from AppDelegate on first launch (no SwiftUI binding available)
+    func openOnboardingWindowDirect() {
+        openOnboardingWindowInternal(onComplete: {
+            UserDefaults.standard.set(true, forKey: "onboardingCompleted")
+        })
+    }
+
+    private func openOnboardingWindowInternal(onComplete: @escaping () -> Void) {
         if let existing = onboardingWindow, existing.isVisible {
             existing.makeKeyAndOrderFront(nil)
             return
         }
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 480, height: 420),
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 460),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -318,6 +338,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                     window.close()
                     self.onboardingWindow = nil
                 }
+            }
+        )
+        let onboardingCompleted = Binding<Bool>(
+            get: { UserDefaults.standard.bool(forKey: "onboardingCompleted") },
+            set: { newVal in
+                if newVal { onComplete() }
             }
         )
         let view = OnboardingView(isPresented: isPresented, onboardingCompleted: onboardingCompleted)
