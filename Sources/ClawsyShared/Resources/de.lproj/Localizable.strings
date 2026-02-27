@@ -200,7 +200,7 @@
 "OP_UPLOAD" = "Hochladen";
 "OP_DOWNLOAD" = "Herunterladen";
 "OP_DELETE" = "Löschen";
-"AGENT_WANTS_TO_OP" = "Der Agent möchte die Datei „%@" %@.";
+"AGENT_WANTS_TO_OP" = "Der Agent möchte die Datei „%@“ %@.";
 "FILENAME_AGENT_STATUS" = "Agentenstatus (intern)";
 "ALLOW_LIMITED" = "Zeitlich erlauben…";
 "ALLOW_UPLOAD" = "Hochladen erlauben";
