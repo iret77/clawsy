@@ -178,14 +178,37 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             let hasEnStrings = Bundle.main.path(forResource: "Localizable", ofType: "strings", inDirectory: "en.lproj") != nil
             let localizations = Bundle.main.localizations.joined(separator: ",")
             let preferred = Bundle.main.preferredLocalizations.first ?? "nil"
-            let testKey = Bundle.main.localizedString(forKey: "APP_NAME", value: "MISSING", table: nil)
+            let testMain = Bundle.main.localizedString(forKey: "APP_NAME", value: "MISSING", table: nil)
+
+            // Try loading de.lproj directly as a Bundle
+            let deLprojURL = Bundle.main.url(forResource: "de", withExtension: "lproj")
+            let deLprojBundle = deLprojURL.flatMap { Bundle(url: $0) }
+            let testDeLproj = deLprojBundle?.localizedString(forKey: "APP_NAME", value: "MISSING", table: nil) ?? "NO_BUNDLE"
+
+            // Read first 60 bytes of the actual file
+            let deStringsPath = Bundle.main.path(forResource: "Localizable", ofType: "strings", inDirectory: "de.lproj") ?? "NOT_FOUND"
+            let filePreview: String
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: deStringsPath)) {
+                filePreview = "\(data.count) bytes | " + (String(data: data.prefix(60), encoding: .utf8) ?? String(data: data.prefix(60), encoding: .isoLatin1) ?? "not utf8")
+            } else {
+                filePreview = "UNREADABLE"
+            }
+
+            // Bundle.clawsy test
+            let clawsyBundle = Bundle.clawsy
+            let testClawsy = clawsyBundle.localizedString(forKey: "APP_NAME", value: "MISSING", table: nil)
+
             self.rawLog = """
 [LOG START] \(dateStr) | Clawsy \(SharedConfig.versionDisplay)
 [BUNDLE] \(bundlePath)
 [RESOURCES] \(resURL)
 [LOCALIZATIONS] \(localizations) | preferred: \(preferred)
 [DE_STRINGS] \(hasDeStrings) | [EN_STRINGS] \(hasEnStrings)
-[APP_NAME lookup] → \(testKey)
+[APP_NAME/main] → \(testMain)
+[APP_NAME/deLproj] → \(testDeLproj)
+[APP_NAME/clawsy] → \(testClawsy)
+[FILE] \(deStringsPath)
+[CONTENT] \(filePreview)
 ----------------------------------------
 
 """
