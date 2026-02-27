@@ -10,9 +10,10 @@ struct OnboardingView: View {
     @State private var isFinderSyncRunning = false
     @State private var refreshTimer: Timer?
     @State private var accessibilityJustRequested = false
+    @State private var accessibilityUserConfirmed = false
 
     private var criticalStepsCompleted: Bool {
-        isInApplications && isAccessibilityGranted
+        isInApplications && (isAccessibilityGranted || accessibilityUserConfirmed)
     }
 
     var body: some View {
@@ -63,16 +64,28 @@ struct OnboardingView: View {
                         action: {}
                     )
                 } else if accessibilityJustRequested {
-                    // After granting: prompt to restart
-                    OnboardingStepRow(
-                        icon: "hand.raised.fill",
-                        title: NSLocalizedString("ONBOARDING_ACCESSIBILITY", bundle: .clawsy, comment: ""),
-                        subtitle: NSLocalizedString("ONBOARDING_ACCESSIBILITY_RESTART_HINT", bundle: .clawsy, comment: ""),
-                        isCompleted: false,
-                        isCritical: true,
-                        actionLabel: NSLocalizedString("ONBOARDING_RESTART", bundle: .clawsy, comment: ""),
-                        action: restartApp
-                    )
+                    // After granting: show restart button + "skip restart" option
+                    VStack(alignment: .leading, spacing: 6) {
+                        OnboardingStepRow(
+                            icon: "hand.raised.fill",
+                            title: NSLocalizedString("ONBOARDING_ACCESSIBILITY", bundle: .clawsy, comment: ""),
+                            subtitle: NSLocalizedString("ONBOARDING_ACCESSIBILITY_RESTART_HINT", bundle: .clawsy, comment: ""),
+                            isCompleted: false,
+                            isCritical: true,
+                            actionLabel: NSLocalizedString("ONBOARDING_RESTART", bundle: .clawsy, comment: ""),
+                            action: restartApp
+                        )
+                        HStack {
+                            Spacer()
+                            Button(action: { accessibilityUserConfirmed = true }) {
+                                Text("ONBOARDING_ACCESSIBILITY_SKIP_RESTART", bundle: .clawsy)
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.trailing, 0)
+                    }
                 } else {
                     OnboardingStepRow(
                         icon: "hand.raised.fill",
@@ -186,16 +199,20 @@ struct OnboardingView: View {
     }
 
     private func restartApp() {
-        let url = URL(fileURLWithPath: Bundle.main.bundlePath)
-        let config = NSWorkspace.OpenConfiguration()
-        NSWorkspace.shared.openApplication(at: url, configuration: config) { _, _ in }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        // Use 'open -n' shell command — most reliable way to relaunch self
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        task.arguments = ["-n", Bundle.main.bundlePath]
+        task.standardOutput = FileHandle.nullDevice
+        task.standardError = FileHandle.nullDevice
+        try? task.run()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             NSApp.terminate(nil)
         }
     }
 
     private func enableFinderSync() {
-        // Directly enable the extension via pluginkit — no confusing System Settings
+        // First try pluginkit (works if extension is already registered)
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/pluginkit")
         task.arguments = ["-e", "use", "-i", "ai.clawsy.FinderSync"]
@@ -203,9 +220,23 @@ struct OnboardingView: View {
         task.standardError = FileHandle.nullDevice
         try? task.run()
         task.waitUntilExit()
-        // Recheck after a short delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+
+        // Recheck after short delay; if still not active, open Finder Extensions pane
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             checkFinderSyncStatus()
+            if !isFinderSyncRunning {
+                // Open specifically the Finder Extensions panel (not generic Extensions)
+                let urls = [
+                    "x-apple.systempreferences:com.apple.preferences.extensions.FinderSync",
+                    "x-apple.systempreferences:com.apple.ExtensionsPreferences?Finder"
+                ]
+                for urlString in urls {
+                    if let url = URL(string: urlString) {
+                        NSWorkspace.shared.open(url)
+                        break
+                    }
+                }
+            }
         }
     }
 }

@@ -191,3 +191,4 @@
 "RULE_NOTIFY_TITLE" = "Clawsy Rule triggered";
 "ONBOARDING_ACCESSIBILITY_RESTART_HINT" = "Permission granted — please restart Clawsy to activate it.";
 "ONBOARDING_RESTART" = "Restart Now";
+"ONBOARDING_ACCESSIBILITY_SKIP_RESTART" = "I've granted access, skip restart →";

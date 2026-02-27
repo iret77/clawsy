@@ -192,3 +192,4 @@
 "RULE_NOTIFY_TITLE" = "Clawsy Regel ausgelöst";
 "ONBOARDING_ACCESSIBILITY_RESTART_HINT" = "Berechtigung erteilt – bitte starte Clawsy neu, damit sie aktiv wird.";
 "ONBOARDING_RESTART" = "Jetzt neu starten";
+"ONBOARDING_ACCESSIBILITY_SKIP_RESTART" = "Ich habe Zugriff erteilt, ohne Neustart fortfahren →";
