@@ -293,6 +293,12 @@ struct ContentView: View {
                 network.sendEvent(kind: "file.sync_triggered", payload: ["path": sharedFolderPath])
             }
         }
+        .onChange(of: network.isConnected) { connected in
+            if !connected {
+                // Connection lost — clear stale tasks immediately
+                taskStore.clearAll()
+            }
+        }
         .sheet(isPresented: Binding(
             get: { ruleEditorFolderPath != nil },
             set: { if !$0 { ruleEditorFolderPath = nil } }

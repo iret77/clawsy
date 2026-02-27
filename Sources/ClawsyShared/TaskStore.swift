@@ -52,6 +52,16 @@ public class TaskStore: ObservableObject {
         loadFromSharedContainer()
     }
     
+    /// Clear all tasks — called on disconnect so stale tasks don't linger.
+    public func clearAll() {
+        DispatchQueue.main.async {
+            self.removalTimers.values.forEach { $0.cancel() }
+            self.removalTimers.removeAll()
+            self.tasks.removeAll()
+            self.saveToSharedContainer()
+        }
+    }
+
     public func updateTask(agentName: String, title: String, progress: Double, statusText: String) {
         DispatchQueue.main.async {
             if let index = self.tasks.firstIndex(where: { $0.agentName == agentName && $0.title == title && $0.progress < 1.0 }) {
