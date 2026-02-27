@@ -80,7 +80,7 @@ struct IOSHomeView: View {
                 
                 // --- Recent Activity (Push Log) ---
                 Section(header: Text("RECENT_INTERACTIONS")) {
-                    InteractionRow(title: "Agent", message: "Christian, I see you are at the office. Should I pull the latest Clawsy logs?")
+                    InteractionRow(title: "Agent", message: "I see you are at the office. Should I pull the latest Clawsy logs?")
                     InteractionRow(title: "Agent", message: "Reminder: Meeting with Alex in 15 mins.")
                 }
             }
