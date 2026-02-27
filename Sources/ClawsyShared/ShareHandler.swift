@@ -93,12 +93,25 @@ public class ShareHandler {
                 return
             }
             
-            network.sendOneShot(kind: "clawsy.share", payload: finalContent) { success in
-                if success {
-                    completion(.success(()))
-                } else {
-                    completion(.failure(ShareError.failedToSend))
-                }
+            // Build envelope and send via agent.deeplink → clawsy-service
+            var envelopeData: [String: Any] = [
+                "type": "share",
+                "version": SharedConfig.versionDisplay,
+                "localTime": ISO8601DateFormatter().string(from: Date()),
+                "tz": TimeZone.current.identifier,
+                "content": finalContent
+            ]
+            if SharedConfig.extendedContextEnabled {
+                envelopeData["telemetry"] = NetworkManager.getTelemetry()
+            }
+            let envelope: [String: Any] = ["clawsy_envelope": envelopeData]
+            guard let jsonData = try? JSONSerialization.data(withJSONObject: envelope),
+                  let jsonString = String(data: jsonData, encoding: .utf8) else {
+                completion(.failure(ShareError.failedToSend))
+                return
+            }
+            network.sendOneShot(message: jsonString) { success in
+                completion(success ? .success(()) : .failure(ShareError.failedToSend))
             }
         }
     }

@@ -50,6 +50,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     private var isUsingSshTunnel = false
     
     // Callbacks for UI/Logic
+    public var onHandshakeComplete: (() -> Void)?
     public var onScreenshotRequested: ((Bool, Any) -> Void)?
     public var onClipboardReadRequested: ((Any) -> Void)?
     public var onClipboardWriteRequested: ((String, Any) -> Void)?
@@ -510,28 +511,51 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     private var oneShotPayload: (String, Any)?
     private var oneShotCompletion: ((Bool) -> Void)?
 
-    public func sendOneShot(kind: String, payload: Any, completion: @escaping (Bool) -> Void) {
-        self.oneShotPayload = (kind, payload)
-        self.oneShotCompletion = completion
-        
-        // If already connected and paired, send immediately
-        if isConnected && isHandshakeComplete {
-            sendEvent(kind: kind, payload: payload)
-            completion(true)
-            return
-        }
-        
-        // Otherwise, connect and wait for handshake
-        self.connect()
-        
-        // Timeout for one-shot
-        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
-            if self.oneShotPayload != nil {
-                self.oneShotCompletion?(false)
-                self.oneShotPayload = nil
+    /// One-shot send for Share Extension: connects, sends message via agent.deeplink, disconnects.
+    public func sendOneShot(message: String, completion: @escaping (Bool) -> Void) {
+        let send = { [weak self] in
+            guard let self = self else { return }
+            self.sendDeeplink(message: message, sessionKey: "clawsy-service")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                completion(true)
                 self.disconnect()
             }
         }
+
+        if isConnected && isHandshakeComplete {
+            send()
+            return
+        }
+
+        // Wait for handshake, then send
+        var sent = false
+        let obs = NotificationCenter.default.addObserver(forName: .init("ClawsyHandshakeComplete"), object: nil, queue: .main) { _ in
+            guard !sent else { return }
+            sent = true
+            send()
+        }
+        onHandshakeComplete = { [weak self] in
+            guard !sent else { return }
+            sent = true
+            NotificationCenter.default.removeObserver(obs)
+            self?.onHandshakeComplete = nil
+            send()
+        }
+        connect()
+
+        // Timeout
+        DispatchQueue.main.asyncAfter(deadline: .now() + 12.0) {
+            guard !sent else { return }
+            sent = true
+            NotificationCenter.default.removeObserver(obs)
+            completion(false)
+            self.disconnect()
+        }
+    }
+
+    @available(*, deprecated, message: "Use sendOneShot(message:) or sendDeeplink()")
+    public func sendOneShot(kind: String, payload: Any, completion: @escaping (Bool) -> Void) {
+        completion(false)
     }
 
     private func checkServerAwareness() {
@@ -636,6 +660,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 if payload?["type"] as? String == "hello-ok" || json["result"] != nil {
                      self.isHandshakeComplete = true
                      self.connectionStatus = isUsingSshTunnel ? "STATUS_ONLINE_PAIRED_SSH" : "STATUS_ONLINE_PAIRED"
+                     self.onHandshakeComplete?()
                      
                      // Store deviceToken from hello-ok if present
                      if let result = json["result"] as? [String: Any],
