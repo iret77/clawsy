@@ -18,9 +18,11 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             // Header
             VStack(spacing: 8) {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 36))
-                    .foregroundColor(.accentColor)
+                Image("OnboardingLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 64, height: 64)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 
                 Text("ONBOARDING_TITLE", bundle: .clawsy)
                     .font(.system(size: 18, weight: .bold))
