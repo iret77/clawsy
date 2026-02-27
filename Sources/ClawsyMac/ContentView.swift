@@ -235,12 +235,9 @@ struct ContentView: View {
                 }
             }
             
-            // Wire up task updates
-            network.onTaskUpdate = { agent, title, progress, status, runId in
-                taskStore.updateTask(agentName: agent, title: title, progress: progress, statusText: status, runId: runId)
-            }
-            network.onTaskCompleteRun = { runId in
-                taskStore.completeRun(runId)
+            // Wire up task updates (primary: .agent_status.json in Shared Folder via FileWatcher)
+            network.onTaskUpdate = { agent, title, progress, status in
+                taskStore.updateTask(agentName: agent, title: title, progress: progress, statusText: status)
             }
 
             // Auto-provision .clawsy files in shared folder

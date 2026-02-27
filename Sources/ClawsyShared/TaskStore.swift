@@ -8,16 +8,14 @@ public struct ClawsyTask: Identifiable, Codable {
     public var progress: Double
     public var statusText: String
     public var timestamp: Date
-    public var runId: String?
     
-    public init(id: UUID = UUID(), agentName: String, title: String, progress: Double, statusText: String, timestamp: Date = Date(), runId: String? = nil) {
+    public init(id: UUID = UUID(), agentName: String, title: String, progress: Double, statusText: String, timestamp: Date = Date()) {
         self.id = id
         self.agentName = agentName
         self.title = title
         self.progress = progress
         self.statusText = statusText
         self.timestamp = timestamp
-        self.runId = runId
     }
 }
 
@@ -31,35 +29,17 @@ public class TaskStore: ObservableObject {
         loadFromSharedContainer()
     }
     
-    public func updateTask(agentName: String, title: String, progress: Double, statusText: String, runId: String? = nil) {
+    public func updateTask(agentName: String, title: String, progress: Double, statusText: String) {
         DispatchQueue.main.async {
             if let index = self.tasks.firstIndex(where: { $0.agentName == agentName && $0.title == title && $0.progress < 1.0 }) {
                 self.tasks[index].progress = progress
                 self.tasks[index].statusText = statusText
                 self.tasks[index].timestamp = Date()
-                if let rid = runId { self.tasks[index].runId = rid }
-                if progress >= 1.0 {
-                    self.scheduleRemoval(for: self.tasks[index].id)
-                }
+                if progress >= 1.0 { self.scheduleRemoval(for: self.tasks[index].id) }
             } else {
-                let newTask = ClawsyTask(agentName: agentName, title: title, progress: progress, statusText: statusText, runId: runId)
+                let newTask = ClawsyTask(agentName: agentName, title: title, progress: progress, statusText: statusText)
                 self.tasks.append(newTask)
-                if progress >= 1.0 {
-                    self.scheduleRemoval(for: newTask.id)
-                }
-            }
-            self.saveToSharedContainer()
-        }
-    }
-    
-    /// Mark all tasks for a given runId as complete (progress = 1.0)
-    public func completeRun(_ runId: String) {
-        DispatchQueue.main.async {
-            for i in self.tasks.indices where self.tasks[i].runId == runId && self.tasks[i].progress < 1.0 {
-                self.tasks[i].progress = 1.0
-                self.tasks[i].statusText = "✓"
-                self.tasks[i].timestamp = Date()
-                self.scheduleRemoval(for: self.tasks[i].id)
+                if progress >= 1.0 { self.scheduleRemoval(for: newTask.id) }
             }
             self.saveToSharedContainer()
         }
