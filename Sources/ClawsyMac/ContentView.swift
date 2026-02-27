@@ -419,7 +419,26 @@ struct ContentView: View {
             
             if let jsonData = try? JSONSerialization.data(withJSONObject: envelope),
                let jsonString = String(data: jsonData, encoding: .utf8) {
+                // Full clipboard data → clawsy-service (silent background context)
                 network.sendServiceEvent(message: jsonString)
+
+                // Brief hint → main session (so agent is immediately aware)
+                let preview: String
+                if let text = content["text"] as? String {
+                    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let short = trimmed.count > 60 ? String(trimmed.prefix(60)) + "…" : trimmed
+                    preview = "📋 Clipboard: \"\(short)\" (\(trimmed.count) Zeichen)"
+                } else if let _ = content["image"] {
+                    preview = "📋 Clipboard: [Bild]"
+                } else {
+                    preview = "📋 Clipboard synchronisiert"
+                }
+                let hint: [String: Any] = ["clawsy_envelope": ["type": "clipboard_hint", "preview": preview]]
+                if let hintData = try? JSONSerialization.data(withJSONObject: hint),
+                   let hintString = String(data: hintData, encoding: .utf8) {
+                    network.sendDeeplink(message: hintString, sessionKey: "main")
+                }
+
                 appDelegate.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
             }
         }
