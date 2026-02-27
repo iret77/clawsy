@@ -2,131 +2,110 @@
 
 **The secure bridge between your Mac and your OpenClaw agents.**
 
-Clawsy is a native macOS companion app designed to empower your [OpenClaw](https://github.com/openclaw/openclaw) virtual assistants with local context, seamless clipboard synchronization, and proactive system awareness. **Don't just blindly hand over full system access to your AI. Clawsy bridges the gap smartly, giving your agent the deep context it needs while keeping you in absolute control through "Fair Play" transparency.**
+Clawsy is a native macOS menu bar app that gives your [OpenClaw](https://github.com/openclaw/openclaw) AI agent real-world reach — screenshots, clipboard, camera, files, and more — while keeping you in full control through transparent permission dialogs.
 
-![Version](https://img.shields.io/badge/version-0.3.6-blue)
-![Platform](https://img.shields.io/badge/platform-macOS-lightgrey)
+![Version](https://img.shields.io/badge/version-0.4.33-blue)
+![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![Build](https://github.com/iret77/clawsy/actions/workflows/build.yml/badge.svg)
 
 ---
 
-## ✨ Core Features
+## ✨ Features
 
-### 🚀 Quick Send
-Instant communication with your agent directly from your menu bar. 
-*   **Seamless Interaction:** Quickly send commands or thoughts without switching apps.
-*   **Rich Metadata:** Automatically attaches context like local time, battery status, and device info so your agent always knows your current environment.
+### 📸 Screenshot & Camera
+Send your screen or a photo directly to your agent with one click — or let the agent request it.
 
-### 📋 Smart Clipboard Sync
-Keep your agent in the loop without cluttering your main chat.
-*   **Service Sessions:** Clipboard contents are pushed to a dedicated `clawsy-service` session.
-*   **Silent Background Sync:** Contents are stored for future reference but don't trigger intrusive notifications.
+### 📋 Clipboard Sync
+Push your clipboard to the agent silently, without cluttering the main chat.
 
-### 🧠 Adaptive Mood Engine
-Clawsy understands your workflow rhythm.
-*   **Activity-Based Profiling:** Learns when you are most productive instead of judging you by static hours.
-*   **Anomaly Detection:** Flags unusual activity patterns (like unexpected 4 AM sessions) as potential stress indicators.
-*   **Privacy-First:** All learning happens locally on your device.
+### ⚡ Quick Send
+A global hotkey (`⌘ ⇧ K`) opens a floating input anywhere on your Mac. Type, send, done.
 
-### 📡 Extended Telemetry
-Provide your agent with high-resolution context (optional):
-*   **Active App Detection:** Let your agent know you're stuck in Xcode or busy in a meeting.
-*   **Hardware Vitals:** Real-time monitoring of battery levels (⚡️) and thermal states.
-*   **Fair Play UI:** A transparent "Last Metadata" view that shows exactly what data is being shared.
+### 📁 Shared Folder & Automation Rules
+A local folder syncs with your agent's workspace. Add `.clawsy` rule files to any subfolder — the built-in **Rule Editor** lets you define triggers like *"when a PDF is added, summarize it"*. No JSON editing required.
 
-### 📸 Visual & Media Awareness
-Empower your agent to see what you see:
-*   **Instant Screenshots:** Quickly capture and send your screen to the agent for analysis or debugging.
-*   **Native Camera Integration:** Use your Mac's camera to snap photos directly into the chat context.
+### 📊 Mission Control
+See what your agent is working on in real time. Agents write their task status to `.agent_status.json` in the shared folder — Clawsy picks it up instantly via FileWatcher.
 
-### 📁 Shared Workspace & Automations (.clawsy)
-Bridge the gap between local files and your remote agent:
-*   **Deep Folder Sync:** A dedicated local folder that synchronizes seamlessly with your OpenClaw workspace, powered by recursive macOS `FSEvents`.
-*   **Double-Click to Edit:** Just double-click a `.clawsy` file in any folder to open the native **Rule Editor**. No JSON editing required.
-*   **Smart Batching:** Clawsy intelligently bundles file changes into a single "Informed Push", saving tokens and preventing chat noise.
-*   **Informed Context:** Rules from your `.clawsy` files are sent directly to the agent alongside file events, enabling instant, context-aware reactions.
-*   **Non-Blocking Notifications:** Whenever the agent creates, modifies, or deletes a file in your workspace, Clawsy alerts you with a native macOS notification.
-
-### ⌨️ Global Hotkeys
-Control Clawsy from anywhere on your Mac.
-*   **Quick Send (CMD + SHIFT + K):** Pop up the Quick Send window instantly, no matter which app you are currently using.
-*   **Native Integration:** Uses macOS Accessibility features for reliable, system-wide shortcut handling.
-
-### 🖼 Apple Photos Integration
-Organize your digital life with the power of AI.
-*   **AI-Powered Sorting:** Ask your agent to import images into specific iCloud albums based on content or rules.
-*   **Safe Cleanup:** Optionally move imported photos to the macOS Trash (`recycle`) automatically after a successful import.
-*   **Privacy First:** Natively uses the macOS `Photos.framework` with explicit user permission.
+### 🔒 Fair Play — You Stay in Control
+Every file access, screenshot request, or clipboard read triggers a permission dialog. You can allow once, for an hour, or for the rest of the day. Nothing happens behind your back.
 
 ---
 
-## 🛠 Installation & Usage
+## 🚀 Installation
 
-### The Easy Way (Recommended)
-As Clawsy is in active development, we recommend using the pre-built binaries:
-1. Go to the [Releases](https://github.com/iret77/clawsy/releases) page.
-2. Download the latest `.dmg` file.
-3. Drag **Clawsy** to your Applications folder.
+1. Go to the [Releases](https://github.com/iret77/clawsy/releases) page
+2. Download **Clawsy.app.zip**
+3. Unzip and move `Clawsy.app` to `/Applications`
+4. Launch Clawsy — the setup assistant guides you through the rest
 
-### Configuration
-1. Open Clawsy and enter your **OpenClaw Gateway URL**.
-2. Provide your **Agent ID** (default is `main`).
-3. (Optional) Enable **Extended Context** in settings for full telemetry features.
+> **First launch:** Clawsy will ask for Accessibility permission (required for global hotkeys) and optionally enable the Finder extension for right-click folder automation.
 
 ---
 
-## 🖥 Server-Side Setup (OpenClaw)
+## ⚙️ Configuration
 
-To fully utilize Clawsy's features like Silent Clipboard Sync and Mood Analysis, your OpenClaw host needs to be prepared. We've made this super easy with a one-line installer.
+Open the Clawsy menu → **Einstellungen** (or `⌘,`):
 
-### The Super Easy Way (Recommended)
-Run this command on your OpenClaw host (e.g., via SSH on your VPS):
-```bash
-curl -sSL https://raw.githubusercontent.com/iret77/clawsy/main/install_clawsy_server.sh | bash
+| Setting | Description |
+|---|---|
+| **Gateway Host** | Your OpenClaw server hostname or IP |
+| **Gateway Port** | Default: `18789` |
+| **Token** | Your OpenClaw agent token |
+| **SSH Fallback** | Auto-tunnel via SSH if direct WSS fails |
+| **Shared Folder** | Local folder synced with your agent |
+
+---
+
+## 🤖 Agent Integration
+
+Clawsy connects to OpenClaw as a native node. Once paired, your agent can:
+
+```python
+# Take a screenshot
+nodes(action="invoke", node="<nodeId>", invokeCommand="screen.capture")
+
+# Read the clipboard
+nodes(action="invoke", node="<nodeId>", invokeCommand="clipboard.read")
+
+# Write a file to the shared folder
+nodes(action="invoke", node="<nodeId>", invokeCommand="file.set",
+      invokeParamsJson='{"name": "hello.txt", "content": "<base64>"}')
+
+# Show task progress in Mission Control
+# Write .agent_status.json to shared folder (silent, no dialog)
 ```
-This script will:
-1.  **Configure `HEARTBEAT.md`**: Adds the automated semantic mood analysis task.
-2.  **Update `AGENTS.md`**: Teaches your agent how to interpret Clawsy's metadata envelopes.
-3.  **Initialize Memory**: Creates the necessary structures for mood tracking.
 
-### Manual Setup (If you prefer)
-If you'd rather do it yourself:
-1.  **Enable Service Sessions**: Ensure your agent allowlists the `clawsy-service` session target.
-2.  **Add Mood Analysis**: Append the mood task to your `HEARTBEAT.md` (see script for details).
-3.  **Agent Awareness**: Add an instruction to `AGENTS.md` to check `memory/clawsy_mood.json` and look for `clawsy_envelope` JSON in the message history.
+See [CLAWSY.md](CLAWSY.md) for the full agent skill documentation.
 
 ---
 
-## 👨‍💻 Development
+## 🛠 Build from Source
 
-If you want to contribute or build from source:
+### Requirements
+- macOS 14.0+
+- Swift 5.9+ (Xcode Command Line Tools)
 
-### Prerequisites
-*   macOS 14.0 or newer
-*   Xcode 15.0+ (or Swift Command Line Tools)
+### Steps
 
-### Build Steps
-1. **Clone the repo:**
-   ```bash
-   git clone https://github.com/iret77/clawsy.git
-   cd clawsy
-   ```
-2. **Build and Package:**
-   Run the included build script:
-   ```bash
-   ./build.sh
-   ```
-   This will compile the Swift code in Release mode and package it into `Clawsy.app` inside the `.build/app/` directory.
+```bash
+git clone https://github.com/iret77/clawsy.git
+cd clawsy
+./build.sh
+# → Clawsy.app lands in .build/app/
+```
+
+CI builds run automatically via GitHub Actions on every tagged release.
 
 ---
 
-## 🛡 Privacy & Fair Play
-Clawsy is built on the principle of **Fair Play**. We believe that transparency is the foundation of trust between a human and their AI assistant.
-*   **No Hidden Data:** Every byte sent to the agent can be inspected in the "Last Metadata" view.
-*   **Local Processing:** Telemetry analysis and mood profiling happen entirely on your Mac.
-*   **Opt-in Context:** You decide which hardware signals are shared.
+## 🛡 Privacy
+
+All processing happens locally on your Mac. Clawsy never phones home. Every agent interaction requires explicit user approval. See [PRIVACY.md](PRIVACY.md) for details.
 
 ---
 
 ## 📄 License
-Clawsy is released under the **MIT License**. See [LICENSE](LICENSE) for details.
+
+MIT — see [LICENSE](LICENSE).
