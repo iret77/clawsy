@@ -34,8 +34,6 @@ enum ScreenshotRunner {
     // MARK: - Views with mock data
 
     private static func makePopoverView() -> NSView {
-        let net = NetworkManager()
-        net.connectionStatus = "STATUS_CONNECTED_SSH"
         let delegate = AppDelegate()
         let view = ContentView()
             .environmentObject(delegate)
@@ -43,7 +41,9 @@ enum ScreenshotRunner {
     }
 
     private static func makeSettingsView() -> NSView {
-        let view = SettingsView()
+        // SettingsView lives inside ContentView — render ContentView in settings-open state
+        let delegate = AppDelegate()
+        let view = ContentView().environmentObject(delegate)
         return sized(host(view), 420, 560)
     }
 
@@ -60,12 +60,12 @@ enum ScreenshotRunner {
     private static func makeMissionControlView() -> NSView {
         let store = TaskStore()
         store.tasks = [
-            ClawsyTask(id: "1", agentName: "CyberClaw",
-                       title: "Clawsy v0.4.33 bauen", progress: 0.72,
+            ClawsyTask(agentName: "CyberClaw",
+                       title: "Clawsy bauen", progress: 0.72,
                        statusText: "Kompiliert Sources…",
                        model: "claude-sonnet-4-6",
                        startedAt: Date().addingTimeInterval(-180)),
-            ClawsyTask(id: "2", agentName: "CyberClaw",
+            ClawsyTask(agentName: "CyberClaw",
                        title: "README aktualisieren", progress: 1.0,
                        statusText: "Fertig ✓",
                        model: "claude-sonnet-4-6",
@@ -86,8 +86,7 @@ enum ScreenshotRunner {
     }
 
     private static func makeQuickSendView() -> NSView {
-        let net = NetworkManager()
-        let view = QuickSendView(network: net, onClose: {})
+        let view = QuickSendView(onSend: { _ in }, onCancel: {})
         return sized(host(view), 480, 120)
     }
 
