@@ -197,7 +197,7 @@
 "ONBOARDING_RESTART" = "Jetzt neu starten";
 "ONBOARDING_ACCESSIBILITY_SKIP_RESTART" = "Ich habe Zugriff erteilt, ohne Neustart fortfahren →";
 "MISSION_CONTROL_EMPTY" = "Keine aktiven Aufgaben";
-"MISSION_CONTROL_EMPTY_HINT" = "Aufgaben erscheinen hier, sobald ein Agent arbeitet.\nDer Agent schreibt dazu in .agent_status.json im geteilten Ordner.";
+"MISSION_CONTROL_EMPTY_HINT" = "Sobald dein Assistent eine Aufgabe bearbeitet, erscheint sie hier.";
 "FILESYNC_TITLE" = "Dateizugriff angefragt";
 "FILESYNC_WINDOW_TITLE" = "Clawsy — Dateizugriff";
 "OP_UPLOAD" = "Hochladen";

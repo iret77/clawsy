@@ -196,7 +196,7 @@
 "ONBOARDING_RESTART" = "Restart Now";
 "ONBOARDING_ACCESSIBILITY_SKIP_RESTART" = "I've granted access, skip restart →";
 "MISSION_CONTROL_EMPTY" = "No active tasks";
-"MISSION_CONTROL_EMPTY_HINT" = "Tasks appear here when an agent is working.\nThe agent writes to .agent_status.json in your shared folder.";
+"MISSION_CONTROL_EMPTY_HINT" = "When your assistant is working on something, it will appear here.";
 "FILESYNC_TITLE" = "File Access Request";
 "FILESYNC_WINDOW_TITLE" = "Clawsy — File Access";
 "OP_UPLOAD" = "Upload";
