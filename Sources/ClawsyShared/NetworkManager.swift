@@ -39,6 +39,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     
     private var socket: WebSocket?
     private var connectionWatchdog: Timer?
+    private var pairingTimeoutTimer: Timer?
     private var signingKey: Curve25519.Signing.PrivateKey?
     private var publicKey: Curve25519.Signing.PublicKey?
     
@@ -447,6 +448,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
     
     public func disconnect() {
+        pairingTimeoutTimer?.invalidate()
+        pairingTimeoutTimer = nil
+        
         socket?.delegate = nil
         socket?.disconnect()
         socket = nil
@@ -585,6 +589,8 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         }
         
         if event == "node.pair.resolved" {
+            self.pairingTimeoutTimer?.invalidate()
+            self.pairingTimeoutTimer = nil
             if let payload = json["payload"] as? [String: Any] {
                 let approved = payload["approved"] as? Bool ?? false
                 if approved, let dt = payload["deviceToken"] as? String {
@@ -661,6 +667,22 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                      let details = errorObj["details"] as? [String: Any]
                      let requestId = details?["requestId"] as? String ?? ""
                      self.connectionStatus = "STATUS_PAIRING"
+                     
+                     // Cancel the connection watchdog – pairing can take minutes
+                     self.connectionWatchdog?.invalidate()
+                     self.connectionWatchdog = nil
+                     
+                     // Start a 5-minute pairing timeout as safety net
+                     self.pairingTimeoutTimer?.invalidate()
+                     self.pairingTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: false) { [weak self] _ in
+                         guard let self = self else { return }
+                         DispatchQueue.main.async {
+                             self.rawLog += "\n[PAIR] Pairing timeout (5 min) – disconnecting"
+                             self.connectionStatus = "STATUS_PAIRING_TIMEOUT"
+                             self.disconnect()
+                         }
+                     }
+                     
                      self.rawLog += "\n[PAIR] NOT_PAIRED – sending node.pair.request (requestId: \(requestId))"
                      let pairReq: [String: Any] = [
                          "type": "req", "id": "2", "method": "node.pair.request",
