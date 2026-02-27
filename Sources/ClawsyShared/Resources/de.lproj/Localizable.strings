@@ -121,7 +121,7 @@
 /* Updates */
 "UPDATES" = "Updates";
 "CHECK_NOW" = "Jetzt prüfen";
-"INSTALL_VERSION %@" = "Version %@ installieren";
+"INSTALL_VERSION %@" = "%@ installieren";
 "UPDATE_AVAILABLE %@" = "Update verfügbar: %@";
 "NO_UPDATES" = "Clawsy ist aktuell.";
 "CHECKING" = "Wird geprüft…";
