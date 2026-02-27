@@ -274,15 +274,16 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
 
     /// Finds a free TCP port on localhost by binding to port 0.
     /// Returns the assigned port number, or nil on failure.
-    /// Returns true if a TCP connection to host:port can be established (non-blocking probe).
+    /// Returns true if a TCP connection to host:port can be established within ~400ms.
     private func isTcpPortOpen(host: String, port: UInt16) -> Bool {
         let sock = Darwin.socket(AF_INET, SOCK_STREAM, 0)
         guard sock >= 0 else { return false }
         defer { Darwin.close(sock) }
 
-        // Set non-blocking so we don't hang
-        var flags = fcntl(sock, F_GETFL, 0)
-        fcntl(sock, F_SETFL, flags | O_NONBLOCK)
+        // Set send/receive timeout so connect() doesn't block indefinitely
+        var tv = timeval(tv_sec: 0, tv_usec: 400_000)
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
 
         var addr = sockaddr_in()
         addr.sin_family = sa_family_t(AF_INET)
@@ -295,23 +296,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 Darwin.connect(sock, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
             }
         }
-
-        if result == 0 { return true }
-        if errno != EINPROGRESS { return false }
-
-        // Wait up to 400ms for connection via select()
-        var writeSet = fd_set()
-        _fd_zero(&writeSet)
-        _fd_set(sock, &writeSet)
-        var timeout = timeval(tv_sec: 0, tv_usec: 400_000)
-        let selected = Darwin.select(sock + 1, nil, &writeSet, nil, &timeout)
-        guard selected > 0 else { return false }
-
-        // Check for socket-level error
-        var soErr: Int32 = 0
-        var soErrLen = socklen_t(MemoryLayout<Int32>.size)
-        getsockopt(sock, SOL_SOCKET, SO_ERROR, &soErr, &soErrLen)
-        return soErr == 0
+        return result == 0
     }
 
     private func findFreePort() -> UInt16? {
