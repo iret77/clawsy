@@ -135,13 +135,33 @@ struct ContentView: View {
                         }
                         .buttonStyle(.plain)
                         
-                        Button(action: {
-                            showingCameraMenu = false
-                            network.sendEvent(kind: "camera.trigger", payload: ["action": "list"])
-                        }) {
-                            MenuItemRow(icon: "list.bullet", title: "LIST_CAMERAS", isEnabled: network.isConnected)
+                        Divider()
+                        let cameras = CameraManager.listCameras()
+                        if cameras.isEmpty {
+                            MenuItemRow(icon: "list.bullet", title: "NO_CAMERAS_FOUND", isEnabled: false)
+                        } else {
+                            ForEach(cameras, id: \.self) { cam in
+                                Button(action: {
+                                    showingCameraMenu = false
+                                    CameraManager.takePhoto(deviceId: cam) { b64 in
+                                        guard let b64 = b64 else { return }
+                                        let envelope: [String: Any] = ["clawsy_envelope": [
+                                            "type": "camera",
+                                            "image": b64,
+                                            "deviceId": cam,
+                                            "localTime": ISO8601DateFormatter().string(from: Date())
+                                        ]]
+                                        if let json = try? JSONSerialization.data(withJSONObject: envelope),
+                                           let str = String(data: json, encoding: .utf8) {
+                                            network.sendServiceEvent(message: str)
+                                        }
+                                    }
+                                }) {
+                                    MenuItemRow(icon: "camera.fill", title: cam, isEnabled: network.isConnected)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
-                        .buttonStyle(.plain)
                     }
                     .padding(4)
                     .frame(width: 200)
