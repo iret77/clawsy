@@ -251,6 +251,7 @@ struct TaskRowView: View {
             }
         }
         .onReceive(timer) { _ in
+            guard !isComplete else { return }
             if let started = task.startedAt {
                 elapsed = Date().timeIntervalSince(started)
             } else {
