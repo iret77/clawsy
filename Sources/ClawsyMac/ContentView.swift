@@ -321,12 +321,35 @@ struct ContentView: View {
             ruleEditorFolderPath = action.folderPath
         case "send_telemetry":
             if network.isConnected {
-                let telemetry = NetworkManager.getTelemetry()
-                network.sendEvent(kind: "clawsy.telemetry", payload: telemetry)
+                if let jsonString = ClawsyEnvelopeBuilder.build(type: "telemetry", content: "📡 Telemetrie von \(action.folderPath)", includeTelemetry: true) {
+                    network.sendServiceEvent(message: jsonString)
+                }
             }
         case "run_actions":
-            if network.isConnected {
-                network.sendEvent(kind: "clawsy.run_folder_actions", payload: ["folderPath": action.folderPath])
+            guard network.isConnected else { break }
+            let folderURL = URL(fileURLWithPath: action.folderPath)
+            let files = (try? FileManager.default.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: nil)) ?? []
+            for fileURL in files {
+                let fileName = fileURL.lastPathComponent
+                guard !fileName.hasPrefix(".") else { continue }
+                let rules = ClawsyManifestManager.matchingRules(for: fileName, in: action.folderPath, trigger: "manual")
+                let resolvedPath = sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
+                for rule in rules {
+                    let relativePath = fileURL.path.replacingOccurrences(of: resolvedPath, with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                    switch rule.action {
+                    case "send_to_agent":
+                        let message = rule.prompt.isEmpty ? "📂 \(relativePath)" : "\(rule.prompt)\n\nDatei: \(relativePath)"
+                        network.sendServiceEvent(message: message, payload: ["trigger": "manual", "fileName": fileName, "relativePath": relativePath, "ruleId": rule.id])
+                    case "notify":
+                        let content = UNMutableNotificationContent()
+                        content.title = NSLocalizedString("RULE_NOTIFY_TITLE", bundle: .clawsy, comment: "")
+                        content.body = rule.prompt.isEmpty ? fileName : "\(rule.prompt): \(fileName)"
+                        content.sound = .default
+                        let req = UNNotificationRequest(identifier: "manual-\(rule.id)-\(UUID().uuidString.prefix(8))", content: content, trigger: nil)
+                        UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
+                    default: break
+                    }
+                }
             }
         default:
             break
