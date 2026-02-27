@@ -212,6 +212,11 @@ if [ -f "CLAWSY.md" ]; then
     echo "✅ Bundled CLAWSY.md into app resources"
 fi
 
+# 0b. Sync ClawsyShared strings → ClawsyMac/Resources so SPM embeds them in Bundle.main
+mkdir -p Sources/ClawsyMac/Resources/en.lproj Sources/ClawsyMac/Resources/de.lproj
+cp Sources/ClawsyShared/Resources/en.lproj/Localizable.strings Sources/ClawsyMac/Resources/en.lproj/
+cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings Sources/ClawsyMac/Resources/de.lproj/
+
 # 7. Copy & compile Localizations (plutil converts UTF-8 text → binary plist,
 #    which is the format macOS NSBundle expects — same as Xcode's built-in step)
 mkdir -p "$RESOURCES_DIR/en.lproj"
