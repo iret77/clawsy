@@ -34,6 +34,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var alertWindow: NSWindow?
     var quickSendWindow: NSWindow?
     var hudWindow: NSWindow?
+    var onboardingWindow: NSWindow?
     var networkManager: NetworkManager?
     
     func applicationWillTerminate(_ notification: Notification) {
@@ -295,6 +296,37 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         showFloatingWindow(view: view, title: "Camera Preview", autosaveName: "ai.clawsy.CameraWindow")
     }
     
+    func openOnboardingWindow(onboardingCompleted: Binding<Bool>) {
+        if let existing = onboardingWindow, existing.isVisible {
+            existing.makeKeyAndOrderFront(nil)
+            return
+        }
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 420),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Willkommen bei Clawsy"
+        window.isReleasedWhenClosed = false
+        window.center()
+
+        let isPresented = Binding<Bool>(
+            get: { window.isVisible },
+            set: { newVal in
+                if !newVal {
+                    window.close()
+                    self.onboardingWindow = nil
+                }
+            }
+        )
+        let view = OnboardingView(isPresented: isPresented, onboardingCompleted: onboardingCompleted)
+        window.contentView = NSHostingView(rootView: view)
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        onboardingWindow = window
+    }
+
     @objc func togglePopover(_ sender: AnyObject?) {
         if let button = statusBarItem.button {
             if popover.isShown {

@@ -206,7 +206,7 @@ struct ContentView: View {
                 }
 
                 // Setup / Onboarding
-                Button(action: { showingOnboarding = true }) {
+                Button(action: { appDelegate.openOnboardingWindow(onboardingCompleted: $onboardingCompleted) }) {
                     MenuItemRow(icon: "checklist", title: "SETUP", isEnabled: true)
                 }
                 .buttonStyle(.plain)
@@ -266,7 +266,7 @@ struct ContentView: View {
             
             // Show onboarding on first launch
             if !onboardingCompleted {
-                showingOnboarding = true
+                appDelegate.openOnboardingWindow(onboardingCompleted: $onboardingCompleted)
             }
             
             // Auto-connect if configured
@@ -297,12 +297,7 @@ struct ContentView: View {
                 ))
             }
         }
-        .sheet(isPresented: $showingOnboarding) {
-            OnboardingView(
-                isPresented: $showingOnboarding,
-                onboardingCompleted: $onboardingCompleted
-            )
-        }
+
     }
     
     // --- Actions ---
