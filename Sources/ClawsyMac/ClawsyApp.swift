@@ -44,6 +44,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        #if SCREENSHOT_MODE
+        if CommandLine.arguments.contains("--screenshot") {
+            ScreenshotRunner.run()
+            return
+        }
+        #endif
+
         // Install CLAWSY.md into OpenClaw workspace on first launch (or if outdated)
         installClawsyDocumentation()
 

@@ -11,6 +11,21 @@ Clawsy is a native macOS menu bar app that gives your [OpenClaw](https://github.
 
 ---
 
+## 📷 Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/01-popover.png" width="240" alt="Main menu"/>
+  <img src="docs/screenshots/02-settings.png" width="420" alt="Settings"/>
+  <img src="docs/screenshots/03-onboarding.png" width="480" alt="Onboarding"/>
+</p>
+<p align="center">
+  <img src="docs/screenshots/04-missioncontrol.png" width="320" alt="Mission Control"/>
+  <img src="docs/screenshots/05-filesync.png" width="440" alt="File Sync dialog"/>
+  <img src="docs/screenshots/06-quicksend.png" width="480" alt="Quick Send"/>
+</p>
+
+---
+
 ## ✨ Features
 
 ### 📸 Screenshot & Camera

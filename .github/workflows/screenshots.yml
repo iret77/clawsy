@@ -1,0 +1,41 @@
+name: Update Screenshots
+
+on:
+  workflow_run:
+    workflows: ["Build Clawsy Ecosystem"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  screenshots:
+    runs-on: macos-15
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build with SCREENSHOT_MODE flag
+        run: |
+          swift build \
+            --target ClawsyMac \
+            -Xswiftc -DSCREENSHOT_MODE \
+            2>&1
+
+      - name: Run screenshot mode
+        run: |
+          mkdir -p docs/screenshots
+          .build/debug/ClawsyMac --screenshot
+
+      - name: Commit screenshots
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots/
+          if git diff --staged --quiet; then
+            echo "No screenshot changes."
+          else
+            git commit -m "docs: auto-update screenshots [skip ci]"
+            git push
+          fi
