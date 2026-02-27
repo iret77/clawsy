@@ -112,8 +112,8 @@ sessions_history(sessionKey="clawsy-service", limit=5)
 ### Wie es funktioniert (technisch)
 Die App sendet Screenshots via `node.event` mit `event: "agent.deeplink"` und `sessionKey: "clawsy-service"` im payloadJSON. Das Gateway routet es in diese Session statt in den aktiven Chat.
 
-### Geschichte
-Diese Architektur wurde am 19. Februar 2026 entwickelt und am 27. Februar 2026 nach Context-Compact wiederhergestellt und dokumentiert. **Bitte nicht wieder verlieren.**
+### Eingeführt
+v0.2.x (Februar 2026)
 
 ---
 
