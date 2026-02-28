@@ -159,7 +159,7 @@ struct ContentView: View {
                             let isActive = camId == activeCamId
                             Button(action: {
                                 activeCameraId = camId
-                                SharedConfig.sharedDefaults?.set(camName, forKey: "activeCameraName")
+                                SharedConfig.sharedDefaults.set(camName, forKey: "activeCameraName")
                             }) {
                                 MenuItemRow(
                                     icon: isActive ? "checkmark.circle.fill" : "circle",
