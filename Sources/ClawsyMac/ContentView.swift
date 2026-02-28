@@ -128,7 +128,7 @@ struct ContentView: View {
 
                 // Camera Group
                 Button(action: { if !availableCameras.isEmpty { showingCameraMenu.toggle() } }) {
-                    MenuItemRow(icon: "video.fill", title: "CAMERA", subtitle: (availableCameras.first { ($0["id"] as? String) == activeCameraId } ?? availableCameras.first)?["name"] as? String, isEnabled: network.isConnected && !availableCameras.isEmpty, hasChevron: true)
+                    MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected && !availableCameras.isEmpty, hasChevron: true)
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
@@ -241,9 +241,13 @@ struct ContentView: View {
                 let cameras = CameraManager.listCameras()
                 DispatchQueue.main.async {
                     availableCameras = cameras
-                    // Auto-select first camera if none saved yet
-                    if activeCameraId.isEmpty, let first = cameras.first, let id = first["id"] as? String {
-                        activeCameraId = id
+                    // Auto-select first camera if none saved or saved ID no longer exists
+                    let knownIds = cameras.compactMap { $0["id"] as? String }
+                    if activeCameraId.isEmpty || !knownIds.contains(activeCameraId) {
+                        if let first = cameras.first, let id = first["id"] as? String {
+                            activeCameraId = id
+                            SharedConfig.sharedDefaults.set(first["name"] as? String ?? "", forKey: "activeCameraName")
+                        }
                     }
                 }
             }
