@@ -103,6 +103,8 @@
 /* HUD */
 "CLIPBOARD_SENT" = "Copied to Cloud";
 "SCREENSHOT_SENT" = "Image Transferred";
+"PHOTO_SENT" = "Photo Transferred";
+"CAPTURE_FAILED" = "Capture Failed";
 
 /* Settings Addition */
 "HOTKEYS" = "Hotkeys";
