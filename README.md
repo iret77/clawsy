@@ -1,81 +1,96 @@
-# 🦞 Clawsy
-
-**The secure bridge between your Mac and your OpenClaw agents.**
-
-Clawsy is a native macOS menu bar app that gives your [OpenClaw](https://github.com/openclaw/openclaw) AI agent real-world reach — screenshots, clipboard, camera, files, and more — while keeping you in full control through transparent permission dialogs.
-
-![Version](https://img.shields.io/github/v/release/iret77/clawsy?label=version&color=blue)
-![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Build](https://github.com/iret77/clawsy/actions/workflows/build.yml/badge.svg)
-
----
-
-## 📷 Screenshots
-
 <p align="center">
-  <img src="docs/screenshots/01-popover.png" width="240" alt="Main menu"/>
-  <img src="docs/screenshots/02-settings.png" width="420" alt="Settings"/>
-  <img src="docs/screenshots/03-onboarding.png" width="480" alt="Onboarding"/>
+  <img src="docs/screenshots/01-popover.png" width="220" alt="Clawsy menu bar app"/>
 </p>
+
+<h1 align="center">Clawsy</h1>
+
 <p align="center">
-  <img src="docs/screenshots/04-missioncontrol.png" width="320" alt="Mission Control"/>
-  <img src="docs/screenshots/05-filesync.png" width="440" alt="File Sync dialog"/>
-  <img src="docs/screenshots/06-quicksend.png" width="480" alt="Quick Send"/>
+  <strong>Your AI agent, fully wired into your Mac.</strong><br>
+  A native menu bar app that gives <a href="https://github.com/openclaw/openclaw">OpenClaw</a> agents real-world reach — screen, clipboard, camera, files — while keeping you in control.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/github/v/release/iret77/clawsy?label=version&color=blue" alt="Version"/>
+  <img src="https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey" alt="Platform"/>
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="License"/>
+  <img src="https://github.com/iret77/clawsy/actions/workflows/build.yml/badge.svg" alt="Build"/>
 </p>
 
 ---
 
-## ✨ Features
+## Install
 
-### 📸 Screenshot & Camera
-Send your screen or a photo directly to your agent with one click — or let the agent request it.
+1. Download **Clawsy.app.zip** from the [Releases](https://github.com/iret77/clawsy/releases) page
+2. Unzip → drag `Clawsy.app` to `/Applications`
+3. Launch — the setup assistant handles the rest
 
-### 📋 Clipboard Sync
-Push your clipboard to the agent silently, without cluttering the main chat.
+> Requires macOS 14+. No cloud account. No subscription. No telemetry.
+
+---
+
+## What it does
+
+Clawsy sits in your menu bar and acts as a secure bridge between your Mac and your OpenClaw agent. Your agent can see your screen, read your clipboard, manage files, and track its own tasks — all with your explicit approval.
 
 ### ⚡ Quick Send
-A global hotkey (`⌘ ⇧ K`) opens a floating input anywhere on your Mac. Type, send, done.
+
+A global hotkey (`⌘⇧K`) opens a floating panel anywhere on your Mac. Type a message to your agent without switching apps or opening a chat window.
+
+<p align="center">
+  <img src="docs/screenshots/06-quicksend.png" width="480" alt="Quick Send panel"/>
+</p>
+
+### 📋 Clipboard, Screen & Camera
+
+Push your clipboard to the agent silently. Let the agent request a screenshot or camera frame. Every request goes through a permission dialog — allow once, for an hour, or deny.
 
 ### 📁 Shared Folder & Automation Rules
-A local folder syncs with your agent's workspace. Add `.clawsy` rule files to any subfolder — the built-in **Rule Editor** lets you define triggers like *"when a PDF is added, summarize it"*. No JSON editing required.
+
+A local folder syncs with your agent's workspace. Drop a `.clawsy` rule file into any subfolder to define triggers — *"when a PDF is added, summarize it"*. No JSON editing. Right-click any folder in Finder to configure rules via the FinderSync extension.
 
 ### 📊 Mission Control
-See what your agent is working on in real time. Agents write their task status to `.agent_status.json` in the shared folder — Clawsy picks it up instantly via FileWatcher.
 
-### 🔒 Fair Play — You Stay in Control
-Every file access, screenshot request, or clipboard read triggers a permission dialog. You can allow once, for an hour, or for the rest of the day. Nothing happens behind your back.
+See what your agent is actually doing, in real time.
+
+<p align="center">
+  <img src="docs/screenshots/04-missioncontrol.png" width="340" alt="Mission Control — live task view"/>
+</p>
+
+Agents write their task status to `.agent_status.json` in the shared folder. Clawsy picks it up instantly.
+
+### 🔒 You Stay in Control
+
+Every file write, screenshot, or clipboard read requires your approval.
+
+<p align="center">
+  <img src="docs/screenshots/05-filesync.png" width="380" alt="File sync permission dialog"/>
+</p>
+
+Nothing happens behind your back. You can always see what was approved and when.
 
 ---
 
-## 🚀 Installation
+## Setup
 
-1. Go to the [Releases](https://github.com/iret77/clawsy/releases) page
-2. Download **Clawsy.app.zip**
-3. Unzip and move `Clawsy.app` to `/Applications`
-4. Launch Clawsy — the setup assistant guides you through the rest
+Open the Clawsy menu → **Settings**:
 
-> **First launch:** Clawsy will ask for Accessibility permission (required for global hotkeys) and optionally enable the Finder extension for right-click folder automation.
-
----
-
-## ⚙️ Configuration
-
-Open the Clawsy menu → **Settings** (or `⌘,`):
+<p align="center">
+  <img src="docs/screenshots/02-settings.png" width="380" alt="Settings"/>
+</p>
 
 | Setting | Description |
 |---|---|
 | **Gateway Host** | Your OpenClaw server hostname or IP |
 | **Gateway Port** | Default: `18789` |
 | **Token** | Your OpenClaw agent token |
-| **SSH Fallback** | Auto-tunnel via SSH if direct WSS fails |
+| **SSH Fallback** | Auto-tunnels via SSH if direct connection fails |
 | **Shared Folder** | Local folder synced with your agent |
 
 ---
 
-## 🤖 Agent Integration
+## Agent Integration
 
-Clawsy connects to OpenClaw as a native node. Once paired, your agent can:
+Once paired, your agent can invoke Clawsy directly:
 
 ```python
 # Take a screenshot
@@ -86,23 +101,14 @@ nodes(action="invoke", node="<nodeId>", invokeCommand="clipboard.read")
 
 # Write a file to the shared folder
 nodes(action="invoke", node="<nodeId>", invokeCommand="file.set",
-      invokeParamsJson='{"name": "hello.txt", "content": "<base64>"}')
-
-# Show task progress in Mission Control
-# Write .agent_status.json to shared folder (silent, no dialog)
+      invokeParamsJson='{"name": "notes.txt", "content": "<base64>"}')
 ```
 
-See [CLAWSY.md](CLAWSY.md) for the full agent skill documentation.
+See [CLAWSY.md](CLAWSY.md) for the full skill documentation.
 
 ---
 
-## 🛠 Build from Source
-
-### Requirements
-- macOS 14.0+
-- Swift 5.9+ (Xcode Command Line Tools)
-
-### Steps
+## Build from Source
 
 ```bash
 git clone https://github.com/iret77/clawsy.git
@@ -111,16 +117,10 @@ cd clawsy
 # → Clawsy.app lands in .build/app/
 ```
 
-CI builds run automatically via GitHub Actions on every tagged release.
+Requires Swift 5.9+ (Xcode Command Line Tools). CI builds run automatically on every tagged release via GitHub Actions.
 
 ---
 
-## 🛡 Privacy
-
-All processing happens locally on your Mac. Clawsy never phones home. Every agent interaction requires explicit user approval. See [PRIVACY.md](PRIVACY.md) for details.
-
----
-
-## 📄 License
+## License
 
 MIT — see [LICENSE](LICENSE).
