@@ -49,19 +49,22 @@ public class CameraManager: NSObject {
         }
     }
     
-    // Stable keys for objc_setAssociatedObject (string literals are NOT stable pointers in Swift)
-    private static var activeSessions: [String: (AVCaptureSession, PhotoCaptureDelegate)] = [:]
+    // Keep session + delegate alive until photo is delivered
+    private static var activeSessions: [String: (AVCaptureSession, PhotoCaptureDelegate, NSObjectProtocol)] = [:]
     private static let sessionsLock = NSLock()
+    // Dedicated serial queue for ALL AVCaptureSession operations (Apple requirement)
+    private static let sessionQueue = DispatchQueue(label: "com.clawsy.camera.session", qos: .userInitiated)
 
     private static func executeCapture(deviceId: String?, completion: @escaping (String?) -> Void) {
-        // AVCaptureSession.startRunning() MUST NOT run on the main thread
-        DispatchQueue.global(qos: .userInitiated).async {
+        // All AVCaptureSession work MUST happen on a single serial queue — never on
+        // DispatchQueue.global (concurrent) or main.  Using a concurrent queue causes
+        // cross-thread access on the session's internal state which triggers an
+        // EXC_BAD_ACCESS / assertion on modern macOS.
+        sessionQueue.async {
             let device: AVCaptureDevice?
             if let deviceId = deviceId, !deviceId.isEmpty {
                 device = AVCaptureDevice(uniqueID: deviceId)
             } else {
-                // Use first discovered camera as fallback (AVCaptureDevice.default(for:) is deprecated
-                // and may return nil on macOS 14+ when no built-in camera is active)
                 let discovered = AVCaptureDevice.DiscoverySession(
                     deviceTypes: [.builtInWideAngleCamera, .external],
                     mediaType: .video,
@@ -78,7 +81,6 @@ public class CameraManager: NSObject {
             do {
                 let input = try AVCaptureDeviceInput(device: captureDevice)
                 let captureSession = AVCaptureSession()
-                // .photo is not supported by all cameras (e.g. external/Continuity) — check first
                 if captureSession.canSetSessionPreset(.photo) {
                     captureSession.sessionPreset = .photo
                 } else if captureSession.canSetSessionPreset(.high) {
@@ -94,32 +96,46 @@ public class CameraManager: NSObject {
 
                 let captureId = UUID().uuidString
                 let delegate = PhotoCaptureDelegate { data in
-                    captureSession.stopRunning()
-                    sessionsLock.lock()
-                    activeSessions.removeValue(forKey: captureId)
-                    sessionsLock.unlock()
+                    // Stop session on the same serial queue to avoid threading issues
+                    sessionQueue.async {
+                        captureSession.stopRunning()
+                        sessionsLock.lock()
+                        if let (_, _, observer) = activeSessions[captureId] {
+                            NotificationCenter.default.removeObserver(observer)
+                        }
+                        activeSessions.removeValue(forKey: captureId)
+                        sessionsLock.unlock()
+                    }
                     completion(data?.base64EncodedString())
                 }
 
-                // Keep session + delegate alive in a stable dictionary until photo is delivered
+                // Observe didStartRunning instead of using a fragile timer delay.
+                // The notification fires once the session is fully running and the
+                // camera hardware is ready to deliver frames.
+                let observer = NotificationCenter.default.addObserver(
+                    forName: .AVCaptureSessionDidStartRunning,
+                    object: captureSession,
+                    queue: nil     // delivered on posting thread
+                ) { _ in
+                    // Capture on the serial queue to guarantee thread safety
+                    sessionQueue.async {
+                        guard captureSession.isRunning else { return }
+                        let settings: AVCapturePhotoSettings
+                        if photoOutput.availablePhotoCodecTypes.contains(.jpeg) {
+                            settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
+                        } else {
+                            settings = AVCapturePhotoSettings()
+                        }
+                        photoOutput.capturePhoto(with: settings, delegate: delegate)
+                    }
+                }
+
                 sessionsLock.lock()
-                activeSessions[captureId] = (captureSession, delegate)
+                activeSessions[captureId] = (captureSession, delegate, observer)
                 sessionsLock.unlock()
 
+                // startRunning is blocking — that's fine on our dedicated serial queue
                 captureSession.startRunning()
-
-                // Give the camera hardware a moment to warm up, then snap
-                DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 1.0) {
-                    // Always request JPEG explicitly — default AVCapturePhotoSettings() may
-                    // pick HEVC or a codec the camera doesn't support → crash
-                    let settings: AVCapturePhotoSettings
-                    if photoOutput.availablePhotoCodecTypes.contains(.jpeg) {
-                        settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
-                    } else {
-                        settings = AVCapturePhotoSettings()
-                    }
-                    photoOutput.capturePhoto(with: settings, delegate: delegate)
-                }
 
             } catch {
                 print("Camera Error: \(error)")
