@@ -34,5 +34,6 @@ jobs:
             echo "No changes."
           else
             git commit -m "docs: auto-update screenshots [skip ci]"
+            git pull --rebase
             git push
           fi
