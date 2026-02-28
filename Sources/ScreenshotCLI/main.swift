@@ -420,21 +420,20 @@ struct HeroView: View {
             }
 
             // Popover — drops down from the Clawsy menu bar icon
-            // Positioned top-right, below menu bar
             ClawsyPanel(cornerRadius: 10) {
                 PopoverView()
             }
             .shadow(color: Color.black.opacity(0.5), radius: 20, x: 0, y: 8)
-            .offset(x: 540, y: 34)
+            .offset(x: 520, y: 30)
 
             // Settings panel — open to the right of the popover
             ClawsyPanel(cornerRadius: 12) {
                 SettingsView()
             }
             .shadow(color: Color.black.opacity(0.5), radius: 24, x: 0, y: 8)
-            .offset(x: 770, y: 34)
+            .offset(x: 755, y: 30)
         }
-        .frame(width: 1100, height: 500)
+        .frame(width: 1100, height: 560)
         .clipShape(RoundedRectangle(cornerRadius: 0))
     }
 }
@@ -678,7 +677,7 @@ try FileManager.default.createDirectory(atPath: outDir, withIntermediateDirector
 
 await MainActor.run {
     // Hero — Mac desktop context (wide, landscape)
-    render(HeroView(), width: 1100, height: 500, to: "\(outDir)/00-hero.png")
+    render(HeroView(), width: 1100, height: 560, to: "\(outDir)/00-hero.png")
 
     // Individual panels — wrapped in ClawsyPanel for realistic frames
     render(
@@ -693,7 +692,7 @@ await MainActor.run {
             .shadow(color: Color.black.opacity(0.4), radius: 20, x: 0, y: 8)
             .padding(20)
             .background(Color(white: 0.08)),
-        width: 320, height: 680, to: "\(outDir)/02-settings.png"
+        width: 320, height: 780, to: "\(outDir)/02-settings.png"
     )
     render(
         ClawsyPanel(cornerRadius: 12) { OnboardingView() }
