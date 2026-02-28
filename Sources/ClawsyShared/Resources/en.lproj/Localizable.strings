@@ -28,7 +28,7 @@
 "SCREENSHOT" = "Screenshot";
 "FULL_SCREEN" = "Full Screen";
 "INTERACTIVE_AREA" = "Interactive Area";
-"PUSH_CLIPBOARD" = "Push Clipboard";
+"PUSH_CLIPBOARD" = "Clipboard";
 "COPY_TO_AGENT" = "Copy to Agent";
 "QUICK_SEND" = "Quick Send";
 "SEND_AND_FORGET" = "Send Text to Agent";
@@ -107,7 +107,7 @@
 /* Settings Addition */
 "HOTKEYS" = "Hotkeys";
 "HOTKEY_QUICK_SEND" = "Quick Send";
-"HOTKEY_PUSH_CLIPBOARD" = "Push Clipboard";
+"HOTKEY_PUSH_CLIPBOARD" = "Clipboard";
 
 /* Metadata View */
 "LAST_METADATA" = "Last Metadata";
