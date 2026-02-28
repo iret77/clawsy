@@ -128,7 +128,7 @@ struct ContentView: View {
 
                 // Camera Group
                 Button(action: { if !availableCameras.isEmpty { showingCameraMenu.toggle() } }) {
-                    MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected && !availableCameras.isEmpty, hasChevron: true)
+                    MenuItemRow(icon: "video.fill", title: "CAMERA", subtitle: (availableCameras.first { ($0["id"] as? String) == activeCameraId } ?? availableCameras.first)?["name"] as? String, isEnabled: network.isConnected && !availableCameras.isEmpty, hasChevron: true)
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
