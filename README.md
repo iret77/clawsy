@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="docs/screenshots/01-popover.png" width="220" alt="Clawsy menu bar app"/>
-</p>
-
 <h1 align="center">Clawsy</h1>
 
 <p align="center">
@@ -14,6 +10,10 @@
   <img src="https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey" alt="Platform"/>
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License"/>
   <img src="https://github.com/iret77/clawsy/actions/workflows/build.yml/badge.svg" alt="Build"/>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/00-hero.png" width="100%" alt="Clawsy — menu bar app on macOS desktop"/>
 </p>
 
 ---

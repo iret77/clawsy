@@ -12,690 +12,662 @@ func render<V: View>(_ view: V, width: CGFloat, height: CGFloat, to path: String
             .environment(\.colorScheme, .dark)
     )
     renderer.scale = 2.0
-    guard let cgImage = renderer.cgImage else {
-        print("❌ render failed: \(path)")
-        return
-    }
+    guard let cgImage = renderer.cgImage else { print("❌ render failed: \(path)"); return }
     let rep = NSBitmapImageRep(cgImage: cgImage)
-    guard let data = rep.representation(using: .png, properties: [:]) else {
-        print("❌ PNG encode failed: \(path)")
-        return
+    guard let data = rep.representation(using: .png, properties: [:]) else { print("❌ PNG encode failed: \(path)"); return }
+    do { try data.write(to: URL(fileURLWithPath: path)); print("✅ \(path)") }
+    catch { print("❌ write failed: \(path) — \(error)") }
+}
+
+// ── Clawsy window style ───────────────────────────────────────────────────────
+// No traffic lights. Dark vibrancy panel, rounded corners, subtle border.
+
+struct ClawsyPanel<Content: View>: View {
+    let content: Content
+    var cornerRadius: CGFloat = 12
+
+    init(cornerRadius: CGFloat = 12, @ViewBuilder content: () -> Content) {
+        self.cornerRadius = cornerRadius
+        self.content = content()
     }
-    do {
-        try data.write(to: URL(fileURLWithPath: path))
-        print("✅ \(path)")
-    } catch {
-        print("❌ write failed: \(path) — \(error)")
+
+    var body: some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(Color(white: 0.13, opacity: 0.97))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(Color(white: 1, opacity: 0.12), lineWidth: 0.5)
+            )
     }
 }
 
-// ── Shared style helpers ──────────────────────────────────────────────────────
+// ── Shared menu row ───────────────────────────────────────────────────────────
 
-// Mirrors the real app: uses system semantic colors (dark mode forced by renderer)
-let accentBlue = Color.accentColor
-
-// MenuItemRow — mirrors SharedUI.swift
-struct MockMenuItemRow: View {
+struct MenuRow: View {
     var icon: String? = nil
     var title: String
-    var color: Color = .primary
-    var isEnabled: Bool = true
+    var color: Color = Color(white: 0.85)
     var shortcut: String? = nil
     var hasChevron: Bool = false
+    var isDisabled: Bool = false
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             if let icon = icon {
                 Image(systemName: icon)
-                    .font(.system(size: 14))
-                    .foregroundColor(isEnabled ? color : color.opacity(0.3))
+                    .font(.system(size: 13))
+                    .foregroundColor(isDisabled ? Color(white: 0.4) : color)
                     .frame(width: 18, alignment: .center)
             }
             Text(title)
                 .font(.system(size: 13))
-                .foregroundColor(isEnabled ? .primary : .secondary.opacity(0.5))
+                .foregroundColor(isDisabled ? Color(white: 0.35) : Color(white: 0.9))
                 .frame(maxWidth: .infinity, alignment: .leading)
-            if let shortcut = shortcut {
-                Text(shortcut)
+            if let sc = shortcut {
+                Text(sc)
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary.opacity(0.5))
+                    .foregroundColor(Color(white: 0.4))
             }
             if hasChevron {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10))
-                    .foregroundColor(.secondary.opacity(0.4))
+                    .foregroundColor(Color(white: 0.35))
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 7)
-        .contentShape(Rectangle())
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
     }
 }
 
-// ── 1. Main Popover ───────────────────────────────────────────────────────────
-// Mirrors: ContentView (the menu bar popover), width 240
+// ── 1. Popover ────────────────────────────────────────────────────────────────
 
-struct PopoverShot: View {
+struct PopoverView: View {
     var body: some View {
         VStack(spacing: 0) {
-
-            // Header — mirrors the HStack at top of ContentView
+            // Header
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Clawsy")
                         .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(Color(white: 0.92))
                     Text("Online (Paired via SSH)")
                         .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                    HStack(spacing: 3) {
-                        Image(systemName: "brain")
-                            .font(.system(size: 9))
-                        Text("claude-sonnet-4-6")
-                            .font(.system(size: 10))
-                    }
-                    .foregroundColor(.secondary.opacity(0.8))
+                        .foregroundColor(Color(white: 0.5))
                 }
                 Spacer()
                 Circle()
-                    .fill(Color.green)
+                    .fill(Color(red: 0.22, green: 0.85, blue: 0.45))
                     .frame(width: 8, height: 8)
-                    .shadow(color: Color.green.opacity(0.5), radius: 2)
+                    .shadow(color: Color.green.opacity(0.6), radius: 3)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 14)
             .padding(.top, 14)
-            .padding(.bottom, 12)
+            .padding(.bottom, 10)
 
-            Divider().opacity(0.5)
+            Divider().background(Color(white: 1, opacity: 0.08))
 
-            // Menu items — in exact order from ContentView
-            VStack(spacing: 2) {
-                MockMenuItemRow(icon: "paperplane.fill", title: "Quick Send",
-                                isEnabled: true, shortcut: "⌘⇧K")
-                MockMenuItemRow(icon: "camera",         title: "Screenshot",
-                                isEnabled: true, hasChevron: true)
-                MockMenuItemRow(icon: "doc.on.clipboard", title: "Clipboard",
-                                isEnabled: true, shortcut: "⌘⇧V")
-                MockMenuItemRow(icon: "video.fill",     title: "Camera",
-                                isEnabled: true, hasChevron: true)
-
-                Divider().padding(.vertical, 4).opacity(0.5)
-
-                MockMenuItemRow(icon: "power", title: "Disconnect", color: .red, isEnabled: true)
-
-                Divider().padding(.vertical, 4).opacity(0.5)
-
-                MockMenuItemRow(icon: "list.bullet.clipboard", title: "Mission Control", isEnabled: true)
-                MockMenuItemRow(icon: "info.bubble.fill",      title: "Last Metadata",   isEnabled: true)
-                MockMenuItemRow(icon: "gearshape.fill",        title: "Settings...",     isEnabled: true)
-
-                Divider().padding(.vertical, 4).opacity(0.5)
-
-                MockMenuItemRow(icon: "xmark.circle.fill", title: "Quit", isEnabled: true)
+            VStack(spacing: 1) {
+                MenuRow(icon: "paperplane",        title: "Quick Send",  shortcut: "⌘⌥K")
+                MenuRow(icon: "camera",            title: "Screenshot",  hasChevron: true, isDisabled: false)
+                MenuRow(icon: "doc.on.clipboard",  title: "Clipboard",   shortcut: "⌘⌥V")
+                MenuRow(icon: "video",             title: "Camera",      hasChevron: true)
             }
-            .padding(6)
+            .padding(.vertical, 4)
+
+            Divider().background(Color(white: 1, opacity: 0.08))
+
+            VStack(spacing: 1) {
+                MenuRow(icon: "bolt.fill", title: "Connect", color: Color(red: 0.4, green: 0.7, blue: 1.0))
+            }
+            .padding(.vertical, 4)
+
+            Divider().background(Color(white: 1, opacity: 0.08))
+
+            VStack(spacing: 1) {
+                MenuRow(icon: "list.bullet.clipboard", title: "Mission Control")
+                MenuRow(icon: "info.circle",           title: "Last Metadata")
+                MenuRow(icon: "gearshape",             title: "Settings...")
+            }
+            .padding(.vertical, 4)
+
+            Divider().background(Color(white: 1, opacity: 0.08))
+
+            VStack(spacing: 1) {
+                MenuRow(icon: "xmark.circle", title: "Quit")
+            }
+            .padding(.vertical, 4)
         }
-        .frame(width: 240)
-        .background(Color(NSColor.windowBackgroundColor))
+        .frame(width: 220)
     }
 }
 
-// ── 2. Settings Popover ───────────────────────────────────────────────────────
-// Mirrors: SettingsView, width 380
+// ── 2. Settings ───────────────────────────────────────────────────────────────
 
-struct SettingsShot: View {
+struct SettingsRow: View {
+    let label: String
+    var value: String? = nil
+    var isPassword: Bool = false
+    var width: CGFloat? = nil
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 6)
+            .fill(Color(white: 1, opacity: 0.06))
+            .overlay(
+                Text(isPassword ? String(repeating: "•", count: 20) : (value ?? ""))
+                    .font(.system(size: 12, design: value != nil ? .monospaced : .default))
+                    .foregroundColor(isPassword ? Color(white: 0.4) : Color(white: 0.85))
+                    .padding(.horizontal, 8),
+                alignment: .leading
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color(white: 1, opacity: 0.1), lineWidth: 0.5)
+            )
+            .frame(width: width, height: 28)
+    }
+}
+
+struct Toggle2: View {
+    let on: Bool
+    var body: some View {
+        Capsule()
+            .fill(on ? Color(red: 0.2, green: 0.78, blue: 0.35) : Color(white: 0.25))
+            .frame(width: 36, height: 20)
+            .overlay(
+                Circle()
+                    .fill(.white)
+                    .frame(width: 16, height: 16)
+                    .offset(x: on ? 8 : -8),
+                alignment: .center
+            )
+    }
+}
+
+struct SettingsSectionHeader: View {
+    let icon: String
+    let title: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .foregroundColor(color)
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(color)
+        }
+    }
+}
+
+struct SettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
 
-            // Header
+            // Close button row
             HStack {
-                Text("Settings")
-                    .font(.system(size: 15, weight: .bold))
                 Spacer()
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(.secondary.opacity(0.8))
+                    .font(.system(size: 15))
+                    .foregroundColor(Color(white: 0.35))
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
-            .padding(.bottom, 16)
+            .padding(.horizontal, 14)
+            .padding(.top, 12)
+            .padding(.bottom, 6)
 
-            Divider().opacity(0.3)
+            Divider().background(Color(white: 1, opacity: 0.08))
 
-            VStack(alignment: .leading, spacing: 24) {
-                let _ = "" // no ScrollView — ImageRenderer doesn't render offscreen content
+            VStack(alignment: .leading, spacing: 18) {
 
-                    // Gateway
-                    VStack(alignment: .leading, spacing: 10) {
-                        Label {
-                            Text("Gateway")
-                                .font(.system(size: 13, weight: .semibold))
-                        } icon: {
-                            Image(systemName: "antenna.radiowaves.left.and.right")
-                        }
-                        .foregroundColor(.blue)
-
-                        HStack(spacing: 8) {
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color.secondary.opacity(0.1))
-                                .overlay(
-                                    Text("agenthost")
-                                        .font(.system(.body, design: .monospaced))
-                                        .foregroundColor(.primary)
-                                        .padding(.horizontal, 8),
-                                    alignment: .leading
-                                )
-                                .frame(height: 28)
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color.secondary.opacity(0.1))
-                                .overlay(
-                                    Text("18789")
-                                        .font(.system(.body, design: .monospaced))
-                                        .foregroundColor(.primary)
-                                        .padding(.horizontal, 8),
-                                    alignment: .leading
-                                )
-                                .frame(width: 80, height: 28)
-                        }
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.secondary.opacity(0.1))
-                            .overlay(
-                                Text("••••••••••••••••")
-                                    .font(.system(.body, design: .monospaced))
-                                    .foregroundColor(.secondary)
-                                    .padding(.horizontal, 8),
-                                alignment: .leading
-                            )
-                            .frame(height: 28)
+                // Gateway
+                VStack(alignment: .leading, spacing: 8) {
+                    SettingsSectionHeader(icon: "antenna.radiowaves.left.and.right", title: "Gateway", color: Color(red: 0.4, green: 0.65, blue: 1.0))
+                    HStack(spacing: 6) {
+                        SettingsRow(label: "host", value: "agenthost")
+                        SettingsRow(label: "port", value: "18789", width: 72)
                     }
+                    SettingsRow(label: "token", isPassword: true)
+                }
 
-                    Divider().opacity(0.3)
+                Divider().background(Color(white: 1, opacity: 0.07))
 
-                    // SSH Fallback
-                    VStack(alignment: .leading, spacing: 10) {
+                // SSH Fallback
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        SettingsSectionHeader(icon: "lock.shield", title: "SSH Fallback", color: Color(red: 1.0, green: 0.65, blue: 0.2))
+                        Spacer()
+                        Toggle2(on: true)
+                    }
+                    SettingsRow(label: "user", value: "claw")
+                    Text("Auto-tunnels via SSH if direct connection fails.")
+                        .font(.system(size: 11))
+                        .foregroundColor(Color(white: 0.4))
+                }
+
+                Divider().background(Color(white: 1, opacity: 0.07))
+
+                // Extended Context
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        SettingsSectionHeader(icon: "chart.bar.doc.horizontal", title: "Extended Context", color: Color(red: 0.3, green: 0.85, blue: 0.85))
+                        Spacer()
+                        Toggle2(on: true)
+                    }
+                    Text("Sends device info, active app, and battery level\nwith each message.")
+                        .font(.system(size: 11))
+                        .foregroundColor(Color(white: 0.4))
+                }
+
+                Divider().background(Color(white: 1, opacity: 0.07))
+
+                // Hotkeys
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        SettingsSectionHeader(icon: "keyboard", title: "Hotkeys", color: Color(red: 0.85, green: 0.5, blue: 0.9))
+                        Spacer()
+                        Text("Allow in Accessibility")
+                            .font(.system(size: 10, weight: .medium))
+                            .padding(.horizontal, 8).padding(.vertical, 3)
+                            .background(Color(red: 1.0, green: 0.75, blue: 0.0).opacity(0.25))
+                            .foregroundColor(Color(red: 1.0, green: 0.8, blue: 0.2))
+                            .cornerRadius(4)
+                    }
+                    ForEach([
+                        ("Quick Send",        "⌘ ⌥  K"),
+                        ("Clipboard",         "⌘ ⌥  V"),
+                        ("Camera",            "⌘ ⌥  P"),
+                        ("Screenshot Full",   "⌘ ⌥  S"),
+                        ("Screenshot Area",   "⌘ ⌥  A"),
+                    ], id: \.0) { item in
                         HStack {
-                            Label {
-                                Text("SSH Fallback")
-                                    .font(.system(size: 13, weight: .semibold))
-                            } icon: {
-                                Image(systemName: "lock.shield")
-                            }
-                            .foregroundColor(.orange)
+                            Text(item.0).font(.system(size: 12)).foregroundColor(Color(white: 0.75))
                             Spacer()
-                            Toggle("", isOn: .constant(true))
-                                .toggleStyle(.switch)
-                                .scaleEffect(0.7)
+                            Text(item.1).font(.system(size: 11, design: .monospaced)).foregroundColor(Color(white: 0.45))
                         }
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.secondary.opacity(0.1))
-                            .overlay(
-                                Text("claw")
-                                    .font(.system(.body, design: .monospaced))
-                                    .foregroundColor(.primary)
-                                    .padding(.horizontal, 8),
-                                alignment: .leading
-                            )
-                            .frame(height: 28)
-                        Text("Auto-tunnels port 18789 if direct connection fails.")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    }
-
-                    Divider().opacity(0.3)
-
-                    // Extended Context
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Label {
-                                Text("Extended Context")
-                                    .font(.system(size: 13, weight: .semibold))
-                            } icon: {
-                                Image(systemName: "chart.bar.doc.horizontal")
-                            }
-                            .foregroundColor(.cyan)
-                            Spacer()
-                            Toggle("", isOn: .constant(false))
-                                .toggleStyle(.switch)
-                                .scaleEffect(0.7)
-                        }
-                        Text("Sends device info, active app, and battery level with each message.")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    }
-
-                    Divider().opacity(0.3)
-
-                    // Shared Folder
-                    VStack(alignment: .leading, spacing: 10) {
-                        Label {
-                            Text("Shared Folder")
-                                .font(.system(size: 13, weight: .semibold))
-                        } icon: {
-                            Image(systemName: "folder.badge.plus")
-                        }
-                        .foregroundColor(.green)
-
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.black.opacity(0.05))
-                            .overlay(
-                                Text("~/Documents/Clawsy")
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .foregroundColor(.primary)
-                                    .padding(.horizontal, 12),
-                                alignment: .leading
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
-                            )
-                            .frame(height: 32)
-
-                        HStack(spacing: 8) {
-                            Label("Select Folder", systemImage: "folder.fill.badge.plus")
-                                .font(.system(size: 12))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(Color.secondary.opacity(0.15))
-                                .cornerRadius(6)
-                            Label("Show in Finder", systemImage: "magnifyingglass")
-                                .font(.system(size: 12))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(Color.secondary.opacity(0.15))
-                                .cornerRadius(6)
-                        }
-                        .foregroundColor(.primary)
                     }
                 }
-                .padding(20)
 
-            Divider().opacity(0.3)
+                Divider().background(Color(white: 1, opacity: 0.07))
 
-            // Footer
-            HStack(spacing: 4) {
-                Image(systemName: "terminal.fill")
-                    .font(.system(size: 13))
-                    .frame(width: 28, height: 28)
-                    .foregroundColor(.secondary)
-                Image(systemName: "checklist")
-                    .font(.system(size: 13))
-                    .frame(width: 28, height: 28)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text("Vibrant. Secure.")
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary.opacity(0.5))
+                // Updates
+                VStack(alignment: .leading, spacing: 8) {
+                    SettingsSectionHeader(icon: "arrow.clockwise.circle", title: "Updates", color: Color(red: 0.35, green: 0.75, blue: 0.5))
+                    HStack {
+                        Text("Current version: v0.5.3 #627")
+                            .font(.system(size: 12))
+                            .foregroundColor(Color(white: 0.5))
+                        Spacer()
+                        Text("Check Now")
+                            .font(.system(size: 11, weight: .medium))
+                            .padding(.horizontal, 10).padding(.vertical, 4)
+                            .background(Color(white: 1, opacity: 0.08))
+                            .foregroundColor(Color(white: 0.8))
+                            .cornerRadius(5)
+                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color(white: 1, opacity: 0.12), lineWidth: 0.5))
+                    }
+                }
+
+                Divider().background(Color(white: 1, opacity: 0.07))
+
+                // Shared Folder
+                VStack(alignment: .leading, spacing: 8) {
+                    SettingsSectionHeader(icon: "folder.badge.plus", title: "Shared Folder", color: Color(red: 0.4, green: 0.82, blue: 0.45))
+                    SettingsRow(label: "path", value: "~/Documents/Clawsy")
+                    HStack(spacing: 8) {
+                        Text("Select Folder")
+                            .font(.system(size: 11))
+                            .padding(.horizontal, 10).padding(.vertical, 4)
+                            .background(Color(white: 1, opacity: 0.08))
+                            .foregroundColor(Color(white: 0.75))
+                            .cornerRadius(5)
+                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color(white: 1, opacity: 0.1), lineWidth: 0.5))
+                        Text("Show in Finder")
+                            .font(.system(size: 11))
+                            .padding(.horizontal, 10).padding(.vertical, 4)
+                            .background(Color(white: 1, opacity: 0.08))
+                            .foregroundColor(Color(white: 0.75))
+                            .cornerRadius(5)
+                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color(white: 1, opacity: 0.1), lineWidth: 0.5))
+                    }
+                    Text("Data stays local.")
+                        .font(.system(size: 10))
+                        .foregroundColor(Color(white: 0.3))
+                }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 6)
-            .background(Color.black.opacity(0.03))
+            .padding(16)
         }
-        .frame(width: 380)
-        .background(Color(NSColor.windowBackgroundColor))
+        .frame(width: 280)
     }
 }
 
-// ── 3. Onboarding ─────────────────────────────────────────────────────────────
-// Mirrors: OnboardingView, 420×460
+// ── 3. Hero — Mac Desktop Context ─────────────────────────────────────────────
+// macOS-style desktop: gradient wallpaper + menu bar + popover + settings open
 
-struct OnboardingShot: View {
+struct HeroView: View {
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+
+            // Wallpaper — macOS Sonoma-style blue/purple gradient
+            LinearGradient(
+                stops: [
+                    .init(color: Color(red: 0.08, green: 0.08, blue: 0.35), location: 0),
+                    .init(color: Color(red: 0.12, green: 0.15, blue: 0.55), location: 0.35),
+                    .init(color: Color(red: 0.25, green: 0.30, blue: 0.70), location: 0.65),
+                    .init(color: Color(red: 0.15, green: 0.20, blue: 0.50), location: 1.0),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            // Subtle wave highlight
+            Ellipse()
+                .fill(
+                    RadialGradient(
+                        colors: [Color(white: 1, opacity: 0.06), Color.clear],
+                        center: .center, startRadius: 0, endRadius: 400
+                    )
+                )
+                .frame(width: 700, height: 300)
+                .offset(x: 200, y: 300)
+
+            VStack(spacing: 0) {
+
+                // Menu bar
+                HStack(spacing: 0) {
+                    // Left side — Apple + app menus (simplified)
+                    HStack(spacing: 16) {
+                        Image(systemName: "applelogo")
+                            .font(.system(size: 13, weight: .medium))
+                        Text("Finder").font(.system(size: 13, weight: .semibold))
+                        ForEach(["File", "Edit", "View", "Go", "Window", "Help"], id: \.self) { item in
+                            Text(item).font(.system(size: 13))
+                        }
+                    }
+                    .foregroundColor(.white)
+                    .padding(.leading, 16)
+
+                    Spacer()
+
+                    // Right side — status icons + Clawsy
+                    HStack(spacing: 12) {
+                        ForEach(["wifi", "battery.100", "clock"], id: \.self) { icon in
+                            Image(systemName: icon)
+                                .font(.system(size: 13))
+                        }
+                        Text("Sat 28 Feb  22:03")
+                            .font(.system(size: 12))
+
+                        // Clawsy icon in menu bar — highlighted
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color(white: 1, opacity: 0.15))
+                                .frame(width: 26, height: 20)
+                            Image(systemName: "bolt.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
+                    }
+                    .foregroundColor(Color(white: 0.85))
+                    .padding(.trailing, 12)
+                }
+                .frame(height: 28)
+                .background(Color(white: 0, opacity: 0.35))
+
+                Spacer()
+            }
+
+            // Popover — drops down from the Clawsy menu bar icon
+            // Positioned top-right, below menu bar
+            ClawsyPanel(cornerRadius: 10) {
+                PopoverView()
+            }
+            .shadow(color: Color.black.opacity(0.5), radius: 20, x: 0, y: 8)
+            .offset(x: 540, y: 34)
+
+            // Settings panel — open to the right of the popover
+            ClawsyPanel(cornerRadius: 12) {
+                SettingsView()
+            }
+            .shadow(color: Color.black.opacity(0.5), radius: 24, x: 0, y: 8)
+            .offset(x: 770, y: 34)
+        }
+        .frame(width: 1100, height: 500)
+        .clipShape(RoundedRectangle(cornerRadius: 0))
+    }
+}
+
+// ── 4. Onboarding ─────────────────────────────────────────────────────────────
+
+struct OnboardingStep: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let done: Bool
+    let critical: Bool
+    let action: String?
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: done ? "checkmark.circle.fill" : (critical ? "exclamationmark.triangle.fill" : "circle.dashed"))
+                .font(.system(size: 19))
+                .foregroundColor(done ? Color(red: 0.22, green: 0.85, blue: 0.45) : (critical ? Color(red: 1.0, green: 0.7, blue: 0.15) : Color(white: 0.35)))
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 5) {
+                    Text(title).font(.system(size: 13, weight: .medium)).foregroundColor(Color(white: 0.9))
+                    if !critical {
+                        Text("optional").font(.system(size: 10)).foregroundColor(Color(white: 0.4))
+                            .padding(.horizontal, 4).padding(.vertical, 1)
+                            .background(Color(white: 1, opacity: 0.07)).cornerRadius(3)
+                    }
+                }
+                Text(subtitle).font(.system(size: 11)).foregroundColor(Color(white: 0.45)).fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            if let action = action, !done {
+                Text(action).font(.system(size: 11))
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(Color(white: 1, opacity: 0.08))
+                    .foregroundColor(Color(white: 0.75))
+                    .cornerRadius(5)
+                    .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color(white: 1, opacity: 0.1), lineWidth: 0.5))
+            }
+        }
+    }
+}
+
+struct OnboardingView: View {
     var body: some View {
         VStack(spacing: 0) {
-
             // Header
             VStack(spacing: 8) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.accentColor.opacity(0.15))
-                        .frame(width: 64, height: 64)
+                        .fill(Color(red: 0.4, green: 0.65, blue: 1.0).opacity(0.18))
+                        .frame(width: 58, height: 58)
                     Image(systemName: "bolt.fill")
-                        .font(.system(size: 30))
-                        .foregroundColor(.accentColor)
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundColor(Color(red: 0.5, green: 0.75, blue: 1.0))
                 }
                 Text("Welcome to Clawsy")
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(Color(white: 0.92))
                 Text("Connect your AI agent to your Mac.")
                     .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+                    .foregroundColor(Color(white: 0.45))
             }
-            .padding(.top, 24)
-            .padding(.bottom, 20)
+            .padding(.top, 24).padding(.bottom, 18)
 
-            Divider().opacity(0.3)
+            Divider().background(Color(white: 1, opacity: 0.08))
 
-            // Checklist — mirrors OnboardingView steps
-            VStack(spacing: 16) {
-                MockOnboardingStep(
-                    icon: "folder.fill",
-                    title: "App Location",
-                    subtitle: "Move Clawsy to your Applications folder.",
-                    isCompleted: true,
-                    isCritical: true,
-                    actionLabel: "Move to Applications"
-                )
-                MockOnboardingStep(
-                    icon: "hand.raised.fill",
-                    title: "Accessibility",
-                    subtitle: "Required for global keyboard shortcuts.",
-                    isCompleted: true,
-                    isCritical: true,
-                    actionLabel: "Open Settings"
-                )
-                MockOnboardingStep(
-                    icon: "folder.badge.gearshape",
-                    title: "FinderSync Extension",
-                    subtitle: "Enables right-click actions in Finder.",
-                    isCompleted: false,
-                    isCritical: false,
-                    actionLabel: "Enable"
-                )
+            VStack(spacing: 14) {
+                OnboardingStep(icon: "folder.fill",         title: "App Location",          subtitle: "Move Clawsy to your Applications folder.", done: true,  critical: true,  action: nil)
+                OnboardingStep(icon: "hand.raised.fill",    title: "Accessibility",          subtitle: "Required for global keyboard shortcuts.",  done: true,  critical: true,  action: nil)
+                OnboardingStep(icon: "folder.badge.gearshape", title: "FinderSync Extension", subtitle: "Enables right-click actions in Finder.",  done: false, critical: false, action: "Enable")
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
+            .padding(.horizontal, 22).padding(.vertical, 18)
 
             Spacer()
 
-            Divider().opacity(0.3)
+            Divider().background(Color(white: 1, opacity: 0.08))
 
-            // Footer buttons
             HStack {
-                Text("Skip")
-                    .font(.system(size: 13))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
-                    .background(Color.secondary.opacity(0.15))
+                Text("Skip").font(.system(size: 13))
+                    .padding(.horizontal, 14).padding(.vertical, 6)
+                    .background(Color(white: 1, opacity: 0.07))
+                    .foregroundColor(Color(white: 0.6))
                     .cornerRadius(6)
-                    .foregroundColor(.primary)
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(white: 1, opacity: 0.1), lineWidth: 0.5))
                 Spacer()
-                Text("Done")
-                    .font(.system(size: 13, weight: .medium))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
-                    .background(Color.accentColor)
-                    .cornerRadius(6)
+                Text("Done").font(.system(size: 13, weight: .semibold))
+                    .padding(.horizontal, 14).padding(.vertical, 6)
+                    .background(Color(red: 0.4, green: 0.65, blue: 1.0))
                     .foregroundColor(.white)
+                    .cornerRadius(6)
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 16)
+            .padding(.horizontal, 22).padding(.vertical, 14)
         }
-        .frame(width: 420, height: 460)
-        .background(Color(NSColor.windowBackgroundColor))
+        .frame(width: 380, height: 360)
     }
 }
 
-struct MockOnboardingStep: View {
-    let icon: String
-    let title: String
-    let subtitle: String
-    let isCompleted: Bool
-    let isCritical: Bool
-    let actionLabel: String
+// ── 5. Mission Control ────────────────────────────────────────────────────────
 
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: isCompleted
-                  ? "checkmark.circle.fill"
-                  : (isCritical ? "exclamationmark.triangle.fill" : "circle.dashed"))
-                .font(.system(size: 20))
-                .foregroundColor(isCompleted ? .green : (isCritical ? .orange : .secondary))
-                .frame(width: 24)
-
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
-                    Text(title).font(.system(size: 13, weight: .medium))
-                    if !isCritical {
-                        Text("optional")
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal, 4).padding(.vertical, 1)
-                            .background(Color.secondary.opacity(0.1))
-                            .cornerRadius(3)
-                    }
-                }
-                Text(subtitle)
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer()
-
-            if !isCompleted {
-                Text(actionLabel)
-                    .font(.system(size: 11))
-                    .padding(.horizontal, 8).padding(.vertical, 4)
-                    .background(Color.secondary.opacity(0.15))
-                    .cornerRadius(5)
-                    .foregroundColor(.primary)
-            }
-        }
-    }
-}
-
-// ── 4. Mission Control ────────────────────────────────────────────────────────
-// Mirrors: MissionControlView popover
-
-struct MissionControlShot: View {
-    var body: some View {
-        VStack(spacing: 12) {
-
-            // Header
-            HStack {
-                Text("Tasks (2 active)")
-                    .font(.headline)
-                Spacer()
-                Image(systemName: "list.bullet.clipboard")
-                    .foregroundColor(.accentColor)
-            }
-
-            // Task cards — mirrors TaskRowView
-            VStack(spacing: 8) {
-                MockTaskRow(
-                    title: "Building Clawsy v0.5.0",
-                    model: "claude-sonnet-4-6",
-                    modelProvider: "anthropic",
-                    progress: 0.72,
-                    statusText: "Compiling Swift sources…",
-                    elapsed: "2m 14s"
-                )
-                MockTaskRow(
-                    title: "Updating README",
-                    model: "claude-sonnet-4-6",
-                    modelProvider: "anthropic",
-                    progress: 0.35,
-                    statusText: "Writing feature section…",
-                    elapsed: "45s"
-                )
-            }
-        }
-        .padding()
-        .frame(width: 340)
-        .background(Color(NSColor.windowBackgroundColor))
-    }
-}
-
-struct MockTaskRow: View {
+struct TaskCard: View {
     let title: String
     let model: String
-    let modelProvider: String
     let progress: Double
-    let statusText: String
+    let status: String
     let elapsed: String
-
-    var modelColor: Color {
-        switch modelProvider {
-        case "anthropic": return Color(red: 0.55, green: 0.45, blue: 0.85)
-        case "openai":    return Color(red: 0.2, green: 0.75, blue: 0.5)
-        case "google":    return Color(red: 0.35, green: 0.6, blue: 0.95)
-        default:          return Color(red: 0.9, green: 0.6, blue: 0.2)
-        }
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(title)
-                    .font(.system(size: 13, weight: .medium))
+                Text(title).font(.system(size: 13, weight: .medium)).foregroundColor(Color(white: 0.88))
                 Spacer()
-                Text(model)
-                    .font(.caption2)
+                Text(model).font(.system(size: 10))
                     .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(modelColor.opacity(0.2))
-                    .foregroundColor(modelColor)
+                    .background(Color(red: 0.55, green: 0.45, blue: 0.85).opacity(0.25))
+                    .foregroundColor(Color(red: 0.7, green: 0.6, blue: 1.0))
                     .clipShape(Capsule())
             }
-
-            // Progress bar
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3).fill(Color(white: 1, opacity: 0.07)).frame(height: 5)
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(Color.secondary.opacity(0.2))
-                        .frame(height: 6)
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(progress > 0.8 ? Color(red: 0.2, green: 0.78, blue: 0.35) : Color(red: 0.4, green: 0.6, blue: 1.0))
-                        .frame(width: geo.size.width * progress, height: 6)
+                        .fill(Color(red: 0.4, green: 0.65, blue: 1.0))
+                        .frame(width: geo.size.width * progress, height: 5)
                 }
-            }
-            .frame(height: 6)
-
+            }.frame(height: 5)
             HStack {
-                Text(statusText)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
+                Text(status).font(.system(size: 11)).foregroundColor(Color(white: 0.38)).lineLimit(1)
                 Spacer()
-                Text(elapsed)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                Text(elapsed).font(.system(size: 11)).foregroundColor(Color(white: 0.35))
             }
         }
         .padding(12)
-        .background(Color.secondary.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .background(Color(white: 1, opacity: 0.05))
+        .cornerRadius(8)
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(white: 1, opacity: 0.07), lineWidth: 0.5))
     }
 }
 
-// ── 5. File Sync Request ──────────────────────────────────────────────────────
-// Mirrors: FileSyncRequestWindow
-
-struct FileSyncShot: View {
+struct MissionControlView: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-
-            // Header
-            HStack(spacing: 12) {
-                Image(systemName: "lock.shield.fill")
-                    .font(.title2)
-                    .foregroundColor(.accentColor)
-                VStack(alignment: .leading) {
-                    Text("File Sync Request")
-                        .font(.headline)
-                    Text("The agent wants to write a file.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+        VStack(spacing: 0) {
+            HStack {
+                Text("Mission Control").font(.system(size: 14, weight: .semibold)).foregroundColor(Color(white: 0.88))
+                Spacer()
+                Text("2 active").font(.system(size: 11))
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(Color(red: 0.4, green: 0.65, blue: 1.0).opacity(0.2))
+                    .foregroundColor(Color(red: 0.5, green: 0.75, blue: 1.0))
+                    .clipShape(Capsule())
             }
-            .padding(16)
+            .padding(14)
 
-            Divider().opacity(0.3)
+            Divider().background(Color(white: 1, opacity: 0.08))
 
-            // Details
-            VStack(alignment: .leading, spacing: 10) {
-                MockInfoRow(label: "File",      value: "ProjectNotes.md")
-                MockInfoRow(label: "Operation", value: "Write")
-                MockInfoRow(label: "Size",      value: "4.2 KB")
-                MockInfoRow(label: "Location",  value: "~/Documents/Clawsy")
-            }
-            .padding(16)
-
-            Divider().opacity(0.3)
-
-            // Actions — mirrors ALLOW_ONCE / ALLOW_1H / DENY
-            HStack(spacing: 8) {
-                Text("Deny")
-                    .font(.system(size: 13))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 7)
-                    .background(Color.secondary.opacity(0.15))
-                    .cornerRadius(6)
-                    .foregroundColor(.primary)
-
-                Text("Just this once")
-                    .font(.system(size: 13, weight: .medium))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 7)
-                    .background(Color.accentColor)
-                    .cornerRadius(6)
-                    .foregroundColor(.white)
+            VStack(spacing: 8) {
+                TaskCard(title: "Building Clawsy v0.5.4",   model: "claude-sonnet-4-6", progress: 0.72, status: "Compiling Swift sources…",    elapsed: "2m 14s")
+                TaskCard(title: "Updating README",           model: "claude-sonnet-4-6", progress: 0.38, status: "Writing features section…",   elapsed: "45s")
             }
             .padding(12)
         }
-        .frame(width: 380)
-        .background(Color(NSColor.windowBackgroundColor))
+        .frame(width: 320)
     }
 }
 
-struct MockInfoRow: View {
-    let label: String
-    let value: String
+// ── 6. File Sync ──────────────────────────────────────────────────────────────
+
+struct FileSyncView: View {
     var body: some View {
-        HStack {
-            Text(label)
-                .foregroundColor(.secondary)
-                .frame(width: 72, alignment: .leading)
-            Text(value)
-                .font(.system(.body, design: .monospaced))
-                .foregroundColor(.primary)
-        }
-        .font(.system(size: 13))
-    }
-}
-
-// ── 6. Quick Send ─────────────────────────────────────────────────────────────
-// Mirrors: QuickSendView (floating panel, borderless)
-
-struct QuickSendShot: View {
-    var body: some View {
-        VStack(spacing: 0) {
-
-            // Input area
-            HStack(spacing: 12) {
-                Image(systemName: "paperplane.fill")
-                    .font(.system(size: 20))
-                    .foregroundColor(.accentColor.opacity(0.8))
-
-                Text("Send something to OpenClaw...")
-                    .font(.system(size: 20, weight: .light))
-                    .foregroundColor(.secondary.opacity(0.5))
-
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 18)
-
-            Divider().opacity(0.3)
-
-            // Footer hints — mirrors QuickSendView footer
-            HStack {
-                Spacer()
-                HStack(spacing: 16) {
-                    Label("Send", systemImage: "return")
-                    Label("Cancel", systemImage: "escape")
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                Image(systemName: "lock.shield.fill").font(.system(size: 20)).foregroundColor(Color(red: 0.4, green: 0.65, blue: 1.0))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("File Sync Request").font(.system(size: 13, weight: .semibold)).foregroundColor(Color(white: 0.9))
+                    Text("The agent wants to write a file.").font(.system(size: 11)).foregroundColor(Color(white: 0.45))
                 }
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
-                .foregroundColor(.secondary.opacity(0.7))
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(Color.black.opacity(0.05))
+            .padding(14)
+
+            Divider().background(Color(white: 1, opacity: 0.08))
+
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach([("File", "ProjectNotes.md"), ("Operation", "Write"), ("Size", "4.2 KB"), ("Location", "~/Documents/Clawsy")], id: \.0) { row in
+                    HStack {
+                        Text(row.0).font(.system(size: 12)).foregroundColor(Color(white: 0.4)).frame(width: 68, alignment: .leading)
+                        Text(row.1).font(.system(size: 12, design: .monospaced)).foregroundColor(Color(white: 0.82))
+                    }
+                }
+            }
+            .padding(14)
+
+            Divider().background(Color(white: 1, opacity: 0.08))
+
+            HStack(spacing: 8) {
+                Text("Deny")
+                    .font(.system(size: 12)).frame(maxWidth: .infinity).padding(.vertical, 7)
+                    .background(Color(white: 1, opacity: 0.07))
+                    .foregroundColor(Color(white: 0.6))
+                    .cornerRadius(6)
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(white: 1, opacity: 0.1), lineWidth: 0.5))
+                Text("Just this once")
+                    .font(.system(size: 12, weight: .medium)).frame(maxWidth: .infinity).padding(.vertical, 7)
+                    .background(Color(red: 0.4, green: 0.65, blue: 1.0))
+                    .foregroundColor(.white)
+                    .cornerRadius(6)
+            }
+            .padding(12)
         }
+        .frame(width: 320)
+    }
+}
+
+// ── 7. Quick Send ─────────────────────────────────────────────────────────────
+
+struct QuickSendView: View {
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "paperplane.fill")
+                .font(.system(size: 18))
+                .foregroundColor(Color(red: 0.4, green: 0.65, blue: 1.0).opacity(0.7))
+            Text("Send something to OpenClaw...")
+                .font(.system(size: 18, weight: .light))
+                .foregroundColor(Color(white: 0.3))
+            Spacer()
+            HStack(spacing: 10) {
+                Text("↵ Send").font(.system(size: 10, design: .monospaced)).foregroundColor(Color(white: 0.25))
+                Text("esc Cancel").font(.system(size: 10, design: .monospaced)).foregroundColor(Color(white: 0.25))
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
         .frame(width: 500)
-        .background(Color(NSColor.windowBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-        )
     }
 }
 
@@ -705,10 +677,50 @@ let outDir = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "docs/
 try FileManager.default.createDirectory(atPath: outDir, withIntermediateDirectories: true)
 
 await MainActor.run {
-    render(PopoverShot(),        width: 240, height: 380, to: "\(outDir)/01-popover.png")
-    render(SettingsShot(),       width: 380, height: 680, to: "\(outDir)/02-settings.png")
-    render(OnboardingShot(),     width: 420, height: 460, to: "\(outDir)/03-onboarding.png")
-    render(MissionControlShot(), width: 340, height: 240, to: "\(outDir)/04-missioncontrol.png")
-    render(FileSyncShot(),       width: 380, height: 240, to: "\(outDir)/05-filesync.png")
-    render(QuickSendShot(),      width: 500, height: 100, to: "\(outDir)/06-quicksend.png")
+    // Hero — Mac desktop context (wide, landscape)
+    render(HeroView(), width: 1100, height: 500, to: "\(outDir)/00-hero.png")
+
+    // Individual panels — wrapped in ClawsyPanel for realistic frames
+    render(
+        ClawsyPanel(cornerRadius: 10) { PopoverView() }
+            .shadow(color: Color.black.opacity(0.4), radius: 16, x: 0, y: 6)
+            .padding(20)
+            .background(Color(white: 0.08)),
+        width: 260, height: 360, to: "\(outDir)/01-popover.png"
+    )
+    render(
+        ClawsyPanel(cornerRadius: 12) { SettingsView() }
+            .shadow(color: Color.black.opacity(0.4), radius: 20, x: 0, y: 8)
+            .padding(20)
+            .background(Color(white: 0.08)),
+        width: 320, height: 680, to: "\(outDir)/02-settings.png"
+    )
+    render(
+        ClawsyPanel(cornerRadius: 12) { OnboardingView() }
+            .shadow(color: Color.black.opacity(0.4), radius: 20, x: 0, y: 8)
+            .padding(20)
+            .background(Color(white: 0.08)),
+        width: 420, height: 400, to: "\(outDir)/03-onboarding.png"
+    )
+    render(
+        ClawsyPanel(cornerRadius: 10) { MissionControlView() }
+            .shadow(color: Color.black.opacity(0.4), radius: 16, x: 0, y: 6)
+            .padding(20)
+            .background(Color(white: 0.08)),
+        width: 360, height: 280, to: "\(outDir)/04-missioncontrol.png"
+    )
+    render(
+        ClawsyPanel(cornerRadius: 10) { FileSyncView() }
+            .shadow(color: Color.black.opacity(0.4), radius: 16, x: 0, y: 6)
+            .padding(20)
+            .background(Color(white: 0.08)),
+        width: 360, height: 260, to: "\(outDir)/05-filesync.png"
+    )
+    render(
+        ClawsyPanel(cornerRadius: 16) { QuickSendView() }
+            .shadow(color: Color.black.opacity(0.4), radius: 20, x: 0, y: 8)
+            .padding(20)
+            .background(Color(white: 0.08)),
+        width: 540, height: 110, to: "\(outDir)/06-quicksend.png"
+    )
 }
