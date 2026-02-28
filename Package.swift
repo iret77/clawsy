@@ -13,7 +13,8 @@ let package = Package(
     products: [
         .executable(name: "ClawsyMac", targets: ["ClawsyMac"]),
         .library(name: "ClawsyMacShare", type: .dynamic, targets: ["ClawsyMacShare"]),
-        .library(name: "ClawsyFinderSync", type: .dynamic, targets: ["ClawsyFinderSync"])
+        .library(name: "ClawsyFinderSync", type: .dynamic, targets: ["ClawsyFinderSync"]),
+        .executable(name: "ScreenshotCLI", targets: ["ScreenshotCLI"])
     ],
     dependencies: [
         .package(url: "https://github.com/daltoniam/Starscream.git", from: "4.0.0")
