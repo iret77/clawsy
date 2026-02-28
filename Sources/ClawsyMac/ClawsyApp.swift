@@ -67,7 +67,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         cleanup.waitUntilExit()
         
         // Single Instance Check
-        let bundleID = Bundle.main.bundleIdentifier ?? "com.openclaw.Clawsy"
+        let bundleID = Bundle.main.bundleIdentifier ?? "ai.clawsy"
         let runningApps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
         
         if runningApps.count > 1 {
