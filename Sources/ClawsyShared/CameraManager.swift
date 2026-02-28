@@ -78,7 +78,12 @@ public class CameraManager: NSObject {
             do {
                 let input = try AVCaptureDeviceInput(device: captureDevice)
                 let captureSession = AVCaptureSession()
-                captureSession.sessionPreset = .photo
+                // .photo is not supported by all cameras (e.g. external/Continuity) — check first
+                if captureSession.canSetSessionPreset(.photo) {
+                    captureSession.sessionPreset = .photo
+                } else if captureSession.canSetSessionPreset(.high) {
+                    captureSession.sessionPreset = .high
+                }
 
                 guard captureSession.canAddInput(input) else { completion(nil); return }
                 captureSession.addInput(input)
@@ -105,7 +110,14 @@ public class CameraManager: NSObject {
 
                 // Give the camera hardware a moment to warm up, then snap
                 DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 1.0) {
-                    let settings = AVCapturePhotoSettings()
+                    // Always request JPEG explicitly — default AVCapturePhotoSettings() may
+                    // pick HEVC or a codec the camera doesn't support → crash
+                    let settings: AVCapturePhotoSettings
+                    if photoOutput.availablePhotoCodecTypes.contains(.jpeg) {
+                        settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
+                    } else {
+                        settings = AVCapturePhotoSettings()
+                    }
                     photoOutput.capturePhoto(with: settings, delegate: delegate)
                 }
 

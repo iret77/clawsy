@@ -15,6 +15,7 @@ struct ContentView: View {
     @State private var ruleEditorFolderPath: String? = nil
     @State private var showingScreenshotMenu = false
     @State private var showingCameraMenu = false
+    @State private var availableCameras: [[String: Any]] = []
     @State private var isScreenshotInteractive = false
     @State private var showingOnboarding = false
     @AppStorage("onboardingCompleted") private var onboardingCompleted = false
@@ -124,7 +125,6 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
                 
                 // Camera Group
-                let availableCameras = CameraManager.listCameras()
                 Button(action: { if !availableCameras.isEmpty { showingCameraMenu.toggle() } }) {
                     MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected && !availableCameras.isEmpty, hasChevron: true)
                 }
@@ -247,6 +247,11 @@ struct ContentView: View {
         .onAppear {
             appDelegate.networkManager = network // Link for QuickSend
             setupCallbacks()
+            // Load cameras once on appear (not in body — AVCaptureDevice on main thread every render)
+            DispatchQueue.global(qos: .userInitiated).async {
+                let cameras = CameraManager.listCameras()
+                DispatchQueue.main.async { availableCameras = cameras }
+            }
             
             // Validate Shared Folder
             if !sharedFolderPath.isEmpty {
