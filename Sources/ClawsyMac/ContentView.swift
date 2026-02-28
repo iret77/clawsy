@@ -124,35 +124,31 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
                 
                 // Camera Group
-                Button(action: { showingCameraMenu.toggle() }) {
-                    MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected, hasChevron: true)
+                let availableCameras = CameraManager.listCameras()
+                Button(action: { if !availableCameras.isEmpty { showingCameraMenu.toggle() } }) {
+                    MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected && !availableCameras.isEmpty, hasChevron: true)
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
                 .popover(isPresented: $showingCameraMenu, arrowEdge: .trailing) {
                     VStack(spacing: 0) {
-                        let cameras = CameraManager.listCameras()
-                        if cameras.isEmpty {
-                            MenuItemRow(icon: "list.bullet", title: "NO_CAMERAS_FOUND", isEnabled: false)
-                        } else {
-                            ForEach(cameras.indices, id: \.self) { idx in
-                                let cam = cameras[idx]
-                                let camId = cam["id"] as? String ?? ""
-                                let camName = cam["name"] as? String ?? "Kamera \(idx + 1)"
-                                Button(action: {
-                                    showingCameraMenu = false
-                                    CameraManager.takePhoto(deviceId: camId) { b64 in
-                                        guard let b64 = b64 else { return }
-                                        network.sendPhoto(base64: b64, deviceName: camName)
-                                        DispatchQueue.main.async {
-                                            appDelegate.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT")
-                                        }
+                        ForEach(availableCameras.indices, id: \.self) { idx in
+                            let cam = availableCameras[idx]
+                            let camId = cam["id"] as? String ?? ""
+                            let camName = cam["name"] as? String ?? "Kamera \(idx + 1)"
+                            Button(action: {
+                                showingCameraMenu = false
+                                CameraManager.takePhoto(deviceId: camId) { b64 in
+                                    guard let b64 = b64 else { return }
+                                    network.sendPhoto(base64: b64, deviceName: camName)
+                                    DispatchQueue.main.async {
+                                        appDelegate.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT")
                                     }
-                                }) {
-                                    MenuItemRow(icon: "camera.fill", title: camName, isEnabled: network.isConnected)
                                 }
-                                .buttonStyle(.plain)
+                            }) {
+                                MenuItemRow(icon: "camera.fill", title: camName, isEnabled: network.isConnected)
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                     .padding(4)
