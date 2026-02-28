@@ -133,45 +133,15 @@ struct ContentView: View {
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
                 .popover(isPresented: $showingCameraMenu, arrowEdge: .trailing) {
-                    VStack(spacing: 0) {
-                        // Active camera name for context
-                        let activeCam = availableCameras.first { ($0["id"] as? String) == activeCameraId }
-                            ?? availableCameras.first
-                        let activeCamId   = activeCam?["id"]   as? String ?? ""
-                        let activeCamName = activeCam?["name"] as? String ?? "Kamera"
-
-                        // ── Take Photo (uses active camera) ──────────────────
-                        Button(action: {
+                    CameraMenuView(
+                        cameras: availableCameras,
+                        activeCameraId: $activeCameraId,
+                        isConnected: network.isConnected,
+                        onTakePhoto: { camId, camName in
                             showingCameraMenu = false
-                            takePhotoWithActive(camId: activeCamId, camName: activeCamName, network: network)
-                        }) {
-                            MenuItemRow(icon: "camera.fill", title: "TAKE_PHOTO", isEnabled: network.isConnected)
+                            takePhotoWithActive(camId: camId, camName: camName, network: network)
                         }
-                        .buttonStyle(.plain)
-
-                        Divider().padding(.vertical, 2).opacity(0.5)
-
-                        // ── Camera Selection (sets active, no photo) ─────────
-                        ForEach(availableCameras.indices, id: \.self) { idx in
-                            let cam = availableCameras[idx]
-                            let camId   = cam["id"]   as? String ?? ""
-                            let camName = cam["name"] as? String ?? "Kamera \(idx + 1)"
-                            let isActive = camId == activeCamId
-                            Button(action: {
-                                activeCameraId = camId
-                                SharedConfig.sharedDefaults.set(camName, forKey: "activeCameraName")
-                            }) {
-                                MenuItemRow(
-                                    icon: isActive ? "checkmark.circle.fill" : "circle",
-                                    title: camName,
-                                    isEnabled: true
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(4)
-                    .frame(width: 220)
+                    )
                 }
                 
                 Divider().padding(.vertical, 4).opacity(0.5)
@@ -1172,4 +1142,48 @@ struct SettingsView: View {
         .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
     }
     
+}
+
+// MARK: - Camera Menu Popover
+struct CameraMenuView: View {
+    let cameras: [[String: Any]]
+    @Binding var activeCameraId: String
+    let isConnected: Bool
+    let onTakePhoto: (String, String) -> Void
+
+    private var activeCam: [String: Any]? {
+        cameras.first { ($0["id"] as? String) == activeCameraId } ?? cameras.first
+    }
+    private var activeCamId: String   { activeCam?["id"]   as? String ?? "" }
+    private var activeCamName: String { activeCam?["name"] as? String ?? "Kamera" }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Button(action: { onTakePhoto(activeCamId, activeCamName) }) {
+                MenuItemRow(icon: "camera.fill", title: "TAKE_PHOTO", isEnabled: isConnected)
+            }
+            .buttonStyle(.plain)
+
+            Divider().padding(.vertical, 2).opacity(0.5)
+
+            ForEach(cameras.indices, id: \.self) { idx in
+                let cam    = cameras[idx]
+                let camId  = cam["id"]   as? String ?? ""
+                let camName = cam["name"] as? String ?? "Kamera \(idx + 1)"
+                Button(action: {
+                    activeCameraId = camId
+                    SharedConfig.sharedDefaults.set(camName, forKey: "activeCameraName")
+                }) {
+                    MenuItemRow(
+                        icon: camId == activeCameraId ? "checkmark.circle.fill" : "circle",
+                        title: camName,
+                        isEnabled: true
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .frame(width: 220)
+    }
 }
