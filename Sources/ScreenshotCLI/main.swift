@@ -424,16 +424,16 @@ struct HeroView: View {
                 PopoverView()
             }
             .shadow(color: Color.black.opacity(0.5), radius: 20, x: 0, y: 8)
-            .offset(x: 360, y: 36)
+            .offset(x: 280, y: 40)
 
             // Settings panel — open to the right of the popover
             ClawsyPanel(cornerRadius: 12) {
                 SettingsView()
             }
             .shadow(color: Color.black.opacity(0.5), radius: 24, x: 0, y: 8)
-            .offset(x: 594, y: 36)
+            .offset(x: 516, y: 40)
         }
-        .frame(width: 1100, height: 560)
+        .frame(width: 1100, height: 680)
         .clipShape(RoundedRectangle(cornerRadius: 0))
     }
 }
@@ -677,7 +677,7 @@ try FileManager.default.createDirectory(atPath: outDir, withIntermediateDirector
 
 await MainActor.run {
     // Hero — Mac desktop context (wide, landscape)
-    render(HeroView(), width: 1100, height: 560, to: "\(outDir)/00-hero.png")
+    render(HeroView(), width: 1100, height: 680, to: "\(outDir)/00-hero.png")
 
     // Individual panels — wrapped in ClawsyPanel for realistic frames
     render(
