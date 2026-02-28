@@ -151,6 +151,10 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSCameraUsageDescription</key>
+    <string>Clawsy needs camera access to send snapshots to your AI agent when requested.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Clawsy may use the microphone when capturing video from a camera device.</string>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsArbitraryLoads</key>
