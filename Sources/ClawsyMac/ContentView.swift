@@ -794,6 +794,7 @@ struct SettingsView: View {
     @AppStorage("sharedFolderPath", store: SharedConfig.sharedDefaults) private var sharedFolderPath = "~/Documents/Clawsy"
     @AppStorage("quickSendHotkey", store: SharedConfig.sharedDefaults) private var quickSendHotkey = "K"
     @AppStorage("pushClipboardHotkey", store: SharedConfig.sharedDefaults) private var pushClipboardHotkey = "V"
+    @AppStorage("cameraHotkey", store: SharedConfig.sharedDefaults) private var cameraHotkey = "P"
     
     func selectFolder() {
         DispatchQueue.main.async {
@@ -1020,6 +1021,27 @@ struct SettingsView: View {
                                         pushClipboardHotkey = String(newValue.prefix(1)).uppercased()
                                     } else {
                                         pushClipboardHotkey = newValue.uppercased()
+                                    }
+                                }
+                        }
+
+                        HStack {
+                            Text("HOTKEY_CAMERA", bundle: .clawsy)
+                                .font(.system(size: 12))
+                            Spacer()
+                            Text("⌘ + ⇧ +")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
+                            TextField("", text: $cameraHotkey)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(.body, design: .monospaced, weight: .bold))
+                                .frame(width: 44)
+                                .multilineTextAlignment(.center)
+                                .onChange(of: cameraHotkey) { newValue in
+                                    if newValue.count > 1 {
+                                        cameraHotkey = String(newValue.prefix(1)).uppercased()
+                                    } else {
+                                        cameraHotkey = newValue.uppercased()
                                     }
                                 }
                         }

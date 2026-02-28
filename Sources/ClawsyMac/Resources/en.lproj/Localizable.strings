@@ -108,6 +108,7 @@
 "HOTKEYS" = "Hotkeys";
 "HOTKEY_QUICK_SEND" = "Quick Send";
 "HOTKEY_PUSH_CLIPBOARD" = "Clipboard";
+"HOTKEY_CAMERA" = "Camera";
 
 /* Metadata View */
 "LAST_METADATA" = "Last Metadata";
