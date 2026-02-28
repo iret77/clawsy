@@ -117,8 +117,10 @@ public class CameraManager: NSObject {
                     object: captureSession,
                     queue: nil     // delivered on posting thread
                 ) { _ in
-                    // Capture on the serial queue to guarantee thread safety
-                    sessionQueue.async {
+                    // Wait for auto-exposure to settle before snapping.
+                    // AVCaptureSessionDidStartRunning fires when the session is running,
+                    // but the sensor still needs ~1.5s to adjust brightness/exposure.
+                    sessionQueue.asyncAfter(deadline: .now() + 1.5) {
                         guard captureSession.isRunning else { return }
                         let settings: AVCapturePhotoSettings
                         if photoOutput.availablePhotoCodecTypes.contains(.jpeg) {
