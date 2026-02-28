@@ -373,11 +373,23 @@ struct HeroView: View {
                 .frame(width: 700, height: 300)
                 .offset(x: 200, y: 300)
 
-            VStack(spacing: 0) {
+            // Popover — drops down from the menu bar
+            ClawsyPanel(cornerRadius: 10) {
+                PopoverView()
+            }
+            .shadow(color: Color.black.opacity(0.5), radius: 20, x: 0, y: 8)
+            .offset(x: 280, y: 38)
 
-                // Menu bar
+            // Settings panel — open to the right of the popover
+            ClawsyPanel(cornerRadius: 12) {
+                SettingsView()
+            }
+            .shadow(color: Color.black.opacity(0.5), radius: 24, x: 0, y: 8)
+            .offset(x: 516, y: 38)
+
+            // Menu bar — rendered LAST so it sits on top
+            VStack(spacing: 0) {
                 HStack(spacing: 0) {
-                    // Left side — Apple + app menus (simplified)
                     HStack(spacing: 16) {
                         Image(systemName: "applelogo")
                             .font(.system(size: 13, weight: .medium))
@@ -391,16 +403,15 @@ struct HeroView: View {
 
                     Spacer()
 
-                    // Right side — status icons + Clawsy
                     HStack(spacing: 12) {
                         ForEach(["wifi", "battery.100", "clock"], id: \.self) { icon in
                             Image(systemName: icon)
                                 .font(.system(size: 13))
                         }
-                        Text("Sat 28 Feb  22:03")
+                        Text("Sat 1 Mar  10:42")
                             .font(.system(size: 12))
 
-                        // Clawsy icon in menu bar — highlighted
+                        // Clawsy icon — highlighted
                         ZStack {
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(Color(white: 1, opacity: 0.15))
@@ -414,26 +425,12 @@ struct HeroView: View {
                     .padding(.trailing, 12)
                 }
                 .frame(height: 28)
-                .background(Color(white: 0, opacity: 0.35))
+                .background(Color(white: 0, opacity: 0.45))
 
                 Spacer()
             }
-
-            // Popover — drops down from the Clawsy menu bar icon
-            ClawsyPanel(cornerRadius: 10) {
-                PopoverView()
-            }
-            .shadow(color: Color.black.opacity(0.5), radius: 20, x: 0, y: 8)
-            .offset(x: 280, y: 40)
-
-            // Settings panel — open to the right of the popover
-            ClawsyPanel(cornerRadius: 12) {
-                SettingsView()
-            }
-            .shadow(color: Color.black.opacity(0.5), radius: 24, x: 0, y: 8)
-            .offset(x: 516, y: 40)
         }
-        .frame(width: 1100, height: 680)
+        .frame(width: 1100, height: 820)
         .clipShape(RoundedRectangle(cornerRadius: 0))
     }
 }
@@ -677,7 +674,7 @@ try FileManager.default.createDirectory(atPath: outDir, withIntermediateDirector
 
 await MainActor.run {
     // Hero — Mac desktop context (wide, landscape)
-    render(HeroView(), width: 1100, height: 680, to: "\(outDir)/00-hero.png")
+    render(HeroView(), width: 1100, height: 820, to: "\(outDir)/00-hero.png")
 
     // Individual panels — wrapped in ClawsyPanel for realistic frames
     render(
