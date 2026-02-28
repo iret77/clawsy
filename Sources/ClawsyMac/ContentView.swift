@@ -77,7 +77,17 @@ struct ContentView: View {
             Divider().opacity(0.5)
             
             // --- Main Actions List ---
+            // Order: Quick Send (most active) → Screenshot → Clipboard → Camera (most deliberate)
             VStack(spacing: 2) {
+                // Quick Send
+                Button(action: { appDelegate.showQuickSend() }) {
+                    MenuItemRow(icon: "paperplane.fill", title: "QUICK_SEND",
+                                isEnabled: network.isConnected,
+                                shortcut: "⌘⇧\(SharedConfig.quickSendHotkey)")
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
+
                 // Screenshot Group
                 Button(action: { showingScreenshotMenu.toggle() }) {
                     MenuItemRow(icon: "camera", title: "SCREENSHOT", isEnabled: network.isConnected, hasChevron: true)
@@ -115,15 +125,6 @@ struct ContentView: View {
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
 
-                // Quick Send
-                Button(action: { appDelegate.showQuickSend() }) {
-                    MenuItemRow(icon: "paperplane.fill", title: "QUICK_SEND",
-                                isEnabled: network.isConnected,
-                                shortcut: "⌘⇧\(SharedConfig.quickSendHotkey)")
-                }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity)
-                
                 // Camera Group
                 Button(action: { if !availableCameras.isEmpty { showingCameraMenu.toggle() } }) {
                     MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected && !availableCameras.isEmpty, hasChevron: true)
