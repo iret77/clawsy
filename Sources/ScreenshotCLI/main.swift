@@ -226,7 +226,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     SettingsSectionHeader(icon: "antenna.radiowaves.left.and.right", title: "Gateway", color: Color(red: 0.4, green: 0.65, blue: 1.0))
                     HStack(spacing: 6) {
-                        SettingsRow(label: "host", value: "agenthost")
+                        SettingsRow(label: "host", value: "my-agent-host")
                         SettingsRow(label: "port", value: "18789", width: 72)
                     }
                     SettingsRow(label: "token", isPassword: true)
@@ -241,7 +241,7 @@ struct SettingsView: View {
                         Spacer()
                         Toggle2(on: true)
                     }
-                    SettingsRow(label: "user", value: "claw")
+                    SettingsRow(label: "user", value: "username")
                     Text("Auto-tunnels via SSH if direct connection fails.")
                         .font(.system(size: 11))
                         .foregroundColor(Color(white: 0.4))
