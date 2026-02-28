@@ -16,6 +16,7 @@ struct ContentView: View {
     @State private var showingScreenshotMenu = false
     @State private var showingCameraMenu = false
     @State private var availableCameras: [[String: Any]] = []
+    @AppStorage("activeCameraId", store: SharedConfig.sharedDefaults) private var activeCameraId = ""
     @State private var isScreenshotInteractive = false
     @State private var showingOnboarding = false
     @AppStorage("onboardingCompleted") private var onboardingCompleted = false
@@ -127,33 +128,50 @@ struct ContentView: View {
 
                 // Camera Group
                 Button(action: { if !availableCameras.isEmpty { showingCameraMenu.toggle() } }) {
-                    MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected && !availableCameras.isEmpty, hasChevron: true)
+                    MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected && !availableCameras.isEmpty, hasChevron: true, shortcut: "⌘⇧\(SharedConfig.cameraHotkey)")
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
                 .popover(isPresented: $showingCameraMenu, arrowEdge: .trailing) {
                     VStack(spacing: 0) {
+                        // Active camera name for context
+                        let activeCam = availableCameras.first { ($0["id"] as? String) == activeCameraId }
+                            ?? availableCameras.first
+                        let activeCamId   = activeCam?["id"]   as? String ?? ""
+                        let activeCamName = activeCam?["name"] as? String ?? "Kamera"
+
+                        // ── Take Photo (uses active camera) ──────────────────
+                        Button(action: {
+                            showingCameraMenu = false
+                            takePhotoWithActive(camId: activeCamId, camName: activeCamName, network: network)
+                        }) {
+                            MenuItemRow(icon: "camera.fill", title: "TAKE_PHOTO", isEnabled: network.isConnected)
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider().padding(.vertical, 2).opacity(0.5)
+
+                        // ── Camera Selection (sets active, no photo) ─────────
                         ForEach(availableCameras.indices, id: \.self) { idx in
                             let cam = availableCameras[idx]
-                            let camId = cam["id"] as? String ?? ""
+                            let camId   = cam["id"]   as? String ?? ""
                             let camName = cam["name"] as? String ?? "Kamera \(idx + 1)"
+                            let isActive = camId == activeCamId
                             Button(action: {
-                                showingCameraMenu = false
-                                CameraManager.takePhoto(deviceId: camId) { b64 in
-                                    guard let b64 = b64 else { return }
-                                    network.sendPhoto(base64: b64, deviceName: camName)
-                                    DispatchQueue.main.async {
-                                        appDelegate.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT")
-                                    }
-                                }
+                                activeCameraId = camId
+                                SharedConfig.sharedDefaults?.set(camName, forKey: "activeCameraName")
                             }) {
-                                MenuItemRow(icon: "camera.fill", title: camName, isEnabled: network.isConnected)
+                                MenuItemRow(
+                                    icon: isActive ? "checkmark.circle.fill" : "circle",
+                                    title: camName,
+                                    isEnabled: true
+                                )
                             }
                             .buttonStyle(.plain)
                         }
                     }
                     .padding(4)
-                    .frame(width: 200)
+                    .frame(width: 220)
                 }
                 
                 Divider().padding(.vertical, 4).opacity(0.5)
@@ -251,7 +269,13 @@ struct ContentView: View {
             // Load cameras once on appear (not in body — AVCaptureDevice on main thread every render)
             DispatchQueue.global(qos: .userInitiated).async {
                 let cameras = CameraManager.listCameras()
-                DispatchQueue.main.async { availableCameras = cameras }
+                DispatchQueue.main.async {
+                    availableCameras = cameras
+                    // Auto-select first camera if none saved yet
+                    if activeCameraId.isEmpty, let first = cameras.first, let id = first["id"] as? String {
+                        activeCameraId = id
+                    }
+                }
             }
             
             // Validate Shared Folder
@@ -401,6 +425,21 @@ struct ContentView: View {
         }
     }
     
+    func takePhotoWithActive(camId: String, camName: String, network: NetworkManager) {
+        CameraManager.takePhoto(deviceId: camId.isEmpty ? nil : camId) { b64 in
+            guard let b64 = b64 else {
+                DispatchQueue.main.async {
+                    appDelegate.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "CAPTURE_FAILED")
+                }
+                return
+            }
+            network.sendPhoto(base64: b64, deviceName: camName)
+            DispatchQueue.main.async {
+                appDelegate.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT")
+            }
+        }
+    }
+
         func handleManualClipboardSend() {
         if let content = ClipboardManager.getClipboardContent() {
             var envelopeData: [String: Any] = [

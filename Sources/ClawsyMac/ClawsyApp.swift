@@ -157,6 +157,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             self.handleGlobalPushClipboard()
             return true
         }
+        if char == SharedConfig.cameraHotkey {
+            self.handleGlobalCamera()
+            return true
+        }
         return false
     }
     
@@ -176,6 +180,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         }
     }
     
+    private func handleGlobalCamera() {
+        guard let network = networkManager, network.isConnected else { return }
+        let camId   = SharedConfig.sharedDefaults?.string(forKey: "activeCameraId") ?? ""
+        let camName = SharedConfig.sharedDefaults?.string(forKey: "activeCameraName") ?? "Kamera"
+        CameraManager.takePhoto(deviceId: camId.isEmpty ? nil : camId) { b64 in
+            guard let b64 = b64 else {
+                DispatchQueue.main.async { self.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "CAPTURE_FAILED") }
+                return
+            }
+            network.sendPhoto(base64: b64, deviceName: camName)
+            DispatchQueue.main.async { self.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT") }
+        }
+    }
+
     func showStatusHUD(icon: String, title: String) {
         DispatchQueue.main.async {
             self.hudWindow?.close()
