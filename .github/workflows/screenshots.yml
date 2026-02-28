@@ -19,8 +19,12 @@ jobs:
       - name: Build & run ScreenshotCLI
         run: |
           swift build --target ScreenshotCLI -c release
-          BINARY=$(find .build -name ScreenshotCLI -type f | head -1)
-          echo "Binary found at: $BINARY"
+          echo "=== .build/release contents ==="
+          ls .build/release/ 2>/dev/null || echo "(no .build/release)"
+          echo "=== find ScreenshotCLI ==="
+          find .build -name "ScreenshotCLI" 2>/dev/null || echo "(not found)"
+          BINARY=$(find .build -name "ScreenshotCLI" | head -1)
+          echo "Binary: $BINARY"
           mkdir -p docs/screenshots
           "$BINARY" docs/screenshots
 
