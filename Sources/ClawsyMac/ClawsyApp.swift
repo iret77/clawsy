@@ -190,7 +190,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     
     private func handleGlobalScreenshot(interactive: Bool) {
         guard let network = networkManager, network.isConnected else { return }
+        // Close popover if open so it doesn't appear in the screenshot
+        if popover.isShown { popover.performClose(nil) }
         DispatchQueue.global(qos: .userInitiated).async {
+            // Small delay to let the popover animation finish
+            Thread.sleep(forTimeInterval: 0.25)
             guard let b64 = ScreenshotManager.takeScreenshot(interactive: interactive) else {
                 DispatchQueue.main.async { self.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "SCREENSHOT_FAILED") }
                 return
