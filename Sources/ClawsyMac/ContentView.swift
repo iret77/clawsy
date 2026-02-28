@@ -127,7 +127,19 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
 
                 // Camera Group
-                Button(action: { if !availableCameras.isEmpty { showingCameraMenu.toggle() } }) {
+                Button(action: {
+                    if !availableCameras.isEmpty {
+                        // Ensure a camera is always selected before opening menu
+                        let knownIds = availableCameras.compactMap { $0["id"] as? String }
+                        if activeCameraId.isEmpty || !knownIds.contains(activeCameraId) {
+                            if let first = availableCameras.first, let id = first["id"] as? String {
+                                activeCameraId = id
+                                SharedConfig.sharedDefaults.set(first["name"] as? String ?? "", forKey: "activeCameraName")
+                            }
+                        }
+                        showingCameraMenu.toggle()
+                    }
+                }) {
                     MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected && !availableCameras.isEmpty, hasChevron: true)
                 }
                 .buttonStyle(.plain)
