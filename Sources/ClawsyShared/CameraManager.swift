@@ -49,6 +49,10 @@ public class CameraManager: NSObject {
         }
     }
     
+    // Stable keys for objc_setAssociatedObject (string literals are NOT stable pointers in Swift)
+    private static var activeSessions: [String: (AVCaptureSession, PhotoCaptureDelegate)] = [:]
+    private static let sessionsLock = NSLock()
+
     private static func executeCapture(deviceId: String?, completion: @escaping (String?) -> Void) {
         // AVCaptureSession.startRunning() MUST NOT run on the main thread
         DispatchQueue.global(qos: .userInitiated).async {
@@ -83,14 +87,19 @@ public class CameraManager: NSObject {
                 guard captureSession.canAddOutput(photoOutput) else { completion(nil); return }
                 captureSession.addOutput(photoOutput)
 
+                let captureId = UUID().uuidString
                 let delegate = PhotoCaptureDelegate { data in
                     captureSession.stopRunning()
+                    sessionsLock.lock()
+                    activeSessions.removeValue(forKey: captureId)
+                    sessionsLock.unlock()
                     completion(data?.base64EncodedString())
                 }
 
-                // Keep session + delegate alive until photo is delivered
-                objc_setAssociatedObject(photoOutput, "session",  captureSession, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-                objc_setAssociatedObject(photoOutput, "delegate", delegate,       .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+                // Keep session + delegate alive in a stable dictionary until photo is delivered
+                sessionsLock.lock()
+                activeSessions[captureId] = (captureSession, delegate)
+                sessionsLock.unlock()
 
                 captureSession.startRunning()
 
