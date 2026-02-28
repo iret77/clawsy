@@ -128,7 +128,7 @@ struct ContentView: View {
 
                 // Camera Group
                 Button(action: { if !availableCameras.isEmpty { showingCameraMenu.toggle() } }) {
-                    MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected && !availableCameras.isEmpty, hasChevron: true, shortcut: "⌘⇧\(SharedConfig.cameraHotkey)")
+                    MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected && !availableCameras.isEmpty, shortcut: "⌘⇧\(SharedConfig.cameraHotkey)", hasChevron: true)
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
