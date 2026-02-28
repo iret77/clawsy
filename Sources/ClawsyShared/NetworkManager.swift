@@ -1141,8 +1141,8 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             "method": "node.event",
             "params": ["event": "agent.request", "payloadJSON": mainJSON]
         ]
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            send(json: mainFrame)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.send(json: mainFrame)
         }
     }
 
