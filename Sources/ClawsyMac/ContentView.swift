@@ -131,15 +131,6 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
                 .popover(isPresented: $showingCameraMenu, arrowEdge: .trailing) {
                     VStack(spacing: 0) {
-                        Button(action: {
-                            showingCameraMenu = false
-                            self.takePhotoAndSend()
-                        }) {
-                            MenuItemRow(icon: "camera.fill", title: "TAKE_PHOTO", isEnabled: network.isConnected)
-                        }
-                        .buttonStyle(.plain)
-                        
-                        Divider()
                         let cameras = CameraManager.listCameras()
                         if cameras.isEmpty {
                             MenuItemRow(icon: "list.bullet", title: "NO_CAMERAS_FOUND", isEnabled: false)
@@ -408,26 +399,7 @@ struct ContentView: View {
         }
     }
     
-    // Manual camera trigger
-    func takePhotoAndSend() {
-        // Pick first available camera explicitly — passing nil relies on deprecated API
-        let cameras = CameraManager.listCameras()
-        let firstCamId = cameras.first?["id"] as? String
-        CameraManager.takePhoto(deviceId: firstCamId) { b64 in
-            if let b64 = b64 {
-                network.sendPhoto(base64: b64)
-                DispatchQueue.main.async {
-                    appDelegate.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT")
-                }
-            } else {
-                DispatchQueue.main.async {
-                    appDelegate.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "CAPTURE_FAILED")
-                }
-            }
-        }
-    }
-    
-    func handleManualClipboardSend() {
+        func handleManualClipboardSend() {
         if let content = ClipboardManager.getClipboardContent() {
             var envelopeData: [String: Any] = [
                 "version": SharedConfig.versionDisplay,
