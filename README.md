@@ -4,7 +4,7 @@
 
 Clawsy is a native macOS menu bar app that gives your [OpenClaw](https://github.com/openclaw/openclaw) AI agent real-world reach — screenshots, clipboard, camera, files, and more — while keeping you in full control through transparent permission dialogs.
 
-![Version](https://img.shields.io/badge/version-0.4.33-blue)
+![Version](https://img.shields.io/github/v/release/iret77/clawsy?label=version&color=blue)
 ![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Build](https://github.com/iret77/clawsy/actions/workflows/build.yml/badge.svg)
@@ -61,7 +61,7 @@ Every file access, screenshot request, or clipboard read triggers a permission d
 
 ## ⚙️ Configuration
 
-Open the Clawsy menu → **Einstellungen** (or `⌘,`):
+Open the Clawsy menu → **Settings** (or `⌘,`):
 
 | Setting | Description |
 |---|---|
