@@ -110,7 +110,9 @@
 "HOTKEYS" = "Hotkeys";
 "HOTKEY_QUICK_SEND" = "Quick Send";
 "HOTKEY_PUSH_CLIPBOARD" = "Clipboard";
-"HOTKEY_CAMERA" = "Camera";
+"HOTKEY_CAMERA" = "Camera (Take Photo)";
+"HOTKEY_SCREENSHOT_FULL" = "Screenshot Full Screen";
+"HOTKEY_SCREENSHOT_AREA" = "Screenshot Area";
 
 /* Metadata View */
 "LAST_METADATA" = "Last Metadata";

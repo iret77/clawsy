@@ -101,15 +101,15 @@ struct ContentView: View {
                             showingScreenshotMenu = false
                             self.takeScreenshotAndSend(interactive: false)
                         }) {
-                            MenuItemRow(icon: "rectangle.dashed", title: "FULL_SCREEN", isEnabled: network.isConnected)
+                            MenuItemRow(icon: "rectangle.dashed", title: "FULL_SCREEN", isEnabled: network.isConnected, shortcut: "⌘⇧\(SharedConfig.screenshotFullHotkey)")
                         }
                         .buttonStyle(.plain)
-                        
+
                         Button(action: {
                             showingScreenshotMenu = false
                             self.takeScreenshotAndSend(interactive: true)
                         }) {
-                            MenuItemRow(icon: "plus.viewfinder", title: "INTERACTIVE_AREA", isEnabled: network.isConnected)
+                            MenuItemRow(icon: "plus.viewfinder", title: "INTERACTIVE_AREA", isEnabled: network.isConnected, shortcut: "⌘⇧\(SharedConfig.screenshotAreaHotkey)")
                         }
                         .buttonStyle(.plain)
                     }
@@ -128,7 +128,7 @@ struct ContentView: View {
 
                 // Camera Group
                 Button(action: { if !availableCameras.isEmpty { showingCameraMenu.toggle() } }) {
-                    MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected && !availableCameras.isEmpty, shortcut: "⌘⇧\(SharedConfig.cameraHotkey)", hasChevron: true)
+                    MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected && !availableCameras.isEmpty, hasChevron: true)
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
@@ -765,6 +765,8 @@ struct SettingsView: View {
     @AppStorage("quickSendHotkey", store: SharedConfig.sharedDefaults) private var quickSendHotkey = "K"
     @AppStorage("pushClipboardHotkey", store: SharedConfig.sharedDefaults) private var pushClipboardHotkey = "V"
     @AppStorage("cameraHotkey", store: SharedConfig.sharedDefaults) private var cameraHotkey = "P"
+    @AppStorage("screenshotFullHotkey", store: SharedConfig.sharedDefaults) private var screenshotFullHotkey = "S"
+    @AppStorage("screenshotAreaHotkey", store: SharedConfig.sharedDefaults) private var screenshotAreaHotkey = "A"
     
     func selectFolder() {
         DispatchQueue.main.async {
@@ -1008,11 +1010,41 @@ struct SettingsView: View {
                                 .frame(width: 44)
                                 .multilineTextAlignment(.center)
                                 .onChange(of: cameraHotkey) { newValue in
-                                    if newValue.count > 1 {
-                                        cameraHotkey = String(newValue.prefix(1)).uppercased()
-                                    } else {
-                                        cameraHotkey = newValue.uppercased()
-                                    }
+                                    cameraHotkey = String(newValue.prefix(1)).uppercased()
+                                }
+                        }
+
+                        HStack {
+                            Text("HOTKEY_SCREENSHOT_FULL", bundle: .clawsy)
+                                .font(.system(size: 12))
+                            Spacer()
+                            Text("⌘ + ⇧ +")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
+                            TextField("", text: $screenshotFullHotkey)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(.body, design: .monospaced, weight: .bold))
+                                .frame(width: 44)
+                                .multilineTextAlignment(.center)
+                                .onChange(of: screenshotFullHotkey) { newValue in
+                                    screenshotFullHotkey = String(newValue.prefix(1)).uppercased()
+                                }
+                        }
+
+                        HStack {
+                            Text("HOTKEY_SCREENSHOT_AREA", bundle: .clawsy)
+                                .font(.system(size: 12))
+                            Spacer()
+                            Text("⌘ + ⇧ +")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
+                            TextField("", text: $screenshotAreaHotkey)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(.body, design: .monospaced, weight: .bold))
+                                .frame(width: 44)
+                                .multilineTextAlignment(.center)
+                                .onChange(of: screenshotAreaHotkey) { newValue in
+                                    screenshotAreaHotkey = String(newValue.prefix(1)).uppercased()
                                 }
                         }
                     }
@@ -1160,7 +1192,7 @@ struct CameraMenuView: View {
     var body: some View {
         VStack(spacing: 0) {
             Button(action: { onTakePhoto(activeCamId, activeCamName) }) {
-                MenuItemRow(icon: "camera.fill", title: "TAKE_PHOTO", isEnabled: isConnected)
+                MenuItemRow(icon: "camera.fill", title: "TAKE_PHOTO", isEnabled: isConnected, shortcut: "⌘⇧\(SharedConfig.cameraHotkey)")
             }
             .buttonStyle(.plain)
 

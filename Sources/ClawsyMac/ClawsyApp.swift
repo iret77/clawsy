@@ -161,6 +161,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             self.handleGlobalCamera()
             return true
         }
+        if char == SharedConfig.screenshotFullHotkey {
+            self.handleGlobalScreenshot(interactive: false)
+            return true
+        }
+        if char == SharedConfig.screenshotAreaHotkey {
+            self.handleGlobalScreenshot(interactive: true)
+            return true
+        }
         return false
     }
     
@@ -180,6 +188,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         }
     }
     
+    private func handleGlobalScreenshot(interactive: Bool) {
+        guard let network = networkManager, network.isConnected else { return }
+        DispatchQueue.global(qos: .userInitiated).async {
+            guard let b64 = ScreenshotManager.takeScreenshot(interactive: interactive) else {
+                DispatchQueue.main.async { self.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "SCREENSHOT_FAILED") }
+                return
+            }
+            network.sendScreenshot(base64: b64)
+            DispatchQueue.main.async { self.showStatusHUD(icon: "camera.viewfinder", title: "SCREENSHOT_SENT") }
+        }
+    }
+
     private func handleGlobalCamera() {
         guard let network = networkManager, network.isConnected else { return }
         let camId   = SharedConfig.sharedDefaults.string(forKey: "activeCameraId") ?? ""
