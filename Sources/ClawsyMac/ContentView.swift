@@ -405,10 +405,10 @@ struct ContentView: View {
     
     // Manual screenshot trigger
     func takeScreenshotAndSend(interactive: Bool) {
-        // Close the popover first so it doesn't appear in the screenshot
-        appDelegate.popover.performClose(nil)
-        // Wait for the popover animation to finish before capturing
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+        // Close the popover — use close() directly, performClose can fail when called from within the popover
+        appDelegate.popover.close()
+        // Wait for the popover to fully disappear before capturing
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
             if let b64 = ScreenshotManager.takeScreenshot(interactive: interactive) {
                 network.sendScreenshot(base64: b64, mimeType: "image/jpeg")
                 appDelegate.showStatusHUD(icon: "camera.fill", title: "SCREENSHOT_SENT")
