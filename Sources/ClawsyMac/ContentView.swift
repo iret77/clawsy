@@ -188,7 +188,7 @@ struct ContentView: View {
 
                 // Settings (contains Debug Log + Setup Wizard inside)
                 Button(action: { showingSettings.toggle() }) {
-                    MenuItemRow(icon: "gearshape.fill", title: "SETTINGS", isEnabled: true, shortcut: "⌘,")
+                    MenuItemRow(icon: "gearshape.fill", title: "SETTINGS", isEnabled: true)
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
@@ -225,7 +225,7 @@ struct ContentView: View {
                 
                 // Quit
                 Button(action: { NSApplication.shared.terminate(nil) }) {
-                    MenuItemRow(icon: "xmark.circle.fill", title: "QUIT", isEnabled: true, shortcut: "⌘Q")
+                    MenuItemRow(icon: "xmark.circle.fill", title: "QUIT", isEnabled: true)
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
