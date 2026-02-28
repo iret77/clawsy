@@ -424,14 +424,14 @@ struct HeroView: View {
                 PopoverView()
             }
             .shadow(color: Color.black.opacity(0.5), radius: 20, x: 0, y: 8)
-            .offset(x: 520, y: 30)
+            .offset(x: 360, y: 36)
 
             // Settings panel — open to the right of the popover
             ClawsyPanel(cornerRadius: 12) {
                 SettingsView()
             }
             .shadow(color: Color.black.opacity(0.5), radius: 24, x: 0, y: 8)
-            .offset(x: 755, y: 30)
+            .offset(x: 594, y: 36)
         }
         .frame(width: 1100, height: 560)
         .clipShape(RoundedRectangle(cornerRadius: 0))
