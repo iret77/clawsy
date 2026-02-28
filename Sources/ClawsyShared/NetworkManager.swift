@@ -1118,7 +1118,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         send(json: storageFrame)
 
         // 2. Trigger main session with the photo (delivered to Telegram)
-        // Small delay to avoid overwhelming the gateway with back-to-back frames
+        // Small delay to let storage frame settle first
         let mainPayload: [String: Any] = [
             "sessionKey": "main",
             "message": "📷 Kamerafoto von Clawsy (\(deviceName))",
@@ -1135,27 +1135,14 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         ]
         let mainJSON = (try? JSONSerialization.data(withJSONObject: mainPayload))
             .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
-
-        func sendMainFrame(attempt: Int) {
-            let mainFrame: [String: Any] = [
-                "type": "req",
-                "id": "event-\(UUID().uuidString.prefix(8))",
-                "method": "node.event",
-                "params": ["event": "agent.request", "payloadJSON": mainJSON]
-            ]
-            send(json: mainFrame)
-            // Retry up to 2 more times with increasing delay if we get no confirmation
-            // (fire-and-forget with redundancy — gateway deduplicates by content)
-            if attempt < 2 {
-                DispatchQueue.main.asyncAfter(deadline: .now() + Double(attempt + 1) * 2.0) {
-                    sendMainFrame(attempt: attempt + 1)
-                }
-            }
-        }
-
-        // Wait 300ms before first send to let storage frame settle
+        let mainFrame: [String: Any] = [
+            "type": "req",
+            "id": "event-\(UUID().uuidString.prefix(8))",
+            "method": "node.event",
+            "params": ["event": "agent.request", "payloadJSON": mainJSON]
+        ]
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            sendMainFrame(attempt: 0)
+            send(json: mainFrame)
         }
     }
 
