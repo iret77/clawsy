@@ -161,8 +161,8 @@ struct SettingsShot: View {
 
             Divider().opacity(0.3)
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 24) {
+                let _ = "" // no ScrollView — ImageRenderer doesn't render offscreen content
 
                     // Gateway
                     VStack(alignment: .leading, spacing: 10) {
@@ -307,8 +307,6 @@ struct SettingsShot: View {
                     }
                 }
                 .padding(20)
-            }
-            .background(Color.black.opacity(0.02))
 
             Divider().opacity(0.3)
 
@@ -526,10 +524,10 @@ struct MockTaskRow: View {
 
     var modelColor: Color {
         switch modelProvider {
-        case "anthropic": return .purple
-        case "openai":    return .green
-        case "google":    return .blue
-        default:          return .orange
+        case "anthropic": return Color(red: 0.55, green: 0.45, blue: 0.85)
+        case "openai":    return Color(red: 0.2, green: 0.75, blue: 0.5)
+        case "google":    return Color(red: 0.35, green: 0.6, blue: 0.95)
+        default:          return Color(red: 0.9, green: 0.6, blue: 0.2)
         }
     }
 
@@ -554,7 +552,7 @@ struct MockTaskRow: View {
                         .fill(Color.secondary.opacity(0.2))
                         .frame(height: 6)
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(progress > 0.8 ? Color.green : Color.accentColor)
+                        .fill(progress > 0.8 ? Color(red: 0.2, green: 0.78, blue: 0.35) : Color(red: 0.4, green: 0.6, blue: 1.0))
                         .frame(width: geo.size.width * progress, height: 6)
                 }
             }
@@ -708,7 +706,7 @@ try FileManager.default.createDirectory(atPath: outDir, withIntermediateDirector
 
 await MainActor.run {
     render(PopoverShot(),        width: 240, height: 380, to: "\(outDir)/01-popover.png")
-    render(SettingsShot(),       width: 380, height: 520, to: "\(outDir)/02-settings.png")
+    render(SettingsShot(),       width: 380, height: 680, to: "\(outDir)/02-settings.png")
     render(OnboardingShot(),     width: 420, height: 460, to: "\(outDir)/03-onboarding.png")
     render(MissionControlShot(), width: 340, height: 240, to: "\(outDir)/04-missioncontrol.png")
     render(FileSyncShot(),       width: 380, height: 240, to: "\(outDir)/05-filesync.png")
