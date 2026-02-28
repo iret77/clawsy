@@ -16,14 +16,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build ScreenshotCLI
-        run: swift build --target ScreenshotCLI -c release 2>&1
-
-      - name: Generate screenshots
+      - name: Build & run ScreenshotCLI
         run: |
-          BINARY=$(swift build --target ScreenshotCLI -c release --show-bin-path 2>/dev/null)/ScreenshotCLI
+          swift build --target ScreenshotCLI -c release 2>&1
+          BIN_DIR=$(swift build --target ScreenshotCLI -c release --show-bin-path)
           mkdir -p docs/screenshots
-          "$BINARY" docs/screenshots
+          "$BIN_DIR/ScreenshotCLI" docs/screenshots
 
       - name: Commit screenshots
         run: |
