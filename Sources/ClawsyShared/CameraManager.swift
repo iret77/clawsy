@@ -56,7 +56,14 @@ public class CameraManager: NSObject {
             if let deviceId = deviceId, !deviceId.isEmpty {
                 device = AVCaptureDevice(uniqueID: deviceId)
             } else {
-                device = AVCaptureDevice.default(for: .video)
+                // Use first discovered camera as fallback (AVCaptureDevice.default(for:) is deprecated
+                // and may return nil on macOS 14+ when no built-in camera is active)
+                let discovered = AVCaptureDevice.DiscoverySession(
+                    deviceTypes: [.builtInWideAngleCamera, .external],
+                    mediaType: .video,
+                    position: .unspecified
+                ).devices
+                device = discovered.first
             }
 
             guard let captureDevice = device else {

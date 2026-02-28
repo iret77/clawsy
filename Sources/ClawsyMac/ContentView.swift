@@ -410,7 +410,10 @@ struct ContentView: View {
     
     // Manual camera trigger
     func takePhotoAndSend() {
-        CameraManager.takePhoto(deviceId: nil) { b64 in
+        // Pick first available camera explicitly — passing nil relies on deprecated API
+        let cameras = CameraManager.listCameras()
+        let firstCamId = cameras.first?["id"] as? String
+        CameraManager.takePhoto(deviceId: firstCamId) { b64 in
             if let b64 = b64 {
                 network.sendPhoto(base64: b64)
                 DispatchQueue.main.async {
