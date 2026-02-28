@@ -1034,9 +1034,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     
     /// Send a screenshot via agent.request into clawsy-service (silent, no main chat delivery).
     public func sendScreenshot(base64: String, mimeType: String = "image/jpeg") {
-        let payload: [String: Any] = [
+        let deviceName = Host.current().localizedName ?? "Mac"
+
+        // 1. Store in clawsy-service for agent context (silent)
+        let storagePayload: [String: Any] = [
             "sessionKey": "clawsy-service",
-            "message": "📸 Screenshot von \(Host.current().localizedName ?? "Mac")",
+            "message": "📸 Screenshot von \(deviceName)",
             "deliver": false,
             "receipt": false,
             "attachments": [
@@ -1048,18 +1051,42 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 ]
             ]
         ]
-        let payloadJSON = (try? JSONSerialization.data(withJSONObject: payload))
+        let storageJSON = (try? JSONSerialization.data(withJSONObject: storagePayload))
             .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
-        let frame: [String: Any] = [
+        let storageFrame: [String: Any] = [
             "type": "req",
             "id": "event-\(UUID().uuidString.prefix(8))",
             "method": "node.event",
-            "params": [
-                "event": "agent.request",
-                "payloadJSON": payloadJSON
-            ]
+            "params": ["event": "agent.request", "payloadJSON": storageJSON]
         ]
-        send(json: frame)
+        send(json: storageFrame)
+
+        // 2. Deliver to main session (routed to Telegram/channel)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            let mainPayload: [String: Any] = [
+                "sessionKey": "main",
+                "message": "📸 Screenshot von Clawsy (\(deviceName))",
+                "deliver": true,
+                "receipt": false,
+                "attachments": [
+                    [
+                        "type": "image",
+                        "mimeType": mimeType,
+                        "fileName": "screenshot.jpg",
+                        "content": base64
+                    ]
+                ]
+            ]
+            let mainJSON = (try? JSONSerialization.data(withJSONObject: mainPayload))
+                .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+            let mainFrame: [String: Any] = [
+                "type": "req",
+                "id": "event-\(UUID().uuidString.prefix(8))",
+                "method": "node.event",
+                "params": ["event": "agent.request", "payloadJSON": mainJSON]
+            ]
+            self.send(json: mainFrame)
+        }
     }
 
     /// Send an event routed to the dedicated clawsy-service session (silent, no main chat spam)
