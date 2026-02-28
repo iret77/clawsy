@@ -18,10 +18,11 @@ jobs:
 
       - name: Build & run ScreenshotCLI
         run: |
-          swift build --target ScreenshotCLI -c release 2>&1
-          BIN_DIR=$(swift build --target ScreenshotCLI -c release --show-bin-path)
+          swift build --target ScreenshotCLI -c release
+          BINARY=$(find .build -name ScreenshotCLI -type f | head -1)
+          echo "Binary found at: $BINARY"
           mkdir -p docs/screenshots
-          "$BIN_DIR/ScreenshotCLI" docs/screenshots
+          "$BINARY" docs/screenshots
 
       - name: Commit screenshots
         run: |
