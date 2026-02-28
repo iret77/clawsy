@@ -226,7 +226,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     SettingsSectionHeader(icon: "antenna.radiowaves.left.and.right", title: "Gateway", color: Color(red: 0.4, green: 0.65, blue: 1.0))
                     HStack(spacing: 6) {
-                        SettingsRow(label: "host", value: "my-agent-host")
+                        SettingsRow(label: "host", value: "openclaw")
                         SettingsRow(label: "port", value: "18789", width: 72)
                     }
                     SettingsRow(label: "token", isPassword: true)
