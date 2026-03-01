@@ -280,7 +280,15 @@ struct ContentView: View {
                 }
             }
             
-            // Wire up task updates (primary: .agent_status.json in Shared Folder via FileWatcher)
+            // Wire up agent info updates (primary: WebSocket agent.info event)
+            network.onAgentInfoUpdate = { model, name in
+                DispatchQueue.main.async {
+                    agentModel = model
+                    agentName = name
+                }
+            }
+
+            // Wire up task updates (primary: WebSocket agent.status event)
             network.onTaskUpdate = { agent, title, progress, status in
                 taskStore.updateTask(agentName: agent, title: title, progress: progress, statusText: status)
             }
@@ -463,22 +471,9 @@ struct ContentView: View {
         
         let watcher = FileWatcher(url: URL(fileURLWithPath: resolvedPath))
         watcher.callback = { changedPath in
-            // Check if this is the agent status file
-            if changedPath.hasSuffix(".agent_status.json") {
-                let fileURL = URL(fileURLWithPath: changedPath)
-                taskStore.loadFromFile(fileURL)
-                return
-            }
-
-            // Check if this is the agent info file (model/session info)
-            if changedPath.hasSuffix(".agent_info.json") {
-                if let data = try? Data(contentsOf: URL(fileURLWithPath: changedPath)),
-                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    DispatchQueue.main.async {
-                        agentModel = json["model"] as? String
-                        agentName = json["agentName"] as? String
-                    }
-                }
+            // agent.status and agent.info are now delivered via WebSocket events (see onTaskUpdate / onAgentInfoUpdate)
+            // Skip these files to avoid stale file reads
+            if changedPath.hasSuffix(".agent_status.json") || changedPath.hasSuffix(".agent_info.json") {
                 return
             }
 

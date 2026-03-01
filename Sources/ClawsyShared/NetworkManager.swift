@@ -626,6 +626,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         send(json: discoveryReq)
     }
 
+    /// Called when agent info (model, agentName) is received via WebSocket
+    public var onAgentInfoUpdate: ((String?, String?) -> Void)?
+
     /// Called when task data changes (agentName, title, progress, statusText)
     public var onTaskUpdate: ((String, String, Double, String) -> Void)?
 
@@ -633,9 +636,15 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         guard let data = text.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
 
-        // Task updates via agent.status event (sent by agent via file.set → .agent_status.json)
-        // Primary channel: Shared Folder (.agent_status.json) watched by FileWatcher
-        // This handler is kept for direct WebSocket delivery as fallback
+        // Agent info updates — primary channel: WebSocket event (agent sends via clawsy-service session)
+        if let kind = json["kind"] as? String, kind == "agent.info",
+           let payload = json["payload"] as? [String: Any] {
+            let model = payload["model"] as? String
+            let name = payload["agentName"] as? String
+            onAgentInfoUpdate?(model, name)
+        }
+
+        // Task updates — primary channel: WebSocket event (agent sends via clawsy-service session)
         if let kind = json["kind"] as? String, kind == "agent.status",
            let payload = json["payload"] as? [String: Any] {
             let agent = payload["agentName"] as? String ?? "Unknown"
