@@ -328,9 +328,15 @@ struct ContentView: View {
             }
         }
         .onChange(of: network.isConnected) { connected in
-            if !connected {
-                // Connection lost — clear stale tasks immediately
+            if connected {
+                // Poll immediately on connect, then on schedule
+                network.startStatePoller()
+            } else {
+                // Connection lost — stop poller, clear stale tasks
+                network.stopStatePoller()
                 taskStore.clearAll()
+                agentModel = nil
+                agentName = nil
             }
         }
         .sheet(isPresented: Binding(

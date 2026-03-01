@@ -626,33 +626,113 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         send(json: discoveryReq)
     }
 
-    /// Called when agent info (model, agentName) is received via WebSocket
+    /// Called when agent info (model, agentName) is received via poll
     public var onAgentInfoUpdate: ((String?, String?) -> Void)?
 
     /// Called when task data changes (agentName, title, progress, statusText)
     public var onTaskUpdate: ((String, String, Double, String) -> Void)?
 
+    // MARK: - State Polling (clawsy-service session via /tools/invoke)
+    private var statePollerTimer: Timer?
+    private let statePollerInterval: TimeInterval = 30
+    private let stateTTLSeconds: TimeInterval = 120  // ignore data older than 2 min
+
+    public func startStatePoller() {
+        pollAgentState()
+        statePollerTimer?.invalidate()
+        statePollerTimer = Timer.scheduledTimer(withTimeInterval: statePollerInterval, repeats: true) { [weak self] _ in
+            self?.pollAgentState()
+        }
+    }
+
+    public func stopStatePoller() {
+        statePollerTimer?.invalidate()
+        statePollerTimer = nil
+    }
+
+    private func pollAgentState() {
+        let scheme = serverHost.hasPrefix("https") ? "" : "http"
+        let host = serverHost.isEmpty ? "127.0.0.1" : serverHost
+        let port = serverPort.isEmpty ? "18789" : serverPort
+        let baseURL: String
+        if host.contains("://") {
+            baseURL = host
+        } else {
+            baseURL = "\(scheme.isEmpty ? "http" : scheme)://\(host):\(port)"
+        }
+        guard let url = URL(string: "\(baseURL)/tools/invoke") else { return }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(serverToken)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.timeoutInterval = 10
+
+        let body: [String: Any] = [
+            "tool": "sessions_history",
+            "args": ["sessionKey": "clawsy-service", "limit": 20]
+        ]
+        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        URLSession.shared.dataTask(with: req) { [weak self] data, _, _ in
+            guard let self, let data else { return }
+            guard let outer = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let ok = outer["ok"] as? Bool, ok,
+                  let result = outer["result"] as? [String: Any],
+                  let contentArr = result["content"] as? [[String: Any]],
+                  let text = contentArr.first?["text"] as? String,
+                  let textData = text.data(using: .utf8),
+                  let payload = try? JSONSerialization.jsonObject(with: textData) as? [String: Any],
+                  let messages = payload["messages"] as? [[String: Any]] else { return }
+
+            let now = Date()
+            // Parse messages newest-first (already newest-first from limit), find latest of each kind
+            var foundInfo = false
+            var foundStatus = false
+            for msg in messages {
+                guard !foundInfo || !foundStatus else { break }
+                guard let role = msg["role"] as? String, role == "user",
+                      let contentBlocks = msg["content"] as? [[String: Any]],
+                      let textBlock = contentBlocks.first(where: { $0["type"] as? String == "text" }),
+                      let rawText = textBlock["text"] as? String,
+                      let msgData = rawText.data(using: .utf8),
+                      let json = try? JSONSerialization.jsonObject(with: msgData) as? [String: Any],
+                      let kind = json["kind"] as? String,
+                      let msgPayload = json["payload"] as? [String: Any] else { continue }
+
+                // TTL check
+                if let updatedAt = msgPayload["updatedAt"] as? String {
+                    let formatter = ISO8601DateFormatter()
+                    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                    if let date = formatter.date(from: updatedAt) ?? ISO8601DateFormatter().date(from: updatedAt) {
+                        if now.timeIntervalSince(date) > self.stateTTLSeconds { continue }
+                    }
+                }
+
+                if kind == "agent.info", !foundInfo {
+                    foundInfo = true
+                    let model = msgPayload["model"] as? String
+                    let name = msgPayload["agentName"] as? String
+                    DispatchQueue.main.async { self.onAgentInfoUpdate?(model, name) }
+                }
+                if kind == "agent.status", !foundStatus {
+                    foundStatus = true
+                    let agent = msgPayload["agentName"] as? String ?? "Unknown"
+                    let title = msgPayload["title"] as? String ?? ""
+                    let progress = msgPayload["progress"] as? Double ?? 0.0
+                    let status = msgPayload["statusText"] as? String ?? ""
+                    DispatchQueue.main.async { self.onTaskUpdate?(agent, title, progress, status) }
+                }
+            }
+        }.resume()
+    }
+
     private func handleMessage(_ text: String) {
         guard let data = text.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
 
-        // Agent info updates — primary channel: WebSocket event (agent sends via clawsy-service session)
-        if let kind = json["kind"] as? String, kind == "agent.info",
-           let payload = json["payload"] as? [String: Any] {
-            let model = payload["model"] as? String
-            let name = payload["agentName"] as? String
-            onAgentInfoUpdate?(model, name)
-        }
-
-        // Task updates — primary channel: WebSocket event (agent sends via clawsy-service session)
-        if let kind = json["kind"] as? String, kind == "agent.status",
-           let payload = json["payload"] as? [String: Any] {
-            let agent = payload["agentName"] as? String ?? "Unknown"
-            let title = payload["title"] as? String ?? ""
-            let progress = payload["progress"] as? Double ?? 0.0
-            let status = payload["statusText"] as? String ?? ""
-            onTaskUpdate?(agent, title, progress, status)
-        }
+        // agent.info and agent.status are delivered via pollAgentState() (sessions_history over HTTP)
+        // No WS handlers needed for these — polling is the single source of truth
 
         let rawId = json["id"]
         let isValidId: Bool
