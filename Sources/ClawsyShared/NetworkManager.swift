@@ -635,7 +635,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     // MARK: - State Polling (clawsy-service session via /tools/invoke)
     private var statePollerTimer: Timer?
     private let statePollerInterval: TimeInterval = 30
-    private let stateTTLSeconds: TimeInterval = 120  // ignore data older than 2 min
+    private let stateTTLSeconds: TimeInterval = 2700  // ignore data older than 45 min (matches heartbeat rhythm)
 
     public func startStatePoller() {
         pollAgentState()
