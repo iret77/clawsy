@@ -651,14 +651,15 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
 
     private func pollAgentState() {
-        let scheme = serverHost.hasPrefix("https") ? "" : "http"
-        let host = serverHost.isEmpty ? "127.0.0.1" : serverHost
-        let port = serverPort.isEmpty ? "18789" : serverPort
+        // Use same base URL logic as WebSocket connection
         let baseURL: String
-        if host.contains("://") {
-            baseURL = host
+        if isUsingSshTunnel {
+            baseURL = "http://127.0.0.1:\(sshTunnelLocalPort)"
         } else {
-            baseURL = "\(scheme.isEmpty ? "http" : scheme)://\(host):\(port)"
+            let host = serverHost.isEmpty ? "127.0.0.1" : serverHost
+            let port = serverPort.isEmpty ? "18789" : serverPort
+            let scheme = host.contains("://") ? "" : "http"
+            baseURL = host.contains("://") ? host : "\(scheme)://\(host):\(port)"
         }
         guard let url = URL(string: "\(baseURL)/tools/invoke") else { return }
 
