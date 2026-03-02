@@ -40,6 +40,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     private var socket: WebSocket?
     private var connectionWatchdog: Timer?
     private var pairingTimeoutTimer: Timer?
+    private var isPairing = false
     private var signingKey: Curve25519.Signing.PrivateKey?
     private var publicKey: Curve25519.Signing.PublicKey?
     
@@ -230,7 +231,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         rawLog += "\n[WSS] Connecting to \(url.absoluteString) (watchdog: \(Int(watchdogSeconds))s)"
 
         connectionWatchdog = Timer.scheduledTimer(withTimeInterval: watchdogSeconds, repeats: false) { [weak self] _ in
-            guard let self = self, !self.isConnected else { return }
+            guard let self = self, !self.isConnected, !self.isPairing else { return }
             DispatchQueue.main.async {
                 self.rawLog += "\n[WSS] Watchdog Timeout (\(Int(watchdogSeconds))s)"
                 self.handleConnectionFailure(err: NSError(domain: "ai.clawsy", code: -1, userInfo: [NSLocalizedDescriptionKey: "Connection Timeout (Watchdog)"]))
@@ -497,6 +498,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
     
     public func disconnect() {
+        isPairing = false
         pairingTimeoutTimer?.invalidate()
         pairingTimeoutTimer = nil
         
@@ -754,12 +756,16 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         }
         
         if event == "node.pair.requested" {
+            self.isPairing = true
+            self.connectionWatchdog?.invalidate()
+            self.connectionWatchdog = nil
             self.connectionStatus = "STATUS_PAIRING_PENDING"
             self.rawLog += "\n[PAIR] Pairing pending – awaiting admin approval"
             return
         }
         
         if event == "node.pair.resolved" {
+            self.isPairing = false
             self.pairingTimeoutTimer?.invalidate()
             self.pairingTimeoutTimer = nil
             if let payload = json["payload"] as? [String: Any] {
@@ -838,6 +844,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                      // Extract requestId and send pairing request
                      let details = errorObj["details"] as? [String: Any]
                      let requestId = details?["requestId"] as? String ?? ""
+                     self.isPairing = true
                      self.connectionStatus = "STATUS_PAIRING"
                      
                      // Cancel the connection watchdog – pairing can take minutes

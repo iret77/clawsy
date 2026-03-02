@@ -192,7 +192,8 @@
 "ONBOARDING_ACCESSIBILITY_DESC" = "Erforderlich für globale Tastenkürzel (Quick Send, Zwischenablage).";
 "ONBOARDING_OPEN_SETTINGS" = "Zugriff erlauben";
 "ONBOARDING_FINDERSYNC" = "Finder-Erweiterung";
-"ONBOARDING_FINDERSYNC_DESC" = "Ermöglicht Rechtsklick-Aktionen auf Ordner.";
+"ONBOARDING_FINDERSYNC_DESC" = "Ermöglicht Rechtsklick-Aktionen auf Ordner. Falls die automatische Aktivierung fehlschlägt, öffne Systemeinstellungen → Erweiterungen → Finder und aktiviere Clawsy manuell.";
+"ONBOARDING_FINDERSYNC_OPEN_SETTINGS" = "Finder-Erweiterungen öffnen";
 "ONBOARDING_ENABLE" = "Aktivieren";
 "ONBOARDING_OPTIONAL" = "optional";
 "ONBOARDING_SKIP" = "Später";

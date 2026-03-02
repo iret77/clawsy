@@ -105,7 +105,8 @@
 "ONBOARDING_ACCESSIBILITY_DESC" = "Necesario para atajos globales (Quick Send, Portapapeles).";
 "ONBOARDING_OPEN_SETTINGS" = "Conceder acceso";
 "ONBOARDING_FINDERSYNC" = "Extensión de Finder";
-"ONBOARDING_FINDERSYNC_DESC" = "Habilita acciones de clic derecho en carpetas.";
+"ONBOARDING_FINDERSYNC_DESC" = "Habilita acciones de clic derecho en carpetas. Si la activación automática falla, abre Configuración del Sistema → Extensiones → Finder y activa Clawsy manualmente.";
+"ONBOARDING_FINDERSYNC_OPEN_SETTINGS" = "Abrir ajustes de Finder";
 "ONBOARDING_ENABLE" = "Activar";
 "ONBOARDING_OPTIONAL" = "opcional";
 "ONBOARDING_SKIP" = "Más tarde";

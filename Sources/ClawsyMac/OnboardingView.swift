@@ -99,15 +99,28 @@ struct OnboardingView: View {
                 }
 
                 // Step 3: FinderSync (optional)
-                OnboardingStepRow(
-                    icon: "folder.badge.gearshape",
-                    title: NSLocalizedString("ONBOARDING_FINDERSYNC", bundle: .clawsy, comment: ""),
-                    subtitle: NSLocalizedString("ONBOARDING_FINDERSYNC_DESC", bundle: .clawsy, comment: ""),
-                    isCompleted: isFinderSyncRunning,
-                    isCritical: false,
-                    actionLabel: NSLocalizedString("ONBOARDING_ENABLE", bundle: .clawsy, comment: ""),
-                    action: enableFinderSync
-                )
+                VStack(alignment: .leading, spacing: 6) {
+                    OnboardingStepRow(
+                        icon: "folder.badge.gearshape",
+                        title: NSLocalizedString("ONBOARDING_FINDERSYNC", bundle: .clawsy, comment: ""),
+                        subtitle: NSLocalizedString("ONBOARDING_FINDERSYNC_DESC", bundle: .clawsy, comment: ""),
+                        isCompleted: isFinderSyncRunning,
+                        isCritical: false,
+                        actionLabel: isFinderSyncRunning ? "" : NSLocalizedString("ONBOARDING_ENABLE", bundle: .clawsy, comment: ""),
+                        action: enableFinderSync
+                    )
+                    if !isFinderSyncRunning {
+                        HStack {
+                            Spacer()
+                            Button(action: openFinderSyncSettings) {
+                                Label(NSLocalizedString("ONBOARDING_FINDERSYNC_OPEN_SETTINGS", bundle: .clawsy, comment: ""), systemImage: "gear")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 20)
@@ -208,6 +221,19 @@ struct OnboardingView: View {
         try? task.run()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             NSApp.terminate(nil)
+        }
+    }
+
+    private func openFinderSyncSettings() {
+        let urls = [
+            "x-apple.systempreferences:com.apple.preferences.extensions.FinderSync",
+            "x-apple.systempreferences:com.apple.ExtensionsPreferences?Finder"
+        ]
+        for urlString in urls {
+            if let url = URL(string: urlString) {
+                NSWorkspace.shared.open(url)
+                return
+            }
         }
     }
 

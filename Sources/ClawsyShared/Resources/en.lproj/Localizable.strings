@@ -191,7 +191,8 @@
 "ONBOARDING_ACCESSIBILITY_DESC" = "Required for global hotkeys (Quick Send, Push Clipboard).";
 "ONBOARDING_OPEN_SETTINGS" = "Grant Access";
 "ONBOARDING_FINDERSYNC" = "Finder Extension";
-"ONBOARDING_FINDERSYNC_DESC" = "Enables right-click actions on folders.";
+"ONBOARDING_FINDERSYNC_DESC" = "Enables right-click actions on folders. If auto-enable fails, open System Settings → Extensions → Finder and enable Clawsy manually.";
+"ONBOARDING_FINDERSYNC_OPEN_SETTINGS" = "Open Finder Extensions Settings";
 "ONBOARDING_ENABLE" = "Enable";
 "ONBOARDING_OPTIONAL" = "optional";
 "ONBOARDING_SKIP" = "Later";

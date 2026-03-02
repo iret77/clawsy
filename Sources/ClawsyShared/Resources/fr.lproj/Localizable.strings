@@ -105,7 +105,8 @@
 "ONBOARDING_ACCESSIBILITY_DESC" = "Requis pour les raccourcis globaux (Quick Send, Presse-papiers).";
 "ONBOARDING_OPEN_SETTINGS" = "Autoriser l'accès";
 "ONBOARDING_FINDERSYNC" = "Extension Finder";
-"ONBOARDING_FINDERSYNC_DESC" = "Active les actions par clic droit sur les dossiers.";
+"ONBOARDING_FINDERSYNC_DESC" = "Active les actions par clic droit sur les dossiers. Si l'activation automatique échoue, ouvrez Réglages Système → Extensions → Finder et activez Clawsy manuellement.";
+"ONBOARDING_FINDERSYNC_OPEN_SETTINGS" = "Ouvrir les réglages Finder";
 "ONBOARDING_ENABLE" = "Activer";
 "ONBOARDING_OPTIONAL" = "optionnel";
 "ONBOARDING_SKIP" = "Plus tard";
