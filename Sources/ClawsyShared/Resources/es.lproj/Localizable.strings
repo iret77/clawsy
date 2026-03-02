@@ -111,3 +111,6 @@
 "ONBOARDING_OPTIONAL" = "opcional";
 "ONBOARDING_SKIP" = "Más tarde";
 "ONBOARDING_DONE" = "Listo";
+"ONBOARDING_SHARE" = "Extensión Compartir";
+"ONBOARDING_SHARE_DESC" = "Usa el menú Compartir en cualquier app para enviar archivos o texto directamente a tu agente. Disponible automáticamente cuando Clawsy está en /Aplicaciones.";
+"ONBOARDING_SHARE_ACTION" = "Entendido";

@@ -219,3 +219,6 @@
 
 "ACCESSIBILITY_GRANTED" = "Bedienungshilfen erlaubt";
 "GRANT_ACCESSIBILITY" = "Bedienungshilfen erlauben";
+"ONBOARDING_SHARE" = "Teilen-Erweiterung";
+"ONBOARDING_SHARE_DESC" = "Nutze das Teilen-Menü in jeder App, um Dateien oder Text direkt an deinen Agenten zu senden. Automatisch verfügbar, sobald Clawsy in /Programme liegt.";
+"ONBOARDING_SHARE_ACTION" = "Verstanden";

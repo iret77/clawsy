@@ -8,6 +8,7 @@ struct OnboardingView: View {
     @State private var isInApplications = false
     @State private var isAccessibilityGranted = false
     @State private var isFinderSyncRunning = false
+    @State private var isShareOnboarded = false
     @State private var refreshTimer: Timer?
     @State private var accessibilityJustRequested = false
     @State private var accessibilityUserConfirmed = false
@@ -121,6 +122,17 @@ struct OnboardingView: View {
                         }
                     }
                 }
+
+                // Step 4: Share Extension (optional)
+                OnboardingStepRow(
+                    icon: "square.and.arrow.up",
+                    title: NSLocalizedString("ONBOARDING_SHARE", bundle: .clawsy, comment: ""),
+                    subtitle: NSLocalizedString("ONBOARDING_SHARE_DESC", bundle: .clawsy, comment: ""),
+                    isCompleted: isShareOnboarded,
+                    isCritical: false,
+                    actionLabel: isShareOnboarded ? "" : NSLocalizedString("ONBOARDING_SHARE_ACTION", bundle: .clawsy, comment: ""),
+                    action: acknowledgeShare
+                )
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 20)
@@ -174,6 +186,7 @@ struct OnboardingView: View {
         // If user just granted, no longer need the "restart" hint
         if trusted { accessibilityJustRequested = false }
         checkFinderSyncStatus()
+        isShareOnboarded = UserDefaults.standard.bool(forKey: "clawsy_share_onboarded")
     }
 
     private func checkFinderSyncStatus() {
@@ -235,6 +248,11 @@ struct OnboardingView: View {
                 return
             }
         }
+    }
+
+    private func acknowledgeShare() {
+        UserDefaults.standard.set(true, forKey: "clawsy_share_onboarded")
+        isShareOnboarded = true
     }
 
     private func enableFinderSync() {

@@ -218,3 +218,6 @@
 
 "ACCESSIBILITY_GRANTED" = "Accessibility granted";
 "GRANT_ACCESSIBILITY" = "Grant Accessibility";
+"ONBOARDING_SHARE" = "Share Extension";
+"ONBOARDING_SHARE_DESC" = "Use the Share menu in any app to send files or text directly to your agent. Available automatically once Clawsy is in /Applications.";
+"ONBOARDING_SHARE_ACTION" = "Got it";
