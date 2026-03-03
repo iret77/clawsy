@@ -46,7 +46,11 @@ Push your clipboard to the agent silently. Let the agent request a screenshot or
 
 ### 📁 Shared Folder & Automation Rules
 
-A local folder syncs with your agent's workspace. Drop a `.clawsy` rule file into any subfolder to define triggers — *"when a PDF is added, summarize it"*. No JSON editing. Right-click any folder in Finder to configure rules via the FinderSync extension.
+A local folder syncs with your agent's workspace. Drop a `.clawsy` rule file into any subfolder to define triggers — *"when a PDF is added, summarize it"*. No JSON editing. Right-click any folder in Finder to configure rules via the **FinderSync Extension**.
+
+### 🔗 Share Extension
+
+Share files, text, or URLs from any macOS app directly to your agent via the system Share menu. No copy-paste required.
 
 ### 📊 Mission Control
 
@@ -56,7 +60,15 @@ See what your agent is actually doing, in real time.
   <img src="docs/screenshots/04-missioncontrol.png" width="340" alt="Mission Control — live task view"/>
 </p>
 
-Agents write their task status to `.agent_status.json` in the shared folder. Clawsy picks it up instantly.
+Agents push their task status via WebSocket. Clawsy picks it up instantly.
+
+### 🔄 Auto-Update
+
+Clawsy checks for new releases automatically and notifies you when an update is available. One click to install.
+
+### 🔒 SSH Tunnel Fallback
+
+Can't reach your gateway directly? Clawsy automatically falls back to an SSH tunnel — encrypted, zero-config if you have `~/.ssh` keys set up.
 
 ### 🔒 You Stay in Control
 
@@ -67,6 +79,23 @@ Every file write, screenshot, or clipboard read requires your approval.
 </p>
 
 Nothing happens behind your back. You can always see what was approved and when.
+
+---
+
+## Features at a Glance (v0.5.7)
+
+| Feature | Description |
+|---|---|
+| **Screenshot & Camera** | Full-screen or area screenshots, camera snap with preview |
+| **Clipboard Sync** | Push/pull clipboard content between Mac and agent |
+| **File Sync** | Shared folder with bidirectional file transfer |
+| **FinderSync Extension** | Right-click folders in Finder to configure `.clawsy` rules |
+| **Share Extension** | Share from any app directly to your agent |
+| **Mission Control** | Real-time task view of your agent's activity |
+| **Auto-Update** | Background update checks with one-click install |
+| **SSH Tunnel Fallback** | Automatic encrypted tunnel when direct connection fails |
+| **Quick Send** | Global hotkey (`⌘⇧K`) to message your agent from anywhere |
+| **.clawsy Rules** | File-event automation with glob matching and agent/notify actions |
 
 ---
 
