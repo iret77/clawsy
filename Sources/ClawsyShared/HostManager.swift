@@ -11,6 +11,15 @@ public class HostManager: ObservableObject {
     @Published public var profiles: [HostProfile] = []
     @Published public var activeHostId: UUID?
 
+    // MARK: - Forwarded NetworkManager state (observed by SwiftUI via HostManager)
+    @Published public var isConnected: Bool = false
+    @Published public var connectionStatus: String = "STATUS_DISCONNECTED"
+    @Published public var connectionAttemptCount: Int = 0
+    @Published public var connectionError: ConnectionError? = nil
+    @Published public var isServerClawsyAware: Bool = false
+
+    private var activeCancellables = Set<AnyCancellable>()
+
     /// One NetworkManager per host, keyed by profile UUID
     public var networkManagers: [UUID: NetworkManager] = [:]
 
@@ -24,6 +33,30 @@ public class HostManager: ObservableObject {
     public var activeNetworkManager: NetworkManager? {
         guard let id = activeHostId ?? profiles.first?.id else { return nil }
         return networkManagers[id]
+    }
+
+    /// Subscribe to the active NM's published properties so HostManager
+    /// re-publishes them → SwiftUI re-renders ContentView automatically.
+    public func subscribeToActiveNM() {
+        activeCancellables.removeAll()
+        guard let nm = activeNetworkManager else {
+            isConnected = false
+            connectionStatus = "STATUS_DISCONNECTED"
+            connectionAttemptCount = 0
+            connectionError = nil
+            isServerClawsyAware = false
+            return
+        }
+        nm.$isConnected.receive(on: DispatchQueue.main)
+            .assign(to: \.isConnected, on: self).store(in: &activeCancellables)
+        nm.$connectionStatus.receive(on: DispatchQueue.main)
+            .assign(to: \.connectionStatus, on: self).store(in: &activeCancellables)
+        nm.$connectionAttemptCount.receive(on: DispatchQueue.main)
+            .assign(to: \.connectionAttemptCount, on: self).store(in: &activeCancellables)
+        nm.$connectionError.receive(on: DispatchQueue.main)
+            .assign(to: \.connectionError, on: self).store(in: &activeCancellables)
+        nm.$isServerClawsyAware.receive(on: DispatchQueue.main)
+            .assign(to: \.isServerClawsyAware, on: self).store(in: &activeCancellables)
     }
 
     public init() {
@@ -111,6 +144,7 @@ public class HostManager: ObservableObject {
         guard profiles.contains(where: { $0.id == id }) else { return }
         activeHostId = id
         saveProfiles()
+        subscribeToActiveNM()
         os_log("Switched active host to: %{public}@", log: logger, type: .info, activeProfile?.name ?? "unknown")
     }
 
@@ -181,6 +215,7 @@ public class HostManager: ObservableObject {
             )
             nm.connect()
         }
+        subscribeToActiveNM()
     }
 
     /// Disconnect all NetworkManagers

@@ -66,10 +66,10 @@ struct ContentView: View {
                     }
                     
                     Group {
-                        if network.connectionStatus == "STATUS_CONNECTING" {
-                            Text("STATUS_CONNECTING \(network.connectionAttemptCount)", bundle: .clawsy)
+                        if hostManager.connectionStatus == "STATUS_CONNECTING" {
+                            Text("STATUS_CONNECTING \(hostManager.connectionAttemptCount)", bundle: .clawsy)
                         } else {
-                            Text(LocalizedStringKey(network.connectionStatus), bundle: .clawsy)
+                            Text(LocalizedStringKey(hostManager.connectionStatus), bundle: .clawsy)
                         }
                     }
                     .font(.system(size: 11))
@@ -99,7 +99,7 @@ struct ContentView: View {
             .padding(.bottom, 12)
             
             // --- Connection Error Banner ---
-            if let connError = network.connectionError, !errorDismissed {
+            if let connError = hostManager.connectionError, !errorDismissed {
                 ConnectionErrorBanner(
                     error: connError,
                     fixPromptCopied: $fixPromptCopied,
@@ -119,7 +119,7 @@ struct ContentView: View {
                 // Quick Send
                 Button(action: { appDelegate.showQuickSend() }) {
                     MenuItemRow(icon: "paperplane.fill", title: "QUICK_SEND",
-                                isEnabled: network.isConnected,
+                                isEnabled: hostManager.isConnected,
                                 shortcut: "⌘⇧\(SharedConfig.quickSendHotkey)")
                 }
                 .buttonStyle(.plain)
@@ -127,7 +127,7 @@ struct ContentView: View {
 
                 // Screenshot Group
                 Button(action: { showingScreenshotMenu.toggle() }) {
-                    MenuItemRow(icon: "camera", title: "SCREENSHOT", isEnabled: network.isConnected, hasChevron: true)
+                    MenuItemRow(icon: "camera", title: "SCREENSHOT", isEnabled: hostManager.isConnected, hasChevron: true)
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
@@ -137,7 +137,7 @@ struct ContentView: View {
                             showingScreenshotMenu = false
                             self.takeScreenshotAndSend(interactive: false)
                         }) {
-                            MenuItemRow(icon: "rectangle.dashed", title: "FULL_SCREEN", isEnabled: network.isConnected, shortcut: "⌘⇧\(SharedConfig.screenshotFullHotkey)")
+                            MenuItemRow(icon: "rectangle.dashed", title: "FULL_SCREEN", isEnabled: hostManager.isConnected, shortcut: "⌘⇧\(SharedConfig.screenshotFullHotkey)")
                         }
                         .buttonStyle(.plain)
 
@@ -145,7 +145,7 @@ struct ContentView: View {
                             showingScreenshotMenu = false
                             self.takeScreenshotAndSend(interactive: true)
                         }) {
-                            MenuItemRow(icon: "plus.viewfinder", title: "INTERACTIVE_AREA", isEnabled: network.isConnected, shortcut: "⌘⇧\(SharedConfig.screenshotAreaHotkey)")
+                            MenuItemRow(icon: "plus.viewfinder", title: "INTERACTIVE_AREA", isEnabled: hostManager.isConnected, shortcut: "⌘⇧\(SharedConfig.screenshotAreaHotkey)")
                         }
                         .buttonStyle(.plain)
                     }
@@ -156,7 +156,7 @@ struct ContentView: View {
                 // Clipboard
                 Button(action: handleManualClipboardSend) {
                     MenuItemRow(icon: "doc.on.clipboard", title: "PUSH_CLIPBOARD",
-                                isEnabled: network.isConnected,
+                                isEnabled: hostManager.isConnected,
                                 shortcut: "⌘⇧\(SharedConfig.pushClipboardHotkey)")
                 }
                 .buttonStyle(.plain)
@@ -176,7 +176,7 @@ struct ContentView: View {
                         showingCameraMenu.toggle()
                     }
                 }) {
-                    MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: network.isConnected && !availableCameras.isEmpty, hasChevron: true)
+                    MenuItemRow(icon: "video.fill", title: "CAMERA", isEnabled: hostManager.isConnected && !availableCameras.isEmpty, hasChevron: true)
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
@@ -184,7 +184,7 @@ struct ContentView: View {
                     CameraMenuView(
                         cameras: availableCameras,
                         activeCameraId: $activeCameraId,
-                        isConnected: network.isConnected,
+                        isConnected: hostManager.isConnected,
                         onTakePhoto: { camId, camName in
                             showingCameraMenu = false
                             takePhotoWithActive(camId: camId, camName: camName, network: network)
@@ -197,9 +197,9 @@ struct ContentView: View {
                 // Connection Control
                 Button(action: toggleConnection) {
                     MenuItemRow(
-                        icon: network.isConnected ? "power" : "bolt.slash.fill",
-                        title: network.isConnected ? "DISCONNECT" : "CONNECT",
-                        color: network.isConnected ? .red : .blue
+                        icon: hostManager.isConnected ? "power" : "bolt.slash.fill",
+                        title: hostManager.isConnected ? "DISCONNECT" : "CONNECT",
+                        color: hostManager.isConnected ? .red : .blue
                     )
                 }
                 .buttonStyle(.plain)
@@ -312,13 +312,22 @@ struct ContentView: View {
                     setupCallbacksForHost(nm: nm, profile: profile)
                 }
             } else if !serverHost.isEmpty && !serverToken.isEmpty {
-                // Legacy fallback: no profiles yet, use AppStorage values
-                // This path creates a single network manager directly
-                let legacyNM = NetworkManager()
-                setupCallbacksLegacy(legacyNM)
-                legacyNM.configure(host: serverHost, port: serverPort, token: serverToken, sshUser: sshUser, fallback: useSshFallback)
-                legacyNM.connect()
-                appDelegate.networkManager = legacyNM
+                // Legacy fallback: no profiles yet, create a transient profile and register in hostManager
+                let legacyProfile = HostProfile(
+                    name: serverHost,
+                    gatewayHost: serverHost,
+                    gatewayPort: serverPort,
+                    serverToken: serverToken,
+                    sshUser: sshUser,
+                    useSshFallback: useSshFallback,
+                    sharedFolderPath: sharedFolderPath
+                )
+                hostManager.profiles = [legacyProfile]
+                hostManager.activeHostId = legacyProfile.id
+                hostManager.connectAll { nm, profile in
+                    setupCallbacksForHost(nm: nm, profile: profile)
+                }
+                appDelegate.networkManager = hostManager.activeNetworkManager
             }
             
             // Validate & provision active host's shared folder
@@ -337,7 +346,7 @@ struct ContentView: View {
         .onChange(of: sharedFolderPath) { _ in
             setupFileWatcher()
         }
-        .onChange(of: network.connectionError) { newError in
+        .onChange(of: hostManager.connectionError) { newError in
             // Reset dismiss state when error type changes or clears
             if newError == nil {
                 errorDismissed = false
@@ -427,13 +436,13 @@ struct ContentView: View {
     }
 
     func getStatusColor() -> Color {
-        if network.isConnected { return .green }
-        if network.connectionStatus.contains("CONNECTING") || network.connectionStatus.contains("STARTING") { return .orange }
+        if hostManager.isConnected { return .green }
+        if hostManager.connectionStatus.contains("CONNECTING") || hostManager.connectionStatus.contains("STARTING") { return .orange }
         return .red
     }
     
     func toggleConnection() {
-        if network.isConnected {
+        if hostManager.isConnected {
             hostManager.disconnectAll()
         } else {
             if !hostManager.profiles.isEmpty {
@@ -819,7 +828,7 @@ struct MetadataView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     MetadataRow(label: "Version", value: SharedConfig.versionDisplay)
-                    MetadataRow(label: "Server Status", value: network.isServerClawsyAware ? "Ready (\(network.serverVersion))" : "Basic")
+                    MetadataRow(label: "Server Status", value: hostManager.isServerClawsyAware ? "Ready (\(network.activeNetworkManager?.serverVersion ?? "unknown"))" : "Basic")
                     MetadataRow(label: "Local Time", value: ISO8601DateFormatter().string(from: Date()))
                     MetadataRow(label: "Timezone", value: TimeZone.current.identifier)
                     
