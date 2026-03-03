@@ -242,10 +242,7 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
                 .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
                     SettingsView(
-                        serverHost: $serverHost,
-                        serverPort: $serverPort,
-                        serverToken: $serverToken,
-                        sshUser: $sshUser,
+                        hostManager: hostManager,
                         isPresented: $showingSettings,
                         onShowDebugLog: {
                             showingSettings = false
@@ -900,25 +897,51 @@ struct MetadataRow: View {
 }
 
 struct SettingsView: View {
-    @Binding var serverHost: String
-    @Binding var serverPort: String
-    @Binding var serverToken: String
-    @Binding var sshUser: String
-    @AppStorage("extendedContextEnabled", store: SharedConfig.sharedDefaults) private var extendedContextEnabled = false
+    /// Host manager — the single source of truth for host-specific settings (v0.6.1+)
+    @ObservedObject var hostManager: HostManager
     @Binding var isPresented: Bool
     var onShowDebugLog: (() -> Void)? = nil
     var onShowOnboarding: (() -> Void)? = nil
-    
-    @ObservedObject var updateManager = UpdateManager.shared
-    
-    @AppStorage("useSshFallback", store: SharedConfig.sharedDefaults) private var useSshFallback = true
-    @AppStorage("sharedFolderPath", store: SharedConfig.sharedDefaults) private var sharedFolderPath = "~/Documents/Clawsy"
+
+    /// Local editable copy of the active host profile; committed on dismiss
+    @State private var editedProfile: HostProfile = HostProfile(
+        name: "", gatewayHost: "", gatewayPort: "18789", serverToken: ""
+    )
+
+    // Non-host global settings (shared across all hosts)
+    @AppStorage("extendedContextEnabled", store: SharedConfig.sharedDefaults) private var extendedContextEnabled = false
     @AppStorage("quickSendHotkey", store: SharedConfig.sharedDefaults) private var quickSendHotkey = "K"
     @AppStorage("pushClipboardHotkey", store: SharedConfig.sharedDefaults) private var pushClipboardHotkey = "V"
     @AppStorage("cameraHotkey", store: SharedConfig.sharedDefaults) private var cameraHotkey = "P"
     @AppStorage("screenshotFullHotkey", store: SharedConfig.sharedDefaults) private var screenshotFullHotkey = "S"
     @AppStorage("screenshotAreaHotkey", store: SharedConfig.sharedDefaults) private var screenshotAreaHotkey = "A"
-    
+
+    // Legacy AppStorage fallback — only used when hostManager.profiles.isEmpty
+    @AppStorage("serverHost", store: SharedConfig.sharedDefaults) private var legacyServerHost = "agenthost"
+    @AppStorage("serverPort", store: SharedConfig.sharedDefaults) private var legacyServerPort = "18789"
+    @AppStorage("serverToken", store: SharedConfig.sharedDefaults) private var legacyServerToken = ""
+    @AppStorage("sshUser", store: SharedConfig.sharedDefaults) private var legacySshUser = ""
+    @AppStorage("useSshFallback", store: SharedConfig.sharedDefaults) private var legacyUseSshFallback = true
+    @AppStorage("sharedFolderPath", store: SharedConfig.sharedDefaults) private var legacySharedFolderPath = "~/Documents/Clawsy"
+
+    @ObservedObject var updateManager = UpdateManager.shared
+
+    /// Save the edited profile back to HostManager (or legacy keys) and close the popover.
+    private func saveAndDismiss() {
+        if hostManager.profiles.isEmpty {
+            // Legacy fallback: persist to AppStorage keys directly
+            legacyServerHost = editedProfile.gatewayHost
+            legacyServerPort = editedProfile.gatewayPort
+            legacyServerToken = editedProfile.serverToken
+            legacySshUser = editedProfile.sshUser
+            legacyUseSshFallback = editedProfile.useSshFallback
+            legacySharedFolderPath = editedProfile.sharedFolderPath
+        } else {
+            hostManager.updateHost(editedProfile)
+        }
+        isPresented = false
+    }
+
     func selectFolder() {
         DispatchQueue.main.async {
             let panel = NSOpenPanel()
@@ -927,41 +950,41 @@ struct SettingsView: View {
             panel.allowsMultipleSelection = false
             panel.message = NSLocalizedString("SELECT_SHARED_FOLDER", bundle: .clawsy, comment: "")
             panel.resolvesAliases = true
-            
-            // Fix: Start at current folder or Home
-            if !sharedFolderPath.isEmpty {
-                let resolved = sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
+
+            // Start at current folder or Home
+            if !editedProfile.sharedFolderPath.isEmpty {
+                let resolved = editedProfile.sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
                 panel.directoryURL = URL(fileURLWithPath: resolved)
             } else {
                 panel.directoryURL = URL(fileURLWithPath: NSHomeDirectory())
             }
 
             NSApp.activate(ignoringOtherApps: true)
-            
+
             panel.begin { response in
                 if response == .OK {
                     guard let url = panel.url else { return }
-                    
+
                     var path = url.path
                     let home = NSHomeDirectory()
                     if path.hasPrefix(home) {
                         path = path.replacingOccurrences(of: home, with: "~")
                     }
-                    
+
                     do {
                         let data = try url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
-                        
+
                         // Stop old access if any
                         SharedConfig.resolvedFolderUrl?.stopAccessingSecurityScopedResource()
-                        
+
                         // Start new access
                         if url.startAccessingSecurityScopedResource() {
                             SharedConfig.resolvedFolderUrl = url
                         }
-                        
+
                         DispatchQueue.main.async {
                             SharedConfig.sharedFolderBookmark = data
-                            self.sharedFolderPath = path
+                            self.editedProfile.sharedFolderPath = path
                         }
                     } catch {
                         print("Failed to create bookmark: \(error)")
@@ -978,7 +1001,7 @@ struct SettingsView: View {
                 Text("SETTINGS_TITLE", bundle: .clawsy)
                     .font(.system(size: 15, weight: .bold))
                 Spacer()
-                Button(action: { isPresented = false }) {
+                Button(action: saveAndDismiss) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 16))
                         .foregroundColor(.secondary.opacity(0.8))
@@ -990,7 +1013,7 @@ struct SettingsView: View {
             .padding(.bottom, 16)
 
             Divider().opacity(0.3)
-            
+
             // Content
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
@@ -999,31 +1022,31 @@ struct SettingsView: View {
                         Label(title: { Text("GATEWAY", bundle: .clawsy) }, icon: { Image(systemName: "antenna.radiowaves.left.and.right") })
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.blue)
-                        
+
                         HStack(spacing: 8) {
-                            TextField(text: $serverHost) {
+                            TextField(text: $editedProfile.gatewayHost) {
                                 Text("HOST", bundle: .clawsy)
                             }
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
-                            
-                            TextField(text: $serverPort) {
+
+                            TextField(text: $editedProfile.gatewayPort) {
                                 Text("PORT", bundle: .clawsy)
                             }
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
                             .frame(width: 80)
                         }
-                        
-                        SecureField(text: $serverToken) {
+
+                        SecureField(text: $editedProfile.serverToken) {
                             Text("TOKEN", bundle: .clawsy)
                         }
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
                     }
-                    
+
                     Divider().opacity(0.3)
-                    
+
                     // SSH Fallback Section
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
@@ -1031,18 +1054,18 @@ struct SettingsView: View {
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(.orange)
                             Spacer()
-                            Toggle("", isOn: $useSshFallback)
+                            Toggle("", isOn: $editedProfile.useSshFallback)
                                 .toggleStyle(.switch)
                                 .scaleEffect(0.7)
                         }
-                        
-                        TextField(text: $sshUser) {
+
+                        TextField(text: $editedProfile.sshUser) {
                             Text("SSH_USER", bundle: .clawsy)
                         }
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
-                        .disabled(!useSshFallback)
-                        .opacity(useSshFallback ? 1.0 : 0.5)
+                        .disabled(!editedProfile.useSshFallback)
+                        .opacity(editedProfile.useSshFallback ? 1.0 : 0.5)
 
                         Text("SSH_FALLBACK_DESC", bundle: .clawsy)
                             .font(.system(size: 11))
@@ -1252,7 +1275,7 @@ struct SettingsView: View {
                             .foregroundColor(.green)
                         
                         // Path display
-                        Text(sharedFolderPath.isEmpty ? "None" : sharedFolderPath)
+                        Text(editedProfile.sharedFolderPath.isEmpty ? "None" : editedProfile.sharedFolderPath)
                             .font(.system(size: 11, design: .monospaced))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
@@ -1261,17 +1284,17 @@ struct SettingsView: View {
                             .cornerRadius(8)
                             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.1), lineWidth: 0.5))
                             .foregroundColor(.primary)
-                        
+
                         HStack(spacing: 8) {
                             Button(action: selectFolder) {
                                 Label(title: { Text("SELECT_FOLDER_BUTTON", bundle: .clawsy) }, icon: { Image(systemName: "folder.fill.badge.plus") })
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.regular)
-                            
-                            if !sharedFolderPath.isEmpty {
+
+                            if !editedProfile.sharedFolderPath.isEmpty {
                                 Button(action: {
-                                    let resolved = sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
+                                    let resolved = editedProfile.sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
                                     NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: resolved)
                                 }) {
                                     Label(title: { Text("SHOW_IN_FINDER", bundle: .clawsy) }, icon: { Image(systemName: "magnifyingglass") })
@@ -1322,9 +1345,26 @@ struct SettingsView: View {
                 .background(Color.black.opacity(0.03))
             }
         }
+        .onAppear {
+            // Load host-specific settings from the active profile (or legacy fallback)
+            if let active = hostManager.activeProfile {
+                editedProfile = active
+            } else {
+                // Legacy fallback: build a transient profile from AppStorage keys
+                editedProfile = HostProfile(
+                    name: legacyServerHost,
+                    gatewayHost: legacyServerHost,
+                    gatewayPort: legacyServerPort,
+                    serverToken: legacyServerToken,
+                    sshUser: legacySshUser,
+                    useSshFallback: legacyUseSshFallback,
+                    sharedFolderPath: legacySharedFolderPath
+                )
+            }
+        }
         .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
     }
-    
+
 }
 
 // MARK: - Camera Menu Popover
