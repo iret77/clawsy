@@ -378,8 +378,14 @@ struct ContentView: View {
                     let relativePath = fileURL.path.replacingOccurrences(of: resolvedPath, with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
                     switch rule.action {
                     case "send_to_agent":
-                        let message = rule.prompt.isEmpty ? "📂 \(relativePath)" : "\(rule.prompt)\n\nDatei: \(relativePath)"
-                        network.sendServiceEvent(message: message, payload: ["trigger": "manual", "fileName": fileName, "relativePath": relativePath, "ruleId": rule.id])
+                        network.sendEvent(kind: "file.rule_triggered", payload: [
+                            "trigger": "manual",
+                            "fileName": fileName,
+                            "relativePath": relativePath,
+                            "ruleId": rule.id,
+                            "prompt": rule.prompt,
+                            "folderPath": self.sharedFolderPath
+                        ])
                     case "notify":
                         let content = UNMutableNotificationContent()
                         content.title = NSLocalizedString("RULE_NOTIFY_TITLE", bundle: .clawsy, comment: "")
@@ -476,7 +482,7 @@ struct ContentView: View {
         guard !sharedFolderPath.isEmpty, ClawsyFileManager.folderExists(at: resolvedPath) else { return }
         
         let watcher = FileWatcher(url: URL(fileURLWithPath: resolvedPath))
-        watcher.callback = { changedPath in
+        watcher.typedCallback = { changedPath, eventType in
             // agent.status and agent.info are now delivered via WebSocket events (see onTaskUpdate / onAgentInfoUpdate)
             // Skip these files to avoid stale file reads
             if changedPath.hasSuffix(".agent_status.json") || changedPath.hasSuffix(".agent_info.json") {
@@ -486,25 +492,27 @@ struct ContentView: View {
             // Extract relative path for the agent
             let relativePath = changedPath.replacingOccurrences(of: resolvedPath, with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
 
-            // --- .clawsy Rule Matching ---
+            // --- .clawsy Rule Matching & Execution ---
             let changedURL = URL(fileURLWithPath: changedPath)
             let fileName = changedURL.lastPathComponent
             let parentFolder = changedURL.deletingLastPathComponent().path
+            let triggerName = eventType.rawValue  // "file_added" or "file_changed"
 
             // Skip hidden files and .clawsy manifests themselves
             if !fileName.hasPrefix(".") {
-                let matchedRules = ClawsyManifestManager.matchingRules(for: fileName, in: parentFolder, trigger: "file_added")
+                let matchedRules = ClawsyManifestManager.matchingRules(for: fileName, in: parentFolder, trigger: triggerName)
                 for rule in matchedRules {
                     switch rule.action {
                     case "send_to_agent":
-                        let message = rule.prompt.isEmpty
-                            ? "📂 Neue Datei: \(relativePath)"
-                            : "\(rule.prompt)\n\nDatei: \(relativePath)"
-                        network.sendServiceEvent(message: message, payload: [
-                            "trigger": "file_added",
+                        // Send as node.event with event: "file.rule_triggered"
+                        // Includes filename, rule id, prompt, and file path for agent processing
+                        network.sendEvent(kind: "file.rule_triggered", payload: [
+                            "trigger": triggerName,
                             "fileName": fileName,
                             "relativePath": relativePath,
-                            "ruleId": rule.id
+                            "ruleId": rule.id,
+                            "prompt": rule.prompt,
+                            "folderPath": self.sharedFolderPath
                         ])
                     case "notify":
                         DispatchQueue.main.async {
@@ -521,10 +529,11 @@ struct ContentView: View {
                 }
             }
 
-            // Debounce/Throttle could be added here, but for now we send the event
+            // General file sync event (always fires for non-hidden files)
             network.sendEvent(kind: "file.sync_triggered", payload: [
-                "path": sharedFolderPath,
-                "changedPath": relativePath
+                "path": self.sharedFolderPath,
+                "changedPath": relativePath,
+                "eventType": triggerName
             ])
         }
         watcher.start()

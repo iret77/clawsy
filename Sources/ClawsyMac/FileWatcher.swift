@@ -2,10 +2,18 @@ import Foundation
 import CoreServices
 
 class FileWatcher {
+    /// Event types derived from FSEvents flags
+    enum EventType: String {
+        case fileAdded = "file_added"
+        case fileChanged = "file_changed"
+    }
+
     private var stream: FSEventStreamRef?
     private let queue = DispatchQueue(label: "ai.clawsy.filewatcher")
     private let url: URL
-    var callback: ((String) -> Void)? // Now returns the changed path
+    /// Callback receives (changedPath, eventType)
+    var callback: ((String) -> Void)?
+    var typedCallback: ((String, EventType) -> Void)?
 
     init(url: URL) {
         self.url = url
@@ -34,11 +42,20 @@ class FileWatcher {
                 let watcher = Unmanaged<FileWatcher>.fromOpaque(clientCallBackInfo).takeUnretainedValue()
                 
                 guard let paths = unsafeBitCast(eventPaths, to: NSArray.self) as? [String] else { return }
+                let flagsPtr = eventFlags
                 
-                for path in paths {
+                for i in 0..<numEvents {
+                    let path = paths[i]
                     // Ignore .DS_Store and .clawsy changes to avoid infinite loops
                     if path.hasSuffix(".DS_Store") || path.hasSuffix(".clawsy") { continue }
+                    
+                    // Determine event type from FSEvents flags
+                    let eventFlag = flagsPtr[i]
+                    let isCreated = (eventFlag & UInt32(kFSEventStreamEventFlagItemCreated)) != 0
+                    let eventType: EventType = isCreated ? .fileAdded : .fileChanged
+                    
                     watcher.callback?(path)
+                    watcher.typedCallback?(path, eventType)
                 }
             },
             &context,

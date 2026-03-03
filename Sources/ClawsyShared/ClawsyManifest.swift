@@ -104,11 +104,9 @@ public class ClawsyManifestManager {
 
     private static func matchesGlob(_ pattern: String, fileName: String) -> Bool {
         if pattern == "*" { return true }
-        // Simple glob: support leading/trailing wildcards
-        if pattern.hasPrefix("*.") {
-            let ext = String(pattern.dropFirst(2))
-            return fileName.hasSuffix("." + ext)
-        }
-        return fileName == pattern
+        // Convert glob pattern to NSPredicate LIKE pattern
+        // NSPredicate LIKE uses * for multi-char and ? for single-char wildcards — same as glob
+        let predicate = NSPredicate(format: "SELF LIKE[c] %@", pattern)
+        return predicate.evaluate(with: fileName)
     }
 }
