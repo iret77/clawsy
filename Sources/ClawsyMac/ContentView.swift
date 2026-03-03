@@ -627,8 +627,7 @@ struct ContentView: View {
         }
         
         // Wire agent info updates only for the active host
-        nm.onAgentInfoUpdate = { [weak self] model, name in
-            guard let self = self else { return }
+        nm.onAgentInfoUpdate = { [self] model, name in
             // Only update UI if this is the active host
             if nm.hostProfileId == self.hostManager.activeHostId {
                 DispatchQueue.main.async {
@@ -638,16 +637,14 @@ struct ContentView: View {
             }
         }
 
-        nm.onTaskUpdate = { [weak self] agent, title, progress, status in
-            guard let self = self else { return }
+        nm.onTaskUpdate = { [self] agent, title, progress, status in
             if nm.hostProfileId == self.hostManager.activeHostId {
                 self.taskStore.updateTask(agentName: agent, title: title, progress: progress, statusText: status)
             }
         }
         
         // Start state poller when handshake completes
-        nm.onHandshakeComplete = { [weak self] in
-            guard let self = self else { return }
+        nm.onHandshakeComplete = { [self] in
             if nm.hostProfileId == self.hostManager.activeHostId {
                 nm.startStatePoller()
             }
