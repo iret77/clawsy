@@ -3,6 +3,7 @@ import ClawsyShared
 
 struct MissionControlView: View {
     @ObservedObject var taskStore: TaskStore
+    @ObservedObject var networkManager: NetworkManager
     @State private var hasWaited = false
 
     private var allPaused: Bool {
@@ -74,6 +75,30 @@ struct MissionControlView: View {
                         }
                     }
                     .padding(.vertical, 4)
+                }
+            }
+            // Gateway Sessions Section
+            let runningSessions = networkManager.gatewaySessions.filter { session in
+                session.status == "running" &&
+                !session.id.hasSuffix(":main") &&
+                !session.id.contains("clawsy-service") &&
+                session.label != "clawsy-service" &&
+                session.label != "main"
+            }
+            if !runningSessions.isEmpty {
+                Divider()
+                    .padding(.vertical, 4)
+                HStack {
+                    Text("SUB-AGENTS")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text("\(runningSessions.count)")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.accentColor)
+                }
+                ForEach(runningSessions) { session in
+                    GatewaySessionRowView(session: session)
                 }
             }
         }
@@ -269,6 +294,87 @@ struct TaskRowView: View {
         if minutes == 0 {
             return "0:\(String(format: "%02d", seconds))"
         }
+        return "\(minutes):\(String(format: "%02d", seconds))"
+    }
+}
+
+// MARK: - GatewaySessionRowView
+
+struct GatewaySessionRowView: View {
+    let session: GatewaySession
+    @State private var elapsed: TimeInterval = 0
+    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    private var displayName: String {
+        if let label = session.label, !label.isEmpty { return label }
+        // Extract readable name from session key (e.g. "agent:main:subagent:uuid" → "subagent")
+        let parts = session.id.split(separator: ":")
+        if parts.count >= 3 { return String(parts[2]) }
+        return session.id
+    }
+
+    private var shortModel: String? {
+        guard let m = session.model else { return nil }
+        // Strip provider prefix: "anthropic/claude-sonnet-4-6" → "claude-sonnet-4-6"
+        if m.contains("/") { return String(m.split(separator: "/").last ?? Substring(m)) }
+        return m
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            // Running indicator dot
+            Circle()
+                .fill(Color.green)
+                .frame(width: 6, height: 6)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(displayName)
+                    .font(.system(size: 11, weight: .medium))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                if let model = shortModel {
+                    Text(model)
+                        .font(.system(size: 9))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer()
+
+            // Elapsed time
+            HStack(spacing: 2) {
+                Image(systemName: "clock")
+                    .font(.system(size: 8))
+                    .foregroundColor(.secondary)
+                Text(formatElapsed(elapsed))
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Color.green.opacity(0.06))
+        .cornerRadius(6)
+        .onAppear {
+            if let started = session.startedAt {
+                elapsed = Date().timeIntervalSince(started)
+            }
+        }
+        .onReceive(timer) { _ in
+            if let started = session.startedAt {
+                elapsed = Date().timeIntervalSince(started)
+            } else {
+                elapsed += 1
+            }
+        }
+    }
+
+    private func formatElapsed(_ interval: TimeInterval) -> String {
+        let totalSeconds = Int(max(0, interval))
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        if minutes == 0 { return "0:\(String(format: "%02d", seconds))" }
         return "\(minutes):\(String(format: "%02d", seconds))"
     }
 }

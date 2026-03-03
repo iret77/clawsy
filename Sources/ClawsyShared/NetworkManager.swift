@@ -18,6 +18,18 @@ import UIKit
 typealias ClawsyImage = UIImage
 #endif
 
+// MARK: - GatewaySession Model
+
+public struct GatewaySession: Identifiable, Equatable {
+    public let id: String        // session key
+    public let label: String?
+    public let kind: String
+    public let status: String    // "running", "done", "error"
+    public let model: String?
+    public let startedAt: Date?
+    public let task: String?
+}
+
 // MARK: - NetworkManager (Native Node Protocol)
 
 public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUserNotificationCenterDelegate {
@@ -32,6 +44,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     @Published public var isServerClawsyAware = false
     @Published public var serverVersion = "unknown"
     @Published public var connectionError: ConnectionError?
+    @Published public var gatewaySessions: [GatewaySession] = []
     
     // Mood Tracking State
     private static var lastAppSwitchTime = Date()
@@ -44,6 +57,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     private var isPairing = false
     private var signingKey: Curve25519.Signing.PrivateKey?
     private var publicKey: Curve25519.Signing.PublicKey?
+
+    // Gateway Sessions Polling
+    private var sessionsPollerTimer: Timer?
+    private var pendingSessionsListReqId: String?
+    private let sessionsPollerInterval: TimeInterval = 10
+    private let sessionsActiveWindowSeconds: TimeInterval = 300  // 5 min = "running"
     
     // SSH Tunnel Management (macOS only)
     #if os(macOS)
@@ -546,6 +565,8 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         isPairing = false
         pairingTimeoutTimer?.invalidate()
         pairingTimeoutTimer = nil
+
+        stopSessionsPoller()
         
         socket?.delegate = nil
         socket?.disconnect()
@@ -565,6 +586,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             self.isHandshakeComplete = false
             self.connectionStatus = "STATUS_DISCONNECTED"
             self.connectionError = nil
+            self.gatewaySessions = []
             self.rawLog += "\n[WSS] Disconnected"
         }
     }
@@ -700,6 +722,78 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     public func stopStatePoller() {
         statePollerTimer?.invalidate()
         statePollerTimer = nil
+    }
+
+    // MARK: - Gateway Sessions Polling (sessions.list every 10s)
+
+    private func startSessionsPoller() {
+        requestSessionsList()
+        sessionsPollerTimer?.invalidate()
+        sessionsPollerTimer = Timer.scheduledTimer(withTimeInterval: sessionsPollerInterval, repeats: true) { [weak self] _ in
+            self?.requestSessionsList()
+        }
+    }
+
+    private func stopSessionsPoller() {
+        sessionsPollerTimer?.invalidate()
+        sessionsPollerTimer = nil
+        pendingSessionsListReqId = nil
+    }
+
+    private func requestSessionsList() {
+        guard isHandshakeComplete, isConnected else { return }
+        let reqId = UUID().uuidString
+        pendingSessionsListReqId = reqId
+        send(json: [
+            "type": "req",
+            "id": reqId,
+            "method": "sessions.list",
+            "params": ["activeMinutes": 60]
+        ])
+    }
+
+    private func parseSessionsListResponse(_ result: Any) {
+        guard let resultDict = result as? [String: Any],
+              let sessions = resultDict["sessions"] as? [[String: Any]] else { return }
+
+        let now = Date()
+        let parsed: [GatewaySession] = sessions.compactMap { s in
+            guard let key = s["key"] as? String else { return nil }
+
+            let label = s["label"] as? String
+            let kind = s["kind"] as? String ?? "direct"
+            let model = s["model"] as? String
+
+            // Derive status: "running" if updatedAt is within 5 min, "error" if aborted
+            var status = "done"
+            if let updatedAtMs = s["updatedAt"] as? Double {
+                let updatedAt = Date(timeIntervalSince1970: updatedAtMs / 1000.0)
+                if now.timeIntervalSince(updatedAt) <= sessionsActiveWindowSeconds {
+                    status = "running"
+                }
+            }
+            if s["abortedLastRun"] as? Bool == true { status = "error" }
+
+            // startedAt not provided by gateway — use updatedAt as approximation
+            var startedAt: Date? = nil
+            if let updatedAtMs = s["updatedAt"] as? Double {
+                startedAt = Date(timeIntervalSince1970: updatedAtMs / 1000.0)
+            }
+
+            return GatewaySession(
+                id: key,
+                label: label,
+                kind: kind,
+                status: status,
+                model: model,
+                startedAt: startedAt,
+                task: nil
+            )
+        }
+
+        DispatchQueue.main.async {
+            self.gatewaySessions = parsed
+        }
     }
 
     private func pollAgentState() {
@@ -845,6 +939,15 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         let type = json["type"] as? String
         if type == "res" || type == "response" || type == "error" {
             if let rid = rawId as? String {
+                // sessions.list response
+                if let pendingId = pendingSessionsListReqId, rid == pendingId {
+                    pendingSessionsListReqId = nil
+                    if let result = json["result"] {
+                        parseSessionsListResponse(result)
+                    }
+                    return
+                }
+
                 if rid.hasPrefix("discovery-") {
                     if let result = json["result"] as? [String: Any],
                        let contentB64 = result["content"] as? String,
@@ -879,6 +982,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                      
                      // Trigger Discovery Check
                      self.checkServerAwareness()
+
+                     // Start gateway sessions poller
+                     self.startSessionsPoller()
                      
                      // Check for pending one-shot
                      if let (kind, payload) = self.oneShotPayload {
@@ -991,7 +1097,8 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             "params": [
                 "minProtocol": 3, "maxProtocol": 3,
                 "client": ["id": "openclaw-\(platform)", "version": SharedConfig.versionDisplay, "platform": platform, "mode": "node"],
-                "role": "node", "caps": ["clipboard", "screen", "camera", "file", "location"], 
+                "role": "node", "caps": ["clipboard", "screen", "camera", "file", "location"],
+                "scopes": ["operator.read"],
                 "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set", "location.get", "location.start", "location.stop", "location.add_smart"],
                 "permissions": ["clipboard.read": true, "clipboard.write": true],
                 "auth": ["token": authToken],

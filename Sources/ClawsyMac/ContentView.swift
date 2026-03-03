@@ -220,7 +220,7 @@ struct ContentView: View {
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
                 .popover(isPresented: $showingMissionControl, arrowEdge: .trailing) {
-                    MissionControlView(taskStore: taskStore)
+                    MissionControlView(taskStore: taskStore, networkManager: network)
                 }
 
                 // Last Metadata
