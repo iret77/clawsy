@@ -20,28 +20,31 @@ struct OnboardingView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            VStack(spacing: 8) {
+            HStack(spacing: 14) {
                 Image("OnboardingLogo")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 64, height: 64)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .frame(width: 48, height: 48)
+                    .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
 
-                Text("ONBOARDING_TITLE", bundle: .clawsy)
-                    .font(.system(size: 18, weight: .bold))
-
-                Text("ONBOARDING_SUBTITLE", bundle: .clawsy)
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("ONBOARDING_TITLE", bundle: .clawsy)
+                        .font(.system(size: 16, weight: .bold))
+                    Text("ONBOARDING_SUBTITLE", bundle: .clawsy)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
             }
-            .padding(.top, 24)
-            .padding(.bottom, 20)
+            .padding(.horizontal, 24)
+            .padding(.top, 18)
+            .padding(.bottom, 14)
 
             Divider().opacity(0.3)
 
-            // Checklist
-            VStack(spacing: 16) {
+            // Checklist (scrollable as safety net)
+            ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 12) {
                 // Step 1: App Location
                 OnboardingStepRow(
                     icon: "folder.fill",
@@ -135,9 +138,10 @@ struct OnboardingView: View {
                 )
             }
             .padding(.horizontal, 24)
-            .padding(.vertical, 20)
+            .padding(.vertical, 16)
+            } // ScrollView
 
-            Spacer()
+            Spacer(minLength: 0)
 
             Divider().opacity(0.3)
 
@@ -164,7 +168,7 @@ struct OnboardingView: View {
             .padding(.horizontal, 24)
             .padding(.vertical, 16)
         }
-        .frame(width: 420, height: 460)
+        .frame(width: 420, height: 480)
         .onAppear {
             refreshStatus()
             refreshTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
