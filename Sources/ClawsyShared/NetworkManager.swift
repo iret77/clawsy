@@ -31,6 +31,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     @Published public var rawLog = ""
     @Published public var isServerClawsyAware = false
     @Published public var serverVersion = "unknown"
+    @Published public var connectionError: ConnectionError?
     
     // Mood Tracking State
     private static var lastAppSwitchTime = Date()
@@ -510,6 +511,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                         self.rawLog += "\n[SSH] Tunnel failed: \(reason)"
                         self.connectionStatus = "STATUS_SSH_FAILED"
                         self.isUsingSshTunnel = false
+                        self.connectionError = .sshTunnelFailed
                     }
                 }
             } catch {
@@ -517,6 +519,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                     self.rawLog += "\n[SSH] Failed to start: \(error.localizedDescription)"
                     self.connectionStatus = "STATUS_SSH_FAILED"
                     self.isUsingSshTunnel = false
+                    self.connectionError = .sshTunnelFailed
                 }
             }
         }
@@ -531,6 +534,11 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             connectionStatus = "STATUS_OFFLINE_TIMEOUT"
         } else {
             connectionStatus = "STATUS_ERROR"
+        }
+        // Classify the error for user-facing banner
+        let sshConfigured = !sshUser.isEmpty && useSshFallback
+        if let classified = ConnectionError.classify(connectionStatus: connectionStatus, usingSshTunnel: isUsingSshTunnel, sshConfigured: sshConfigured) {
+            connectionError = classified
         }
     }
     
@@ -556,6 +564,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             self.isConnected = false
             self.isHandshakeComplete = false
             self.connectionStatus = "STATUS_DISCONNECTED"
+            self.connectionError = nil
             self.rawLog += "\n[WSS] Disconnected"
         }
     }
@@ -581,10 +590,14 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 self.isConnected = true
                 self.connectionStatus = "STATUS_CONNECTED"
                 self.connectionAttemptCount = 0
+                self.connectionError = nil
             case .disconnected(let reason, let code):
                 self.rawLog += "\n[WSS] Disconnected: \(reason) (code: \(code))"
                 self.isConnected = false
                 self.connectionStatus = "STATUS_DISCONNECTED"
+                if let classified = ConnectionError.classify(disconnectReason: reason, code: code) {
+                    self.connectionError = classified
+                }
             case .text(let string):
                 self.rawLog += "\nIN: \(string)"
                 self.handleMessage(string)
@@ -850,6 +863,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 if payload?["type"] as? String == "hello-ok" || json["result"] != nil {
                      self.isHandshakeComplete = true
                      self.connectionStatus = isUsingSshTunnel ? "STATUS_ONLINE_PAIRED_SSH" : "STATUS_ONLINE_PAIRED"
+                     self.connectionError = nil
                      self.onHandshakeComplete?()
                      
                      // Store deviceToken from hello-ok if present
@@ -918,6 +932,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 } else if json["error"] != nil {
                      self.isHandshakeComplete = false
                      self.connectionStatus = "STATUS_HANDSHAKE_FAILED"
+                     self.connectionError = .invalidToken
                 }
                 }
             }

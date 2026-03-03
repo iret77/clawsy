@@ -20,6 +20,8 @@ struct ContentView: View {
     @State private var isScreenshotInteractive = false
     @State private var showingOnboarding = false
     @AppStorage("onboardingCompleted") private var onboardingCompleted = false
+    @State private var errorDismissed = false
+    @State private var fixPromptCopied = false
     
     // Persistent Configuration (UI State only) — kept for legacy SettingsView compatibility
     @AppStorage("serverHost", store: SharedConfig.sharedDefaults) private var serverHost = "agenthost"
@@ -95,6 +97,19 @@ struct ContentView: View {
             .padding(.horizontal, 16)
             .padding(.top, 14)
             .padding(.bottom, 12)
+            
+            // --- Connection Error Banner ---
+            if let connError = network.connectionError, !errorDismissed {
+                ConnectionErrorBanner(
+                    error: connError,
+                    fixPromptCopied: $fixPromptCopied,
+                    onDismiss: { errorDismissed = true },
+                    onOpenSettings: { showingSettings = true }
+                )
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+            }
             
             Divider().opacity(0.5)
             
@@ -324,6 +339,15 @@ struct ContentView: View {
         }
         .onChange(of: sharedFolderPath) { _ in
             setupFileWatcher()
+        }
+        .onChange(of: network.connectionError) { newError in
+            // Reset dismiss state when error type changes or clears
+            if newError == nil {
+                errorDismissed = false
+            } else {
+                errorDismissed = false
+                fixPromptCopied = false
+            }
         }
         .onChange(of: hostManager.activeHostId) { _ in
             // When active host changes, update AppDelegate references and menu bar icon
@@ -1344,6 +1368,103 @@ struct CameraMenuView: View {
         }
         .padding(4)
         .frame(width: 220)
+    }
+}
+
+// MARK: - Connection Error Banner
+
+struct ConnectionErrorBanner: View {
+    let error: ConnectionError
+    @Binding var fixPromptCopied: Bool
+    let onDismiss: () -> Void
+    let onOpenSettings: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Header row
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white)
+                Text("Verbindungsfehler")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.white)
+                Spacer()
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.white.opacity(0.8))
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Title + Description
+            VStack(alignment: .leading, spacing: 3) {
+                Text(error.title)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.white)
+                Text(error.description)
+                    .font(.system(size: 10))
+                    .foregroundColor(.white.opacity(0.85))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            // Action buttons
+            HStack(spacing: 8) {
+                if let prompt = error.fixPrompt {
+                    Button(action: {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(prompt, forType: .string)
+                        fixPromptCopied = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            fixPromptCopied = false
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: fixPromptCopied ? "checkmark" : "doc.on.clipboard")
+                                .font(.system(size: 10))
+                            Text(fixPromptCopied ? "✓ Kopiert!" : "Fix-Prompt kopieren")
+                                .font(.system(size: 10, weight: .medium))
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.white.opacity(0.2))
+                        .cornerRadius(6)
+                        .foregroundColor(.white)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                if case .openSettings = error.fixAction {
+                    Button(action: onOpenSettings) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "gearshape")
+                                .font(.system(size: 10))
+                            Text("Einstellungen")
+                                .font(.system(size: 10, weight: .medium))
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.white.opacity(0.2))
+                        .cornerRadius(6)
+                        .foregroundColor(.white)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.red.opacity(0.85), Color.orange.opacity(0.85)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
     }
 }
 
