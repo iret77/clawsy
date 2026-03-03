@@ -65,7 +65,7 @@ public struct SharedConfig {
     public static var screenshotFullHotkey: String { sharedDefaults.string(forKey: "screenshotFullHotkey") ?? "S" }
     public static var screenshotAreaHotkey: String { sharedDefaults.string(forKey: "screenshotAreaHotkey") ?? "A" }
     
-    public static var shortVersion: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.5.7" }
+    public static var shortVersion: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.6.0" }
     public static var buildNumber: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1" }
     public static var versionDisplay: String { "v\(shortVersion) #\(buildNumber)" }
     

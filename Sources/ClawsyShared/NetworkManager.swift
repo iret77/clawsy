@@ -64,33 +64,72 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     // Permission Tracking
     private var filePermissionExpiry: Date?
     
-    // Internal Sync'd Settings
-    private var serverHost: String { SharedConfig.serverHost }
-    private var serverPort: String { SharedConfig.serverPort }
-    private var serverToken: String { SharedConfig.serverToken }
-    private var sshUser: String { SharedConfig.sharedDefaults.string(forKey: "sshUser") ?? "" }
-    private var useSshFallback: Bool { 
-        if SharedConfig.sharedDefaults.object(forKey: "useSshFallback") == nil { return true }
-        return SharedConfig.sharedDefaults.bool(forKey: "useSshFallback") 
+    // Host Profile — if set, use profile settings instead of SharedConfig globals
+    public var hostProfile: HostProfile?
+    
+    /// The UUID of the associated host profile (for HostManager lookups)
+    public var hostProfileId: UUID? { hostProfile?.id }
+    
+    // Internal Sync'd Settings — now profile-aware
+    private var serverHost: String {
+        hostProfile?.gatewayHost ?? SharedConfig.serverHost
     }
-    private var sharedFolderPath: String { SharedConfig.sharedDefaults.string(forKey: "sharedFolderPath") ?? "~/Documents/Clawsy" }
+    private var serverPort: String {
+        hostProfile?.gatewayPort ?? SharedConfig.serverPort
+    }
+    private var serverToken: String {
+        hostProfile?.serverToken ?? SharedConfig.serverToken
+    }
+    private var sshUser: String {
+        hostProfile?.sshUser ?? (SharedConfig.sharedDefaults.string(forKey: "sshUser") ?? "")
+    }
+    private var useSshFallback: Bool {
+        if let profile = hostProfile { return profile.useSshFallback }
+        if SharedConfig.sharedDefaults.object(forKey: "useSshFallback") == nil { return true }
+        return SharedConfig.sharedDefaults.bool(forKey: "useSshFallback")
+    }
+    private var sharedFolderPath: String {
+        hostProfile?.sharedFolderPath ?? (SharedConfig.sharedDefaults.string(forKey: "sharedFolderPath") ?? "~/Documents/Clawsy")
+    }
     
     // Device token for node pairing (per-host)
     private var deviceTokenKey: String { "clawsy_device_token_\(serverHost)" }
     private var deviceToken: String? {
-        get { SharedConfig.sharedDefaults.string(forKey: deviceTokenKey) }
+        get {
+            // Check hostProfile first
+            if let dt = hostProfile?.deviceToken { return dt }
+            return SharedConfig.sharedDefaults.string(forKey: deviceTokenKey)
+        }
         set {
             if let val = newValue {
                 SharedConfig.sharedDefaults.set(val, forKey: deviceTokenKey)
             } else {
                 SharedConfig.sharedDefaults.removeObject(forKey: deviceTokenKey)
             }
+            // Also update the profile in memory
+            hostProfile?.deviceToken = newValue
             SharedConfig.sharedDefaults.synchronize()
         }
     }
     
+    /// Initialize with a HostProfile (multi-host mode)
+    public init(hostProfile: HostProfile) {
+        self.hostProfile = hostProfile
+        super.init()
+        loadOrGenerateSigningKey()
+        setupNotifications()
+        setupLocation()
+    }
+    
+    /// Legacy init (single-host mode, reads from SharedConfig)
     public override init() {
         super.init()
+        loadOrGenerateSigningKey()
+        setupNotifications()
+        setupLocation()
+    }
+    
+    private func loadOrGenerateSigningKey() {
         // Try to load existing key or generate new one
         if let savedKeyData = SharedConfig.sharedDefaults.data(forKey: "nodePrivateKey"),
            let key = try? Curve25519.Signing.PrivateKey(rawRepresentation: savedKeyData) {
@@ -101,8 +140,6 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             SharedConfig.sharedDefaults.set(newKey.rawRepresentation, forKey: "nodePrivateKey")
         }
         self.publicKey = self.signingKey?.publicKey
-        setupNotifications()
-        setupLocation()
     }
     
     private func setupLocation() {

@@ -36,11 +36,66 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var hudWindow: NSWindow?
     var onboardingWindow: NSWindow?
     var networkManager: NetworkManager?
+    var hostManager: HostManager?
+    
+    /// Updates the menu bar icon with a colored dot overlay for the active host
+    func updateMenuBarIcon() {
+        guard let button = statusBarItem?.button else { return }
+        let iconName = NSImage.Name("Icon")
+        guard let lobster = NSImage(named: iconName) else { return }
+        lobster.isTemplate = true
+        
+        guard let activeProfile = hostManager?.activeProfile,
+              let dotColor = NSColor(hex: activeProfile.color) else {
+            // No active profile or single host — just use template icon
+            button.image = lobster
+            return
+        }
+        
+        // Only show colored dot when there are multiple hosts
+        guard let manager = hostManager, manager.profiles.count > 1 else {
+            button.image = lobster
+            return
+        }
+        
+        // Composite: lobster template + colored dot (bottom-right)
+        let size = lobster.size
+        let composite = NSImage(size: size)
+        composite.lockFocus()
+        
+        // Draw lobster
+        lobster.draw(in: NSRect(origin: .zero, size: size))
+        
+        // Draw colored dot (8×8pt, bottom-right corner)
+        let dotSize: CGFloat = 6
+        let dotRect = NSRect(
+            x: size.width - dotSize - 1,
+            y: 1,
+            width: dotSize,
+            height: dotSize
+        )
+        dotColor.setFill()
+        NSBezierPath(ovalIn: dotRect).fill()
+        
+        // White border for visibility
+        NSColor.white.withAlphaComponent(0.9).setStroke()
+        let borderPath = NSBezierPath(ovalIn: dotRect.insetBy(dx: 0.5, dy: 0.5))
+        borderPath.lineWidth = 1.0
+        borderPath.stroke()
+        
+        composite.unlockFocus()
+        composite.isTemplate = false // Must be false for the colored dot to show
+        button.image = composite
+    }
     
     func applicationWillTerminate(_ notification: Notification) {
-        // Explicitly disconnect and kill SSH tunnel process.
+        // Explicitly disconnect and kill SSH tunnel process for all hosts.
         // Without sandbox, child processes are no longer auto-killed on app exit.
-        networkManager?.disconnect()
+        if let hm = hostManager {
+            hm.disconnectAll()
+        } else {
+            networkManager?.disconnect()
+        }
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {

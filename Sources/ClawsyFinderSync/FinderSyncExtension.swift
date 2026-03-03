@@ -7,9 +7,9 @@ class FinderSyncExtension: FIFinderSync {
     override init() {
         super.init()
 
-        // Watch the shared folder (root + subfolders)
+        // Watch the active host's shared folder (root + subfolders)
         let defaults = UserDefaults(suiteName: "group.ai.openclaw.clawsy")
-        let rawPath = defaults?.string(forKey: "sharedFolderPath") ?? "~/Documents/Clawsy"
+        let rawPath = activeHostFolderPath(defaults: defaults)
         let expanded = (rawPath as NSString).expandingTildeInPath
         let root = URL(fileURLWithPath: expanded)
 
@@ -23,6 +23,24 @@ class FinderSyncExtension: FIFinderSync {
             }
         }
         FIFinderSyncController.default().directoryURLs = watched
+    }
+
+    /// Reads the active host's shared folder path from the new multi-host profiles,
+    /// falling back to the legacy key for backward compatibility.
+    private func activeHostFolderPath(defaults: UserDefaults?) -> String {
+        guard let defaults = defaults else { return "~/Documents/Clawsy" }
+
+        // Try multi-host: read activeHostId, then find matching profile
+        if let activeIdStr = defaults.string(forKey: "activeHostId"),
+           let _ = UUID(uuidString: activeIdStr),
+           let data = defaults.data(forKey: "hostProfiles"),
+           let profiles = try? JSONDecoder().decode([HostProfile].self, from: data),
+           let active = profiles.first(where: { $0.id.uuidString == activeIdStr }) {
+            return active.sharedFolderPath
+        }
+
+        // Fallback to legacy single-host key
+        return defaults.string(forKey: "sharedFolderPath") ?? "~/Documents/Clawsy"
     }
 
     // MARK: - Toolbar
@@ -101,9 +119,9 @@ class FinderSyncExtension: FIFinderSync {
             }
             return first.deletingLastPathComponent().path
         }
-        // Fall back to shared folder root
+        // Fall back to active host's shared folder
         let defaults = UserDefaults(suiteName: "group.ai.openclaw.clawsy")
-        let raw = defaults?.string(forKey: "sharedFolderPath") ?? "~/Documents/Clawsy"
+        let raw = activeHostFolderPath(defaults: defaults)
         return (raw as NSString).expandingTildeInPath
     }
 }

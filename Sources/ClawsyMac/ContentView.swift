@@ -3,8 +3,8 @@ import UserNotifications
 import ClawsyShared
 
 struct ContentView: View {
-    // Use Shared Network Manager
-    @StateObject private var network = NetworkManager()
+    // Host Manager — manages multiple hosts and their NetworkManagers
+    @StateObject private var hostManager = HostManager()
     @StateObject private var taskStore = TaskStore()
     @EnvironmentObject var appDelegate: AppDelegate
     
@@ -21,7 +21,7 @@ struct ContentView: View {
     @State private var showingOnboarding = false
     @AppStorage("onboardingCompleted") private var onboardingCompleted = false
     
-    // Persistent Configuration (UI State only)
+    // Persistent Configuration (UI State only) — kept for legacy SettingsView compatibility
     @AppStorage("serverHost", store: SharedConfig.sharedDefaults) private var serverHost = "agenthost"
     @AppStorage("serverPort", store: SharedConfig.sharedDefaults) private var serverPort = "18789"
     @AppStorage("serverToken", store: SharedConfig.sharedDefaults) private var serverToken = ""
@@ -33,14 +33,35 @@ struct ContentView: View {
     @State private var fileWatcher: FileWatcher?
     @State private var agentModel: String? = nil
     @State private var agentName: String? = nil
+
+    /// Convenience: the active NetworkManager from the host manager
+    private var network: NetworkManager {
+        hostManager.activeNetworkManager ?? NetworkManager()
+    }
     
     var body: some View {
         VStack(spacing: 0) {
+            // --- Host Switcher (only visible with 2+ hosts) ---
+            if hostManager.profiles.count > 1 {
+                HostSwitcherView(hostManager: hostManager)
+                    .padding(.horizontal, 12)
+                    .padding(.top, 10)
+                    .padding(.bottom, 4)
+                Divider().opacity(0.3)
+            }
+
             // --- Header & Status ---
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("APP_NAME", bundle: .clawsy)
-                        .font(.system(size: 13, weight: .semibold))
+                    HStack(spacing: 6) {
+                        Text("APP_NAME", bundle: .clawsy)
+                            .font(.system(size: 13, weight: .semibold))
+                        if let activeProfile = hostManager.activeProfile, hostManager.profiles.count > 1 {
+                            Text(activeProfile.name)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(Color(hex: activeProfile.color) ?? .secondary)
+                        }
+                    }
                     
                     Group {
                         if network.connectionStatus == "STATUS_CONNECTING" {
@@ -65,7 +86,7 @@ struct ContentView: View {
                 
                 Spacer()
                 
-                // Status Indicator
+                // Status Indicator — colored per active host
                 Circle()
                     .fill(getStatusColor())
                     .frame(width: 8, height: 8)
@@ -246,8 +267,10 @@ struct ContentView: View {
         }
         .frame(width: 240)
         .onAppear {
-            appDelegate.networkManager = network // Link for QuickSend
-            setupCallbacks()
+            // Link HostManager to AppDelegate for QuickSend, hotkeys, etc.
+            appDelegate.hostManager = hostManager
+            appDelegate.networkManager = hostManager.activeNetworkManager
+
             // Load cameras once on appear (not in body — AVCaptureDevice on main thread every render)
             DispatchQueue.global(qos: .userInitiated).async {
                 let cameras = CameraManager.listCameras()
@@ -263,43 +286,6 @@ struct ContentView: View {
                     }
                 }
             }
-            
-            // Validate Shared Folder
-            if !sharedFolderPath.isEmpty {
-                if !ClawsyFileManager.folderExists(at: sharedFolderPath) {
-                    let path = sharedFolderPath
-                    sharedFolderPath = ""
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        let content = UNMutableNotificationContent()
-                        content.title = NSLocalizedString("FOLDER_MISSING_TITLE", bundle: .clawsy, comment: "")
-                        content.body = String(format: NSLocalizedString("FOLDER_MISSING_BODY", bundle: .clawsy, comment: ""), path)
-                        content.sound = .default
-                        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
-                        UNUserNotificationCenter.current().add(request)
-                    }
-                }
-            }
-            
-            // Wire up agent info updates (primary: WebSocket agent.info event)
-            network.onAgentInfoUpdate = { model, name in
-                DispatchQueue.main.async {
-                    agentModel = model
-                    agentName = name
-                }
-            }
-
-            // Wire up task updates (primary: WebSocket agent.status event)
-            network.onTaskUpdate = { agent, title, progress, status in
-                taskStore.updateTask(agentName: agent, title: title, progress: progress, statusText: status)
-            }
-
-            // Auto-provision .clawsy files in shared folder
-            if !sharedFolderPath.isEmpty {
-                let resolved = sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
-                DispatchQueue.global(qos: .background).async {
-                    ClawsyManifestManager.provisionAll(in: resolved)
-                }
-            }
 
             // Listen for FinderSync actions via Darwin notification
             ActionBridge.observe {
@@ -308,35 +294,49 @@ struct ContentView: View {
                 }
             }
             
-
+            // Connect all configured hosts
+            if !hostManager.profiles.isEmpty {
+                hostManager.connectAll { nm, profile in
+                    setupCallbacksForHost(nm: nm, profile: profile)
+                }
+            } else if !serverHost.isEmpty && !serverToken.isEmpty {
+                // Legacy fallback: no profiles yet, use AppStorage values
+                // This path creates a single network manager directly
+                let legacyNM = NetworkManager()
+                setupCallbacksLegacy(legacyNM)
+                legacyNM.configure(host: serverHost, port: serverPort, token: serverToken, sshUser: sshUser, fallback: useSshFallback)
+                legacyNM.connect()
+                appDelegate.networkManager = legacyNM
+            }
             
-            // Auto-connect if configured
-            if !serverHost.isEmpty && !serverToken.isEmpty {
-                network.configure(host: serverHost, port: serverPort, token: serverToken, sshUser: sshUser, fallback: useSshFallback)
-                network.connect()
+            // Validate & provision active host's shared folder
+            if let active = hostManager.activeProfile, !active.sharedFolderPath.isEmpty {
+                let resolved = active.sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
+                if ClawsyFileManager.folderExists(at: resolved) {
+                    DispatchQueue.global(qos: .background).async {
+                        ClawsyManifestManager.provisionAll(in: resolved)
+                    }
+                }
             }
             
             setupFileWatcher()
+            appDelegate.updateMenuBarIcon()
         }
         .onChange(of: sharedFolderPath) { _ in
             setupFileWatcher()
         }
-        .onChange(of: network.isHandshakeComplete) { newValue in
-            if newValue {
-                // Auto-trigger sync event once paired
-                network.sendEvent(kind: "file.sync_triggered", payload: ["path": sharedFolderPath])
-            }
-        }
-        .onChange(of: network.isConnected) { connected in
-            if connected {
-                // Poll immediately on connect, then on schedule
-                network.startStatePoller()
-            } else {
-                // Connection lost — stop poller, clear stale tasks
-                network.stopStatePoller()
-                taskStore.clearAll()
-                agentModel = nil
-                agentName = nil
+        .onChange(of: hostManager.activeHostId) { _ in
+            // When active host changes, update AppDelegate references and menu bar icon
+            appDelegate.networkManager = hostManager.activeNetworkManager
+            appDelegate.updateMenuBarIcon()
+            setupFileWatcher()
+            // Clear agent info — it belongs to the previous host
+            agentModel = nil
+            agentName = nil
+            taskStore.clearAll()
+            // Start poller for the new active host
+            if let nm = hostManager.activeNetworkManager, nm.isConnected {
+                nm.startStatePoller()
             }
         }
         .sheet(isPresented: Binding(
@@ -356,35 +356,38 @@ struct ContentView: View {
     // --- Actions ---
     
     func handleFinderSyncAction(_ action: PendingAction) {
+        let activeNM = hostManager.activeNetworkManager
+        let activeFolderPath = hostManager.activeProfile?.sharedFolderPath ?? sharedFolderPath
+        
         switch action.kind {
         case "open_rule_editor":
             ruleEditorFolderPath = action.folderPath
         case "send_telemetry":
-            if network.isConnected {
+            if let nm = activeNM, nm.isConnected {
                 if let jsonString = ClawsyEnvelopeBuilder.build(type: "telemetry", content: "📡 Telemetrie von \(action.folderPath)", includeTelemetry: true) {
-                    network.sendServiceEvent(message: jsonString)
+                    nm.sendServiceEvent(message: jsonString)
                 }
             }
         case "run_actions":
-            guard network.isConnected else { break }
+            guard let nm = activeNM, nm.isConnected else { break }
             let folderURL = URL(fileURLWithPath: action.folderPath)
             let files = (try? FileManager.default.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: nil)) ?? []
             for fileURL in files {
                 let fileName = fileURL.lastPathComponent
                 guard !fileName.hasPrefix(".") else { continue }
                 let rules = ClawsyManifestManager.matchingRules(for: fileName, in: action.folderPath, trigger: "manual")
-                let resolvedPath = sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
+                let resolvedPath = activeFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
                 for rule in rules {
                     let relativePath = fileURL.path.replacingOccurrences(of: resolvedPath, with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
                     switch rule.action {
                     case "send_to_agent":
-                        network.sendEvent(kind: "file.rule_triggered", payload: [
+                        nm.sendEvent(kind: "file.rule_triggered", payload: [
                             "trigger": "manual",
                             "fileName": fileName,
                             "relativePath": relativePath,
                             "ruleId": rule.id,
                             "prompt": rule.prompt,
-                            "folderPath": self.sharedFolderPath
+                            "folderPath": activeFolderPath
                         ])
                     case "notify":
                         let content = UNMutableNotificationContent()
@@ -410,16 +413,20 @@ struct ContentView: View {
     
     func toggleConnection() {
         if network.isConnected {
-            network.disconnect()
+            hostManager.disconnectAll()
         } else {
-            network.configure(
-                host: serverHost, 
-                port: serverPort, 
-                token: serverToken, 
-                sshUser: sshUser, 
-                fallback: useSshFallback
-            )
-            network.connect()
+            if !hostManager.profiles.isEmpty {
+                hostManager.connectAll { nm, profile in
+                    setupCallbacksForHost(nm: nm, profile: profile)
+                }
+            } else {
+                // Legacy single-host path
+                let nm = NetworkManager()
+                setupCallbacksLegacy(nm)
+                nm.configure(host: serverHost, port: serverPort, token: serverToken, sshUser: sshUser, fallback: useSshFallback)
+                nm.connect()
+                appDelegate.networkManager = nm
+            }
         }
     }
     
@@ -452,6 +459,7 @@ struct ContentView: View {
     }
 
         func handleManualClipboardSend() {
+        guard let activeNM = hostManager.activeNetworkManager else { return }
         if let content = ClipboardManager.getClipboardContent() {
             var envelopeData: [String: Any] = [
                 "version": SharedConfig.versionDisplay,
@@ -470,7 +478,7 @@ struct ContentView: View {
             if let jsonData = try? JSONSerialization.data(withJSONObject: envelope),
                let jsonString = String(data: jsonData, encoding: .utf8) {
                 // Clipboard → clawsy-service only (silent background context)
-                network.sendServiceEvent(message: jsonString)
+                activeNM.sendServiceEvent(message: jsonString)
                 appDelegate.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
             }
         }
@@ -478,11 +486,15 @@ struct ContentView: View {
     
     func setupFileWatcher() {
         fileWatcher?.stop()
-        let resolvedPath = sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
-        guard !sharedFolderPath.isEmpty, ClawsyFileManager.folderExists(at: resolvedPath) else { return }
+        let activeFolderPath = hostManager.activeProfile?.sharedFolderPath ?? sharedFolderPath
+        let resolvedPath = activeFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
+        guard !activeFolderPath.isEmpty, ClawsyFileManager.folderExists(at: resolvedPath) else { return }
         
         let watcher = FileWatcher(url: URL(fileURLWithPath: resolvedPath))
-        watcher.typedCallback = { changedPath, eventType in
+        watcher.typedCallback = { [weak hostManager] changedPath, eventType in
+            guard let activeNM = hostManager?.activeNetworkManager else { return }
+            let activeFolder = hostManager?.activeProfile?.sharedFolderPath ?? ""
+
             // agent.status and agent.info are now delivered via WebSocket events (see onTaskUpdate / onAgentInfoUpdate)
             // Skip these files to avoid stale file reads
             if changedPath.hasSuffix(".agent_status.json") || changedPath.hasSuffix(".agent_info.json") {
@@ -506,13 +518,13 @@ struct ContentView: View {
                     case "send_to_agent":
                         // Send as node.event with event: "file.rule_triggered"
                         // Includes filename, rule id, prompt, and file path for agent processing
-                        network.sendEvent(kind: "file.rule_triggered", payload: [
+                        activeNM.sendEvent(kind: "file.rule_triggered", payload: [
                             "trigger": triggerName,
                             "fileName": fileName,
                             "relativePath": relativePath,
                             "ruleId": rule.id,
                             "prompt": rule.prompt,
-                            "folderPath": self.sharedFolderPath
+                            "folderPath": activeFolder
                         ])
                     case "notify":
                         DispatchQueue.main.async {
@@ -530,8 +542,8 @@ struct ContentView: View {
             }
 
             // General file sync event (always fires for non-hidden files)
-            network.sendEvent(kind: "file.sync_triggered", payload: [
-                "path": self.sharedFolderPath,
+            activeNM.sendEvent(kind: "file.sync_triggered", payload: [
+                "path": activeFolder,
                 "changedPath": relativePath,
                 "eventType": triggerName
             ])
@@ -540,10 +552,94 @@ struct ContentView: View {
         self.fileWatcher = watcher
     }
     
-    func setupCallbacks() {
+    /// Set up callbacks for a specific host's NetworkManager
+    func setupCallbacksForHost(nm: NetworkManager, profile: HostProfile) {
+        nm.onScreenshotRequested = { interactive, requestId in
+            DispatchQueue.main.async {
+                self.appDelegate.showScreenshotRequest(
+                    requestedInteractive: interactive,
+                    onConfirm: { userInteractive in
+                        if let b64 = ScreenshotManager.takeScreenshot(interactive: userInteractive) {
+                            nm.sendResponse(id: requestId, result: ["format": "jpeg", "base64": b64])
+                        } else {
+                            nm.sendError(id: requestId, code: -1, message: "Screenshot failed")
+                        }
+                    },
+                    onCancel: {
+                        nm.sendError(id: requestId, code: -1, message: "User denied screenshot")
+                    }
+                )
+            }
+        }
+        
+        nm.onClipboardReadRequested = { requestId in
+            if let content = ClipboardManager.getClipboardContent() {
+                nm.sendResponse(id: requestId, result: ["text": content])
+            } else {
+                nm.sendError(id: requestId, code: -1, message: "Clipboard empty or unavailable")
+            }
+        }
+        
+        nm.onClipboardWriteRequested = { content, requestId in
+            DispatchQueue.main.async {
+                self.appDelegate.showClipboardRequest(content: content, onConfirm: {
+                    ClipboardManager.setClipboardContent(content)
+                    nm.sendResponse(id: requestId, result: ["status": "ok"])
+                }, onCancel: {
+                    nm.sendError(id: requestId, code: -1, message: "User denied clipboard write")
+                })
+            }
+        }
+        
+        nm.onFileSyncRequested = { filename, operation, onConfirm, onCancel in
+            DispatchQueue.main.async {
+                self.appDelegate.showFileSyncRequest(filename: filename, operation: operation, onConfirm: { duration in
+                    onConfirm(duration)
+                }, onCancel: {
+                    onCancel()
+                })
+            }
+        }
+
+        nm.onCameraPreviewRequested = { image, onConfirm, onCancel in
+            self.appDelegate.showCameraPreview(image: image, onConfirm: onConfirm, onCancel: onCancel)
+        }
+        
+        // Wire agent info updates only for the active host
+        nm.onAgentInfoUpdate = { [weak self] model, name in
+            guard let self = self else { return }
+            // Only update UI if this is the active host
+            if nm.hostProfileId == self.hostManager.activeHostId {
+                DispatchQueue.main.async {
+                    self.agentModel = model
+                    self.agentName = name
+                }
+            }
+        }
+
+        nm.onTaskUpdate = { [weak self] agent, title, progress, status in
+            guard let self = self else { return }
+            if nm.hostProfileId == self.hostManager.activeHostId {
+                self.taskStore.updateTask(agentName: agent, title: title, progress: progress, statusText: status)
+            }
+        }
+        
+        // Start state poller when handshake completes
+        nm.onHandshakeComplete = { [weak self] in
+            guard let self = self else { return }
+            if nm.hostProfileId == self.hostManager.activeHostId {
+                nm.startStatePoller()
+            }
+            // Trigger file sync
+            nm.sendEvent(kind: "file.sync_triggered", payload: ["path": profile.sharedFolderPath])
+        }
+    }
+    
+    /// Legacy callback setup for single NetworkManager (no HostManager)
+    func setupCallbacksLegacy(_ network: NetworkManager) {
         network.onScreenshotRequested = { interactive, requestId in
             DispatchQueue.main.async {
-                appDelegate.showScreenshotRequest(
+                self.appDelegate.showScreenshotRequest(
                     requestedInteractive: interactive,
                     onConfirm: { userInteractive in
                         if let b64 = ScreenshotManager.takeScreenshot(interactive: userInteractive) {
@@ -569,7 +665,7 @@ struct ContentView: View {
         
         network.onClipboardWriteRequested = { content, requestId in
             DispatchQueue.main.async {
-                appDelegate.showClipboardRequest(content: content, onConfirm: {
+                self.appDelegate.showClipboardRequest(content: content, onConfirm: {
                     ClipboardManager.setClipboardContent(content)
                     network.sendResponse(id: requestId, result: ["status": "ok"])
                 }, onCancel: {
@@ -580,7 +676,7 @@ struct ContentView: View {
         
         network.onFileSyncRequested = { filename, operation, onConfirm, onCancel in
             DispatchQueue.main.async {
-                appDelegate.showFileSyncRequest(filename: filename, operation: operation, onConfirm: { duration in
+                self.appDelegate.showFileSyncRequest(filename: filename, operation: operation, onConfirm: { duration in
                     onConfirm(duration)
                 }, onCancel: {
                     onCancel()
@@ -589,7 +685,7 @@ struct ContentView: View {
         }
 
         network.onCameraPreviewRequested = { image, onConfirm, onCancel in
-            appDelegate.showCameraPreview(image: image, onConfirm: onConfirm, onCancel: onCancel)
+            self.appDelegate.showCameraPreview(image: image, onConfirm: onConfirm, onCancel: onCancel)
         }
     }
 }
@@ -1248,5 +1344,49 @@ struct CameraMenuView: View {
         }
         .padding(4)
         .frame(width: 220)
+    }
+}
+
+// MARK: - Host Switcher View (horizontal pill row)
+
+struct HostSwitcherView: View {
+    @ObservedObject var hostManager: HostManager
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(hostManager.profiles) { profile in
+                    let isActive = profile.id == hostManager.activeHostId
+                    let hostColor = Color(hex: profile.color) ?? .red
+
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            hostManager.switchActiveHost(to: profile.id)
+                        }
+                    }) {
+                        HStack(spacing: 5) {
+                            Circle()
+                                .fill(isActive ? .white : hostColor)
+                                .frame(width: 6, height: 6)
+                            Text(profile.name)
+                                .font(.system(size: 11, weight: isActive ? .semibold : .regular))
+                                .foregroundColor(isActive ? .white : hostColor)
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(
+                            Capsule()
+                                .fill(isActive ? hostColor : Color.clear)
+                        )
+                        .overlay(
+                            Capsule()
+                                .stroke(hostColor, lineWidth: isActive ? 0 : 1.5)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
     }
 }
