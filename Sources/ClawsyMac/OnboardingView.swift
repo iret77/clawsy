@@ -18,6 +18,12 @@ struct OnboardingView: View {
         isInApplications && (isAccessibilityGranted || accessibilityUserConfirmed)
     }
 
+    /// True if accessibility was previously requested (persisted across launches)
+    private var accessibilityPreviouslyRequested: Bool {
+        get { UserDefaults.standard.bool(forKey: "clawsy_accessibility_requested") }
+        nonmutating set { UserDefaults.standard.set(newValue, forKey: "clawsy_accessibility_requested") }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -191,8 +197,13 @@ struct OnboardingView: View {
         isInApplications = Bundle.main.bundlePath.hasPrefix("/Applications")
         let trusted = AXIsProcessTrusted()
         isAccessibilityGranted = trusted
-        // If user just granted, no longer need the "restart" hint
-        if trusted { accessibilityJustRequested = false }
+        // If already trusted: clear restart hint
+        if trusted {
+            accessibilityJustRequested = false
+        } else if accessibilityPreviouslyRequested {
+            // Was previously requested and enabled in Settings, but process needs restart
+            accessibilityJustRequested = true
+        }
         checkFinderSyncStatus()
         isShareOnboarded = UserDefaults.standard.bool(forKey: "clawsy_share_onboarded")
     }
@@ -224,6 +235,8 @@ struct OnboardingView: View {
     private func requestAccessibility() {
         let options = [kAXTrustedCheckOptionPrompt.takeRetainedValue(): true] as CFDictionary
         AXIsProcessTrustedWithOptions(options)
+        // Mark as requested so future launches show "restart needed" immediately
+        accessibilityPreviouslyRequested = true
         // After user dismisses the system dialog, show "restart" hint
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             if !AXIsProcessTrusted() {
