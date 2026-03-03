@@ -215,3 +215,4 @@
 
 "ACCESSIBILITY_GRANTED" = "Accessibility granted";
 "GRANT_ACCESSIBILITY" = "Grant Accessibility";
+"ONBOARDING_FINDERSYNC_HINT" = "In System Settings: Anmeldeobjekte & Erweiterungen → Finder → Clawsy aktivieren";

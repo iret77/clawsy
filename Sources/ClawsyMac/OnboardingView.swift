@@ -8,6 +8,7 @@ struct OnboardingView: View {
     @State private var isInApplications = false
     @State private var isAccessibilityGranted = false
     @State private var isFinderSyncRunning = false
+    @State private var showFinderSyncHint = false
     @State private var isShareOnboarded = false
     @State private var refreshTimer: Timer?
     @State private var accessibilityJustRequested = false
@@ -113,16 +114,19 @@ struct OnboardingView: View {
                         actionLabel: isFinderSyncRunning ? "" : NSLocalizedString("ONBOARDING_ENABLE", bundle: .clawsy, comment: ""),
                         action: enableFinderSync
                     )
-                    if !isFinderSyncRunning {
-                        HStack {
-                            Spacer()
-                            Button(action: openFinderSyncSettings) {
-                                Label(NSLocalizedString("ONBOARDING_FINDERSYNC_OPEN_SETTINGS", bundle: .clawsy, comment: ""), systemImage: "gear")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
-                            }
-                            .buttonStyle(.plain)
+                    if !isFinderSyncRunning && showFinderSyncHint {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.right.circle.fill")
+                                .font(.system(size: 11))
+                                .foregroundColor(.blue)
+                            Text("ONBOARDING_FINDERSYNC_HINT", bundle: .clawsy)
+                                .font(.system(size: 11))
+                                .foregroundColor(.blue)
                         }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(Color.blue.opacity(0.08))
+                        .cornerRadius(6)
                     }
                 }
 
@@ -242,13 +246,17 @@ struct OnboardingView: View {
     }
 
     private func openFinderSyncSettings() {
+        // macOS 13+ (Ventura/Sonoma/Sequoia): Login Items & Extensions
+        // macOS 12 and below: old Extensions pane
         let urls = [
-            "x-apple.systempreferences:com.apple.preferences.extensions.FinderSync",
-            "x-apple.systempreferences:com.apple.ExtensionsPreferences?Finder"
+            "x-apple.systempreferences:com.apple.LoginItems-Settings.extension",
+            "x-apple.systempreferences:com.apple.ExtensionsPreferences",
+            "x-apple.systempreferences:com.apple.preferences.extensions"
         ]
         for urlString in urls {
             if let url = URL(string: urlString) {
                 NSWorkspace.shared.open(url)
+                showFinderSyncHint = true
                 return
             }
         }
@@ -269,21 +277,11 @@ struct OnboardingView: View {
         try? task.run()
         task.waitUntilExit()
 
-        // Recheck after short delay; if still not active, open Finder Extensions pane
+        // Recheck after short delay; if still not active, open Settings with hint
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             checkFinderSyncStatus()
             if !isFinderSyncRunning {
-                // Open specifically the Finder Extensions panel (not generic Extensions)
-                let urls = [
-                    "x-apple.systempreferences:com.apple.preferences.extensions.FinderSync",
-                    "x-apple.systempreferences:com.apple.ExtensionsPreferences?Finder"
-                ]
-                for urlString in urls {
-                    if let url = URL(string: urlString) {
-                        NSWorkspace.shared.open(url)
-                        break
-                    }
-                }
+                openFinderSyncSettings()
             }
         }
     }
