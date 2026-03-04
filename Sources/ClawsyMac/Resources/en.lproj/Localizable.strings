@@ -234,6 +234,11 @@
 "REPAIR_CONNECTION" = "Re-Pair Device";
 "REPAIR_CONNECTION_HELP" = "Use if the connection is rejected after a gateway restart. Clears the stored device token and initiates fresh pairing.";
 
+// Settings tabs
+"SETTINGS_TAB_CONNECTION" = "Connection";
+"SETTINGS_TAB_FEATURES" = "Features";
+"SETTINGS_TAB_UPDATES" = "Updates";
+
 // HUD keys
 "SCREENSHOT_FAILED" = "Screenshot failed";
 "CAPTURE_FAILED" = "Capture failed";

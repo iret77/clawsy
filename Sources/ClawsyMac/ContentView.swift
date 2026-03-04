@@ -952,6 +952,7 @@ struct SettingsView: View {
     @State private var showingAddHost = false
     @State private var hostToDelete: HostProfile? = nil
     @State private var showDeleteConfirm = false
+    @State private var selectedTab = 0
 
     // Non-host global settings (shared across all hosts)
     @AppStorage("extendedContextEnabled", store: SharedConfig.sharedDefaults) private var extendedContextEnabled = false
@@ -1062,424 +1063,462 @@ struct SettingsView: View {
 
             Divider().opacity(0.3)
 
-            // Content
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+            // Content — Tabbed Layout
+            TabView(selection: $selectedTab) {
 
-                    // ── Host Management Section ──────────────────────────────
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Label(title: { Text(l10n: "HOSTS") }, icon: { Image(systemName: "server.rack") })
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(.indigo)
-                            Spacer()
-                            Button(action: { showingAddHost = true }) {
-                                Label(title: { Text(l10n: "ADD_HOST") }, icon: { Image(systemName: "plus.circle.fill") })
-                                    .font(.system(size: 11))
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                        }
+                // ━━ Tab 1: Connection ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
 
-                        ForEach(hostManager.profiles) { profile in
-                            let isActive = profile.id == hostManager.activeHostId
-                            let nm = hostManager.networkManagers[profile.id]
-                            let isConnected = nm?.isConnected ?? false
-                            let isConnecting = nm?.connectionStatus.contains("CONNECTING") ?? false || nm?.connectionStatus.contains("STARTING") ?? false
-                            let hostColor = Color(hex: profile.color) ?? .red
-
-                            HStack(spacing: 8) {
-                                // Color dot
-                                Circle().fill(hostColor).frame(width: 8, height: 8)
-
-                                // Name
-                                Text(profile.name.isEmpty ? profile.gatewayHost : profile.name)
-                                    .font(.system(size: 12, weight: isActive ? .semibold : .regular))
-                                    .lineLimit(1)
-
+                        // ── Host Management Section ──────────────────────────────
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Label(title: { Text(l10n: "HOSTS") }, icon: { Image(systemName: "server.rack") })
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.indigo)
                                 Spacer()
-
-                                // Connection status badge
-                                if isConnected {
-                                    Circle().fill(Color.green).frame(width: 6, height: 6)
-                                } else if isConnecting {
-                                    Circle().fill(Color.orange).frame(width: 6, height: 6)
-                                } else {
-                                    Circle().fill(Color.secondary.opacity(0.4)).frame(width: 6, height: 6)
-                                }
-
-                                // Active indicator
-                                if isActive {
-                                    Text(l10n: "ACTIVE")
-                                        .font(.system(size: 9, weight: .medium))
-                                        .foregroundColor(hostColor)
-                                        .padding(.horizontal, 5)
-                                        .padding(.vertical, 2)
-                                        .background(hostColor.opacity(0.12))
-                                        .cornerRadius(3)
-                                }
-
-                                // Delete button (disabled if only 1 host)
-                                Button(action: {
-                                    hostToDelete = profile
-                                    showDeleteConfirm = true
-                                }) {
-                                    Image(systemName: "trash")
+                                Button(action: { showingAddHost = true }) {
+                                    Label(title: { Text(l10n: "ADD_HOST") }, icon: { Image(systemName: "plus.circle.fill") })
                                         .font(.system(size: 11))
-                                        .foregroundColor(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                                .disabled(hostManager.profiles.count <= 1)
-                                .opacity(hostManager.profiles.count <= 1 ? 0.3 : 1.0)
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 7)
-                            .background(isActive ? hostColor.opacity(0.08) : Color.clear)
-                            .cornerRadius(7)
-                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(isActive ? hostColor.opacity(0.25) : Color.primary.opacity(0.06), lineWidth: 1))
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                if !isActive {
-                                    hostManager.updateHost(editedProfile) // save current edits first
-                                    hostManager.switchActiveHost(to: profile.id)
-                                    if let newActive = hostManager.activeProfile {
-                                        editedProfile = newActive
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Divider().opacity(0.3)
-
-                    // ── Gateway Section ──────────────────────────────────────
-                    VStack(alignment: .leading, spacing: 10) {
-                        Label(title: { Text(l10n: "GATEWAY") }, icon: { Image(systemName: "antenna.radiowaves.left.and.right") })
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.blue)
-
-                        // Host name + color picker row
-                        HStack(spacing: 8) {
-                            TextField(text: $editedProfile.name) {
-                                Text(l10n: "HOST_NAME")
-                            }
-                            .textFieldStyle(.roundedBorder)
-
-                            // Color picker — 8 preset circles
-                            HStack(spacing: 5) {
-                                ForEach(HostProfile.defaultColors, id: \.self) { hex in
-                                    let c = Color(hex: hex) ?? .red
-                                    let isSelected = editedProfile.color == hex
-                                    Circle()
-                                        .fill(c)
-                                        .frame(width: isSelected ? 16 : 12, height: isSelected ? 16 : 12)
-                                        .overlay(Circle().stroke(Color.primary.opacity(isSelected ? 0.4 : 0), lineWidth: 1.5))
-                                        .onTapGesture { editedProfile.color = hex }
-                                        .animation(.easeInOut(duration: 0.1), value: isSelected)
-                                }
-                            }
-                        }
-
-                        HStack(spacing: 8) {
-                            TextField(text: $editedProfile.gatewayHost) {
-                                Text(l10n: "HOST")
-                            }
-                            .textFieldStyle(.roundedBorder)
-                            .font(.system(.body, design: .monospaced))
-
-                            TextField(text: $editedProfile.gatewayPort) {
-                                Text(l10n: "PORT")
-                            }
-                            .textFieldStyle(.roundedBorder)
-                            .font(.system(.body, design: .monospaced))
-                            .frame(width: 80)
-                        }
-
-                        SecureField(text: $editedProfile.serverToken) {
-                            Text(l10n: "TOKEN")
-                        }
-                        .textFieldStyle(.roundedBorder)
-                        .font(.system(.body, design: .monospaced))
-
-                        // Re-Pair button — clears deviceToken and forces fresh pairing
-                        Button(action: {
-                            hostManager.repairActiveConnection()
-                        }) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "arrow.triangle.2.circlepath")
-                                    .font(.system(size: 12))
-                                Text(l10n: "REPAIR_CONNECTION")
-                                    .font(.system(size: 12, weight: .medium))
-                            }
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.regular)
-                        .help(NSLocalizedString("REPAIR_CONNECTION_HELP", bundle: .clawsy, comment: ""))
-                    }
-
-                    Divider().opacity(0.3)
-
-                    // SSH Fallback Section
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Label(title: { Text(l10n: "SSH_FALLBACK") }, icon: { Image(systemName: "lock.shield") })
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(.orange)
-                            Spacer()
-                            Toggle("", isOn: $editedProfile.useSshFallback)
-                                .toggleStyle(.switch)
-                                .scaleEffect(0.7)
-                        }
-
-                        TextField(text: $editedProfile.sshUser) {
-                            Text(l10n: "SSH_USER")
-                        }
-                        .textFieldStyle(.roundedBorder)
-                        .font(.system(.body, design: .monospaced))
-                        .disabled(!editedProfile.useSshFallback)
-                        .opacity(editedProfile.useSshFallback ? 1.0 : 0.5)
-
-                        Text(l10n: "SSH_FALLBACK_DESC")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    Divider().opacity(0.3)
-
-                    // Extended Context Section
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Label(title: { Text(l10n: "EXTENDED_CONTEXT") }, icon: { Image(systemName: "chart.bar.doc.horizontal") })
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(.cyan)
-                            
-                            Button(action: {}) {
-                                Image(systemName: "info.circle")
-                                    .font(.system(size: 12))
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundColor(.secondary)
-                            .help(NSLocalizedString("EXTENDED_CONTEXT_HELP", bundle: .clawsy, comment: ""))
-
-                            Spacer()
-                            Toggle("", isOn: $extendedContextEnabled)
-                                .toggleStyle(.switch)
-                                .scaleEffect(0.7)
-                        }
-                        
-                        Text(l10n: "EXTENDED_CONTEXT_DESC")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    
-                    Divider().opacity(0.3)
-                    
-                    // Hotkeys Section
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack(alignment: .center) {
-                            Label(title: { Text(l10n: "HOTKEYS") }, icon: { Image(systemName: "keyboard") })
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(.purple)
-                            Spacer()
-                            // Accessibility status badge + grant button
-                            if AXIsProcessTrusted() {
-                                Label(NSLocalizedString("ACCESSIBILITY_GRANTED", bundle: .clawsy, comment: ""), systemImage: "checkmark.circle.fill")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.green)
-                            } else {
-                                Button(action: {
-                                    NSApp.delegate.flatMap { $0 as? AppDelegate }?.requestAccessibilityPermission()
-                                }) {
-                                    Label(NSLocalizedString("GRANT_ACCESSIBILITY", bundle: .clawsy, comment: ""), systemImage: "exclamationmark.shield.fill")
-                                        .font(.system(size: 11))
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .tint(.orange)
-                                .controlSize(.small)
-                            }
-                        }
-                        
-                        HStack {
-                            Text(l10n: "HOTKEY_QUICK_SEND")
-                                .font(.system(size: 12))
-                            Spacer()
-                            Text("⌘ + ⇧ +")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.secondary)
-                            TextField("", text: $quickSendHotkey)
-                                .textFieldStyle(.roundedBorder)
-                                .font(.system(.body, design: .monospaced, weight: .bold))
-                                .frame(width: 44)
-                                .multilineTextAlignment(.center)
-                                .onChange(of: quickSendHotkey) { newValue in
-                                    if newValue.count > 1 {
-                                        quickSendHotkey = String(newValue.prefix(1)).uppercased()
-                                    } else {
-                                        quickSendHotkey = newValue.uppercased()
-                                    }
-                                }
-                        }
-                        
-                        HStack {
-                            Text(l10n: "HOTKEY_PUSH_CLIPBOARD")
-                                .font(.system(size: 12))
-                            Spacer()
-                            Text("⌘ + ⇧ +")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.secondary)
-                            TextField("", text: $pushClipboardHotkey)
-                                .textFieldStyle(.roundedBorder)
-                                .font(.system(.body, design: .monospaced, weight: .bold))
-                                .frame(width: 44)
-                                .multilineTextAlignment(.center)
-                                .onChange(of: pushClipboardHotkey) { newValue in
-                                    if newValue.count > 1 {
-                                        pushClipboardHotkey = String(newValue.prefix(1)).uppercased()
-                                    } else {
-                                        pushClipboardHotkey = newValue.uppercased()
-                                    }
-                                }
-                        }
-
-                        HStack {
-                            Text(l10n: "HOTKEY_CAMERA")
-                                .font(.system(size: 12))
-                            Spacer()
-                            Text("⌘ + ⇧ +")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.secondary)
-                            TextField("", text: $cameraHotkey)
-                                .textFieldStyle(.roundedBorder)
-                                .font(.system(.body, design: .monospaced, weight: .bold))
-                                .frame(width: 44)
-                                .multilineTextAlignment(.center)
-                                .onChange(of: cameraHotkey) { newValue in
-                                    cameraHotkey = String(newValue.prefix(1)).uppercased()
-                                }
-                        }
-
-                        HStack {
-                            Text(l10n: "HOTKEY_SCREENSHOT_FULL")
-                                .font(.system(size: 12))
-                            Spacer()
-                            Text("⌘ + ⇧ +")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.secondary)
-                            TextField("", text: $screenshotFullHotkey)
-                                .textFieldStyle(.roundedBorder)
-                                .font(.system(.body, design: .monospaced, weight: .bold))
-                                .frame(width: 44)
-                                .multilineTextAlignment(.center)
-                                .onChange(of: screenshotFullHotkey) { newValue in
-                                    screenshotFullHotkey = String(newValue.prefix(1)).uppercased()
-                                }
-                        }
-
-                        HStack {
-                            Text(l10n: "HOTKEY_SCREENSHOT_AREA")
-                                .font(.system(size: 12))
-                            Spacer()
-                            Text("⌘ + ⇧ +")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.secondary)
-                            TextField("", text: $screenshotAreaHotkey)
-                                .textFieldStyle(.roundedBorder)
-                                .font(.system(.body, design: .monospaced, weight: .bold))
-                                .frame(width: 44)
-                                .multilineTextAlignment(.center)
-                                .onChange(of: screenshotAreaHotkey) { newValue in
-                                    screenshotAreaHotkey = String(newValue.prefix(1)).uppercased()
-                                }
-                        }
-                    }
-                    
-                    Divider().opacity(0.3)
-                    
-                    // Updates Section
-                    VStack(alignment: .leading, spacing: 10) {
-                        Label(title: { Text(l10n: "UPDATES") }, icon: { Image(systemName: "arrow.triangle.2.circlepath") })
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.blue)
-                        
-                        HStack {
-                            Text(String(format: NSLocalizedString("CURRENT_VERSION %@", bundle: .clawsy, comment: ""), SharedConfig.versionDisplay))
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.secondary)
-                            
-                            Spacer()
-                            
-                            if updateManager.isChecking {
-                                ProgressView()
-                                    .scaleEffect(0.5)
-                            } else if updateManager.isInstalling {
-                                HStack(spacing: 6) {
-                                    ProgressView(value: updateManager.downloadProgress)
-                                        .frame(width: 80)
-                                    Text("\(Int(updateManager.downloadProgress * 100))%")
-                                        .font(.system(size: 11))
-                                        .foregroundColor(.secondary)
-                                }
-                            } else if updateManager.updateAvailable {
-                                Button(String(format: NSLocalizedString("INSTALL_VERSION %@", bundle: .clawsy, comment: ""), updateManager.updateVersion)) {
-                                    updateManager.downloadAndInstall()
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .tint(.green)
-                                .lineLimit(1)
-                                .fixedSize()
-                            } else {
-                                Button(action: { updateManager.checkForUpdates(silent: false) }) {
-                                    Label(title: { Text(l10n: "CHECK_NOW") }, icon: { Image(systemName: "arrow.clockwise") })
                                 }
                                 .buttonStyle(.bordered)
+                                .controlSize(.small)
+                            }
+
+                            ForEach(hostManager.profiles) { profile in
+                                let isActive = profile.id == hostManager.activeHostId
+                                let nm = hostManager.networkManagers[profile.id]
+                                let isConnected = nm?.isConnected ?? false
+                                let isConnecting = nm?.connectionStatus.contains("CONNECTING") ?? false || nm?.connectionStatus.contains("STARTING") ?? false
+                                let hostColor = Color(hex: profile.color) ?? .red
+
+                                HStack(spacing: 8) {
+                                    // Color dot
+                                    Circle().fill(hostColor).frame(width: 8, height: 8)
+
+                                    // Name
+                                    Text(profile.name.isEmpty ? profile.gatewayHost : profile.name)
+                                        .font(.system(size: 12, weight: isActive ? .semibold : .regular))
+                                        .lineLimit(1)
+
+                                    Spacer()
+
+                                    // Connection status badge
+                                    if isConnected {
+                                        Circle().fill(Color.green).frame(width: 6, height: 6)
+                                    } else if isConnecting {
+                                        Circle().fill(Color.orange).frame(width: 6, height: 6)
+                                    } else {
+                                        Circle().fill(Color.secondary.opacity(0.4)).frame(width: 6, height: 6)
+                                    }
+
+                                    // Active indicator
+                                    if isActive {
+                                        Text(l10n: "ACTIVE")
+                                            .font(.system(size: 9, weight: .medium))
+                                            .foregroundColor(hostColor)
+                                            .padding(.horizontal, 5)
+                                            .padding(.vertical, 2)
+                                            .background(hostColor.opacity(0.12))
+                                            .cornerRadius(3)
+                                    }
+
+                                    // Delete button (disabled if only 1 host)
+                                    Button(action: {
+                                        hostToDelete = profile
+                                        showDeleteConfirm = true
+                                    }) {
+                                        Image(systemName: "trash")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .disabled(hostManager.profiles.count <= 1)
+                                    .opacity(hostManager.profiles.count <= 1 ? 0.3 : 1.0)
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 7)
+                                .background(isActive ? hostColor.opacity(0.08) : Color.clear)
+                                .cornerRadius(7)
+                                .overlay(RoundedRectangle(cornerRadius: 7).stroke(isActive ? hostColor.opacity(0.25) : Color.primary.opacity(0.06), lineWidth: 1))
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    if !isActive {
+                                        hostManager.updateHost(editedProfile) // save current edits first
+                                        hostManager.switchActiveHost(to: profile.id)
+                                        if let newActive = hostManager.activeProfile {
+                                            editedProfile = newActive
+                                        }
+                                    }
+                                }
                             }
                         }
-                    }
-                    
-                    Divider().opacity(0.3)
-                    
-                    // File Sync Section
-                    VStack(alignment: .leading, spacing: 10) {
-                        Label(title: { Text(l10n: "SHARED_FOLDER") }, icon: { Image(systemName: "folder.badge.plus") })
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.green)
-                        
-                        // Path display
-                        Text(editedProfile.sharedFolderPath.isEmpty ? "None" : editedProfile.sharedFolderPath)
-                            .font(.system(size: 11, design: .monospaced))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.black.opacity(0.05))
-                            .cornerRadius(8)
-                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.1), lineWidth: 0.5))
-                            .foregroundColor(.primary)
 
-                        HStack(spacing: 8) {
-                            Button(action: selectFolder) {
-                                Label(title: { Text(l10n: "SELECT_FOLDER_BUTTON") }, icon: { Image(systemName: "folder.fill.badge.plus") })
+                        Divider().opacity(0.3)
+
+                        // ── Gateway Section ──────────────────────────────────────
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label(title: { Text(l10n: "GATEWAY") }, icon: { Image(systemName: "antenna.radiowaves.left.and.right") })
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.blue)
+
+                            // Host name + color picker row
+                            HStack(spacing: 8) {
+                                TextField(text: $editedProfile.name) {
+                                    Text(l10n: "HOST_NAME")
+                                }
+                                .textFieldStyle(.roundedBorder)
+
+                                // Color picker — 8 preset circles
+                                HStack(spacing: 5) {
+                                    ForEach(HostProfile.defaultColors, id: \.self) { hex in
+                                        let c = Color(hex: hex) ?? .red
+                                        let isSelected = editedProfile.color == hex
+                                        Circle()
+                                            .fill(c)
+                                            .frame(width: isSelected ? 16 : 12, height: isSelected ? 16 : 12)
+                                            .overlay(Circle().stroke(Color.primary.opacity(isSelected ? 0.4 : 0), lineWidth: 1.5))
+                                            .onTapGesture { editedProfile.color = hex }
+                                            .animation(.easeInOut(duration: 0.1), value: isSelected)
+                                    }
+                                }
+                            }
+
+                            HStack(spacing: 8) {
+                                TextField(text: $editedProfile.gatewayHost) {
+                                    Text(l10n: "HOST")
+                                }
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(.body, design: .monospaced))
+
+                                TextField(text: $editedProfile.gatewayPort) {
+                                    Text(l10n: "PORT")
+                                }
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(.body, design: .monospaced))
+                                .frame(width: 80)
+                            }
+
+                            SecureField(text: $editedProfile.serverToken) {
+                                Text(l10n: "TOKEN")
+                            }
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(.body, design: .monospaced))
+
+                            // Re-Pair button — clears deviceToken and forces fresh pairing
+                            Button(action: {
+                                hostManager.repairActiveConnection()
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "arrow.triangle.2.circlepath")
+                                        .font(.system(size: 12))
+                                    Text(l10n: "REPAIR_CONNECTION")
+                                        .font(.system(size: 12, weight: .medium))
+                                }
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.regular)
+                            .help(NSLocalizedString("REPAIR_CONNECTION_HELP", bundle: .clawsy, comment: ""))
+                        }
 
-                            if !editedProfile.sharedFolderPath.isEmpty {
-                                Button(action: {
-                                    let resolved = editedProfile.sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
-                                    NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: resolved)
-                                }) {
-                                    Label(title: { Text(l10n: "SHOW_IN_FINDER") }, icon: { Image(systemName: "magnifyingglass") })
+                        Divider().opacity(0.3)
+
+                        // SSH Fallback Section
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Label(title: { Text(l10n: "SSH_FALLBACK") }, icon: { Image(systemName: "lock.shield") })
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.orange)
+                                Spacer()
+                                Toggle("", isOn: $editedProfile.useSshFallback)
+                                    .toggleStyle(.switch)
+                                    .scaleEffect(0.7)
+                            }
+
+                            TextField(text: $editedProfile.sshUser) {
+                                Text(l10n: "SSH_USER")
+                            }
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(.body, design: .monospaced))
+                            .disabled(!editedProfile.useSshFallback)
+                            .opacity(editedProfile.useSshFallback ? 1.0 : 0.5)
+
+                            Text(l10n: "SSH_FALLBACK_DESC")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .padding(20)
+                }
+                .tag(0)
+                .tabItem {
+                    Label {
+                        Text(l10n: "SETTINGS_TAB_CONNECTION")
+                    } icon: {
+                        Image(systemName: "network")
+                    }
+                }
+
+                // ━━ Tab 2: Features ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+
+                        // Extended Context Section
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Label(title: { Text(l10n: "EXTENDED_CONTEXT") }, icon: { Image(systemName: "chart.bar.doc.horizontal") })
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.cyan)
+                                
+                                Button(action: {}) {
+                                    Image(systemName: "info.circle")
+                                        .font(.system(size: 12))
+                                }
+                                .buttonStyle(.plain)
+                                .foregroundColor(.secondary)
+                                .help(NSLocalizedString("EXTENDED_CONTEXT_HELP", bundle: .clawsy, comment: ""))
+
+                                Spacer()
+                                Toggle("", isOn: $extendedContextEnabled)
+                                    .toggleStyle(.switch)
+                                    .scaleEffect(0.7)
+                            }
+                            
+                            Text(l10n: "EXTENDED_CONTEXT_DESC")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        
+                        Divider().opacity(0.3)
+                        
+                        // Hotkeys Section
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(alignment: .center) {
+                                Label(title: { Text(l10n: "HOTKEYS") }, icon: { Image(systemName: "keyboard") })
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.purple)
+                                Spacer()
+                                // Accessibility status badge + grant button
+                                if AXIsProcessTrusted() {
+                                    Label(NSLocalizedString("ACCESSIBILITY_GRANTED", bundle: .clawsy, comment: ""), systemImage: "checkmark.circle.fill")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.green)
+                                } else {
+                                    Button(action: {
+                                        NSApp.delegate.flatMap { $0 as? AppDelegate }?.requestAccessibilityPermission()
+                                    }) {
+                                        Label(NSLocalizedString("GRANT_ACCESSIBILITY", bundle: .clawsy, comment: ""), systemImage: "exclamationmark.shield.fill")
+                                            .font(.system(size: 11))
+                                    }
+                                    .buttonStyle(.borderedProminent)
+                                    .tint(.orange)
+                                    .controlSize(.small)
+                                }
+                            }
+                            
+                            HStack {
+                                Text(l10n: "HOTKEY_QUICK_SEND")
+                                    .font(.system(size: 12))
+                                Spacer()
+                                Text("⌘ + ⇧ +")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                TextField("", text: $quickSendHotkey)
+                                    .textFieldStyle(.roundedBorder)
+                                    .font(.system(.body, design: .monospaced, weight: .bold))
+                                    .frame(width: 44)
+                                    .multilineTextAlignment(.center)
+                                    .onChange(of: quickSendHotkey) { newValue in
+                                        if newValue.count > 1 {
+                                            quickSendHotkey = String(newValue.prefix(1)).uppercased()
+                                        } else {
+                                            quickSendHotkey = newValue.uppercased()
+                                        }
+                                    }
+                            }
+                            
+                            HStack {
+                                Text(l10n: "HOTKEY_PUSH_CLIPBOARD")
+                                    .font(.system(size: 12))
+                                Spacer()
+                                Text("⌘ + ⇧ +")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                TextField("", text: $pushClipboardHotkey)
+                                    .textFieldStyle(.roundedBorder)
+                                    .font(.system(.body, design: .monospaced, weight: .bold))
+                                    .frame(width: 44)
+                                    .multilineTextAlignment(.center)
+                                    .onChange(of: pushClipboardHotkey) { newValue in
+                                        if newValue.count > 1 {
+                                            pushClipboardHotkey = String(newValue.prefix(1)).uppercased()
+                                        } else {
+                                            pushClipboardHotkey = newValue.uppercased()
+                                        }
+                                    }
+                            }
+
+                            HStack {
+                                Text(l10n: "HOTKEY_CAMERA")
+                                    .font(.system(size: 12))
+                                Spacer()
+                                Text("⌘ + ⇧ +")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                TextField("", text: $cameraHotkey)
+                                    .textFieldStyle(.roundedBorder)
+                                    .font(.system(.body, design: .monospaced, weight: .bold))
+                                    .frame(width: 44)
+                                    .multilineTextAlignment(.center)
+                                    .onChange(of: cameraHotkey) { newValue in
+                                        cameraHotkey = String(newValue.prefix(1)).uppercased()
+                                    }
+                            }
+
+                            HStack {
+                                Text(l10n: "HOTKEY_SCREENSHOT_FULL")
+                                    .font(.system(size: 12))
+                                Spacer()
+                                Text("⌘ + ⇧ +")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                TextField("", text: $screenshotFullHotkey)
+                                    .textFieldStyle(.roundedBorder)
+                                    .font(.system(.body, design: .monospaced, weight: .bold))
+                                    .frame(width: 44)
+                                    .multilineTextAlignment(.center)
+                                    .onChange(of: screenshotFullHotkey) { newValue in
+                                        screenshotFullHotkey = String(newValue.prefix(1)).uppercased()
+                                    }
+                            }
+
+                            HStack {
+                                Text(l10n: "HOTKEY_SCREENSHOT_AREA")
+                                    .font(.system(size: 12))
+                                Spacer()
+                                Text("⌘ + ⇧ +")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                TextField("", text: $screenshotAreaHotkey)
+                                    .textFieldStyle(.roundedBorder)
+                                    .font(.system(.body, design: .monospaced, weight: .bold))
+                                    .frame(width: 44)
+                                    .multilineTextAlignment(.center)
+                                    .onChange(of: screenshotAreaHotkey) { newValue in
+                                        screenshotAreaHotkey = String(newValue.prefix(1)).uppercased()
+                                    }
+                            }
+                        }
+                        
+                        Divider().opacity(0.3)
+                        
+                        // File Sync Section
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label(title: { Text(l10n: "SHARED_FOLDER") }, icon: { Image(systemName: "folder.badge.plus") })
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.green)
+                            
+                            // Path display
+                            Text(editedProfile.sharedFolderPath.isEmpty ? "None" : editedProfile.sharedFolderPath)
+                                .font(.system(size: 11, design: .monospaced))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color.black.opacity(0.05))
+                                .cornerRadius(8)
+                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.1), lineWidth: 0.5))
+                                .foregroundColor(.primary)
+
+                            HStack(spacing: 8) {
+                                Button(action: selectFolder) {
+                                    Label(title: { Text(l10n: "SELECT_FOLDER_BUTTON") }, icon: { Image(systemName: "folder.fill.badge.plus") })
                                 }
                                 .buttonStyle(.bordered)
                                 .controlSize(.regular)
+
+                                if !editedProfile.sharedFolderPath.isEmpty {
+                                    Button(action: {
+                                        let resolved = editedProfile.sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
+                                        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: resolved)
+                                    }) {
+                                        Label(title: { Text(l10n: "SHOW_IN_FINDER") }, icon: { Image(systemName: "magnifyingglass") })
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.regular)
+                                }
                             }
                         }
                     }
+                    .padding(20)
                 }
-                .padding(20)
+                .tag(1)
+                .tabItem {
+                    Label {
+                        Text(l10n: "SETTINGS_TAB_FEATURES")
+                    } icon: {
+                        Image(systemName: "gearshape.2")
+                    }
+                }
+
+                // ━━ Tab 3: Updates ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+
+                        // Updates Section
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label(title: { Text(l10n: "UPDATES") }, icon: { Image(systemName: "arrow.triangle.2.circlepath") })
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.blue)
+                            
+                            HStack {
+                                Text(String(format: NSLocalizedString("CURRENT_VERSION %@", bundle: .clawsy, comment: ""), SharedConfig.versionDisplay))
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                
+                                Spacer()
+                                
+                                if updateManager.isChecking {
+                                    ProgressView()
+                                        .scaleEffect(0.5)
+                                } else if updateManager.isInstalling {
+                                    HStack(spacing: 6) {
+                                        ProgressView(value: updateManager.downloadProgress)
+                                            .frame(width: 80)
+                                        Text("\(Int(updateManager.downloadProgress * 100))%")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.secondary)
+                                    }
+                                } else if updateManager.updateAvailable {
+                                    Button(String(format: NSLocalizedString("INSTALL_VERSION %@", bundle: .clawsy, comment: ""), updateManager.updateVersion)) {
+                                        updateManager.downloadAndInstall()
+                                    }
+                                    .buttonStyle(.borderedProminent)
+                                    .tint(.green)
+                                    .lineLimit(1)
+                                    .fixedSize()
+                                } else {
+                                    Button(action: { updateManager.checkForUpdates(silent: false) }) {
+                                        Label(title: { Text(l10n: "CHECK_NOW") }, icon: { Image(systemName: "arrow.clockwise") })
+                                    }
+                                    .buttonStyle(.bordered)
+                                }
+                            }
+                        }
+                    }
+                    .padding(20)
+                }
+                .tag(2)
+                .tabItem {
+                    Label {
+                        Text(l10n: "SETTINGS_TAB_UPDATES")
+                    } icon: {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                    }
+                }
             }
-            .background(Color.black.opacity(0.02))
+            .frame(minHeight: 300, maxHeight: 500)
             
             Divider().opacity(0.3)
             
