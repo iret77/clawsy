@@ -15,7 +15,7 @@ struct MissionControlView: View {
             // Header
             HStack {
                 if taskStore.tasks.isEmpty {
-                    Text("MISSION_CONTROL_TITLE", bundle: .clawsy)
+                    Text(l10n: "MISSION_CONTROL_TITLE")
                         .font(.headline)
                 } else {
                     Text(String(format: NSLocalizedString("MISSION_CONTROL_TITLE_COUNT", bundle: .clawsy, comment: ""), taskStore.tasks.count))
@@ -31,7 +31,7 @@ struct MissionControlView: View {
                     Image(systemName: "pause.circle.fill")
                         .font(.caption2)
                         .foregroundColor(.yellow)
-                    Text("MISSION_CONTROL_ALL_PAUSED", bundle: .clawsy)
+                    Text(l10n: "MISSION_CONTROL_ALL_PAUSED")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -43,10 +43,10 @@ struct MissionControlView: View {
                         Image(systemName: "tray")
                             .font(.system(size: 32))
                             .foregroundColor(.secondary.opacity(0.5))
-                        Text("MISSION_CONTROL_EMPTY", bundle: .clawsy)
+                        Text(l10n: "MISSION_CONTROL_EMPTY")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                        Text("MISSION_CONTROL_EMPTY_HINT", bundle: .clawsy)
+                        Text(l10n: "MISSION_CONTROL_EMPTY_HINT")
                             .font(.caption)
                             .foregroundColor(.secondary.opacity(0.7))
                             .multilineTextAlignment(.center)
@@ -56,7 +56,7 @@ struct MissionControlView: View {
                     VStack(spacing: 12) {
                         ProgressView()
                             .scaleEffect(0.8)
-                        Text("WAITING_FOR_TASKS", bundle: .clawsy)
+                        Text(l10n: "WAITING_FOR_TASKS")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -174,7 +174,7 @@ struct TaskRowView: View {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
                         .font(.system(size: 14))
-                    Text("MISSION_CONTROL_COMPLETE", bundle: .clawsy)
+                    Text(l10n: "MISSION_CONTROL_COMPLETE")
                         .font(.caption)
                         .foregroundColor(.green)
                     Spacer()

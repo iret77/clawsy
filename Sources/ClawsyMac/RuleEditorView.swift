@@ -27,7 +27,7 @@ struct RuleEditorView: View {
                 Image(systemName: "folder.badge.gearshape")
                     .foregroundColor(.accentColor)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("RULE_EDITOR_TITLE", bundle: .clawsy)
+                    Text(l10n: "RULE_EDITOR_TITLE")
                         .font(.system(size: 13, weight: .semibold))
                     Text(folderDisplayName)
                         .font(.system(size: 11))
@@ -51,10 +51,10 @@ struct RuleEditorView: View {
                     Image(systemName: "list.bullet.rectangle")
                         .font(.system(size: 28))
                         .foregroundColor(.secondary.opacity(0.4))
-                    Text("RULE_EDITOR_EMPTY", bundle: .clawsy)
+                    Text(l10n: "RULE_EDITOR_EMPTY")
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
-                    Text("RULE_EDITOR_EMPTY_HINT", bundle: .clawsy)
+                    Text(l10n: "RULE_EDITOR_EMPTY_HINT")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary.opacity(0.7))
                         .multilineTextAlignment(.center)
@@ -87,7 +87,7 @@ struct RuleEditorView: View {
                     editingRule = newRule
                 }) {
                     Label {
-                        Text("RULE_ADD", bundle: .clawsy)
+                        Text(l10n: "RULE_ADD")
                     } icon: {
                         Image(systemName: "plus.circle.fill")
                     }
@@ -98,7 +98,7 @@ struct RuleEditorView: View {
 
                 Spacer()
 
-                Text("RULE_COUNT \(manifest.rules.count)", bundle: .clawsy)
+                Text(String(format: NSLocalizedString("RULE_COUNT %lld", bundle: .clawsy, comment: ""), manifest.rules.count))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
@@ -198,17 +198,17 @@ struct RuleEditSheet: View {
 
             Form {
                 Picker(String(localized: "RULE_TRIGGER", bundle: .clawsy), selection: $rule.trigger) {
-                    Text("RULE_TRIGGER_FILE_ADDED", bundle: .clawsy).tag("file_added")
-                    Text("RULE_TRIGGER_FILE_CHANGED", bundle: .clawsy).tag("file_changed")
-                    Text("RULE_TRIGGER_MANUAL", bundle: .clawsy).tag("manual")
+                    Text(l10n: "RULE_TRIGGER_FILE_ADDED").tag("file_added")
+                    Text(l10n: "RULE_TRIGGER_FILE_CHANGED").tag("file_changed")
+                    Text(l10n: "RULE_TRIGGER_MANUAL").tag("manual")
                 }
 
                 TextField("Filter (z.B. *.pdf)", text: $rule.filter)
                     .font(.system(.body, design: .monospaced))
 
                 Picker(String(localized: "RULE_ACTION", bundle: .clawsy), selection: $rule.action) {
-                    Text("RULE_ACTION_SEND_TO_AGENT", bundle: .clawsy).tag("send_to_agent")
-                    Text("RULE_ACTION_NOTIFY", bundle: .clawsy).tag("notify")
+                    Text(l10n: "RULE_ACTION_SEND_TO_AGENT").tag("send_to_agent")
+                    Text(l10n: "RULE_ACTION_NOTIFY").tag("notify")
                 }
 
                 if rule.action == "send_to_agent" {
@@ -219,7 +219,7 @@ struct RuleEditSheet: View {
 
             HStack {
                 Button(action: { dismiss() }) {
-                    Text("CANCEL", bundle: .clawsy)
+                    Text(l10n: "CANCEL")
                 }
                 .keyboardShortcut(.cancelAction)
                 Spacer()
@@ -227,7 +227,7 @@ struct RuleEditSheet: View {
                     onSave(rule)
                     dismiss()
                 }) {
-                    Text("RULE_SAVE", bundle: .clawsy)
+                    Text(l10n: "RULE_SAVE")
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)

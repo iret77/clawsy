@@ -9,7 +9,7 @@ struct ClawsyApp: App {
     var body: some Scene {
         Settings {
             VStack {
-                Text("SETTINGS_WINDOW_TITLE", bundle: .clawsy)
+                Text(l10n: "SETTINGS_WINDOW_TITLE")
                 let format = NSLocalizedString("VERSION_FORMAT %@", tableName: nil, bundle: .clawsy, value: "Clawsy %@", comment: "Version format string")
                 Text(String(format: format, SharedConfig.versionDisplay))
             }

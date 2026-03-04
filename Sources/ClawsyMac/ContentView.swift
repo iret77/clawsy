@@ -56,7 +56,7 @@ struct ContentView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        Text("APP_NAME", bundle: .clawsy)
+                        Text(l10n: "APP_NAME")
                             .font(.system(size: 13, weight: .semibold))
                         if let activeProfile = hostManager.activeProfile {
                             Text(activeProfile.name.isEmpty ? activeProfile.gatewayHost : activeProfile.name)
@@ -67,7 +67,7 @@ struct ContentView: View {
                     
                     Group {
                         if hostManager.connectionStatus == "STATUS_CONNECTING" {
-                            Text("STATUS_CONNECTING \(hostManager.connectionAttemptCount)", bundle: .clawsy)
+                            Text(String(format: NSLocalizedString("STATUS_CONNECTING %lld", bundle: .clawsy, comment: ""), hostManager.connectionAttemptCount))
                         } else {
                             Text(LocalizedStringKey(hostManager.connectionStatus), bundle: .clawsy)
                         }
@@ -765,7 +765,7 @@ struct DebugLogView: View {
             // Header
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("DEBUG_LOG_TITLE", bundle: .clawsy)
+                    Text(l10n: "DEBUG_LOG_TITLE")
                         .font(.system(size: 15, weight: .bold))
                     Text(SharedConfig.versionDisplay)
                         .font(.system(size: 10, design: .monospaced))
@@ -788,7 +788,7 @@ struct DebugLogView: View {
             // Log Content
             ScrollView {
                 if logText.isEmpty {
-                    Text("NO_DATA", bundle: .clawsy)
+                    Text(l10n: "NO_DATA")
                         .font(.system(.caption, design: .monospaced))
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -807,7 +807,7 @@ struct DebugLogView: View {
             
             // Footer
             HStack {
-                Text("SELECT_TEXT_COPY", bundle: .clawsy)
+                Text(l10n: "SELECT_TEXT_COPY")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                 Spacer()
@@ -815,7 +815,7 @@ struct DebugLogView: View {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(logText, forType: .string)
                 }) {
-                    Text("COPY_ALL", bundle: .clawsy)
+                    Text(l10n: "COPY_ALL")
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
@@ -842,7 +842,7 @@ struct MetadataView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
             HStack(alignment: .center) {
-                Label(title: { Text("LAST_METADATA", bundle: .clawsy) }, icon: { Image(systemName: "info.circle.fill") })
+                Label(title: { Text(l10n: "LAST_METADATA") }, icon: { Image(systemName: "info.circle.fill") })
                     .font(.system(size: 15, weight: .bold))
                 Spacer()
                 Button(action: { isPresented = false }) {
@@ -868,7 +868,7 @@ struct MetadataView: View {
                     
                     if SharedConfig.extendedContextEnabled {
                         Divider().padding(.vertical, 4).opacity(0.3)
-                        Text("EXTENDED_CONTEXT", bundle: .clawsy)
+                        Text(l10n: "EXTENDED_CONTEXT")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.cyan)
                         
@@ -894,7 +894,7 @@ struct MetadataView: View {
                             MetadataRow(label: "User Mood", value: moodString(for: mood))
                         }
                     } else {
-                        Text("EXTENDED_CONTEXT_DISABLED", bundle: .clawsy)
+                        Text(l10n: "EXTENDED_CONTEXT_DISABLED")
                             .font(.system(size: 10).italic())
                             .foregroundColor(.secondary)
                             .padding(.top, 4)
@@ -908,7 +908,7 @@ struct MetadataView: View {
             
             // Footer
             HStack {
-                Text("METADATA_VIEW_DESC", bundle: .clawsy)
+                Text(l10n: "METADATA_VIEW_DESC")
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
                 Spacer()
@@ -1046,7 +1046,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
             HStack(alignment: .center) {
-                Text("SETTINGS_TITLE", bundle: .clawsy)
+                Text(l10n: "SETTINGS_TITLE")
                     .font(.system(size: 15, weight: .bold))
                 Spacer()
                 Button(action: saveAndDismiss) {
@@ -1069,12 +1069,12 @@ struct SettingsView: View {
                     // ── Host Management Section ──────────────────────────────
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Label(title: { Text("HOSTS", bundle: .clawsy) }, icon: { Image(systemName: "server.rack") })
+                            Label(title: { Text(l10n: "HOSTS") }, icon: { Image(systemName: "server.rack") })
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(.indigo)
                             Spacer()
                             Button(action: { showingAddHost = true }) {
-                                Label(title: { Text("ADD_HOST", bundle: .clawsy) }, icon: { Image(systemName: "plus.circle.fill") })
+                                Label(title: { Text(l10n: "ADD_HOST") }, icon: { Image(systemName: "plus.circle.fill") })
                                     .font(.system(size: 11))
                             }
                             .buttonStyle(.bordered)
@@ -1110,7 +1110,7 @@ struct SettingsView: View {
 
                                 // Active indicator
                                 if isActive {
-                                    Text("ACTIVE", bundle: .clawsy)
+                                    Text(l10n: "ACTIVE")
                                         .font(.system(size: 9, weight: .medium))
                                         .foregroundColor(hostColor)
                                         .padding(.horizontal, 5)
@@ -1154,14 +1154,14 @@ struct SettingsView: View {
 
                     // ── Gateway Section ──────────────────────────────────────
                     VStack(alignment: .leading, spacing: 10) {
-                        Label(title: { Text("GATEWAY", bundle: .clawsy) }, icon: { Image(systemName: "antenna.radiowaves.left.and.right") })
+                        Label(title: { Text(l10n: "GATEWAY") }, icon: { Image(systemName: "antenna.radiowaves.left.and.right") })
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.blue)
 
                         // Host name + color picker row
                         HStack(spacing: 8) {
                             TextField(text: $editedProfile.name) {
-                                Text("HOST_NAME", bundle: .clawsy)
+                                Text(l10n: "HOST_NAME")
                             }
                             .textFieldStyle(.roundedBorder)
 
@@ -1182,13 +1182,13 @@ struct SettingsView: View {
 
                         HStack(spacing: 8) {
                             TextField(text: $editedProfile.gatewayHost) {
-                                Text("HOST", bundle: .clawsy)
+                                Text(l10n: "HOST")
                             }
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
 
                             TextField(text: $editedProfile.gatewayPort) {
-                                Text("PORT", bundle: .clawsy)
+                                Text(l10n: "PORT")
                             }
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
@@ -1196,7 +1196,7 @@ struct SettingsView: View {
                         }
 
                         SecureField(text: $editedProfile.serverToken) {
-                            Text("TOKEN", bundle: .clawsy)
+                            Text(l10n: "TOKEN")
                         }
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
@@ -1208,7 +1208,7 @@ struct SettingsView: View {
                             HStack(spacing: 6) {
                                 Image(systemName: "arrow.triangle.2.circlepath")
                                     .font(.system(size: 12))
-                                Text("REPAIR_CONNECTION", bundle: .clawsy)
+                                Text(l10n: "REPAIR_CONNECTION")
                                     .font(.system(size: 12, weight: .medium))
                             }
                         }
@@ -1222,7 +1222,7 @@ struct SettingsView: View {
                     // SSH Fallback Section
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Label(title: { Text("SSH_FALLBACK", bundle: .clawsy) }, icon: { Image(systemName: "lock.shield") })
+                            Label(title: { Text(l10n: "SSH_FALLBACK") }, icon: { Image(systemName: "lock.shield") })
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(.orange)
                             Spacer()
@@ -1232,14 +1232,14 @@ struct SettingsView: View {
                         }
 
                         TextField(text: $editedProfile.sshUser) {
-                            Text("SSH_USER", bundle: .clawsy)
+                            Text(l10n: "SSH_USER")
                         }
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
                         .disabled(!editedProfile.useSshFallback)
                         .opacity(editedProfile.useSshFallback ? 1.0 : 0.5)
 
-                        Text("SSH_FALLBACK_DESC", bundle: .clawsy)
+                        Text(l10n: "SSH_FALLBACK_DESC")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -1250,7 +1250,7 @@ struct SettingsView: View {
                     // Extended Context Section
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Label(title: { Text("EXTENDED_CONTEXT", bundle: .clawsy) }, icon: { Image(systemName: "chart.bar.doc.horizontal") })
+                            Label(title: { Text(l10n: "EXTENDED_CONTEXT") }, icon: { Image(systemName: "chart.bar.doc.horizontal") })
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(.cyan)
                             
@@ -1268,7 +1268,7 @@ struct SettingsView: View {
                                 .scaleEffect(0.7)
                         }
                         
-                        Text("EXTENDED_CONTEXT_DESC", bundle: .clawsy)
+                        Text(l10n: "EXTENDED_CONTEXT_DESC")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -1279,7 +1279,7 @@ struct SettingsView: View {
                     // Hotkeys Section
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(alignment: .center) {
-                            Label(title: { Text("HOTKEYS", bundle: .clawsy) }, icon: { Image(systemName: "keyboard") })
+                            Label(title: { Text(l10n: "HOTKEYS") }, icon: { Image(systemName: "keyboard") })
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(.purple)
                             Spacer()
@@ -1302,7 +1302,7 @@ struct SettingsView: View {
                         }
                         
                         HStack {
-                            Text("HOTKEY_QUICK_SEND", bundle: .clawsy)
+                            Text(l10n: "HOTKEY_QUICK_SEND")
                                 .font(.system(size: 12))
                             Spacer()
                             Text("⌘ + ⇧ +")
@@ -1323,7 +1323,7 @@ struct SettingsView: View {
                         }
                         
                         HStack {
-                            Text("HOTKEY_PUSH_CLIPBOARD", bundle: .clawsy)
+                            Text(l10n: "HOTKEY_PUSH_CLIPBOARD")
                                 .font(.system(size: 12))
                             Spacer()
                             Text("⌘ + ⇧ +")
@@ -1344,7 +1344,7 @@ struct SettingsView: View {
                         }
 
                         HStack {
-                            Text("HOTKEY_CAMERA", bundle: .clawsy)
+                            Text(l10n: "HOTKEY_CAMERA")
                                 .font(.system(size: 12))
                             Spacer()
                             Text("⌘ + ⇧ +")
@@ -1361,7 +1361,7 @@ struct SettingsView: View {
                         }
 
                         HStack {
-                            Text("HOTKEY_SCREENSHOT_FULL", bundle: .clawsy)
+                            Text(l10n: "HOTKEY_SCREENSHOT_FULL")
                                 .font(.system(size: 12))
                             Spacer()
                             Text("⌘ + ⇧ +")
@@ -1378,7 +1378,7 @@ struct SettingsView: View {
                         }
 
                         HStack {
-                            Text("HOTKEY_SCREENSHOT_AREA", bundle: .clawsy)
+                            Text(l10n: "HOTKEY_SCREENSHOT_AREA")
                                 .font(.system(size: 12))
                             Spacer()
                             Text("⌘ + ⇧ +")
@@ -1399,7 +1399,7 @@ struct SettingsView: View {
                     
                     // Updates Section
                     VStack(alignment: .leading, spacing: 10) {
-                        Label(title: { Text("UPDATES", bundle: .clawsy) }, icon: { Image(systemName: "arrow.triangle.2.circlepath") })
+                        Label(title: { Text(l10n: "UPDATES") }, icon: { Image(systemName: "arrow.triangle.2.circlepath") })
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.blue)
                         
@@ -1431,7 +1431,7 @@ struct SettingsView: View {
                                 .fixedSize()
                             } else {
                                 Button(action: { updateManager.checkForUpdates(silent: false) }) {
-                                    Label(title: { Text("CHECK_NOW", bundle: .clawsy) }, icon: { Image(systemName: "arrow.clockwise") })
+                                    Label(title: { Text(l10n: "CHECK_NOW") }, icon: { Image(systemName: "arrow.clockwise") })
                                 }
                                 .buttonStyle(.bordered)
                             }
@@ -1442,7 +1442,7 @@ struct SettingsView: View {
                     
                     // File Sync Section
                     VStack(alignment: .leading, spacing: 10) {
-                        Label(title: { Text("SHARED_FOLDER", bundle: .clawsy) }, icon: { Image(systemName: "folder.badge.plus") })
+                        Label(title: { Text(l10n: "SHARED_FOLDER") }, icon: { Image(systemName: "folder.badge.plus") })
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.green)
                         
@@ -1459,7 +1459,7 @@ struct SettingsView: View {
 
                         HStack(spacing: 8) {
                             Button(action: selectFolder) {
-                                Label(title: { Text("SELECT_FOLDER_BUTTON", bundle: .clawsy) }, icon: { Image(systemName: "folder.fill.badge.plus") })
+                                Label(title: { Text(l10n: "SELECT_FOLDER_BUTTON") }, icon: { Image(systemName: "folder.fill.badge.plus") })
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.regular)
@@ -1469,7 +1469,7 @@ struct SettingsView: View {
                                     let resolved = editedProfile.sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
                                     NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: resolved)
                                 }) {
-                                    Label(title: { Text("SHOW_IN_FINDER", bundle: .clawsy) }, icon: { Image(systemName: "magnifyingglass") })
+                                    Label(title: { Text(l10n: "SHOW_IN_FINDER") }, icon: { Image(systemName: "magnifyingglass") })
                                 }
                                 .buttonStyle(.bordered)
                                 .controlSize(.regular)
@@ -1508,7 +1508,7 @@ struct SettingsView: View {
 
                     Spacer()
 
-                    Text("VIBRANT_SECURE", bundle: .clawsy)
+                    Text(l10n: "VIBRANT_SECURE")
                         .font(.system(size: 10))
                         .foregroundColor(.secondary.opacity(0.5))
                 }
@@ -1554,7 +1554,7 @@ struct SettingsView: View {
                 }
             },
             message: {
-                Text("DELETE_HOST_MESSAGE", bundle: .clawsy)
+                Text(l10n: "DELETE_HOST_MESSAGE")
             }
         )
         .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
@@ -1786,7 +1786,7 @@ struct AddHostSheet: View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
             HStack {
-                Text("ADD_HOST_TITLE", bundle: .clawsy)
+                Text(l10n: "ADD_HOST_TITLE")
                     .font(.system(size: 15, weight: .bold))
                 Spacer()
                 Button(action: { isPresented = false }) {
@@ -1807,15 +1807,15 @@ struct AddHostSheet: View {
 
                     // Name + Color
                     VStack(alignment: .leading, spacing: 8) {
-                        Label(title: { Text("HOST_IDENTITY", bundle: .clawsy) }, icon: { Image(systemName: "tag.fill") })
+                        Label(title: { Text(l10n: "HOST_IDENTITY") }, icon: { Image(systemName: "tag.fill") })
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.indigo)
 
-                        TextField(text: $name) { Text("HOST_NAME", bundle: .clawsy) }
+                        TextField(text: $name) { Text(l10n: "HOST_NAME") }
                             .textFieldStyle(.roundedBorder)
 
                         HStack(spacing: 6) {
-                            Text("HOST_COLOR", bundle: .clawsy)
+                            Text(l10n: "HOST_COLOR")
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                             Spacer()
@@ -1836,20 +1836,20 @@ struct AddHostSheet: View {
 
                     // Gateway
                     VStack(alignment: .leading, spacing: 8) {
-                        Label(title: { Text("GATEWAY", bundle: .clawsy) }, icon: { Image(systemName: "antenna.radiowaves.left.and.right") })
+                        Label(title: { Text(l10n: "GATEWAY") }, icon: { Image(systemName: "antenna.radiowaves.left.and.right") })
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.blue)
 
                         HStack(spacing: 8) {
-                            TextField(text: $host) { Text("HOST", bundle: .clawsy) }
+                            TextField(text: $host) { Text(l10n: "HOST") }
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(.body, design: .monospaced))
-                            TextField(text: $port) { Text("PORT", bundle: .clawsy) }
+                            TextField(text: $port) { Text(l10n: "PORT") }
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(.body, design: .monospaced))
                                 .frame(width: 80)
                         }
-                        SecureField(text: $token) { Text("TOKEN", bundle: .clawsy) }
+                        SecureField(text: $token) { Text(l10n: "TOKEN") }
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
                     }
@@ -1859,13 +1859,13 @@ struct AddHostSheet: View {
                     // SSH
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Label(title: { Text("SSH_FALLBACK", bundle: .clawsy) }, icon: { Image(systemName: "lock.shield") })
+                            Label(title: { Text(l10n: "SSH_FALLBACK") }, icon: { Image(systemName: "lock.shield") })
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(.orange)
                             Spacer()
                             Toggle("", isOn: $useSshFallback).toggleStyle(.switch).scaleEffect(0.7)
                         }
-                        TextField(text: $sshUser) { Text("SSH_USER", bundle: .clawsy) }
+                        TextField(text: $sshUser) { Text(l10n: "SSH_USER") }
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
                             .disabled(!useSshFallback)

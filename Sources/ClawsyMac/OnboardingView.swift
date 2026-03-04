@@ -35,9 +35,9 @@ struct OnboardingView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("ONBOARDING_TITLE", bundle: .clawsy)
+                    Text(l10n: "ONBOARDING_TITLE")
                         .font(.system(size: 16, weight: .bold))
-                    Text("ONBOARDING_SUBTITLE", bundle: .clawsy)
+                    Text(l10n: "ONBOARDING_SUBTITLE")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
@@ -89,7 +89,7 @@ struct OnboardingView: View {
                         HStack {
                             Spacer()
                             Button(action: { accessibilityUserConfirmed = true }) {
-                                Text("ONBOARDING_ACCESSIBILITY_SKIP_RESTART", bundle: .clawsy)
+                                Text(l10n: "ONBOARDING_ACCESSIBILITY_SKIP_RESTART")
                                     .font(.system(size: 10))
                                     .foregroundColor(.secondary)
                             }
@@ -160,7 +160,7 @@ struct OnboardingView: View {
                 Button(action: {
                     isPresented = false
                 }) {
-                    Text("ONBOARDING_SKIP", bundle: .clawsy)
+                    Text(l10n: "ONBOARDING_SKIP")
                 }
                 .buttonStyle(.bordered)
 
@@ -170,7 +170,7 @@ struct OnboardingView: View {
                     onboardingCompleted = true
                     isPresented = false
                 }) {
-                    Text("ONBOARDING_DONE", bundle: .clawsy)
+                    Text(l10n: "ONBOARDING_DONE")
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!criticalStepsCompleted)
@@ -328,7 +328,7 @@ private struct OnboardingStepRow: View {
                     Text(title)
                         .font(.system(size: 13, weight: .medium))
                     if !isCritical {
-                        Text("ONBOARDING_OPTIONAL", bundle: .clawsy)
+                        Text(l10n: "ONBOARDING_OPTIONAL")
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                             .padding(.horizontal, 4)

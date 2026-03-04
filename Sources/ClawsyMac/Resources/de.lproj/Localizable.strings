@@ -230,7 +230,6 @@
 "DELETE_HOST_TITLE %@" = "\"%@\" entfernen?";
 "DELETE_HOST_CONFIRM" = "Entfernen";
 "DELETE_HOST_MESSAGE" = "Dieser Host wird getrennt und die Konfiguration dauerhaft gelöscht.";
-"CANCEL" = "Abbrechen";
 
 // Re-Pair Connection
 "REPAIR_CONNECTION" = "Gerät neu verbinden";

@@ -60,7 +60,7 @@ struct FileSyncRequestWindow: View {
                     .shadow(color: (operation == "Delete" ? Color.red : Color.blue).opacity(0.3), radius: 4, y: 2)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("FILESYNC_TITLE", bundle: .clawsy)
+                    Text(l10n: "FILESYNC_TITLE")
                         .font(.system(size: 15, weight: .bold))
                     Text("\(operationLocalized): \(displayFilename)")
                         .font(.system(size: 11, weight: .medium))
