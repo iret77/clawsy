@@ -215,7 +215,7 @@
 
 "ACCESSIBILITY_GRANTED" = "Accessibility granted";
 "GRANT_ACCESSIBILITY" = "Grant Accessibility";
-"ONBOARDING_FINDERSYNC_HINT" = "In System Settings: Anmeldeobjekte & Erweiterungen → Finder → Clawsy aktivieren";
+"ONBOARDING_FINDERSYNC_HINT" = "In System Settings: Login Items & Extensions → Finder → Enable Clawsy";
 
 // Multi-host management
 "HOSTS" = "Hosts";
@@ -229,4 +229,8 @@
 "DELETE_HOST_TITLE %@" = "Remove \"%@\"?";
 "DELETE_HOST_CONFIRM" = "Remove";
 "DELETE_HOST_MESSAGE" = "This will disconnect and permanently remove this host configuration.";
-"CANCEL" = "Cancel";
+
+// HUD keys
+"SCREENSHOT_FAILED" = "Screenshot failed";
+"CAPTURE_FAILED" = "Capture failed";
+"PHOTO_SENT" = "Photo sent";

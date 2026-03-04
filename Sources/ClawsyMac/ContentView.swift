@@ -22,6 +22,7 @@ struct ContentView: View {
     @AppStorage("onboardingCompleted") private var onboardingCompleted = false
     @State private var errorDismissed = false
     @State private var fixPromptCopied = false
+    @State private var showingAddHostFromHeader = false
     
     // Persistent Configuration (UI State only) — kept for legacy SettingsView compatibility
     @AppStorage("serverHost", store: SharedConfig.sharedDefaults) private var serverHost = "agenthost"
@@ -36,18 +37,20 @@ struct ContentView: View {
     @State private var agentModel: String? = nil
     @State private var agentName: String? = nil
 
-    /// Convenience: the active NetworkManager from the host manager
-    private var network: NetworkManager {
-        hostManager.activeNetworkManager ?? NetworkManager()
+    /// Convenience: the active NetworkManager from the host manager (nil when no host connected)
+    private var network: NetworkManager? {
+        hostManager.activeNetworkManager
     }
     
     var body: some View {
         VStack(spacing: 0) {
-            // --- Host Switcher (always visible) ---
-            HostSwitcherView(hostManager: hostManager)
-                .padding(.horizontal, 12)
-                .padding(.top, 10)
-                .padding(.bottom, 4)
+            // --- Host Switcher (always visible when multiple hosts) ---
+            if hostManager.profiles.count > 1 {
+                HostSwitcherView(hostManager: hostManager, onHostAdded: connectNewHost)
+                    .padding(.horizontal, 12)
+                    .padding(.top, 10)
+                    .padding(.bottom, 4)
+            }
             Divider().opacity(0.3)
             // --- Header & Status ---
             HStack {
@@ -85,6 +88,19 @@ struct ContentView: View {
                 
                 Spacer()
                 
+                // Add Host button (always visible for easy access)
+                Button(action: { showingAddHostFromHeader = true }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .frame(width: 20, height: 20)
+                        .background(Circle().stroke(Color.secondary.opacity(0.4), lineWidth: 1.2))
+                }
+                .buttonStyle(.plain)
+                .sheet(isPresented: $showingAddHostFromHeader) {
+                    AddHostSheet(hostManager: hostManager, isPresented: $showingAddHostFromHeader, onHostAdded: connectNewHost)
+                }
+
                 // Status Indicator — colored per active host
                 Circle()
                     .fill(getStatusColor())
@@ -184,7 +200,9 @@ struct ContentView: View {
                         isConnected: hostManager.isConnected,
                         onTakePhoto: { camId, camName in
                             showingCameraMenu = false
-                            takePhotoWithActive(camId: camId, camName: camName, network: network)
+                            if let nm = network {
+                                takePhotoWithActive(camId: camId, camName: camName, network: nm)
+                            }
                         }
                     )
                 }
@@ -217,7 +235,9 @@ struct ContentView: View {
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
                 .popover(isPresented: $showingMissionControl, arrowEdge: .trailing) {
-                    MissionControlView(taskStore: taskStore, networkManager: network)
+                    if let nm = network {
+                        MissionControlView(taskStore: taskStore, networkManager: nm)
+                    }
                 }
 
                 // Last Metadata
@@ -227,8 +247,10 @@ struct ContentView: View {
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
                 .popover(isPresented: $showingMetadata, arrowEdge: .trailing) {
-                    MetadataView(network: network, isPresented: $showingMetadata)
-                        .frame(width: 350, height: 320)
+                    if let nm = network {
+                        MetadataView(network: nm, isPresented: $showingMetadata)
+                            .frame(width: 350, height: 320)
+                    }
                 }
 
                 // Settings (contains Debug Log + Setup Wizard inside)
@@ -250,7 +272,8 @@ struct ContentView: View {
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                                 appDelegate.openOnboardingWindow(onboardingCompleted: $onboardingCompleted)
                             }
-                        }
+                        },
+                        onHostAdded: connectNewHost
                     )
                     .frame(width: 380)
                 }
@@ -258,7 +281,7 @@ struct ContentView: View {
                 .background(
                     Color.clear
                         .popover(isPresented: $showingLog, arrowEdge: .trailing) {
-                            DebugLogView(logText: network.rawLog, isPresented: $showingLog)
+                            DebugLogView(logText: network?.rawLog ?? "", isPresented: $showingLog)
                                 .frame(width: 400, height: 300)
                         }
                 )
@@ -366,6 +389,12 @@ struct ContentView: View {
                 nm.startStatePoller()
             }
         }
+        .onChange(of: hostManager.isConnected) { _ in
+            // Sync AppDelegate's networkManager when connection state changes
+            // so hotkeys always use the current active NetworkManager
+            appDelegate.networkManager = hostManager.activeNetworkManager
+            appDelegate.updateMenuBarIcon()
+        }
         .sheet(isPresented: Binding(
             get: { ruleEditorFolderPath != nil },
             set: { if !$0 { ruleEditorFolderPath = nil } }
@@ -459,13 +488,14 @@ struct ContentView: View {
     
     // Manual screenshot trigger
     func takeScreenshotAndSend(interactive: Bool) {
+        guard let nm = network else { return }
         // Close the popover — use close() directly, performClose can fail when called from within the popover
         appDelegate.popover.close()
         // Wait for the popover to fully disappear before capturing
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
             if let b64 = ScreenshotManager.takeScreenshot(interactive: interactive) {
-                network.sendScreenshot(base64: b64, mimeType: "image/jpeg")
-                appDelegate.showStatusHUD(icon: "camera.fill", title: "SCREENSHOT_SENT")
+                nm.sendScreenshot(base64: b64, mimeType: "image/jpeg")
+                self.appDelegate.showStatusHUD(icon: "camera.fill", title: "SCREENSHOT_SENT")
             }
         }
     }
@@ -579,6 +609,13 @@ struct ContentView: View {
         self.fileWatcher = watcher
     }
     
+    /// Connect a newly added host and set up its callbacks
+    func connectNewHost(_ profile: HostProfile) {
+        hostManager.connectHost(profile.id) { nm, prof in
+            setupCallbacksForHost(nm: nm, profile: prof)
+        }
+    }
+
     /// Set up callbacks for a specific host's NetworkManager
     func setupCallbacksForHost(nm: NetworkManager, profile: HostProfile) {
         nm.onScreenshotRequested = { interactive, requestId in
@@ -905,6 +942,7 @@ struct SettingsView: View {
     @Binding var isPresented: Bool
     var onShowDebugLog: (() -> Void)? = nil
     var onShowOnboarding: (() -> Void)? = nil
+    var onHostAdded: ((HostProfile) -> Void)? = nil
 
     /// Local editable copy of the active host profile; committed on dismiss
     @State private var editedProfile: HostProfile = HostProfile(
@@ -1480,7 +1518,7 @@ struct SettingsView: View {
             }
         }
         .sheet(isPresented: $showingAddHost) {
-            AddHostSheet(hostManager: hostManager, isPresented: $showingAddHost)
+            AddHostSheet(hostManager: hostManager, isPresented: $showingAddHost, onHostAdded: onHostAdded)
         }
         .alert(
             String(format: NSLocalizedString("DELETE_HOST_TITLE %@", bundle: .clawsy, comment: ""),
@@ -1654,6 +1692,7 @@ struct ConnectionErrorBanner: View {
 
 struct HostSwitcherView: View {
     @ObservedObject var hostManager: HostManager
+    var onHostAdded: ((HostProfile) -> Void)? = nil
     @State private var showingAddHost = false
 
     var body: some View {
@@ -1702,7 +1741,7 @@ struct HostSwitcherView: View {
             .padding(.horizontal, 2)
         }
         .sheet(isPresented: $showingAddHost) {
-            AddHostSheet(hostManager: hostManager, isPresented: $showingAddHost)
+            AddHostSheet(hostManager: hostManager, isPresented: $showingAddHost, onHostAdded: onHostAdded)
         }
     }
 }
@@ -1712,6 +1751,7 @@ struct HostSwitcherView: View {
 struct AddHostSheet: View {
     @ObservedObject var hostManager: HostManager
     @Binding var isPresented: Bool
+    var onHostAdded: ((HostProfile) -> Void)? = nil
 
     @State private var name = ""
     @State private var host = ""
@@ -1842,6 +1882,7 @@ struct AddHostSheet: View {
                         sharedFolderPath: sharedFolderPath
                     )
                     hostManager.addHost(profile)
+                    onHostAdded?(profile)
                     isPresented = false
                 }
                 .buttonStyle(.borderedProminent)

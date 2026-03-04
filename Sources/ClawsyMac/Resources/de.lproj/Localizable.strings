@@ -231,3 +231,8 @@
 "DELETE_HOST_CONFIRM" = "Entfernen";
 "DELETE_HOST_MESSAGE" = "Dieser Host wird getrennt und die Konfiguration dauerhaft gelöscht.";
 "CANCEL" = "Abbrechen";
+
+// HUD keys
+"SCREENSHOT_FAILED" = "Screenshot fehlgeschlagen";
+"CAPTURE_FAILED" = "Aufnahme fehlgeschlagen";
+"PHOTO_SENT" = "Foto gesendet";

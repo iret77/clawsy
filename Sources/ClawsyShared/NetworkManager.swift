@@ -1185,7 +1185,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
             self.sendAck(id: id)
             let executeGet = {
-                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: String(format: NSLocalizedString("NOTIFICATION_BODY_DOWNLOADING", bundle: .clawsy, comment: ""), name), isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
+                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: String(format: NSLocalizedString("NOTIFICATION_BODY_DOWNLOADING", bundle: .clawsy, comment: ""), name), isAuto: ({ if let exp = self.filePermissionExpiry { return exp > Date() } else { return false } }()))
                 DispatchQueue.global(qos: .userInitiated).async {
                     if let b64 = ClawsyFileManager.readFile(at: fullPath) { self.sendResponse(id: id, result: ["content": b64, "name": name]) } else { self.sendError(id: id, code: -32000, message: "Failed to read file") }
                 }
@@ -1196,7 +1196,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
             self.sendAck(id: id)
             let executeSet = {
-                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: String(format: NSLocalizedString("NOTIFICATION_BODY_UPLOADING", bundle: .clawsy, comment: ""), name), isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
+                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: String(format: NSLocalizedString("NOTIFICATION_BODY_UPLOADING", bundle: .clawsy, comment: ""), name), isAuto: ({ if let exp = self.filePermissionExpiry { return exp > Date() } else { return false } }()))
                 DispatchQueue.global(qos: .userInitiated).async {
                     if ClawsyFileManager.writeFile(at: fullPath, base64Content: content) { self.sendResponse(id: id, result: ["status": "ok", "name": name]) } else { self.sendError(id: id, code: -32000, message: "Failed to write file") }
                 }
@@ -1215,7 +1215,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
             self.sendAck(id: id)
             let executeDelete = {
-                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: "Deleted: \(name)", isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
+                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: "Deleted: \(name)", isAuto: ({ if let exp = self.filePermissionExpiry { return exp > Date() } else { return false } }()))
                 DispatchQueue.global(qos: .userInitiated).async {
                     if ClawsyFileManager.deleteFile(at: fullPath) { self.sendResponse(id: id, result: ["status": "ok", "name": name]) } else { self.sendError(id: id, code: -32000, message: "Failed to delete file") }
                 }
@@ -1226,7 +1226,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
             self.sendAck(id: id)
             let executeRename = {
-                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: "Renamed: \(name) -> \(newName)", isAuto: (self.filePermissionExpiry != nil && self.filePermissionExpiry! > Date()))
+                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: "Renamed: \(name) -> \(newName)", isAuto: ({ if let exp = self.filePermissionExpiry { return exp > Date() } else { return false } }()))
                 DispatchQueue.global(qos: .userInitiated).async {
                     if ClawsyFileManager.renameFile(at: fullPath, to: newName) { self.sendResponse(id: id, result: ["status": "ok", "name": newName]) } else { self.sendError(id: id, code: -32000, message: "Failed to rename file") }
                 }
