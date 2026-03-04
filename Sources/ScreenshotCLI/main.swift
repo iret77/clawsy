@@ -120,7 +120,7 @@ struct PopoverView: View {
             Divider().background(Color(white: 1, opacity: 0.08))
 
             VStack(spacing: 1) {
-                MenuRow(icon: "bolt.fill", title: "Connect", color: Color(red: 0.4, green: 0.7, blue: 1.0))
+                MenuRow(icon: "arrow.triangle.2.circlepath", title: "Re-Pair Device", color: Color(red: 0.4, green: 0.7, blue: 1.0))
             }
             .padding(.vertical, 4)
 
@@ -203,6 +203,32 @@ struct SettingsSectionHeader: View {
     }
 }
 
+struct SettingsTabBar: View {
+    let tabs: [String]
+    let selected: Int
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(tabs.enumerated()), id: \.offset) { index, tab in
+                Text(tab)
+                    .font(.system(size: 11, weight: index == selected ? .semibold : .regular))
+                    .foregroundColor(index == selected ? Color(white: 0.95) : Color(white: 0.45))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 5)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .fill(index == selected ? Color(white: 1, opacity: 0.12) : Color.clear)
+                    )
+            }
+        }
+        .padding(2)
+        .background(
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(Color(white: 1, opacity: 0.06))
+        )
+    }
+}
+
 struct SettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -218,9 +244,40 @@ struct SettingsView: View {
             .padding(.top, 12)
             .padding(.bottom, 6)
 
+            // Tab bar
+            SettingsTabBar(tabs: ["Verbindung", "Funktionen", "Updates"], selected: 0)
+                .padding(.horizontal, 14)
+                .padding(.bottom, 12)
+
             Divider().background(Color(white: 1, opacity: 0.08))
 
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 16) {
+
+                // Hosts
+                VStack(alignment: .leading, spacing: 8) {
+                    SettingsSectionHeader(icon: "server.rack", title: "Hosts", color: Color(red: 0.4, green: 0.65, blue: 1.0))
+                    HStack(spacing: 8) {
+                        Image(systemName: "desktopcomputer")
+                            .font(.system(size: 11))
+                            .foregroundColor(Color(white: 0.55))
+                        Text("agenthost")
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundColor(Color(white: 0.85))
+                        Spacer()
+                        Text("Active")
+                            .font(.system(size: 10, weight: .medium))
+                            .padding(.horizontal, 7).padding(.vertical, 2)
+                            .background(Color(red: 0.2, green: 0.78, blue: 0.35).opacity(0.2))
+                            .foregroundColor(Color(red: 0.3, green: 0.9, blue: 0.45))
+                            .clipShape(Capsule())
+                    }
+                    .padding(8)
+                    .background(Color(white: 1, opacity: 0.04))
+                    .cornerRadius(6)
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(white: 1, opacity: 0.08), lineWidth: 0.5))
+                }
+
+                Divider().background(Color(white: 1, opacity: 0.07))
 
                 // Gateway
                 VStack(alignment: .leading, spacing: 8) {
@@ -245,96 +302,6 @@ struct SettingsView: View {
                     Text("Auto-tunnels via SSH if direct connection fails.")
                         .font(.system(size: 11))
                         .foregroundColor(Color(white: 0.4))
-                }
-
-                Divider().background(Color(white: 1, opacity: 0.07))
-
-                // Extended Context
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        SettingsSectionHeader(icon: "chart.bar.doc.horizontal", title: "Extended Context", color: Color(red: 0.3, green: 0.85, blue: 0.85))
-                        Spacer()
-                        Toggle2(on: true)
-                    }
-                    Text("Sends device info, active app, and battery level\nwith each message.")
-                        .font(.system(size: 11))
-                        .foregroundColor(Color(white: 0.4))
-                }
-
-                Divider().background(Color(white: 1, opacity: 0.07))
-
-                // Hotkeys
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        SettingsSectionHeader(icon: "keyboard", title: "Hotkeys", color: Color(red: 0.85, green: 0.5, blue: 0.9))
-                        Spacer()
-                        Text("Allow in Accessibility")
-                            .font(.system(size: 10, weight: .medium))
-                            .padding(.horizontal, 8).padding(.vertical, 3)
-                            .background(Color(red: 1.0, green: 0.75, blue: 0.0).opacity(0.25))
-                            .foregroundColor(Color(red: 1.0, green: 0.8, blue: 0.2))
-                            .cornerRadius(4)
-                    }
-                    ForEach([
-                        ("Quick Send",        "⌘ ⌥  K"),
-                        ("Clipboard",         "⌘ ⌥  V"),
-                        ("Camera",            "⌘ ⌥  P"),
-                        ("Screenshot Full",   "⌘ ⌥  S"),
-                        ("Screenshot Area",   "⌘ ⌥  A"),
-                    ], id: \.0) { item in
-                        HStack {
-                            Text(item.0).font(.system(size: 12)).foregroundColor(Color(white: 0.75))
-                            Spacer()
-                            Text(item.1).font(.system(size: 11, design: .monospaced)).foregroundColor(Color(white: 0.45))
-                        }
-                    }
-                }
-
-                Divider().background(Color(white: 1, opacity: 0.07))
-
-                // Updates
-                VStack(alignment: .leading, spacing: 8) {
-                    SettingsSectionHeader(icon: "arrow.clockwise.circle", title: "Updates", color: Color(red: 0.35, green: 0.75, blue: 0.5))
-                    HStack {
-                        Text("Current version: v0.5.3 #627")
-                            .font(.system(size: 12))
-                            .foregroundColor(Color(white: 0.5))
-                        Spacer()
-                        Text("Check Now")
-                            .font(.system(size: 11, weight: .medium))
-                            .padding(.horizontal, 10).padding(.vertical, 4)
-                            .background(Color(white: 1, opacity: 0.08))
-                            .foregroundColor(Color(white: 0.8))
-                            .cornerRadius(5)
-                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color(white: 1, opacity: 0.12), lineWidth: 0.5))
-                    }
-                }
-
-                Divider().background(Color(white: 1, opacity: 0.07))
-
-                // Shared Folder
-                VStack(alignment: .leading, spacing: 8) {
-                    SettingsSectionHeader(icon: "folder.badge.plus", title: "Shared Folder", color: Color(red: 0.4, green: 0.82, blue: 0.45))
-                    SettingsRow(label: "path", value: "~/Documents/Clawsy")
-                    HStack(spacing: 8) {
-                        Text("Select Folder")
-                            .font(.system(size: 11))
-                            .padding(.horizontal, 10).padding(.vertical, 4)
-                            .background(Color(white: 1, opacity: 0.08))
-                            .foregroundColor(Color(white: 0.75))
-                            .cornerRadius(5)
-                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color(white: 1, opacity: 0.1), lineWidth: 0.5))
-                        Text("Show in Finder")
-                            .font(.system(size: 11))
-                            .padding(.horizontal, 10).padding(.vertical, 4)
-                            .background(Color(white: 1, opacity: 0.08))
-                            .foregroundColor(Color(white: 0.75))
-                            .cornerRadius(5)
-                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color(white: 1, opacity: 0.1), lineWidth: 0.5))
-                    }
-                    Text("Data stays local.")
-                        .font(.system(size: 10))
-                        .foregroundColor(Color(white: 0.3))
                 }
             }
             .padding(16)
@@ -408,7 +375,7 @@ struct HeroView: View {
                             Image(systemName: icon)
                                 .font(.system(size: 13))
                         }
-                        Text("Sat 1 Mar  10:42")
+                        Text("Tue 4 Mar  14:30")
                             .font(.system(size: 12))
 
                         // Clawsy icon — highlighted
@@ -416,9 +383,8 @@ struct HeroView: View {
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(Color(white: 1, opacity: 0.15))
                                 .frame(width: 26, height: 20)
-                            Image(systemName: "bolt.fill")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(.white)
+                            Text("🦞")
+                                .font(.system(size: 11))
                         }
                     }
                     .foregroundColor(Color(white: 0.85))
@@ -484,9 +450,8 @@ struct OnboardingView: View {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(Color(red: 0.4, green: 0.65, blue: 1.0).opacity(0.18))
                         .frame(width: 58, height: 58)
-                    Image(systemName: "bolt.fill")
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundColor(Color(red: 0.5, green: 0.75, blue: 1.0))
+                    Text("🦞")
+                        .font(.system(size: 28))
                 }
                 Text("Welcome to Clawsy")
                     .font(.system(size: 17, weight: .bold))
@@ -588,8 +553,8 @@ struct MissionControlView: View {
             Divider().background(Color(white: 1, opacity: 0.08))
 
             VStack(spacing: 8) {
-                TaskCard(title: "Building Clawsy v0.5.4",   model: "claude-sonnet-4-6", progress: 0.72, status: "Compiling Swift sources…",    elapsed: "2m 14s")
-                TaskCard(title: "Updating README",           model: "claude-sonnet-4-6", progress: 0.38, status: "Writing features section…",   elapsed: "45s")
+                TaskCard(title: "Building Clawsy v0.7.3",   model: "claude-sonnet-4-6", progress: 0.72, status: "Compiling Swift sources…",    elapsed: "2m 14s")
+                TaskCard(title: "L10n Fix (74 strings)",     model: "claude-sonnet-4-6", progress: 0.38, status: "Updating localization keys…", elapsed: "45s")
             }
             .padding(12)
         }
@@ -689,7 +654,7 @@ await MainActor.run {
             .shadow(color: Color.black.opacity(0.4), radius: 20, x: 0, y: 8)
             .padding(20)
             .background(Color(white: 0.08)),
-        width: 320, height: 780, to: "\(outDir)/02-settings.png"
+        width: 320, height: 520, to: "\(outDir)/02-settings.png"
     )
     render(
         ClawsyPanel(cornerRadius: 12) { OnboardingView() }
