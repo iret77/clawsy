@@ -1253,11 +1253,7 @@ struct SettingsView: View {
                 }
                 .tag(0)
                 .tabItem {
-                    Label {
-                        Text(l10n: "SETTINGS_TAB_CONNECTION")
-                    } icon: {
-                        Image(systemName: "network")
-                    }
+                    Label(NSLocalizedString("SETTINGS_TAB_CONNECTION", bundle: .clawsy, comment: ""), systemImage: "network")
                 }
 
                 // ━━ Tab 2: Features ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1455,11 +1451,7 @@ struct SettingsView: View {
                 }
                 .tag(1)
                 .tabItem {
-                    Label {
-                        Text(l10n: "SETTINGS_TAB_FEATURES")
-                    } icon: {
-                        Image(systemName: "gearshape.2")
-                    }
+                    Label(NSLocalizedString("SETTINGS_TAB_FEATURES", bundle: .clawsy, comment: ""), systemImage: "gearshape.2")
                 }
 
                 // ━━ Tab 3: Updates ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1511,11 +1503,7 @@ struct SettingsView: View {
                 }
                 .tag(2)
                 .tabItem {
-                    Label {
-                        Text(l10n: "SETTINGS_TAB_UPDATES")
-                    } icon: {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                    }
+                    Label(NSLocalizedString("SETTINGS_TAB_UPDATES", bundle: .clawsy, comment: ""), systemImage: "arrow.triangle.2.circlepath")
                 }
             }
             .frame(minHeight: 300, maxHeight: 500)
