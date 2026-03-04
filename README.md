@@ -30,23 +30,27 @@ Nothing happens behind your back. Every screenshot, clipboard read, or file writ
 
 - **macOS 14+** (Sonoma / Sequoia), Apple Silicon or Intel
 - **OpenClaw instance** — running and accessible from your Mac ([github.com/openclaw/openclaw](https://github.com/openclaw/openclaw))
-- No cloud account. No subscription. No telemetry.
 
 ---
 
 ## Quick Start
 
-### Mac Side
+### 1. Prepare your OpenClaw Gateway
+
+Make sure your OpenClaw instance is running and you have the **Gateway Host**, **Port** (default: `18789`), and **Token** ready.
+
+> 💡 For detailed server-side configuration, see [docs/SERVER_SETUP.md](docs/SERVER_SETUP.md).
+
+### 2. Install Clawsy on your Mac
 
 1. Download **Clawsy.app.zip** from the [latest release](https://github.com/iret77/clawsy/releases/latest)
 2. Unzip → drag `Clawsy.app` to `/Applications`
 3. Launch Clawsy — the onboarding assistant walks you through permissions
-4. Open **Settings** → enter your OpenClaw **Gateway Host**, **Port** (default: `18789`), and **Token**
-5. Click **Connect**
 
-### OpenClaw Side
+### 3. Connect
 
-6. Clawsy sends a pairing request on first connect. **Approve it:**
+4. Open **Settings** → enter your OpenClaw **Gateway Host**, **Port**, and **Token**
+5. Clawsy connects and sends a pairing request. **Approve it on your server:**
    ```bash
    # List pending pairing requests
    openclaw nodes
@@ -54,10 +58,10 @@ Nothing happens behind your back. Every screenshot, clipboard read, or file writ
    # Approve (use the request ID shown)
    openclaw nodes approve <requestId>
    ```
-   Or approve via the OpenClaw web dashboard if available.
 
-7. **Tell your agent that Clawsy is installed.** Copy-paste this into your chat or add it to your `AGENTS.md`:
+### 4. Tell your agent
 
+6. Copy-paste this into your chat or add it to your `AGENTS.md`:
    ```
    Clawsy (macOS companion app) is installed and connected.
    Read the Clawsy skill file for full integration details.
@@ -67,9 +71,7 @@ Nothing happens behind your back. Every screenshot, clipboard read, or file writ
    See: https://github.com/iret77/clawsy/blob/main/for-agents.md
    ```
 
-8. **Done.** Your agent can now take screenshots, read your clipboard, access files, and show live task progress.
-
-> 💡 For detailed server-side configuration, see [docs/SERVER_SETUP.md](docs/SERVER_SETUP.md).
+7. **Done.** Your agent can now take screenshots, read your clipboard, access files, and show live task progress.
 
 ---
 
