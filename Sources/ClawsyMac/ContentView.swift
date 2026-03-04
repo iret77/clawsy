@@ -87,19 +87,6 @@ struct ContentView: View {
                 }
                 
                 Spacer()
-                
-                // Add Host button (always visible for easy access)
-                Button(action: { showingAddHostFromHeader = true }) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.secondary)
-                        .frame(width: 20, height: 20)
-                        .background(Circle().stroke(Color.secondary.opacity(0.4), lineWidth: 1.2))
-                }
-                .buttonStyle(.plain)
-                .sheet(isPresented: $showingAddHostFromHeader) {
-                    AddHostSheet(hostManager: hostManager, isPresented: $showingAddHostFromHeader, onHostAdded: connectNewHost)
-                }
 
                 // Status Indicator — colored per active host
                 Circle()
