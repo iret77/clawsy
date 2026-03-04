@@ -217,3 +217,17 @@
 "ACCESSIBILITY_GRANTED" = "Bedienungshilfen erlaubt";
 "GRANT_ACCESSIBILITY" = "Bedienungshilfen erlauben";
 "ONBOARDING_FINDERSYNC_HINT" = "In Systemeinstellungen: Anmeldeobjekte & Erweiterungen → Finder → Clawsy aktivieren";
+
+// Multi-host management
+"HOSTS" = "Hosts";
+"ADD_HOST" = "Host hinzufügen";
+"ACTIVE" = "Aktiv";
+"HOST_NAME" = "Name";
+"HOST_COLOR" = "Farbe";
+"HOST_IDENTITY" = "Identität";
+"ADD_HOST_TITLE" = "Neuen Host hinzufügen";
+"ADD_HOST_SAVE" = "Host hinzufügen";
+"DELETE_HOST_TITLE %@" = "\"%@\" entfernen?";
+"DELETE_HOST_CONFIRM" = "Entfernen";
+"DELETE_HOST_MESSAGE" = "Dieser Host wird getrennt und die Konfiguration dauerhaft gelöscht.";
+"CANCEL" = "Abbrechen";

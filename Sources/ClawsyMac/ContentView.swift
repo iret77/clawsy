@@ -43,23 +43,20 @@ struct ContentView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // --- Host Switcher (only visible with 2+ hosts) ---
-            if hostManager.profiles.count > 1 {
-                HostSwitcherView(hostManager: hostManager)
-                    .padding(.horizontal, 12)
-                    .padding(.top, 10)
-                    .padding(.bottom, 4)
-                Divider().opacity(0.3)
-            }
-
+            // --- Host Switcher (always visible) ---
+            HostSwitcherView(hostManager: hostManager)
+                .padding(.horizontal, 12)
+                .padding(.top, 10)
+                .padding(.bottom, 4)
+            Divider().opacity(0.3)
             // --- Header & Status ---
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text("APP_NAME", bundle: .clawsy)
                             .font(.system(size: 13, weight: .semibold))
-                        if let activeProfile = hostManager.activeProfile, hostManager.profiles.count > 1 {
-                            Text(activeProfile.name)
+                        if let activeProfile = hostManager.activeProfile {
+                            Text(activeProfile.name.isEmpty ? activeProfile.gatewayHost : activeProfile.name)
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundColor(Color(hex: activeProfile.color) ?? .secondary)
                         }
@@ -914,6 +911,10 @@ struct SettingsView: View {
         name: "", gatewayHost: "", gatewayPort: "18789", serverToken: ""
     )
 
+    @State private var showingAddHost = false
+    @State private var hostToDelete: HostProfile? = nil
+    @State private var showDeleteConfirm = false
+
     // Non-host global settings (shared across all hosts)
     @AppStorage("extendedContextEnabled", store: SharedConfig.sharedDefaults) private var extendedContextEnabled = false
     @AppStorage("quickSendHotkey", store: SharedConfig.sharedDefaults) private var quickSendHotkey = "K"
@@ -935,7 +936,6 @@ struct SettingsView: View {
     /// Save the edited profile back to HostManager (or legacy keys) and close the popover.
     private func saveAndDismiss() {
         if hostManager.profiles.isEmpty {
-            // Legacy fallback: persist to AppStorage keys directly
             legacyServerHost = editedProfile.gatewayHost
             legacyServerPort = editedProfile.gatewayPort
             legacyServerToken = editedProfile.serverToken
@@ -943,6 +943,10 @@ struct SettingsView: View {
             legacyUseSshFallback = editedProfile.useSshFallback
             legacySharedFolderPath = editedProfile.sharedFolderPath
         } else {
+            // Ensure name falls back to host if blank
+            if editedProfile.name.trimmingCharacters(in: .whitespaces).isEmpty {
+                editedProfile.name = editedProfile.gatewayHost
+            }
             hostManager.updateHost(editedProfile)
         }
         isPresented = false
@@ -1023,11 +1027,120 @@ struct SettingsView: View {
             // Content
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    // Gateway Section
+
+                    // ── Host Management Section ──────────────────────────────
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Label(title: { Text("HOSTS", bundle: .clawsy) }, icon: { Image(systemName: "server.rack") })
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.indigo)
+                            Spacer()
+                            Button(action: { showingAddHost = true }) {
+                                Label(title: { Text("ADD_HOST", bundle: .clawsy) }, icon: { Image(systemName: "plus.circle.fill") })
+                                    .font(.system(size: 11))
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+
+                        ForEach(hostManager.profiles) { profile in
+                            let isActive = profile.id == hostManager.activeHostId
+                            let nm = hostManager.networkManagers[profile.id]
+                            let isConnected = nm?.isConnected ?? false
+                            let isConnecting = nm?.connectionStatus.contains("CONNECTING") ?? false || nm?.connectionStatus.contains("STARTING") ?? false
+                            let hostColor = Color(hex: profile.color) ?? .red
+
+                            HStack(spacing: 8) {
+                                // Color dot
+                                Circle().fill(hostColor).frame(width: 8, height: 8)
+
+                                // Name
+                                Text(profile.name.isEmpty ? profile.gatewayHost : profile.name)
+                                    .font(.system(size: 12, weight: isActive ? .semibold : .regular))
+                                    .lineLimit(1)
+
+                                Spacer()
+
+                                // Connection status badge
+                                if isConnected {
+                                    Circle().fill(Color.green).frame(width: 6, height: 6)
+                                } else if isConnecting {
+                                    Circle().fill(Color.orange).frame(width: 6, height: 6)
+                                } else {
+                                    Circle().fill(Color.secondary.opacity(0.4)).frame(width: 6, height: 6)
+                                }
+
+                                // Active indicator
+                                if isActive {
+                                    Text("ACTIVE", bundle: .clawsy)
+                                        .font(.system(size: 9, weight: .medium))
+                                        .foregroundColor(hostColor)
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 2)
+                                        .background(hostColor.opacity(0.12))
+                                        .cornerRadius(3)
+                                }
+
+                                // Delete button (disabled if only 1 host)
+                                Button(action: {
+                                    hostToDelete = profile
+                                    showDeleteConfirm = true
+                                }) {
+                                    Image(systemName: "trash")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(hostManager.profiles.count <= 1)
+                                .opacity(hostManager.profiles.count <= 1 ? 0.3 : 1.0)
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                            .background(isActive ? hostColor.opacity(0.08) : Color.clear)
+                            .cornerRadius(7)
+                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(isActive ? hostColor.opacity(0.25) : Color.primary.opacity(0.06), lineWidth: 1))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                if !isActive {
+                                    hostManager.updateHost(editedProfile) // save current edits first
+                                    hostManager.switchActiveHost(to: profile.id)
+                                    if let newActive = hostManager.activeProfile {
+                                        editedProfile = newActive
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Divider().opacity(0.3)
+
+                    // ── Gateway Section ──────────────────────────────────────
                     VStack(alignment: .leading, spacing: 10) {
                         Label(title: { Text("GATEWAY", bundle: .clawsy) }, icon: { Image(systemName: "antenna.radiowaves.left.and.right") })
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.blue)
+
+                        // Host name + color picker row
+                        HStack(spacing: 8) {
+                            TextField(text: $editedProfile.name) {
+                                Text("HOST_NAME", bundle: .clawsy)
+                            }
+                            .textFieldStyle(.roundedBorder)
+
+                            // Color picker — 8 preset circles
+                            HStack(spacing: 5) {
+                                ForEach(HostProfile.defaultColors, id: \.self) { hex in
+                                    let c = Color(hex: hex) ?? .red
+                                    let isSelected = editedProfile.color == hex
+                                    Circle()
+                                        .fill(c)
+                                        .frame(width: isSelected ? 16 : 12, height: isSelected ? 16 : 12)
+                                        .overlay(Circle().stroke(Color.primary.opacity(isSelected ? 0.4 : 0), lineWidth: 1.5))
+                                        .onTapGesture { editedProfile.color = hex }
+                                        .animation(.easeInOut(duration: 0.1), value: isSelected)
+                                }
+                            }
+                        }
 
                         HStack(spacing: 8) {
                             TextField(text: $editedProfile.gatewayHost) {
@@ -1352,11 +1465,9 @@ struct SettingsView: View {
             }
         }
         .onAppear {
-            // Load host-specific settings from the active profile (or legacy fallback)
             if let active = hostManager.activeProfile {
                 editedProfile = active
             } else {
-                // Legacy fallback: build a transient profile from AppStorage keys
                 editedProfile = HostProfile(
                     name: legacyServerHost,
                     gatewayHost: legacyServerHost,
@@ -1368,6 +1479,31 @@ struct SettingsView: View {
                 )
             }
         }
+        .sheet(isPresented: $showingAddHost) {
+            AddHostSheet(hostManager: hostManager, isPresented: $showingAddHost)
+        }
+        .alert(
+            String(format: NSLocalizedString("DELETE_HOST_TITLE %@", bundle: .clawsy, comment: ""),
+                   hostToDelete?.name ?? hostToDelete?.gatewayHost ?? ""),
+            isPresented: $showDeleteConfirm,
+            actions: {
+                Button(NSLocalizedString("DELETE_HOST_CONFIRM", bundle: .clawsy, comment: ""), role: .destructive) {
+                    if let h = hostToDelete {
+                        hostManager.removeHost(id: h.id)
+                        if let newActive = hostManager.activeProfile {
+                            editedProfile = newActive
+                        }
+                    }
+                    hostToDelete = nil
+                }
+                Button(NSLocalizedString("CANCEL", bundle: .clawsy, comment: ""), role: .cancel) {
+                    hostToDelete = nil
+                }
+            },
+            message: {
+                Text("DELETE_HOST_MESSAGE", bundle: .clawsy)
+            }
+        )
         .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
     }
 
@@ -1518,12 +1654,16 @@ struct ConnectionErrorBanner: View {
 
 struct HostSwitcherView: View {
     @ObservedObject var hostManager: HostManager
+    @State private var showingAddHost = false
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
                 ForEach(hostManager.profiles) { profile in
                     let isActive = profile.id == hostManager.activeHostId
+                    let nm = hostManager.networkManagers[profile.id]
+                    let connected = nm?.isConnected ?? false
+                    let connecting = nm?.connectionStatus.contains("CONNECTING") ?? false || nm?.connectionStatus.contains("STARTING") ?? false
                     let hostColor = Color(hex: profile.color) ?? .red
 
                     Button(action: {
@@ -1531,29 +1671,186 @@ struct HostSwitcherView: View {
                             hostManager.switchActiveHost(to: profile.id)
                         }
                     }) {
-                        HStack(spacing: 5) {
+                        HStack(spacing: 4) {
+                            // Per-host connection status dot
                             Circle()
-                                .fill(isActive ? .white : hostColor)
-                                .frame(width: 6, height: 6)
-                            Text(profile.name)
+                                .fill(connected ? Color.green : (connecting ? Color.orange : Color.secondary.opacity(0.5)))
+                                .frame(width: 5, height: 5)
+                            Text(profile.name.isEmpty ? profile.gatewayHost : profile.name)
                                 .font(.system(size: 11, weight: isActive ? .semibold : .regular))
                                 .foregroundColor(isActive ? .white : hostColor)
                                 .lineLimit(1)
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(
-                            Capsule()
-                                .fill(isActive ? hostColor : Color.clear)
-                        )
-                        .overlay(
-                            Capsule()
-                                .stroke(hostColor, lineWidth: isActive ? 0 : 1.5)
-                        )
+                        .background(Capsule().fill(isActive ? hostColor : Color.clear))
+                        .overlay(Capsule().stroke(hostColor, lineWidth: isActive ? 0 : 1.5))
                     }
                     .buttonStyle(.plain)
                 }
+
+                // "+" Add Host button — always visible
+                Button(action: { showingAddHost = true }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .frame(width: 22, height: 22)
+                        .background(Circle().stroke(Color.secondary.opacity(0.4), lineWidth: 1.2))
+                }
+                .buttonStyle(.plain)
             }
+            .padding(.horizontal, 2)
         }
+        .sheet(isPresented: $showingAddHost) {
+            AddHostSheet(hostManager: hostManager, isPresented: $showingAddHost)
+        }
+    }
+}
+
+// MARK: - Add Host Sheet
+
+struct AddHostSheet: View {
+    @ObservedObject var hostManager: HostManager
+    @Binding var isPresented: Bool
+
+    @State private var name = ""
+    @State private var host = ""
+    @State private var port = "18789"
+    @State private var token = ""
+    @State private var sshUser = ""
+    @State private var useSshFallback = true
+    @State private var selectedColor = HostProfile.defaultColors[1] // Blue default
+    @State private var sharedFolderPath = ""
+
+    private var canSave: Bool {
+        !host.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !token.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack {
+                Text("ADD_HOST_TITLE", bundle: .clawsy)
+                    .font(.system(size: 15, weight: .bold))
+                Spacer()
+                Button(action: { isPresented = false }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary.opacity(0.8))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+
+            Divider().opacity(0.3)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+
+                    // Name + Color
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label(title: { Text("HOST_IDENTITY", bundle: .clawsy) }, icon: { Image(systemName: "tag.fill") })
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.indigo)
+
+                        TextField(text: $name) { Text("HOST_NAME", bundle: .clawsy) }
+                            .textFieldStyle(.roundedBorder)
+
+                        HStack(spacing: 6) {
+                            Text("HOST_COLOR", bundle: .clawsy)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            HStack(spacing: 6) {
+                                ForEach(HostProfile.defaultColors, id: \.self) { hex in
+                                    let c = Color(hex: hex) ?? .red
+                                    let sel = selectedColor == hex
+                                    Circle().fill(c).frame(width: sel ? 18 : 13, height: sel ? 18 : 13)
+                                        .overlay(Circle().stroke(Color.primary.opacity(sel ? 0.4 : 0), lineWidth: 1.5))
+                                        .onTapGesture { selectedColor = hex }
+                                        .animation(.easeInOut(duration: 0.1), value: sel)
+                                }
+                            }
+                        }
+                    }
+
+                    Divider().opacity(0.3)
+
+                    // Gateway
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label(title: { Text("GATEWAY", bundle: .clawsy) }, icon: { Image(systemName: "antenna.radiowaves.left.and.right") })
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.blue)
+
+                        HStack(spacing: 8) {
+                            TextField(text: $host) { Text("HOST", bundle: .clawsy) }
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(.body, design: .monospaced))
+                            TextField(text: $port) { Text("PORT", bundle: .clawsy) }
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(.body, design: .monospaced))
+                                .frame(width: 80)
+                        }
+                        SecureField(text: $token) { Text("TOKEN", bundle: .clawsy) }
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(.body, design: .monospaced))
+                    }
+
+                    Divider().opacity(0.3)
+
+                    // SSH
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Label(title: { Text("SSH_FALLBACK", bundle: .clawsy) }, icon: { Image(systemName: "lock.shield") })
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.orange)
+                            Spacer()
+                            Toggle("", isOn: $useSshFallback).toggleStyle(.switch).scaleEffect(0.7)
+                        }
+                        TextField(text: $sshUser) { Text("SSH_USER", bundle: .clawsy) }
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(.body, design: .monospaced))
+                            .disabled(!useSshFallback)
+                            .opacity(useSshFallback ? 1.0 : 0.5)
+                    }
+                }
+                .padding(20)
+            }
+
+            Divider().opacity(0.3)
+
+            // Footer
+            HStack {
+                Button(NSLocalizedString("CANCEL", bundle: .clawsy, comment: "")) {
+                    isPresented = false
+                }
+                .buttonStyle(.bordered)
+                Spacer()
+                Button(NSLocalizedString("ADD_HOST_SAVE", bundle: .clawsy, comment: "")) {
+                    let safeName = name.trimmingCharacters(in: .whitespaces).isEmpty ? host : name
+                    let profile = HostProfile(
+                        name: safeName,
+                        gatewayHost: host.trimmingCharacters(in: .whitespaces),
+                        gatewayPort: port.isEmpty ? "18789" : port,
+                        serverToken: token.trimmingCharacters(in: .whitespaces),
+                        sshUser: sshUser,
+                        useSshFallback: useSshFallback,
+                        color: selectedColor,
+                        sharedFolderPath: sharedFolderPath
+                    )
+                    hostManager.addHost(profile)
+                    isPresented = false
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!canSave)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+        }
+        .frame(width: 400)
+        .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
     }
 }
