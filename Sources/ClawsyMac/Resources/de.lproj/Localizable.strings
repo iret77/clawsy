@@ -232,6 +232,10 @@
 "DELETE_HOST_MESSAGE" = "Dieser Host wird getrennt und die Konfiguration dauerhaft gelöscht.";
 "CANCEL" = "Abbrechen";
 
+// Re-Pair Connection
+"REPAIR_CONNECTION" = "Gerät neu verbinden";
+"REPAIR_CONNECTION_HELP" = "Verwende dies, wenn die Verbindung nach einem Gateway-Neustart abgelehnt wird. Löscht den gespeicherten Geräte-Token und startet eine neue Kopplung.";
+
 // HUD keys
 "SCREENSHOT_FAILED" = "Screenshot fehlgeschlagen";
 "CAPTURE_FAILED" = "Aufnahme fehlgeschlagen";

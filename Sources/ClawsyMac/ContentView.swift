@@ -1200,6 +1200,21 @@ struct SettingsView: View {
                         }
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
+
+                        // Re-Pair button — clears deviceToken and forces fresh pairing
+                        Button(action: {
+                            hostManager.repairActiveConnection()
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                    .font(.system(size: 12))
+                                Text("REPAIR_CONNECTION", bundle: .clawsy)
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.regular)
+                        .help(NSLocalizedString("REPAIR_CONNECTION_HELP", bundle: .clawsy, comment: ""))
                     }
 
                     Divider().opacity(0.3)

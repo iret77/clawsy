@@ -230,6 +230,10 @@
 "DELETE_HOST_CONFIRM" = "Remove";
 "DELETE_HOST_MESSAGE" = "This will disconnect and permanently remove this host configuration.";
 
+// Re-Pair Connection
+"REPAIR_CONNECTION" = "Re-Pair Device";
+"REPAIR_CONNECTION_HELP" = "Use if the connection is rejected after a gateway restart. Clears the stored device token and initiates fresh pairing.";
+
 // HUD keys
 "SCREENSHOT_FAILED" = "Screenshot failed";
 "CAPTURE_FAILED" = "Capture failed";

@@ -18,23 +18,132 @@
 
 ---
 
-## Install
-
-1. Download **Clawsy.app.zip** from the [Releases](https://github.com/iret77/clawsy/releases) page
-2. Unzip → drag `Clawsy.app` to `/Applications`
-3. Launch — the setup assistant handles the rest
-
-> Requires macOS 14+. No cloud account. No subscription. No telemetry.
-
----
-
-## What it does
+## What It Does
 
 Clawsy sits in your menu bar and acts as a secure bridge between your Mac and your OpenClaw agent. Your agent can see your screen, read your clipboard, manage files, and track its own tasks — all with your explicit approval.
 
+Nothing happens behind your back. Every screenshot, clipboard read, or file write requires your permission.
+
+---
+
+## Requirements
+
+- **macOS 14+** (Sonoma / Sequoia), Apple Silicon or Intel
+- **OpenClaw instance** — running and accessible from your Mac ([github.com/openclaw/openclaw](https://github.com/openclaw/openclaw))
+- No cloud account. No subscription. No telemetry.
+
+---
+
+## Quick Start
+
+### Mac Side
+
+1. Download **Clawsy.app.zip** from the [latest release](https://github.com/iret77/clawsy/releases/latest)
+2. Unzip → drag `Clawsy.app` to `/Applications`
+3. Launch Clawsy — the onboarding assistant walks you through permissions
+4. Open **Settings** → enter your OpenClaw **Gateway Host**, **Port** (default: `18789`), and **Token**
+5. Click **Connect**
+
+### OpenClaw Side
+
+6. Clawsy sends a pairing request on first connect. **Approve it:**
+   ```bash
+   # List pending pairing requests
+   openclaw nodes
+
+   # Approve (use the request ID shown)
+   openclaw nodes approve <requestId>
+   ```
+   Or approve via the OpenClaw web dashboard if available.
+
+7. **Tell your agent that Clawsy is installed.** Copy-paste this into your chat or add it to your `AGENTS.md`:
+
+   ```
+   Clawsy (macOS companion app) is installed and connected.
+   Read the Clawsy skill file for full integration details.
+   Add to HEARTBEAT.md:
+   - Send agent.info to clawsy-service every heartbeat
+   - Send agent.status for active tasks
+   See: https://github.com/iret77/clawsy/blob/main/for-agents.md
+   ```
+
+8. **Done.** Your agent can now take screenshots, read your clipboard, access files, and show live task progress.
+
+> 💡 For detailed server-side configuration, see [docs/SERVER_SETUP.md](docs/SERVER_SETUP.md).
+
+---
+
+## Server Setup (OpenClaw Side)
+
+Clawsy is a client — it connects to your OpenClaw Gateway. Your agent needs to know Clawsy exists and how to use it.
+
+### What the Agent Needs
+
+After Clawsy connects, your agent should:
+
+1. **Send `agent.info`** on every heartbeat (shows model name in Clawsy header)
+2. **Send `agent.status`** during active work (shows live progress in Mission Control)
+3. **Read from `clawsy-service`** session to receive screenshots, clipboard, and camera events
+
+### HEARTBEAT.md Snippet
+
+Add this to your agent's `HEARTBEAT.md`:
+
+```markdown
+## Clawsy (every heartbeat)
+Send agent.info + agent.status to clawsy-service:
+sessions_send(sessionKey="clawsy-service", timeoutSeconds=3,
+  message='{"kind":"agent.info","payload":{"agentName":"<NAME>","model":"<MODEL>","updatedAt":"<ISO-UTC>"}}')
+sessions_send(sessionKey="clawsy-service", timeoutSeconds=3,
+  message='{"kind":"agent.status","payload":{"agentName":"<NAME>","title":"Idle","progress":0.0,"statusText":"Waiting"}}')
+```
+
+### For Agents Reading This
+
+If you are an OpenClaw agent, read [for-agents.md](for-agents.md) — it has everything you need: exact code, data formats, and integration patterns.
+
+> Full server setup guide: [docs/SERVER_SETUP.md](docs/SERVER_SETUP.md)
+
+---
+
+## Multi-Host Support (v0.7.0+)
+
+Clawsy can connect to **multiple OpenClaw gateways simultaneously**. Each host gets:
+
+- Its own connection, token, and device pairing
+- A color-coded label in the host switcher bar
+- An isolated shared folder (no cross-contamination)
+- Independent Mission Control task tracking
+
+**To add a host:** Click the **+** button in the Clawsy header or go to Settings → Add Host.
+
+Use this when you run separate OpenClaw instances (e.g., work vs. personal, dev vs. prod).
+
+---
+
+## Features at a Glance (v0.7.1)
+
+| Feature | Description |
+|---|---|
+| **Screenshot & Camera** | Full-screen or area screenshots, camera snap with preview |
+| **Clipboard Sync** | Push/pull clipboard content between Mac and agent |
+| **File Sync** | Shared folder with bidirectional file transfer |
+| **FinderSync Extension** | Right-click folders in Finder to configure `.clawsy` rules |
+| **Share Extension** | Share from any app directly to your agent |
+| **Mission Control** | Real-time task view of your agent's activity |
+| **Multi-Host** | Connect to multiple OpenClaw gateways with color-coded switching |
+| **Auto-Update** | Background update checks with one-click install |
+| **SSH Tunnel Fallback** | Automatic encrypted tunnel when direct connection fails |
+| **Quick Send** | Global hotkey (`⌘⇧K`) to message your agent from anywhere |
+| **.clawsy Rules** | File-event automation with glob matching and agent/notify actions |
+
+---
+
+## Key Features
+
 ### ⚡ Quick Send
 
-A global hotkey (`⌘⇧K`) opens a floating panel anywhere on your Mac. Type a message to your agent without switching apps or opening a chat window.
+A global hotkey (`⌘⇧K`) opens a floating panel anywhere on your Mac. Type a message to your agent without switching apps.
 
 <p align="center">
   <img src="docs/screenshots/06-quicksend.png" width="480" alt="Quick Send panel"/>
@@ -46,25 +155,21 @@ Push your clipboard to the agent silently. Let the agent request a screenshot or
 
 ### 📁 Shared Folder & Automation Rules
 
-A local folder syncs with your agent's workspace. Drop a `.clawsy` rule file into any subfolder to define triggers — *"when a PDF is added, summarize it"*. No JSON editing. Right-click any folder in Finder to configure rules via the **FinderSync Extension**.
+A local folder syncs with your agent's workspace. Drop a `.clawsy` rule file into any subfolder to define triggers — *"when a PDF is added, summarize it"*. Right-click any folder in Finder to configure rules via the **FinderSync Extension**.
 
 ### 🔗 Share Extension
 
-Share files, text, or URLs from any macOS app directly to your agent via the system Share menu. No copy-paste required.
+Share files, text, or URLs from any macOS app directly to your agent via the system Share menu.
 
 ### 📊 Mission Control
 
-See what your agent is actually doing, in real time.
+See what your agent is doing, in real time.
 
 <p align="center">
   <img src="docs/screenshots/04-missioncontrol.png" width="340" alt="Mission Control — live task view"/>
 </p>
 
-Agents push their task status via WebSocket. Clawsy picks it up instantly.
-
-### 🔄 Auto-Update
-
-Clawsy checks for new releases automatically and notifies you when an update is available. One click to install.
+Agents push task status via WebSocket. Clawsy shows progress bars, task names, and status text instantly.
 
 ### 🔒 SSH Tunnel Fallback
 
@@ -78,28 +183,9 @@ Every file write, screenshot, or clipboard read requires your approval.
   <img src="docs/screenshots/05-filesync.png" width="380" alt="File sync permission dialog"/>
 </p>
 
-Nothing happens behind your back. You can always see what was approved and when.
-
 ---
 
-## Features at a Glance (v0.5.7)
-
-| Feature | Description |
-|---|---|
-| **Screenshot & Camera** | Full-screen or area screenshots, camera snap with preview |
-| **Clipboard Sync** | Push/pull clipboard content between Mac and agent |
-| **File Sync** | Shared folder with bidirectional file transfer |
-| **FinderSync Extension** | Right-click folders in Finder to configure `.clawsy` rules |
-| **Share Extension** | Share from any app directly to your agent |
-| **Mission Control** | Real-time task view of your agent's activity |
-| **Auto-Update** | Background update checks with one-click install |
-| **SSH Tunnel Fallback** | Automatic encrypted tunnel when direct connection fails |
-| **Quick Send** | Global hotkey (`⌘⇧K`) to message your agent from anywhere |
-| **.clawsy Rules** | File-event automation with glob matching and agent/notify actions |
-
----
-
-## Setup
+## Settings
 
 Open the Clawsy menu → **Settings**:
 
@@ -111,29 +197,47 @@ Open the Clawsy menu → **Settings**:
 |---|---|
 | **Gateway Host** | Your OpenClaw server hostname or IP |
 | **Gateway Port** | Default: `18789` |
-| **Token** | Your OpenClaw agent token |
+| **Token** | Your OpenClaw auth token |
 | **SSH Fallback** | Auto-tunnels via SSH if direct connection fails |
-| **Shared Folder** | Local folder synced with your agent |
+| **Shared Folder** | Local folder synced with your agent (default: `~/Documents/Clawsy`) |
 
 ---
 
 ## Agent Integration
 
-Once paired, your agent can invoke Clawsy directly:
+Once paired, your agent uses the `nodes` tool to interact with Clawsy:
 
 ```python
 # Take a screenshot
-nodes(action="invoke", node="<nodeId>", invokeCommand="screen.capture")
+nodes(action="invoke", invokeCommand="screen.capture")
 
 # Read the clipboard
-nodes(action="invoke", node="<nodeId>", invokeCommand="clipboard.read")
+nodes(action="invoke", invokeCommand="clipboard.read")
 
-# Write a file to the shared folder
-nodes(action="invoke", node="<nodeId>", invokeCommand="file.set",
+# Write to clipboard
+nodes(action="invoke", invokeCommand="clipboard.write",
+      invokeParamsJson='{"text": "Hello from your agent"}')
+
+# Camera snap
+nodes(action="invoke", invokeCommand="camera.snap",
+      invokeParamsJson='{"facing": "front"}')
+
+# List files in shared folder
+nodes(action="invoke", invokeCommand="file.list",
+      invokeParamsJson='{"path": "."}')
+
+# Read a file
+nodes(action="invoke", invokeCommand="file.get",
+      invokeParamsJson='{"name": "report.pdf"}')
+
+# Write a file
+nodes(action="invoke", invokeCommand="file.set",
       invokeParamsJson='{"name": "notes.txt", "content": "<base64>"}')
 ```
 
-See [CLAWSY.md](CLAWSY.md) for the full skill documentation.
+Available commands: `screen.capture`, `clipboard.read`, `clipboard.write`, `camera.list`, `camera.snap`, `file.list`, `file.get`, `file.set`, `location.get`
+
+> For complete agent integration docs, see [for-agents.md](for-agents.md) and [CLAWSY.md](CLAWSY.md).
 
 ---
 

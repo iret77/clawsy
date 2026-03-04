@@ -149,15 +149,34 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         setupLocation()
     }
     
+    /// Returns the UserDefaults key for this host's signing key.
+    /// Per-host mode uses `nodePrivateKey_<gatewayHost>_<gatewayPort>`;
+    /// legacy single-host mode (no hostProfile) keeps `nodePrivateKey` for backward compatibility.
+    private var signingKeyDefaultsKey: String {
+        if let profile = hostProfile {
+            return "nodePrivateKey_\(profile.gatewayHost)_\(profile.gatewayPort)"
+        }
+        return "nodePrivateKey"
+    }
+
     private func loadOrGenerateSigningKey() {
-        // Try to load existing key or generate new one
-        if let savedKeyData = SharedConfig.sharedDefaults.data(forKey: "nodePrivateKey"),
+        let keyName = signingKeyDefaultsKey
+
+        // Try to load existing per-host key
+        if let savedKeyData = SharedConfig.sharedDefaults.data(forKey: keyName),
            let key = try? Curve25519.Signing.PrivateKey(rawRepresentation: savedKeyData) {
             self.signingKey = key
         } else {
+            // For per-host mode, try migrating the legacy shared key on first run
+            if hostProfile != nil,
+               let legacyData = SharedConfig.sharedDefaults.data(forKey: "nodePrivateKey"),
+               let legacyKey = try? Curve25519.Signing.PrivateKey(rawRepresentation: legacyData) {
+                // Don't migrate — generate a fresh key so each host gets a distinct identity
+                let _ = legacyKey // suppress unused warning
+            }
             let newKey = Curve25519.Signing.PrivateKey()
             self.signingKey = newKey
-            SharedConfig.sharedDefaults.set(newKey.rawRepresentation, forKey: "nodePrivateKey")
+            SharedConfig.sharedDefaults.set(newKey.rawRepresentation, forKey: keyName)
         }
         self.publicKey = self.signingKey?.publicKey
     }

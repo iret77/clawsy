@@ -193,6 +193,24 @@ public class HostManager: ObservableObject {
         saveProfiles()
     }
 
+    // MARK: - Re-Pair / Repair Connection
+
+    /// Clears the stored deviceToken for the active host and forces a fresh connection.
+    /// Use when the gateway has lost pairing state (e.g. after a restart) and Clawsy is stuck
+    /// in a DEVICE_AUTH_SIGNATURE_INVALID loop.
+    public func repairActiveConnection() {
+        guard let profile = activeProfile else { return }
+        var updated = profile
+        updated.deviceToken = nil
+        updateHost(updated)
+        if let nm = activeNetworkManager {
+            nm.disconnect()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                nm.connect()
+            }
+        }
+    }
+
     // MARK: - Connection Management
 
     /// Create and connect NetworkManagers for all profiles
