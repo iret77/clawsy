@@ -45,6 +45,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     @Published public var serverVersion = "unknown"
     @Published public var connectionError: ConnectionError?
     @Published public var gatewaySessions: [GatewaySession] = []
+    @Published public var retryCountdown: Int = 0  // Seconds until next retry (0 = no retry pending)
+    private var retryTimer: Timer?
+    private var retryAttempt: Int = 0
+    private let maxRetryAttempt: Int = 10
+    private let baseRetryDelay: TimeInterval = 2.0
+    private let maxRetryDelay: TimeInterval = 300.0  // 5 minutes max
     
     // Mood Tracking State
     private static var lastAppSwitchTime = Date()
@@ -264,6 +270,10 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         }
         
         if connectionAttemptCount == 0 {
+            retryAttempt = 0
+            retryCountdown = 0
+            retryTimer?.invalidate()
+            retryTimer = nil
             isUsingSshTunnel = false
         }
         
@@ -323,6 +333,38 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         self.socket?.connect()
     }
     
+    private func scheduleRetry() {
+        guard retryAttempt < maxRetryAttempt else {
+            rawLog += "\n[RECONNECT] Giving up after \(retryAttempt) attempts"
+            connectionStatus = "STATUS_RECONNECT_EXHAUSTED"
+            connectionError = .reconnectExhausted
+            return
+        }
+
+        let delay = min(baseRetryDelay * pow(2.0, Double(retryAttempt)), maxRetryDelay)
+        let jitter = Double.random(in: 0...1.0)
+        let actualDelay = delay + jitter
+        let delayInt = max(Int(actualDelay.rounded(.up)), 1)
+        retryAttempt += 1
+        retryCountdown = delayInt
+        rawLog += "\n[RECONNECT] Attempt \(retryAttempt)/\(maxRetryAttempt) in \(String(format: "%.1f", actualDelay))s"
+        connectionStatus = "STATUS_RECONNECT_WAITING"
+
+        retryTimer?.invalidate()
+        retryTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            guard let self = self else { timer.invalidate(); return }
+            DispatchQueue.main.async {
+                self.retryCountdown -= 1
+                if self.retryCountdown <= 0 {
+                    timer.invalidate()
+                    self.retryTimer = nil
+                    self.isUsingSshTunnel = false
+                    self.connect()
+                }
+            }
+        }
+    }
+
     private func handleConnectionFailure(err: Error?) {
         DispatchQueue.main.async {
             self.connectionWatchdog?.invalidate()
@@ -336,12 +378,16 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             
             #if os(macOS)
             if self.useSshFallback && !self.isUsingSshTunnel {
+                // First failure: try SSH tunnel (no backoff for the first SSH attempt)
                 self.startSshTunnel()
             } else {
+                // SSH also failed OR SSH not configured → backoff retry
                 self.runDiagnostics(err: err)
+                self.scheduleRetry()
             }
             #else
             self.runDiagnostics(err: err)
+            self.scheduleRetry()
             #endif
         }
     }
@@ -550,6 +596,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                         self.connectionStatus = "STATUS_SSH_FAILED"
                         self.isUsingSshTunnel = false
                         self.connectionError = .sshTunnelFailed
+                        self.scheduleRetry()
                     }
                 }
             } catch {
@@ -558,6 +605,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                     self.connectionStatus = "STATUS_SSH_FAILED"
                     self.isUsingSshTunnel = false
                     self.connectionError = .sshTunnelFailed
+                    self.scheduleRetry()
                 }
             }
         }
@@ -599,6 +647,11 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         #endif
         isUsingSshTunnel = false
         
+        retryTimer?.invalidate()
+        retryTimer = nil
+        retryCountdown = 0
+        // Don't reset retryAttempt here — let manual connect() do that
+        
         connectionAttemptCount = 0
         DispatchQueue.main.async {
             self.isConnected = false
@@ -625,6 +678,10 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             
             switch event {
             case .connected(let headers):
+                self.retryAttempt = 0
+                self.retryCountdown = 0
+                self.retryTimer?.invalidate()
+                self.retryTimer = nil
                 self.rawLog += "\n[WSS] Connected (headers: \(headers.count))"
                 self.connectionWatchdog?.invalidate()
                 self.connectionWatchdog = nil

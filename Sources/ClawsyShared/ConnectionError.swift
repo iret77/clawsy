@@ -8,6 +8,7 @@ public enum ConnectionError: Equatable {
     case sshTunnelFailed
     case hostUnreachable
     case gatewayNotRunning
+    case reconnectExhausted
     case unknownDisconnect(reason: String)
 
     // MARK: - User-Facing Strings (German)
@@ -19,6 +20,7 @@ public enum ConnectionError: Equatable {
         case .sshTunnelFailed:      return "SSH-Tunnel fehlgeschlagen"
         case .hostUnreachable:      return "Gateway nicht erreichbar"
         case .gatewayNotRunning:    return "Gateway antwortet nicht"
+        case .reconnectExhausted:   return "Verbindung fehlgeschlagen"
         case .unknownDisconnect:    return "Verbindungsfehler"
         }
     }
@@ -35,6 +37,8 @@ public enum ConnectionError: Equatable {
             return "Das Gateway ist nicht erreichbar. Prüfe ob OpenClaw läuft und Host/Port korrekt sind."
         case .gatewayNotRunning:
             return "Der SSH-Tunnel steht, aber das Gateway antwortet nicht auf localhost."
+        case .reconnectExhausted:
+            return "Verbindung konnte nach mehreren Versuchen nicht hergestellt werden. Bitte Netzwerk und Gateway-Einstellungen prüfen."
         case .unknownDisconnect(let reason):
             return "Verbindung getrennt: \(reason)"
         }
@@ -69,6 +73,8 @@ public enum ConnectionError: Equatable {
             Mein Clawsy hat einen SSH-Tunnel aufgebaut, aber das Gateway antwortet nicht auf localhost. \
             Bitte prüfe ob das OpenClaw Gateway auf dem Server läuft (`openclaw gateway status`).
             """
+        case .reconnectExhausted:
+            return nil
         case .unknownDisconnect:
             return nil
         }
@@ -84,6 +90,8 @@ public enum ConnectionError: Equatable {
         case .invalidToken:
             return .openSettings  // User can also copy the prompt, but settings is primary
         case .sshTunnelFailed:
+            return .openSettings
+        case .reconnectExhausted:
             return .openSettings
         case .unknownDisconnect:
             return .none

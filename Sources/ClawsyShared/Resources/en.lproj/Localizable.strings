@@ -221,3 +221,7 @@
 "ONBOARDING_SHARE" = "Share Extension";
 "ONBOARDING_SHARE_DESC" = "Use the Share menu in any app to send files or text directly to your agent. Available automatically once Clawsy is in /Applications.";
 "ONBOARDING_SHARE_ACTION" = "Got it";
+
+
+"STATUS_RECONNECT_WAITING" = "Reconnecting...";
+"STATUS_RECONNECT_EXHAUSTED" = "Connection failed";

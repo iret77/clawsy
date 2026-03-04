@@ -244,3 +244,6 @@
 "SCREENSHOT_FAILED" = "Screenshot fehlgeschlagen";
 "CAPTURE_FAILED" = "Aufnahme fehlgeschlagen";
 "PHOTO_SENT" = "Foto gesendet";
+
+"STATUS_RECONNECT_WAITING" = "Verbindung wird wiederhergestellt…";
+"STATUS_RECONNECT_EXHAUSTED" = "Verbindung fehlgeschlagen";

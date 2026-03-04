@@ -17,6 +17,7 @@ public class HostManager: ObservableObject {
     @Published public var connectionAttemptCount: Int = 0
     @Published public var connectionError: ConnectionError? = nil
     @Published public var isServerClawsyAware: Bool = false
+    @Published public var retryCountdown: Int = 0
 
     private var activeCancellables = Set<AnyCancellable>()
 
@@ -45,6 +46,7 @@ public class HostManager: ObservableObject {
             connectionAttemptCount = 0
             connectionError = nil
             isServerClawsyAware = false
+            retryCountdown = 0
             return
         }
         nm.$isConnected.receive(on: DispatchQueue.main)

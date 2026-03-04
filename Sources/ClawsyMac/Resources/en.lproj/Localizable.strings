@@ -243,3 +243,6 @@
 "SCREENSHOT_FAILED" = "Screenshot failed";
 "CAPTURE_FAILED" = "Capture failed";
 "PHOTO_SENT" = "Photo sent";
+
+"STATUS_RECONNECT_WAITING" = "Reconnecting...";
+"STATUS_RECONNECT_EXHAUSTED" = "Connection failed";
