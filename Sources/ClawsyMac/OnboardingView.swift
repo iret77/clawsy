@@ -125,7 +125,7 @@ struct OnboardingView: View {
                             Image(systemName: "arrow.right.circle.fill")
                                 .font(.system(size: 11))
                                 .foregroundColor(.blue)
-                            Text("ONBOARDING_FINDERSYNC_HINT", bundle: .clawsy)
+                            Text(NSLocalizedString("ONBOARDING_FINDERSYNC_HINT", bundle: .clawsy, comment: ""))
                                 .font(.system(size: 11))
                                 .foregroundColor(.blue)
                         }
@@ -290,7 +290,10 @@ struct OnboardingView: View {
         try? task.run()
         task.waitUntilExit()
 
-        // Recheck after short delay; if still not active, open Settings with hint
+        // Always show the hint so the user knows the manual path
+        showFinderSyncHint = true
+
+        // Recheck after short delay; if still not active, open Settings
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             checkFinderSyncStatus()
             if !isFinderSyncRunning {

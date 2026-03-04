@@ -189,7 +189,7 @@
 "ONBOARDING_ACCESSIBILITY_DESC" = "Required for global hotkeys (Quick Send, Push Clipboard).";
 "ONBOARDING_OPEN_SETTINGS" = "Grant Access";
 "ONBOARDING_FINDERSYNC" = "Finder Extension";
-"ONBOARDING_FINDERSYNC_DESC" = "Enables right-click actions on folders.";
+"ONBOARDING_FINDERSYNC_DESC" = "Adds 'Send to Agent' to Finder's right-click menu. Requires manual activation in System Settings.";
 "ONBOARDING_ENABLE" = "Enable";
 "ONBOARDING_OPTIONAL" = "optional";
 "ONBOARDING_SKIP" = "Later";
@@ -215,7 +215,7 @@
 
 "ACCESSIBILITY_GRANTED" = "Accessibility granted";
 "GRANT_ACCESSIBILITY" = "Grant Accessibility";
-"ONBOARDING_FINDERSYNC_HINT" = "In System Settings: Login Items & Extensions → Finder → Enable Clawsy";
+"ONBOARDING_FINDERSYNC_HINT" = "Open System Settings → General → Login Items & Extensions → scroll to Finder Extensions → enable Clawsy";
 
 // Multi-host management
 "HOSTS" = "Hosts";
