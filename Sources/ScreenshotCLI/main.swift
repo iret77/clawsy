@@ -19,6 +19,21 @@ func render<V: View>(_ view: V, width: CGFloat, height: CGFloat, to path: String
     catch { print("❌ write failed: \(path) — \(error)") }
 }
 
+// ── Clawsy icon loader ────────────────────────────────────────────────────────
+// Load the claw icon from Assets/Icon.png (black silhouette on transparent).
+// Tries multiple relative paths since CWD may vary.
+
+func loadClawsyIcon(size: NSSize = NSSize(width: 16, height: 16)) -> NSImage? {
+    for path in ["Assets/Icon.png", "../../Assets/Icon.png", "../../../Assets/Icon.png"] {
+        if let img = NSImage(contentsOfFile: path) {
+            img.isTemplate = true
+            img.size = size
+            return img
+        }
+    }
+    return nil
+}
+
 // ── Clawsy window style ───────────────────────────────────────────────────────
 // No traffic lights. Dark vibrancy panel, rounded corners, subtle border.
 
@@ -371,21 +386,30 @@ struct HeroView: View {
                     Spacer()
 
                     HStack(spacing: 12) {
+                        // Clawsy menu bar icon — LEFT of system icons (like real macOS)
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color(white: 1, opacity: 0.15))
+                                .frame(width: 26, height: 20)
+                            if let icon = loadClawsyIcon(size: NSSize(width: 14, height: 14)) {
+                                Image(nsImage: icon)
+                                    .renderingMode(.template)
+                                    .foregroundColor(.white)
+                            } else {
+                                // Fallback if icon file not found
+                                Text("C")
+                                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                                    .foregroundColor(.white)
+                            }
+                        }
+
+                        // System icons (AFTER third-party items on real macOS)
                         ForEach(["wifi", "battery.100", "clock"], id: \.self) { icon in
                             Image(systemName: icon)
                                 .font(.system(size: 13))
                         }
                         Text("Tue 4 Mar  14:30")
                             .font(.system(size: 12))
-
-                        // Clawsy icon — highlighted
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color(white: 1, opacity: 0.15))
-                                .frame(width: 26, height: 20)
-                            Text("🦞")
-                                .font(.system(size: 11))
-                        }
                     }
                     .foregroundColor(Color(white: 0.85))
                     .padding(.trailing, 12)
@@ -450,8 +474,15 @@ struct OnboardingView: View {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(Color(red: 0.4, green: 0.65, blue: 1.0).opacity(0.18))
                         .frame(width: 58, height: 58)
-                    Text("🦞")
-                        .font(.system(size: 28))
+                    if let icon = loadClawsyIcon(size: NSSize(width: 28, height: 28)) {
+                        Image(nsImage: icon)
+                            .renderingMode(.template)
+                            .foregroundColor(Color(red: 0.5, green: 0.75, blue: 1.0))
+                    } else {
+                        Text("C")
+                            .font(.system(size: 28, weight: .heavy, design: .rounded))
+                            .foregroundColor(Color(red: 0.5, green: 0.75, blue: 1.0))
+                    }
                 }
                 Text("Welcome to Clawsy")
                     .font(.system(size: 17, weight: .bold))
