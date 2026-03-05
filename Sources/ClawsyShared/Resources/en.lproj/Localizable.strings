@@ -254,3 +254,9 @@
 "ONBOARDING_SHARE" = "Share Extension";
 "ONBOARDING_SHARE_DESC" = "Use the Share menu in any app to send files or text directly to your agent. Available automatically when Clawsy is in /Applications.";
 "ONBOARDING_SHARE_ACTION" = "Got it";
+
+// Onboarding – Server Setup
+"ONBOARDING_SERVER" = "Server Setup";
+"ONBOARDING_SERVER_DESC" = "Your agent needs server-side components to cache clipboard and screenshot events. Tap to copy a setup prompt — paste it to your agent via chat.";
+"ONBOARDING_SERVER_COPY" = "Copy Setup Prompt";
+"ONBOARDING_SERVER_DONE" = "Done";

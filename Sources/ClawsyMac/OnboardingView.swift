@@ -10,6 +10,7 @@ struct OnboardingView: View {
     @State private var isFinderSyncRunning = false
     @State private var showFinderSyncHint = false
     @State private var isShareOnboarded = false
+    @State private var isServerSetupDone: Bool = UserDefaults.standard.bool(forKey: "clawsy_server_setup_done")
     @State private var refreshTimer: Timer?
     @State private var accessibilityJustRequested = false
     @State private var accessibilityUserConfirmed = false
@@ -146,6 +147,17 @@ struct OnboardingView: View {
                     actionLabel: isShareOnboarded ? "" : NSLocalizedString("ONBOARDING_SHARE_ACTION", bundle: .clawsy, comment: ""),
                     action: acknowledgeShare
                 )
+
+                // Step 5: Server Setup (optional)
+                OnboardingStepRow(
+                    icon: "server.rack",
+                    title: NSLocalizedString("ONBOARDING_SERVER", bundle: .clawsy, comment: ""),
+                    subtitle: NSLocalizedString("ONBOARDING_SERVER_DESC", bundle: .clawsy, comment: ""),
+                    isCompleted: isServerSetupDone,
+                    isCritical: false,
+                    actionLabel: isServerSetupDone ? "" : NSLocalizedString("ONBOARDING_SERVER_COPY", bundle: .clawsy, comment: ""),
+                    action: copyServerSetupPrompt
+                )
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 16)
@@ -280,6 +292,29 @@ struct OnboardingView: View {
     private func acknowledgeShare() {
         UserDefaults.standard.set(true, forKey: "clawsy_share_onboarded")
         isShareOnboarded = true
+    }
+
+    private func copyServerSetupPrompt() {
+        let prompt = """
+        Clawsy (macOS Companion App) is now installed and connected to this gateway. \
+        Please install the server-side components so you can access clipboard history, \
+        screenshots, and other cached events:
+
+        1. Clone the repo: git clone https://github.com/iret77/clawsy.git /tmp/clawsy-setup
+        2. Run setup: cd /tmp/clawsy-setup/server && chmod +x setup.sh && ./setup.sh
+        3. Read the integration guide: cat /tmp/clawsy-setup/server/templates/CLAWSY.md
+
+        After setup, add Clawsy heartbeat entries to your HEARTBEAT.md — \
+        send agent.info and agent.status to clawsy-service every heartbeat. \
+        See: https://github.com/iret77/clawsy/blob/main/server/templates/CLAWSY.md
+        """
+
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(prompt, forType: .string)
+
+        isServerSetupDone = true
+        UserDefaults.standard.set(true, forKey: "clawsy_server_setup_done")
     }
 
     private func enableFinderSync() {

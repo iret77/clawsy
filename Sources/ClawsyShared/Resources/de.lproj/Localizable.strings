@@ -255,3 +255,9 @@
 "ONBOARDING_SHARE" = "Teilen-Erweiterung";
 "ONBOARDING_SHARE_DESC" = "Nutze das Teilen-Menü in jeder App, um Dateien oder Text direkt an deinen Agent zu senden. Automatisch verfügbar, wenn Clawsy in /Programme liegt.";
 "ONBOARDING_SHARE_ACTION" = "Verstanden";
+
+// Onboarding – Server einrichten
+"ONBOARDING_SERVER" = "Server einrichten";
+"ONBOARDING_SERVER_DESC" = "Dein Agent braucht Server-Komponenten, um Zwischenablage und Screenshots zu cachen. Tippe, um einen Setup-Prompt zu kopieren — sende ihn deinem Agent per Chat.";
+"ONBOARDING_SERVER_COPY" = "Setup-Prompt kopieren";
+"ONBOARDING_SERVER_DONE" = "Fertig";
