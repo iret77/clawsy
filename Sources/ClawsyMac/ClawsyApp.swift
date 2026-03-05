@@ -58,15 +58,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             return
         }
         
-        // Composite: lobster template + colored dot (bottom-right)
+        // Composite: appearance-adaptive lobster + colored dot (bottom-right)
+        // Cannot use isTemplate=true on composite (macOS would render dot monochrome),
+        // so we tint the lobster manually based on current appearance.
         let size = lobster.size
+        let isDark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        let tintColor: NSColor = isDark ? .white : .black
+
+        // Create tinted copy of lobster icon
+        let tintedLobster = lobster.copy() as! NSImage
+        tintedLobster.isTemplate = false
+        tintedLobster.lockFocus()
+        tintColor.set()
+        NSRect(origin: .zero, size: size).fill(using: .sourceAtop)
+        tintedLobster.unlockFocus()
+
         let composite = NSImage(size: size)
         composite.lockFocus()
-        
-        // Draw lobster
-        lobster.draw(in: NSRect(origin: .zero, size: size))
-        
-        // Draw colored dot (8×8pt, bottom-right corner)
+
+        // Draw appearance-tinted lobster
+        tintedLobster.draw(in: NSRect(origin: .zero, size: size))
+
+        // Draw colored dot (6×6pt, bottom-right corner)
         let dotSize: CGFloat = 6
         let dotRect = NSRect(
             x: size.width - dotSize - 1,
@@ -76,15 +89,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         )
         dotColor.setFill()
         NSBezierPath(ovalIn: dotRect).fill()
-        
+
         // White border for visibility
         NSColor.white.withAlphaComponent(0.9).setStroke()
         let borderPath = NSBezierPath(ovalIn: dotRect.insetBy(dx: 0.5, dy: 0.5))
         borderPath.lineWidth = 1.0
         borderPath.stroke()
-        
+
         composite.unlockFocus()
-        composite.isTemplate = false // Must be false for the colored dot to show
+        composite.isTemplate = false
         button.image = composite
     }
     
@@ -175,6 +188,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         UpdateManager.shared.checkForUpdates(silent: true)
         UpdateManager.shared.startPeriodicChecks()
 
+        // Redraw menu bar icon when system appearance changes (Dark ↔ Light Mode)
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(appearanceChanged),
+            name: NSNotification.Name("AppleInterfaceThemeChangedNotification"),
+            object: nil
+        )
+
         // Show onboarding on very first launch (before user ever clicks the menu bar icon)
         let onboardingCompleted = UserDefaults.standard.bool(forKey: "onboardingCompleted")
         if !onboardingCompleted {
@@ -184,6 +205,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         }
     }
     
+    @objc private func appearanceChanged(_ notification: Notification) {
+        DispatchQueue.main.async { [weak self] in
+            self?.updateMenuBarIcon()
+        }
+    }
+
     private func registerGlobalHotkeyMonitor() {
         // Always register the monitor — it fires only when Accessibility is granted.
         // Do NOT auto-prompt on startup: macOS revokes permission on every binary update,
