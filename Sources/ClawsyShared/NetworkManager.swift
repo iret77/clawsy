@@ -1081,17 +1081,29 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                      }
                 } else if let errorObj = json["error"] as? [String: Any],
                           let errorCode = errorObj["code"] as? String, errorCode == "NOT_PAIRED" {
-                     // Extract requestId and send pairing request
                      let details = errorObj["details"] as? [String: Any]
                      let requestId = details?["requestId"] as? String ?? ""
+                     
+                     #if os(macOS)
+                     // Strategy: If we're connected via direct WSS (not SSH tunnel) and SSH
+                     // fallback is available, reconnect through SSH. Localhost connections get
+                     // auto-approved pairing on the server side — no manual approval needed.
+                     // This is THE key insight from the 2026-03-05 connection incident.
+                     if !self.isUsingSshTunnel && self.useSshFallback && !self.sshUser.isEmpty {
+                         self.rawLog += "\n[PAIR] NOT_PAIRED via WSS – switching to SSH tunnel for auto-pairing"
+                         self.disconnect()
+                         self.startSshTunnel()
+                         return
+                     }
+                     #endif
+                     
+                     // No SSH available — fall back to standard pairing flow
                      self.isPairing = true
                      self.connectionStatus = "STATUS_PAIRING"
                      
-                     // Cancel the connection watchdog – pairing can take minutes
                      self.connectionWatchdog?.invalidate()
                      self.connectionWatchdog = nil
                      
-                     // Start a 5-minute pairing timeout as safety net
                      self.pairingTimeoutTimer?.invalidate()
                      self.pairingTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: false) { [weak self] _ in
                          guard let self = self else { return }
@@ -1150,39 +1162,50 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         return SHA256.hash(data: pubKeyData).map { String(format: "%02x", $0) }.joined()
     }
 
+    // MARK: - Connection Identity Constants
+    // These are the single source of truth for both signature payload AND connect params.
+    // NEVER define these values separately — that's how signature mismatches happen.
+    // See: 2026-03-05 scopes mismatch incident (v0.7.5 fix).
+    private static let connectRole = "node"
+    private static let connectClientMode = "node"
+    private static let connectScopes = ["operator.read"]
+    
+    #if os(macOS)
+    private static let connectPlatform = "macos"
+    #elseif os(iOS)
+    private static let connectPlatform = "ios"
+    #elseif os(tvOS)
+    private static let connectPlatform = "tvos"
+    #else
+    private static let connectPlatform = "unknown"
+    #endif
+
+    private var connectClientId: String { "openclaw-\(Self.connectPlatform)" }
+
     private func performHandshake(nonce: String) {
         guard let signingKey = signingKey, let publicKey = publicKey else { return }
         let tsMs = Int64(Date().timeIntervalSince1970 * 1000)
         let deviceId = self.deviceId
         
-        // Protocol V2 components: version, deviceId, clientId, clientMode, role, scopes, ts, token, nonce
-        // Note: scopes MUST match what is sent in the connect params below.
         let authToken = deviceToken ?? serverToken
-        let scopesString = "operator.read"
-        let components = ["v2", deviceId, "openclaw-macos", "node", "node", scopesString, String(tsMs), authToken, nonce]
+        let scopesString = Self.connectScopes.joined(separator: ",")
+        
+        // Protocol V2: version|deviceId|clientId|clientMode|role|scopes|ts|token|nonce
+        // All values come from the shared constants above — same source as the connect params.
+        let components = ["v2", deviceId, connectClientId, Self.connectClientMode, Self.connectRole, scopesString, String(tsMs), authToken, nonce]
         let payloadString = components.joined(separator: "|")
         guard let payloadData = payloadString.data(using: .utf8) else { return }
         guard let signature = try? signingKey.signature(for: payloadData) else { return }
         let pubKeyB64 = base64UrlEncode(publicKey.rawRepresentation)
         let sigB64 = base64UrlEncode(signature)
         
-        #if os(macOS)
-        let platform = "macos"
-        #elseif os(iOS)
-        let platform = "ios"
-        #elseif os(tvOS)
-        let platform = "tvos"
-        #else
-        let platform = "unknown"
-        #endif
-        
         let connectReq: [String: Any] = [
             "type": "req", "id": "1", "method": "connect",
             "params": [
                 "minProtocol": 3, "maxProtocol": 3,
-                "client": ["id": "openclaw-\(platform)", "version": SharedConfig.versionDisplay, "platform": platform, "mode": "node"],
-                "role": "node", "caps": ["clipboard", "screen", "camera", "file", "location"],
-                "scopes": ["operator.read"],
+                "client": ["id": connectClientId, "version": SharedConfig.versionDisplay, "platform": Self.connectPlatform, "mode": Self.connectClientMode],
+                "role": Self.connectRole, "caps": ["clipboard", "screen", "camera", "file", "location"],
+                "scopes": Self.connectScopes,
                 "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set", "location.get", "location.start", "location.stop", "location.add_smart"],
                 "permissions": ["clipboard.read": true, "clipboard.write": true],
                 "auth": ["token": authToken],
