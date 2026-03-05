@@ -692,9 +692,16 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             case .disconnected(let reason, let code):
                 self.rawLog += "\n[WSS] Disconnected: \(reason) (code: \(code))"
                 self.isConnected = false
-                self.connectionStatus = "STATUS_DISCONNECTED"
                 if let classified = ConnectionError.classify(disconnectReason: reason, code: code) {
                     self.connectionError = classified
+                }
+                // If the handshake never completed (e.g. NOT_PAIRED / pairing-required),
+                // treat this as a connection failure so SSH fallback can trigger.
+                if !self.isHandshakeComplete && !self.isPairing {
+                    self.rawLog += "\n[WSS] Handshake incomplete — treating as connection failure"
+                    self.handleConnectionFailure(err: nil)
+                } else {
+                    self.connectionStatus = "STATUS_DISCONNECTED"
                 }
             case .text(let string):
                 self.rawLog += "\nIN: \(string)"
