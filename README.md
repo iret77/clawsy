@@ -79,6 +79,35 @@ Make sure your OpenClaw instance is running and you have the **Gateway Host**, *
 
 Clawsy is a client — it connects to your OpenClaw Gateway. Your agent needs to know Clawsy exists and how to use it.
 
+### Event Cache (clawsy-monitor)
+
+Clawsy pushes events (clipboard, screenshots, shares) to a `clawsy-service` session. The **clawsy-monitor** watches this session and caches events into a structured `clawsy-context.json` in your workspace so agents can read them efficiently.
+
+#### Automatic Setup
+
+```bash
+cd server
+./setup.sh
+```
+
+This installs `clawsy-monitor` as a systemd service that watches for Clawsy events and caches them in `clawsy-context.json` in your workspace. The setup is fully portable — all paths are auto-detected.
+
+#### Manual Setup
+
+If you don't have systemd, run the monitor directly:
+
+```bash
+node server/monitor.mjs
+```
+
+#### Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `OPENCLAW_HOME` | `~/.openclaw` | OpenClaw home directory |
+| `OPENCLAW_AGENT` | `main` | Agent ID |
+| `OPENCLAW_WORKSPACE` | `$OPENCLAW_HOME/workspace` | Workspace directory |
+
 ### What the Agent Needs
 
 After Clawsy connects, your agent should:
