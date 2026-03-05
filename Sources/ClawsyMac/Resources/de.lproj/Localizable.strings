@@ -250,3 +250,8 @@
 "STATUS_RECONNECT_WAITING" = "Verbindung wird wiederhergestellt…";
 "STATUS_RECONNECTING" = "Verbindung wird wiederhergestellt…";
 "STATUS_RECONNECT_EXHAUSTED" = "Verbindung fehlgeschlagen";
+
+// Onboarding – Teilen-Erweiterung
+"ONBOARDING_SHARE" = "Teilen-Erweiterung";
+"ONBOARDING_SHARE_DESC" = "Nutze das Teilen-Menü in jeder App, um Dateien oder Text direkt an deinen Agent zu senden. Automatisch verfügbar, wenn Clawsy in /Programme liegt.";
+"ONBOARDING_SHARE_ACTION" = "Verstanden";

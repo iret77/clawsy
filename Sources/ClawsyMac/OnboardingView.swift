@@ -197,13 +197,15 @@ struct OnboardingView: View {
         isInApplications = Bundle.main.bundlePath.hasPrefix("/Applications")
         let trusted = AXIsProcessTrusted()
         isAccessibilityGranted = trusted
-        // If already trusted: clear restart hint
+        // If already trusted: clear restart hint and persist flag
         if trusted {
             accessibilityJustRequested = false
-        } else if accessibilityPreviouslyRequested {
-            // Was previously requested and enabled in Settings, but process needs restart
-            accessibilityJustRequested = true
+            accessibilityPreviouslyRequested = true
         }
+        // Note: do NOT set accessibilityJustRequested = true here based on
+        // accessibilityPreviouslyRequested. That @State flag is session-only
+        // and only becomes true when the user clicks "Enable" in THIS session.
+        // After a restart it resets to false → shows "Enable" button (correct).
         checkFinderSyncStatus()
         isShareOnboarded = UserDefaults.standard.bool(forKey: "clawsy_share_onboarded")
     }
