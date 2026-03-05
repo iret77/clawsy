@@ -1148,10 +1148,11 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         let tsMs = Int64(Date().timeIntervalSince1970 * 1000)
         let deviceId = self.deviceId
         
-        // Protocol V2 components: version, deviceId, clientId, role, mode, clientVersion, ts, token, nonce
-        // Note: clientId MUST be 'openclaw-macos' (or similar recognized id) for standard Gateway logic.
+        // Protocol V2 components: version, deviceId, clientId, clientMode, role, scopes, ts, token, nonce
+        // Note: scopes MUST match what is sent in the connect params below.
         let authToken = deviceToken ?? serverToken
-        let components = ["v2", deviceId, "openclaw-macos", "node", "node", "", String(tsMs), authToken, nonce]
+        let scopesString = "operator.read"
+        let components = ["v2", deviceId, "openclaw-macos", "node", "node", scopesString, String(tsMs), authToken, nonce]
         let payloadString = components.joined(separator: "|")
         guard let payloadData = payloadString.data(using: .utf8) else { return }
         guard let signature = try? signingKey.signature(for: payloadData) else { return }
