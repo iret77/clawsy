@@ -45,6 +45,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     @Published public var serverVersion = "unknown"
     @Published public var connectionError: ConnectionError?
     @Published public var gatewaySessions: [GatewaySession] = []
+    @Published public var pairingRequestId: String = ""  // Request ID for manual pairing approval
     @Published public var retryCountdown: Int = 0  // Seconds until next retry (0 = no retry pending)
     private var retryTimer: Timer?
     private var retryAttempt: Int = 0
@@ -630,6 +631,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     
     public func disconnect() {
         isPairing = false
+        pairingRequestId = ""
         pairingTimeoutTimer?.invalidate()
         pairingTimeoutTimer = nil
 
@@ -1001,6 +1003,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         
         if event == "node.pair.resolved" {
             self.isPairing = false
+            self.pairingRequestId = ""
             self.pairingTimeoutTimer?.invalidate()
             self.pairingTimeoutTimer = nil
             if let payload = json["payload"] as? [String: Any] {
@@ -1105,9 +1108,10 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                      }
                      #endif
                      
-                     // No SSH available — fall back to standard pairing flow
+                     // No SSH available — show pairing instructions to user
                      self.isPairing = true
-                     self.connectionStatus = "STATUS_PAIRING"
+                     self.pairingRequestId = requestId
+                     self.connectionStatus = requestId.isEmpty ? "STATUS_PAIRING" : "STATUS_AWAITING_PAIR_APPROVE"
                      
                      self.connectionWatchdog?.invalidate()
                      self.connectionWatchdog = nil

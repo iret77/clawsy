@@ -22,6 +22,7 @@ struct ContentView: View {
     @AppStorage("onboardingCompleted") private var onboardingCompleted = false
     @State private var errorDismissed = false
     @State private var fixPromptCopied = false
+    @State private var pairingCmdCopied = false
     @State private var showingAddHostFromHeader = false
     
     // Persistent Configuration (UI State only) — kept for legacy SettingsView compatibility
@@ -105,6 +106,17 @@ struct ContentView: View {
                     fixPromptCopied: $fixPromptCopied,
                     onDismiss: { errorDismissed = true },
                     onOpenSettings: { showingSettings = true }
+                )
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+            }
+
+            // --- Pairing Approval Banner ---
+            if hostManager.connectionStatus == "STATUS_AWAITING_PAIR_APPROVE" && !hostManager.pairingRequestId.isEmpty {
+                PairingApprovalBanner(
+                    requestId: hostManager.pairingRequestId,
+                    copied: $pairingCmdCopied
                 )
                 .transition(.move(edge: .top).combined(with: .opacity))
                 .padding(.horizontal, 8)
@@ -1617,6 +1629,84 @@ struct CameraMenuView: View {
         }
         .padding(4)
         .frame(width: 220)
+    }
+}
+
+// MARK: - Pairing Approval Banner
+
+struct PairingApprovalBanner: View {
+    let requestId: String
+    @Binding var copied: Bool
+
+    private var command: String { "openclaw nodes approve \(requestId)" }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Header
+            HStack {
+                Image(systemName: "link.badge.plus")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white)
+                Text(l10n: "PAIRING_REQUIRED_TITLE")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.white)
+                Spacer()
+            }
+
+            // Description
+            Text(l10n: "PAIRING_REQUIRED_DESC")
+                .font(.system(size: 10))
+                .foregroundColor(.white.opacity(0.85))
+
+            // Command + Copy button
+            HStack(spacing: 6) {
+                Text(command)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(.white)
+                    .textSelection(.enabled)
+                    .lineLimit(1)
+
+                Spacer()
+
+                Button(action: {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(command, forType: .string)
+                    copied = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        copied = false
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                            .font(.system(size: 10))
+                        Text(l10n: copied ? "PAIRING_COPIED" : "PAIRING_COPY_CMD")
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.white.opacity(0.2))
+                    .cornerRadius(6)
+                    .foregroundColor(.white)
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Hint
+            Text(l10n: "PAIRING_REQUIRED_HINT")
+                .font(.system(size: 9))
+                .foregroundColor(.white.opacity(0.6))
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.blue.opacity(0.85), Color.indigo.opacity(0.85)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
     }
 }
 

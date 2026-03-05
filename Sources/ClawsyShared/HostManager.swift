@@ -17,6 +17,7 @@ public class HostManager: ObservableObject {
     @Published public var connectionAttemptCount: Int = 0
     @Published public var connectionError: ConnectionError? = nil
     @Published public var isServerClawsyAware: Bool = false
+    @Published public var pairingRequestId: String = ""
     @Published public var retryCountdown: Int = 0
 
     private var activeCancellables = Set<AnyCancellable>()
@@ -46,6 +47,7 @@ public class HostManager: ObservableObject {
             connectionAttemptCount = 0
             connectionError = nil
             isServerClawsyAware = false
+            pairingRequestId = ""
             retryCountdown = 0
             return
         }
@@ -59,6 +61,8 @@ public class HostManager: ObservableObject {
             .assign(to: \.connectionError, on: self).store(in: &activeCancellables)
         nm.$isServerClawsyAware.receive(on: DispatchQueue.main)
             .assign(to: \.isServerClawsyAware, on: self).store(in: &activeCancellables)
+        nm.$pairingRequestId.receive(on: DispatchQueue.main)
+            .assign(to: \.pairingRequestId, on: self).store(in: &activeCancellables)
     }
 
     public init() {

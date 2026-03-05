@@ -95,6 +95,12 @@
 "STATUS_PAIRING" = "Emparejando…";
 "STATUS_PAIRING_PENDING" = "Esperando aprobación…";
 "STATUS_PAIRING_REJECTED" = "Emparejamiento rechazado";
+"STATUS_AWAITING_PAIR_APPROVE" = "Esperando aprobación de emparejamiento…";
+"PAIRING_REQUIRED_TITLE" = "Aprobación de emparejamiento necesaria";
+"PAIRING_REQUIRED_DESC" = "Ejecuta este comando en tu servidor:";
+"PAIRING_REQUIRED_HINT" = "El servidor debe aprobar este dispositivo antes de conectar.";
+"PAIRING_COPY_CMD" = "Copiar";
+"PAIRING_COPIED" = "¡Copiado!";
 
 /* Onboarding */
 "SETUP" = "Asistente de configuración";

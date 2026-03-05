@@ -95,6 +95,12 @@
 "STATUS_PAIRING" = "Appairage…";
 "STATUS_PAIRING_PENDING" = "En attente d'approbation…";
 "STATUS_PAIRING_REJECTED" = "Appairage refusé";
+"STATUS_AWAITING_PAIR_APPROVE" = "En attente d'approbation…";
+"PAIRING_REQUIRED_TITLE" = "Approbation de l'appairage requise";
+"PAIRING_REQUIRED_DESC" = "Exécutez cette commande sur votre serveur :";
+"PAIRING_REQUIRED_HINT" = "Le serveur doit approuver cet appareil avant la connexion.";
+"PAIRING_COPY_CMD" = "Copier";
+"PAIRING_COPIED" = "Copié !";
 
 /* Onboarding */
 "SETUP" = "Assistant de configuration";

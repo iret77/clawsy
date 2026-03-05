@@ -146,6 +146,12 @@
 "STATUS_PAIRING_PENDING" = "Awaiting pairing approval…";
 "STATUS_PAIRING_REJECTED" = "Pairing rejected";
 "STATUS_PAIRING_TIMEOUT" = "Pairing timed out";
+"STATUS_AWAITING_PAIR_APPROVE" = "Awaiting pairing approval…";
+"PAIRING_REQUIRED_TITLE" = "Pairing approval needed";
+"PAIRING_REQUIRED_DESC" = "Run this command on your server:";
+"PAIRING_REQUIRED_HINT" = "The server needs to approve this device before connecting.";
+"PAIRING_COPY_CMD" = "Copy";
+"PAIRING_COPIED" = "Copied!";
 
 "MISSION_CONTROL_TITLE" = "Task Overview";
 "MISSION_CONTROL_TITLE_COUNT" = "Task Overview (%d)";
