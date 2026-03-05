@@ -701,15 +701,13 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                     self.rawLog += "\n[WSS] Handshake incomplete — treating as connection failure"
                     self.handleConnectionFailure(err: nil)
                 } else if self.isHandshakeComplete {
-                    // Was fully connected — auto-reconnect after a short delay.
-                    self.rawLog += "\n[WSS] Connection lost after successful handshake — auto-reconnecting"
-                    self.connectionStatus = "STATUS_RECONNECTING"
+                    // Was fully connected — auto-reconnect with backoff.
+                    // Gateway restarts can take 10-30s, so don't hammer immediately.
+                    self.rawLog += "\n[WSS] Connection lost after successful handshake — scheduling reconnect"
                     self.isHandshakeComplete = false
                     self.connectionAttemptCount = 0
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-                        guard let self = self, !self.isConnected else { return }
-                        self.connect()
-                    }
+                    self.retryAttempt = 0
+                    self.scheduleRetry()
                 } else {
                     self.connectionStatus = "STATUS_DISCONNECTED"
                 }
