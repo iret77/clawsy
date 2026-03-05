@@ -2,7 +2,9 @@
 "AGENT_WANTS_TO" = "The agent wants to %@ a file.";
 "LOCATION" = "Location: %@";
 "DENY" = "Deny";
-"ALLOW" = "Allow %@";
+"ALLOW" = "Allow";
+"CLIPBOARD_WRITE_TITLE" = "Agent wants to write to clipboard";
+"CLIPBOARD_READ_TITLE" = "Agent wants to read clipboard";
 "ALLOW_ONCE" = "Just this once";
 "ALLOW_1H" = "For 1 hour";
 "ALLOW_DAY" = "For the rest of the day";

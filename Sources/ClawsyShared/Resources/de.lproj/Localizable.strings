@@ -2,7 +2,9 @@
 "AGENT_WANTS_TO" = "Der Agent möchte eine Datei %@.";
 "LOCATION" = "Ort: %@";
 "DENY" = "Ablehnen";
-"ALLOW" = "%@ erlauben";
+"ALLOW" = "Erlauben";
+"CLIPBOARD_WRITE_TITLE" = "Agent möchte in die Zwischenablage schreiben";
+"CLIPBOARD_READ_TITLE" = "Agent möchte die Zwischenablage lesen";
 "ALLOW_ONCE" = "Nur dieses Mal";
 "ALLOW_1H" = "Für 1 Stunde";
 "ALLOW_DAY" = "Für den Rest des Tages";

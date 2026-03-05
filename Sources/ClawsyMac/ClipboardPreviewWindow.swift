@@ -1,8 +1,14 @@
 import SwiftUI
 import AppKit
 
+enum ClipboardDirection {
+    case read
+    case write
+}
+
 struct ClipboardPreviewWindow: View {
     let content: String
+    let direction: ClipboardDirection
     let onConfirm: () -> Void
     let onCancel: () -> Void
     
@@ -35,7 +41,7 @@ struct ClipboardPreviewWindow: View {
                         )
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("CLIPBOARD_SYNC")
+                        Text(l10n: direction == .write ? "CLIPBOARD_WRITE_TITLE" : "CLIPBOARD_READ_TITLE")
                             .font(.system(size: 15, weight: .semibold))
                         
                         Text("CHAR_COUNT \(charCount)")

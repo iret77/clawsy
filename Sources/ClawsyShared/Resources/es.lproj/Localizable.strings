@@ -2,7 +2,9 @@
 "AGENT_WANTS_TO" = "El agente quiere %@ un archivo.";
 "LOCATION" = "Ubicación: %@";
 "DENY" = "Denegar";
-"ALLOW" = "Permitir %@";
+"ALLOW" = "Permitir";
+"CLIPBOARD_WRITE_TITLE" = "El agente quiere escribir en el portapapeles";
+"CLIPBOARD_READ_TITLE" = "El agente quiere leer el portapapeles";
 "ALLOW_ONCE" = "Solo esta vez";
 "ALLOW_1H" = "Por 1 hora";
 "ALLOW_DAY" = "Por el resto del día";

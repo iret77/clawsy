@@ -384,9 +384,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         }
     }
     
-    func showClipboardRequest(content: String, onConfirm: @escaping () -> Void, onCancel: @escaping () -> Void) {
+    func showClipboardRequest(content: String, direction: ClipboardDirection = .write, onConfirm: @escaping () -> Void, onCancel: @escaping () -> Void) {
         let view = ClipboardPreviewWindow(
             content: content,
+            direction: direction,
             onConfirm: { onConfirm(); self.alertWindow?.close() },
             onCancel: { onCancel(); self.alertWindow?.close() }
         )

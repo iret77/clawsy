@@ -2,7 +2,9 @@
 "AGENT_WANTS_TO" = "L'agent veut %@ un fichier.";
 "LOCATION" = "Emplacement : %@";
 "DENY" = "Refuser";
-"ALLOW" = "Autoriser %@";
+"ALLOW" = "Autoriser";
+"CLIPBOARD_WRITE_TITLE" = "L'agent veut écrire dans le presse-papiers";
+"CLIPBOARD_READ_TITLE" = "L'agent veut lire le presse-papiers";
 "ALLOW_ONCE" = "Seulement cette fois";
 "ALLOW_1H" = "Pendant 1 heure";
 "ALLOW_DAY" = "Pour le reste de la journée";
