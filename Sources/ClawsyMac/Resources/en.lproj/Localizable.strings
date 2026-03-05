@@ -245,4 +245,5 @@
 "PHOTO_SENT" = "Photo sent";
 
 "STATUS_RECONNECT_WAITING" = "Reconnecting...";
+"STATUS_RECONNECTING" = "Reconnecting…";
 "STATUS_RECONNECT_EXHAUSTED" = "Connection failed";

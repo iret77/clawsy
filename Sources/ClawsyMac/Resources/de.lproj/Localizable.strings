@@ -246,4 +246,5 @@
 "PHOTO_SENT" = "Foto gesendet";
 
 "STATUS_RECONNECT_WAITING" = "Verbindung wird wiederhergestellt…";
+"STATUS_RECONNECTING" = "Verbindung wird wiederhergestellt…";
 "STATUS_RECONNECT_EXHAUSTED" = "Verbindung fehlgeschlagen";
