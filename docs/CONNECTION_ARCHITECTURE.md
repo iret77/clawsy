@@ -1,92 +1,66 @@
-# Clawsy Connection Architecture — Lessons & Invariants
+# Clawsy Connection Architecture
 
-> Written after the 2026-03-05 connection incident. Read this before touching auth or connection code.
+Developer reference for the WebSocket connection, device authentication, and pairing flow.
 
-## The Connection Flow
+## Connection Flow
 
 ```
-User clicks "Verbinden"
-  → connect() [connectionAttemptCount=0, isUsingSshTunnel=false]
-    → try WSS direct (wss://host:port)
-      → SUCCESS (.connected) → performHandshake(nonce)
-        → Server verifies signature
-        → Server checks pairing
-          → PAIRED + key matches → hello-ok ✅
-          → NOT_PAIRED or key mismatch → see "Pairing Flow" below
-      → TIMEOUT (watchdog) → handleConnectionFailure()
-        → SSH fallback available? → startSshTunnel() → connect() again
-        → No SSH? → scheduleRetry() with exponential backoff
-      → ERROR (.error) → handleConnectionFailure() → same as timeout
-      → DISCONNECT (.disconnected) → if !handshakeComplete → handleConnectionFailure()
+connect()
+  → try WSS direct (wss://host:port)
+    → SUCCESS (.connected) → performHandshake(nonce)
+      → Server verifies device signature
+      → Server checks pairing
+        → PAIRED + key matches → hello-ok ✅
+        → NOT_PAIRED → see "Pairing" below
+    → TIMEOUT (watchdog) → handleConnectionFailure()
+      → SSH fallback available? → startSshTunnel() → connect() via tunnel
+      → No SSH? → scheduleRetry() with exponential backoff
+    → ERROR (.error) → handleConnectionFailure() → same as timeout
+    → DISCONNECT (.disconnected, handshake incomplete) → handleConnectionFailure()
 ```
 
-## The Three Invariants
+## Device Auth Signature
 
-### 1. Signature payload = connect params (NEVER duplicate values)
-
-The device auth signature is computed over a pipe-delimited payload:
+The signature is computed over a pipe-delimited payload:
 ```
 v2|deviceId|clientId|clientMode|role|scopes|ts|token|nonce
 ```
 
-The server reconstructs this payload from the connect params the client sends.
-**If any value differs between signature and params → DEVICE_AUTH_SIGNATURE_INVALID.**
+The server reconstructs this payload from the connect params and verifies the signature.
+**If any value differs between the signed payload and connect params → signature rejected.**
 
-**Fix (2026-03-05):** All shared values (role, clientMode, scopes, clientId, platform)
-are defined as static constants on `NetworkManager`. Both `performHandshake()` and the
-connect request reference these same constants. There is no way for them to diverge.
+All shared values (role, clientMode, scopes, clientId, platform) are defined as static
+constants on `NetworkManager`. Both `performHandshake()` and the connect request reference
+these same constants. Never define them separately.
 
-### 2. SSH tunnel = localhost = auto-approved pairing
+## Pairing
 
-The OpenClaw Gateway auto-approves pairing for localhost connections (`silent: true`).
+### SSH tunnel = localhost = auto-approved
+
+The OpenClaw Gateway auto-approves pairing for localhost connections.
 SSH tunnels terminate on the server → gateway sees `127.0.0.1` → auto-approve.
 
-**This means:** When NOT_PAIRED arrives over direct WSS, the smartest move is to
-reconnect via SSH tunnel. The pairing will be auto-approved without human intervention.
+When NOT_PAIRED arrives over direct WSS and SSH fallback is available, Clawsy
+automatically reconnects via SSH tunnel. The pairing completes without user intervention.
 
-**Fix (2026-03-05):** The NOT_PAIRED handler now checks if SSH fallback is available.
-If yes, it disconnects and reconnects via SSH tunnel instead of waiting for manual approval.
+### Per-host signing keys
 
-### 3. .disconnected ≠ .error but can still mean failure
+Each host profile has its own Ed25519 keypair. The deviceId is derived from the public key:
+`SHA256(publicKey.rawRepresentation)`. This means:
+- Each host = unique deviceId
+- Re-pairing is required when keys change (e.g., fresh host profile)
 
-WebSocket events:
-- `.error` → connection failed → triggers `handleConnectionFailure()` → SSH fallback
-- `.disconnected` → clean close → previously did NOT trigger fallback
+## Handling Server-Initiated Disconnects
 
-But a server-initiated disconnect during handshake (e.g., NOT_PAIRED, close 1008) is
-functionally a connection failure. The user didn't get connected.
+WebSocket `.disconnected` events during an incomplete handshake (e.g., server closes
+with code 1008 after NOT_PAIRED) are treated as connection failures. This ensures
+SSH fallback triggers even when the WSS transport itself connected successfully.
 
-**Fix (2026-03-05):** `.disconnected` now calls `handleConnectionFailure()` when
-`isHandshakeComplete == false && isPairing == false`.
+## Debugging
 
-## Per-Host Signing Keys
-
-Since v0.7.2, each host profile has its own Ed25519 keypair. This means:
-- Changing hosts = new deviceId
-- Re-pairing required when keys change
-- Old `paired.json` entries become stale
-
-The deviceId is `SHA256(publicKey.rawRepresentation)` — deterministic from the key.
-
-## Known Server-Side Issue
-
-The Gateway's `pending.json` file and its in-memory state can diverge. A pending
-pairing request may exist in the file but not be visible via `nodes pending` or
-approvable via `nodes approve`. Gateway restart reloads the file but creates a
-window where Clawsy needs to reconnect.
-
-**Workaround:** The SSH auto-pairing strategy makes this moot — localhost connections
-bypass the pending queue entirely.
-
-## Debugging Checklist
-
-When Clawsy can't connect:
-
-1. **Check the debug log** (Settings → scroll down → Debug Log)
-2. **DEVICE_AUTH_SIGNATURE_INVALID** → Signature/params mismatch. Check that the
-   constants in `performHandshake()` match the connect params.
+1. **Check the debug log** (Settings → Debug Log)
+2. **DEVICE_AUTH_SIGNATURE_INVALID** → Signature/params mismatch. Verify the shared constants.
 3. **NOT_PAIRED** → Device key not recognized. Should auto-resolve via SSH tunnel.
-   If no SSH: manual re-pair needed.
-4. **AUTH_TOKEN_MISMATCH** → Stale deviceToken. App auto-clears and retries.
-5. **WSS Timeout + no SSH** → Check sshUser is set in host profile.
-6. **STATUS_SSH_USER_MISSING** → SSH fallback configured but no SSH user set.
+   Without SSH: manual re-pair via `openclaw nodes approve <requestId>`.
+4. **AUTH_TOKEN_MISMATCH** → Stale deviceToken. Auto-clears and retries.
+5. **STATUS_SSH_USER_MISSING** → SSH fallback enabled but no SSH user configured.
