@@ -8,6 +8,31 @@ Clawsy ist die macOS Companion App. Sie gibt dem Agenten direkten Zugriff auf de
 
 ---
 
+## "pair clawsy" — Neuen User verbinden (WICHTIG)
+
+Wenn ein User schreibt **"pair clawsy"**, **"clawsy verbinden"**, **"connect clawsy"** oder ähnliches:
+
+```bash
+# Schritt 1: Setup-Link generieren
+CODE=$(openclaw qr --setup-code-only 2>/dev/null)
+echo "clawsy://pair?code=${CODE}"
+
+# Schritt 2: Auto-Approve-Watcher starten (Hintergrund, max. 120s)
+bash ~/.openclaw/workspace/tools/clawsy-pair.sh &
+```
+
+**Antwort an User** (diesen genauen Text senden):
+> Hier ist dein Clawsy-Verbindungslink — klicke ihn auf deinem Mac:
+> `clawsy://pair?code=<CODE>`
+>
+> 1. Klicke den Link → macOS fragt "Mit Clawsy öffnen?" → Ja
+> 2. Clawsy verbindet sich automatisch
+> 3. Ich approve das Pairing sofort — du musst nichts weiter tun!
+
+Der Watcher läuft im Hintergrund und approved das Pairing automatisch sobald der User den Link klickt.
+
+---
+
 ## Was Du damit tun kannst
 
 | Fähigkeit | Wann nutzen |

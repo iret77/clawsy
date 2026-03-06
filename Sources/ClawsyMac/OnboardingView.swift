@@ -300,6 +300,58 @@ struct OnboardingView: View {
     }
 }
 
+// MARK: - Agent Pair Tip (copyable "pair clawsy" message)
+
+private struct AgentPairTip: View {
+    @State private var copied = false
+    private let pairMessage = "pair clawsy"
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: "bubble.left.and.bubble.right.fill")
+                    .font(.system(size: 13))
+                    .foregroundColor(.accentColor)
+                Text(l10n: "ONBOARDING_GATEWAY_ASK_AGENT")
+                    .font(.system(size: 11, weight: .medium))
+            }
+
+            Text(l10n: "ONBOARDING_GATEWAY_ASK_AGENT_DESC")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+
+            // Copyable command pill
+            Button(action: copyPairMessage) {
+                HStack(spacing: 6) {
+                    Text(pairMessage)
+                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.accentColor)
+                    Spacer()
+                    Image(systemName: copied ? "checkmark" : "doc.on.clipboard")
+                        .font(.system(size: 10))
+                        .foregroundColor(copied ? .green : .secondary)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.accentColor.opacity(0.08))
+                .cornerRadius(6)
+                .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.accentColor.opacity(0.2), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(10)
+        .background(Color.accentColor.opacity(0.05))
+        .cornerRadius(8)
+    }
+
+    private func copyPairMessage() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(pairMessage, forType: .string)
+        copied = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copied = false }
+    }
+}
+
 // MARK: - Gateway Connection Step
 
 private struct GatewayConnectionStep: View {
@@ -331,23 +383,8 @@ private struct GatewayConnectionStep: View {
             }
 
             if !isConnected {
-                // Ask-your-agent tip
-                HStack(spacing: 8) {
-                    Image(systemName: "bubble.left.and.bubble.right.fill")
-                        .font(.system(size: 13))
-                        .foregroundColor(.accentColor)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(l10n: "ONBOARDING_GATEWAY_ASK_AGENT")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.primary)
-                        Text(l10n: "ONBOARDING_GATEWAY_ASK_AGENT_DESC")
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .padding(10)
-                .background(Color.accentColor.opacity(0.08))
-                .cornerRadius(8)
+                // Ask-your-agent tip with copyable command
+                AgentPairTip()
 
                 // Setup code paste field
                 HStack(spacing: 8) {

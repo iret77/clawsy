@@ -278,7 +278,7 @@
 "ONBOARDING_GATEWAY_DESC" = "Connect Clawsy to your OpenClaw instance. This is required for everything to work.";
 "ONBOARDING_GATEWAY_CONNECTED" = "Connected ✓";
 "ONBOARDING_GATEWAY_ASK_AGENT" = "Easiest: ask your agent";
-"ONBOARDING_GATEWAY_ASK_AGENT_DESC" = "Message your agent via Telegram, Slack, or any channel: \"pair clawsy\" — it will send a link you can click.";
+"ONBOARDING_GATEWAY_ASK_AGENT_DESC" = "Send your agent via Telegram, Slack, or any channel exactly this message:";
 "ONBOARDING_GATEWAY_CODE_PLACEHOLDER" = "Paste setup code here…";
 "ONBOARDING_GATEWAY_CONNECT" = "Connect";
 "ONBOARDING_GATEWAY_CODE_ERROR" = "Invalid setup code. Ask your agent to generate a new one.";
