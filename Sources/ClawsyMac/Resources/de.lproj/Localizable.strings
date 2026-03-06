@@ -285,3 +285,13 @@
 "ONBOARDING_GATEWAY_CODE_ERROR" = "Ungültiger Setup-Code. Lass deinen Agenten einen neuen generieren.";
 "ONBOARDING_GATEWAY_MANUAL" = "Host und Token manuell eingeben →";
 
+// Server Install Flow (Onboarding Step 0)
+"ONBOARDING_INSTALL_SUBTITLE" = "Schick diesen Befehl deinem Agenten, um den Clawsy-Server zu installieren.";
+"ONBOARDING_INSTALL_STEP1" = "1. Kopiere diesen Befehl und schicke ihn deinem Agenten (Telegram, Slack, etc.):";
+"ONBOARDING_INSTALL_STEP2" = "2. Dein Agent installiert Clawsy und schickt dir einen Link zum Klicken zurück.";
+"ONBOARDING_INSTALL_SENT" = "Gesendet — ich warte auf den Link";
+"ONBOARDING_INSTALL_WAITING" = "Warte auf den Link von deinem Agenten…";
+"ONBOARDING_INSTALL_WAITING_HINT" = "Klicke den clawsy://-Link den dein Agent schickt. Clawsy verbindet sich automatisch.";
+"ONBOARDING_INSTALL_BACK" = "← Zurück";
+"ONBOARDING_GATEWAY_HAVE_CODE" = "Code bereits vorhanden? →";
+
