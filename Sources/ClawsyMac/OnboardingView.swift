@@ -295,133 +295,140 @@ private struct GatewayStep: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // ── Header row ────────────────────────────────────────────────
-            HStack(spacing: 12) {
-                Image(systemName: statusIcon)
-                    .font(.system(size: 20))
-                    .foregroundColor(statusColor)
-                    .frame(width: 24)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(l10n: "ONBOARDING_GATEWAY_TITLE")
-                        .font(.system(size: 13, weight: .medium))
-                    Text(statusSubtitle)
-                        .font(.system(size: 11))
-                        .foregroundColor(isConnected ? .green : .secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer()
-                if effectivePhase == .installPrompt || effectivePhase == .waitingForLink {
-                    Button(effectivePhase == .waitingForLink ? NSLocalizedString("ONBOARDING_GATEWAY_HAVE_CODE", bundle: .clawsy, comment: "") : "") {
-                        phase = .pasteCode
-                    }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary)
-                }
-            }
-
-            // ── Phase: Install Prompt ─────────────────────────────────────
-            if effectivePhase == .installPrompt {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(l10n: "ONBOARDING_INSTALL_STEP1")
-                        .font(.system(size: 11, weight: .medium))
-
-                    // Copyable install command
-                    Button(action: copyInstallCommand) {
-                        HStack(spacing: 8) {
-                            Text(installCommand)
-                                .font(.system(size: 10, design: .monospaced))
-                                .foregroundColor(.primary.opacity(0.85))
-                                .lineLimit(2)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Spacer(minLength: 4)
-                            Image(systemName: promptCopied ? "checkmark" : "doc.on.clipboard")
-                                .font(.system(size: 11))
-                                .foregroundColor(promptCopied ? .green : .secondary)
-                        }
-                        .padding(.horizontal, 10).padding(.vertical, 8)
-                        .background(Color(nsColor: .textBackgroundColor).opacity(0.8))
-                        .cornerRadius(6)
-                        .overlay(RoundedRectangle(cornerRadius: 6)
-                            .strokeBorder(Color.secondary.opacity(0.25), lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-
-                    Text(l10n: "ONBOARDING_INSTALL_STEP2")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-
-                    // "I sent it" → show waiting state
-                    Button(action: { phase = .waitingForLink }) {
-                        Label(NSLocalizedString("ONBOARDING_INSTALL_SENT", bundle: .clawsy, comment: ""), systemImage: "arrow.up.circle.fill")
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-                }
-            }
-
-            // ── Phase: Waiting for link ───────────────────────────────────
-            if effectivePhase == .waitingForLink {
-                HStack(spacing: 10) {
-                    ProgressView().controlSize(.small)
-                    Text(l10n: "ONBOARDING_INSTALL_WAITING")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                }
-                .padding(.vertical, 4)
-
-                Text(l10n: "ONBOARDING_INSTALL_WAITING_HINT")
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary.opacity(0.8))
-            }
-
-            // ── Phase: Paste Code (manual fallback) ───────────────────────
-            if effectivePhase == .pasteCode {
-                HStack(spacing: 8) {
-                    ZStack(alignment: .leading) {
-                        if setupCodeInput.isEmpty {
-                            Text(l10n: "ONBOARDING_GATEWAY_CODE_PLACEHOLDER")
-                                .font(.system(size: 11, design: .monospaced))
-                                .foregroundColor(.secondary.opacity(0.5))
-                                .padding(.leading, 7)
-                        }
-                        TextField("", text: $setupCodeInput)
-                            .font(.system(size: 11, design: .monospaced))
-                            .textFieldStyle(.plain)
-                            .padding(.horizontal, 8).padding(.vertical, 5)
-                            .onSubmit { onConnect() }
-                    }
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .strokeBorder(setupCodeError ? Color.red : Color.secondary.opacity(0.3), lineWidth: 1)
-                    )
-                    Button(action: onConnect) {
-                        if isConnecting { ProgressView().controlSize(.small).frame(width: 44) }
-                        else { Text(l10n: "ONBOARDING_GATEWAY_CONNECT").font(.system(size: 11, weight: .medium)) }
-                    }
-                    .buttonStyle(.borderedProminent).controlSize(.small)
-                    .disabled(setupCodeInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isConnecting)
-                }
-                if setupCodeError {
-                    Text(l10n: "ONBOARDING_GATEWAY_CODE_ERROR").font(.system(size: 10)).foregroundColor(.red)
-                }
-                HStack {
-                    Button(action: { phase = .installPrompt }) {
-                        Text(l10n: "ONBOARDING_INSTALL_BACK").font(.system(size: 10)).foregroundColor(.secondary)
-                    }.buttonStyle(.plain)
-                    Spacer()
-                    Button(action: onOpenSettings) {
-                        Text(l10n: "ONBOARDING_GATEWAY_MANUAL").font(.system(size: 10)).foregroundColor(.secondary)
-                    }.buttonStyle(.plain)
-                }
-            }
+            headerRow
+            phaseContent
         }
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 10)
             .fill(effectivePhase == .connected ? Color.green.opacity(0.06) : Color.orange.opacity(0.05)))
         .overlay(RoundedRectangle(cornerRadius: 10)
             .strokeBorder(effectivePhase == .connected ? Color.green.opacity(0.3) : Color.orange.opacity(0.2), lineWidth: 1))
+    }
+
+    @ViewBuilder private var headerRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: statusIcon)
+                .font(.system(size: 20))
+                .foregroundColor(statusColor)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(l10n: "ONBOARDING_GATEWAY_TITLE")
+                    .font(.system(size: 13, weight: .medium))
+                Text(statusSubtitle)
+                    .font(.system(size: 11))
+                    .foregroundColor(isConnected ? .green : .secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            if effectivePhase == .installPrompt || effectivePhase == .waitingForLink {
+                let haveCodeLabel = NSLocalizedString("ONBOARDING_GATEWAY_HAVE_CODE", bundle: .clawsy, comment: "")
+                Button(effectivePhase == .waitingForLink ? haveCodeLabel : "") { phase = .pasteCode }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder private var phaseContent: some View {
+        switch effectivePhase {
+        case .installPrompt: installPromptView
+        case .waitingForLink: waitingView
+        case .pasteCode: pasteCodeView
+        case .connected: EmptyView()
+        }
+    }
+
+    @ViewBuilder private var installPromptView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(l10n: "ONBOARDING_INSTALL_STEP1").font(.system(size: 11, weight: .medium))
+            Button(action: copyInstallCommand) {
+                HStack(spacing: 8) {
+                    Text(installCommand)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(.primary.opacity(0.85))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 4)
+                    Image(systemName: promptCopied ? "checkmark" : "doc.on.clipboard")
+                        .font(.system(size: 11))
+                        .foregroundColor(promptCopied ? .green : .secondary)
+                }
+                .padding(.horizontal, 10).padding(.vertical, 8)
+                .background(Color(nsColor: .textBackgroundColor).opacity(0.8))
+                .cornerRadius(6)
+                .overlay(RoundedRectangle(cornerRadius: 6)
+                    .strokeBorder(Color.secondary.opacity(0.25), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            Text(l10n: "ONBOARDING_INSTALL_STEP2").font(.system(size: 11)).foregroundColor(.secondary)
+            let sentLabel = NSLocalizedString("ONBOARDING_INSTALL_SENT", bundle: .clawsy, comment: "")
+            Button(action: { phase = .waitingForLink }) {
+                Label(sentLabel, systemImage: "arrow.up.circle.fill").font(.system(size: 11, weight: .medium))
+            }
+            .buttonStyle(.borderedProminent).controlSize(.small)
+        }
+    }
+
+    @ViewBuilder private var waitingView: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 10) {
+                ProgressView().controlSize(.small)
+                Text(l10n: "ONBOARDING_INSTALL_WAITING").font(.system(size: 11)).foregroundColor(.secondary)
+            }
+            Text(l10n: "ONBOARDING_INSTALL_WAITING_HINT").font(.system(size: 10)).foregroundColor(.secondary.opacity(0.8))
+        }
+    }
+
+    @ViewBuilder private var pasteCodeView: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                codeInputField
+                connectButton
+            }
+            if setupCodeError {
+                Text(l10n: "ONBOARDING_GATEWAY_CODE_ERROR").font(.system(size: 10)).foregroundColor(.red)
+            }
+            HStack {
+                Button(action: { phase = .installPrompt }) {
+                    Text(l10n: "ONBOARDING_INSTALL_BACK").font(.system(size: 10)).foregroundColor(.secondary)
+                }.buttonStyle(.plain)
+                Spacer()
+                Button(action: onOpenSettings) {
+                    Text(l10n: "ONBOARDING_GATEWAY_MANUAL").font(.system(size: 10)).foregroundColor(.secondary)
+                }.buttonStyle(.plain)
+            }
+        }
+    }
+
+    @ViewBuilder private var codeInputField: some View {
+        ZStack(alignment: .leading) {
+            if setupCodeInput.isEmpty {
+                Text(l10n: "ONBOARDING_GATEWAY_CODE_PLACEHOLDER")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(.secondary.opacity(0.5))
+                    .padding(.leading, 7)
+            }
+            TextField("", text: $setupCodeInput)
+                .font(.system(size: 11, design: .monospaced))
+                .textFieldStyle(.plain)
+                .padding(.horizontal, 8).padding(.vertical, 5)
+                .onSubmit { onConnect() }
+        }
+        .background(RoundedRectangle(cornerRadius: 6)
+            .strokeBorder(setupCodeError ? Color.red : Color.secondary.opacity(0.3), lineWidth: 1))
+    }
+
+    @ViewBuilder private var connectButton: some View {
+        Button(action: onConnect) {
+            if isConnecting {
+                ProgressView().controlSize(.small).frame(width: 44)
+            } else {
+                Text(l10n: "ONBOARDING_GATEWAY_CONNECT").font(.system(size: 11, weight: .medium))
+            }
+        }
+        .buttonStyle(.borderedProminent).controlSize(.small)
+        .disabled(setupCodeInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isConnecting)
     }
 
     /// Effective phase: if connected but server setup needed (Case B), override to installPrompt
