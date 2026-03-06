@@ -18,6 +18,7 @@ public struct HostProfile: Codable, Identifiable, Equatable {
     public var serverToken: String
     public var sshUser: String
     public var useSshFallback: Bool
+    public var sshOnly: Bool         // skip WSS, always use SSH tunnel
     public var color: String         // hex e.g. "#FF3B30"
     public var sharedFolderPath: String  // e.g. "~/Clawsy/CyberClaw/"
     public var deviceToken: String?
@@ -30,6 +31,7 @@ public struct HostProfile: Codable, Identifiable, Equatable {
         serverToken: String,
         sshUser: String = "",
         useSshFallback: Bool = true,
+        sshOnly: Bool = false,
         color: String = "#FF3B30",
         sharedFolderPath: String = "",
         deviceToken: String? = nil
@@ -41,9 +43,26 @@ public struct HostProfile: Codable, Identifiable, Equatable {
         self.serverToken = serverToken
         self.sshUser = sshUser
         self.useSshFallback = useSshFallback
+        self.sshOnly = sshOnly
         self.color = color
         self.sharedFolderPath = sharedFolderPath
         self.deviceToken = deviceToken
+    }
+
+    // Custom decoder for backward compatibility — old profiles lack sshOnly
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        gatewayHost = try container.decode(String.self, forKey: .gatewayHost)
+        gatewayPort = try container.decode(String.self, forKey: .gatewayPort)
+        serverToken = try container.decode(String.self, forKey: .serverToken)
+        sshUser = try container.decode(String.self, forKey: .sshUser)
+        useSshFallback = try container.decode(Bool.self, forKey: .useSshFallback)
+        sshOnly = try container.decodeIfPresent(Bool.self, forKey: .sshOnly) ?? false
+        color = try container.decode(String.self, forKey: .color)
+        sharedFolderPath = try container.decode(String.self, forKey: .sharedFolderPath)
+        deviceToken = try container.decodeIfPresent(String.self, forKey: .deviceToken)
     }
 
     /// Default host colors for new profiles (cycle through these)

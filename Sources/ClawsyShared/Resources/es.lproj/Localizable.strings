@@ -128,3 +128,8 @@
 "SERVER_SETUP_NEEDED_DESC" = "Tu agente OpenClaw necesita el componente de servidor Clawsy para recibir eventos. Pide a tu agente que lo instale.";
 "SERVER_SETUP_COPY_PROMPT" = "Copiar instrucciones de instalación";
 "SERVER_SETUP_PROMPT_COPIED" = "¡Copiado!";
+
+
+// Modo solo SSH
+"SSH_ONLY_MODE" = "Solo SSH";
+"SSH_ONLY_MODE_DESC" = "Omitir conexión directa, siempre usar túnel SSH";

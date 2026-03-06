@@ -118,6 +118,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         if SharedConfig.sharedDefaults.object(forKey: "useSshFallback") == nil { return true }
         return SharedConfig.sharedDefaults.bool(forKey: "useSshFallback")
     }
+    private var sshOnly: Bool {
+        hostProfile?.sshOnly ?? false
+    }
     private var sharedFolderPath: String {
         hostProfile?.sharedFolderPath ?? (SharedConfig.sharedDefaults.string(forKey: "sharedFolderPath") ?? "~/Documents/Clawsy")
     }
@@ -261,6 +264,19 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             let dateStr = ISO8601DateFormatter().string(from: Date())
             self.rawLog = "[LOG START] \(dateStr) | Clawsy \(SharedConfig.versionDisplay)\n----------------------------------------\n"
         }
+        
+        // SSH-Only Mode: skip WSS entirely, go straight to SSH tunnel
+        #if os(macOS)
+        if sshOnly && !sshUser.isEmpty && !isUsingSshTunnel {
+            rawLog += "\n[SSH] SSH-Only mode — skipping direct WSS connection"
+            connectionAttemptCount += 1
+            DispatchQueue.main.async {
+                self.connectionStatus = "STATUS_STARTING_SSH"
+            }
+            startSshTunnel()
+            return
+        }
+        #endif
         
         let host = serverHost
         let token = serverToken
@@ -725,6 +741,21 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             case .error(let err):
                 self.rawLog += "\n[WSS] Error: \(err?.localizedDescription ?? "nil")"
                 self.isConnected = false
+                // Fast SSH fallback: if handshake never completed (e.g. firewall block, TCP refused)
+                // and SSH fallback is available, skip retry backoff and go straight to SSH tunnel.
+                // This prevents the "Verbindung wird wiederhergestellt..." loop on blocked firewalls.
+                #if os(macOS)
+                if !self.isHandshakeComplete && self.useSshFallback && !self.sshUser.isEmpty && !self.isUsingSshTunnel {
+                    self.rawLog += "\n[WSS] Pre-handshake failure — fast-switching to SSH tunnel"
+                    self.connectionWatchdog?.invalidate()
+                    self.connectionWatchdog = nil
+                    self.socket?.delegate = nil
+                    self.socket?.disconnect()
+                    self.socket = nil
+                    self.startSshTunnel()
+                    return
+                }
+                #endif
                 self.handleConnectionFailure(err: err)
             case .viabilityChanged(let viable):
                 self.rawLog += "\n[WSS] Viability: \(viable)"

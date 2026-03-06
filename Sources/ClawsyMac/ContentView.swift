@@ -1251,6 +1251,24 @@ struct SettingsView: View {
                             .disabled(!editedProfile.useSshFallback)
                             .opacity(editedProfile.useSshFallback ? 1.0 : 0.5)
 
+                            // SSH-Only Mode toggle (only visible when SSH fallback is enabled and user is set)
+                            if editedProfile.useSshFallback && !editedProfile.sshUser.isEmpty {
+                                Divider().opacity(0.2)
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(l10n: "SSH_ONLY_MODE")
+                                            .font(.system(size: 12, weight: .medium))
+                                        Text(l10n: "SSH_ONLY_MODE_DESC")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    Spacer()
+                                    Toggle("", isOn: $editedProfile.sshOnly)
+                                        .toggleStyle(.switch)
+                                        .scaleEffect(0.7)
+                                }
+                            }
+
                             Text(l10n: "SSH_FALLBACK_DESC")
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)

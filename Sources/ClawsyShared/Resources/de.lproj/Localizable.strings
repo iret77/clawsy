@@ -273,3 +273,8 @@
 "SERVER_SETUP_NEEDED_DESC" = "Dein OpenClaw-Agent benötigt die Clawsy-Server-Komponente. Bitte deinen Agenten, sie zu installieren.";
 "SERVER_SETUP_COPY_PROMPT" = "Installationsanweisung kopieren";
 "SERVER_SETUP_PROMPT_COPIED" = "Kopiert!";
+
+
+// SSH-Only-Modus
+"SSH_ONLY_MODE" = "Nur SSH";
+"SSH_ONLY_MODE_DESC" = "Direktverbindung überspringen, immer SSH-Tunnel verwenden";
