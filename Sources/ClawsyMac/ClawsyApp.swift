@@ -176,9 +176,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                     hm.addHost(profile)
                     hm.switchActiveHost(to: profile.id)
                 }
-                hm.connectAll { nm, p in
-                    self.setupCallbacksForHost(nm: nm, profile: p)
-                }
+                // ContentView sets up the actual callbacks via its own connectAll call
+                // We just trigger the connection; UI callbacks are handled by ContentView
+                hm.connectAll { _, _ in }
                 self.networkManager = hm.activeNetworkManager
             }
             // Notify onboarding view that a setup code was imported
