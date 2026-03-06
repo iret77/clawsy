@@ -268,7 +268,7 @@
 "ONBOARDING_SERVER_DONE" = "Done";
 
 // Server Probe Detection
-"SERVER_SETUP_NEEDED_TITLE" = "Clawsy Server component missing";
-"SERVER_SETUP_NEEDED_DESC" = "The Clawsy gateway plugin is not active on this host. Run the server setup to activate it.";
+"SERVER_SETUP_NEEDED_TITLE" = "OpenClaw Gateway unreachable";
+"SERVER_SETUP_NEEDED_DESC" = "Cannot connect to the OpenClaw Gateway. Make sure OpenClaw is installed and the gateway is running on your server.";
 "SERVER_SETUP_COPY_PROMPT" = "Copy Install Prompt";
 "SERVER_SETUP_PROMPT_COPIED" = "Copied!";

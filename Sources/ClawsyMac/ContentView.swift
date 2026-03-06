@@ -1839,7 +1839,7 @@ struct ConnectionErrorBanner: View {
 struct ServerSetupBanner: View {
     @Binding var copied: Bool
 
-    private let installPrompt = "Please install the Clawsy server component on this OpenClaw instance. Clone https://github.com/iret77/clawsy.git and run: cd clawsy/server && ./setup.sh"
+    private let installPrompt = "OpenClaw Gateway is not reachable. Install OpenClaw from https://openclaw.ai and make sure the gateway service is running."
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {

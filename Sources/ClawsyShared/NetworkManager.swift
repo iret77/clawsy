@@ -49,7 +49,6 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     @Published public var retryCountdown: Int = 0  // Seconds until next retry (0 = no retry pending)
     @Published public var serverDetected: Bool = false
     @Published public var serverSetupNeeded: Bool = false
-    public var pendingProbeId: String? = nil
     private var retryTimer: Timer?
     private var retryAttempt: Int = 0
     private let maxRetryAttempt: Int = 10
@@ -682,7 +681,8 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             self.gatewaySessions = []
             self.serverDetected = false
             self.serverSetupNeeded = false
-            self.pendingProbeId = nil
+            self.isServerClawsyAware = false
+            self.serverVersion = "unknown"
             self.rawLog += "\n[WSS] Disconnected"
         }
     }
@@ -817,34 +817,6 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     @available(*, deprecated, message: "Use sendOneShot(message:) or sendDeeplink()")
     public func sendOneShot(kind: String, payload: Any, completion: @escaping (Bool) -> Void) {
         completion(false)
-    }
-
-    private func checkServerAwareness() {
-        let requestId = "discovery-\(UUID().uuidString.prefix(4))"
-        let discoveryReq: [String: Any] = [
-            "type": "req",
-            "id": requestId,
-            "method": "file.get",
-            "params": ["name": ".clawsy_version"]
-        ]
-        send(json: discoveryReq)
-    }
-
-    private func probeServer() {
-        let msgId = UUID().uuidString
-        let probe: [String: Any] = ["id": msgId, "method": "clawsy.server.probe", "params": [:] as [String: Any]]
-        guard let data = try? JSONSerialization.data(withJSONObject: probe),
-              let str = String(data: data, encoding: .utf8) else { return }
-        socket?.write(string: str)
-        
-        // Wait 10s for response; if no success → server missing
-        DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
-            guard let self = self else { return }
-            if !self.serverDetected {
-                self.serverSetupNeeded = true
-            }
-        }
-        self.pendingProbeId = msgId
     }
 
     /// Called when agent info (model, agentName) is received via poll
@@ -1007,7 +979,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                     foundInfo = true
                     let model = msgPayload["model"] as? String
                     let name = msgPayload["agentName"] as? String
-                    DispatchQueue.main.async { self.onAgentInfoUpdate?(model, name) }
+                    DispatchQueue.main.async {
+                        self.onAgentInfoUpdate?(model, name)
+                        // agent.info confirms the OpenClaw agent is active → gateway is fully aware
+                        self.isServerClawsyAware = true
+                        self.serverVersion = model ?? "OpenClaw"
+                    }
                 }
                 if kind == "agent.status", !foundStatus {
                     foundStatus = true
@@ -1096,33 +1073,6 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                     return
                 }
 
-                // Server probe response
-                if let probeId = pendingProbeId, rid == probeId {
-                    pendingProbeId = nil
-                    let ok = json["ok"] as? Bool ?? (json["result"] != nil && json["error"] == nil)
-                    if ok {
-                        self.serverDetected = true
-                        self.serverSetupNeeded = false
-                    } else {
-                        self.serverDetected = false
-                        self.serverSetupNeeded = true
-                    }
-                    return
-                }
-
-                if rid.hasPrefix("discovery-") {
-                    if let result = json["result"] as? [String: Any],
-                       let contentB64 = result["content"] as? String,
-                       let data = Data(base64Encoded: contentB64),
-                       let versionStr = String(data: data, encoding: .utf8) {
-                        self.isServerClawsyAware = true
-                        self.serverVersion = versionStr.trimmingCharacters(in: .whitespacesAndNewlines)
-                    } else {
-                        self.isServerClawsyAware = false
-                    }
-                    return
-                }
-                
                 if rid == "1" {
                 let payload = json["payload"] as? [String: Any]
                 if payload?["type"] as? String == "hello-ok" || json["result"] != nil {
@@ -1142,11 +1092,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                          self.deviceToken = dt
                      }
                      
-                     // Trigger Discovery Check
-                     self.checkServerAwareness()
-
-                     // Probe for clawsy-bridge plugin
-                     self.probeServer()
+                     // Connected + paired = gateway IS the server. No separate probe needed.
+                     self.serverDetected = true
+                     self.serverSetupNeeded = false
 
                      // Start gateway sessions poller
                      self.startSessionsPoller()
