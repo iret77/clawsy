@@ -704,10 +704,15 @@ Details in CLAWSY.md.
         let onImportSetupCode: (String) -> Bool = { [weak self] code in
             self?.handleSetupCode(code) ?? false
         }
+        let serverSetupNeeded = Binding<Bool>(
+            get: { self.networkManager?.serverSetupNeeded ?? false },
+            set: { _ in }
+        )
         let view = OnboardingView(
             isPresented: isPresented,
             onboardingCompleted: onboardingCompleted,
             isGatewayConnected: isGatewayConnected,
+            serverSetupNeeded: serverSetupNeeded,
             onImportSetupCode: onImportSetupCode
         )
         window.contentView = NSHostingView(rootView: view)

@@ -295,3 +295,7 @@
 "ONBOARDING_INSTALL_BACK" = "← Zurück";
 "ONBOARDING_GATEWAY_HAVE_CODE" = "Code bereits vorhanden? →";
 
+// v0.9.3 — Onboarding Install-Prompt & Case B
+"ONBOARDING_INSTALL_PROMPT_FULL" = "Bitte installiere den Clawsy-Server auf dieser OpenClaw-Instanz:\n\ncurl -fsSL https://raw.githubusercontent.com/iret77/clawsy/main/server/install.sh | bash\n\nDas Skript richtet alles ein und sendet dir automatisch einen Setup-Link über deinen üblichen Messaging-Kanal (Telegram, Slack, etc.). Klicke diesen Link auf deinem Mac, um die Verbindung herzustellen.";
+"ONBOARDING_INSTALL_CASE_B_SUBTITLE" = "Verbunden, aber Clawsy-Server ist noch nicht installiert.";
+

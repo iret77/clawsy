@@ -59,11 +59,18 @@ if command -v openclaw &>/dev/null; then
   if [[ -n "$SETUP_CODE" ]]; then
     # Start auto-approve watcher in background (approves when user clicks link)
     bash "$TOOLS_DIR/clawsy-pair.sh" --timeout 300 >/dev/null 2>&1 &
+
     echo "" >&2
-    echo "🎉 Clawsy is ready! Send this link to the user:" >&2
-    echo "" >&2
-    # The clawsy:// link is printed to STDOUT for easy capture by the agent
+    echo "🎉 Clawsy Server installed! Notifying user..." >&2
+
+    # Proactively send setup link to user via agent (agent forwards via Telegram/Slack/etc.)
+    openclaw sessions send main \
+      "🦞 Clawsy-Server ist eingerichtet! Hier ist dein Setup-Link — klicke ihn auf deinem Mac um die Verbindung herzustellen: clawsy://pair?code=${SETUP_CODE}" \
+      2>/dev/null || true
+
     echo "clawsy://pair?code=${SETUP_CODE}"
+    echo "" >&2
+    echo "✅ Done. The link has been sent to your agent." >&2
   else
     echo "⚠️  Could not generate setup code. Gateway may still be restarting." >&2
     echo "   Try manually: openclaw qr --setup-code-only" >&2

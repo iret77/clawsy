@@ -7,7 +7,23 @@ struct OnboardingView: View {
     @Binding var isPresented: Bool
     @Binding var onboardingCompleted: Bool
     @Binding var isGatewayConnected: Bool
+    @Binding var serverSetupNeeded: Bool
     var onImportSetupCode: (String) -> Bool
+
+    /// Convenience init for preview / screenshot callers that don't need all bindings.
+    init(
+        isPresented: Binding<Bool> = .constant(true),
+        onboardingCompleted: Binding<Bool> = .constant(false),
+        isGatewayConnected: Binding<Bool> = .constant(false),
+        serverSetupNeeded: Binding<Bool> = .constant(false),
+        onImportSetupCode: @escaping (String) -> Bool = { _ in false }
+    ) {
+        _isPresented = isPresented
+        _onboardingCompleted = onboardingCompleted
+        _isGatewayConnected = isGatewayConnected
+        _serverSetupNeeded = serverSetupNeeded
+        self.onImportSetupCode = onImportSetupCode
+    }
 
     // ── State ──────────────────────────────────────────────────────────────
     @State private var isInApplications = false
@@ -69,6 +85,7 @@ struct OnboardingView: View {
                     GatewayStep(
                         phase: $gatewayPhase,
                         isConnected: isGatewayConnected,
+                        serverSetupNeeded: serverSetupNeeded,
                         setupCodeInput: $setupCodeInput,
                         setupCodeError: $setupCodeError,
                         isConnecting: $isConnecting,
@@ -265,6 +282,7 @@ struct OnboardingView: View {
 private struct GatewayStep: View {
     @Binding var phase: OnboardingView.GatewayPhase
     let isConnected: Bool
+    let serverSetupNeeded: Bool
     @Binding var setupCodeInput: String
     @Binding var setupCodeError: Bool
     @Binding var isConnecting: Bool
@@ -292,8 +310,8 @@ private struct GatewayStep: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
-                if phase == .installPrompt || phase == .waitingForLink {
-                    Button(phase == .waitingForLink ? l10n("ONBOARDING_GATEWAY_HAVE_CODE") : "") {
+                if effectivePhase == .installPrompt || effectivePhase == .waitingForLink {
+                    Button(effectivePhase == .waitingForLink ? l10n("ONBOARDING_GATEWAY_HAVE_CODE") : "") {
                         phase = .pasteCode
                     }
                     .buttonStyle(.plain)
@@ -303,7 +321,7 @@ private struct GatewayStep: View {
             }
 
             // ── Phase: Install Prompt ─────────────────────────────────────
-            if phase == .installPrompt {
+            if effectivePhase == .installPrompt {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(l10n: "ONBOARDING_INSTALL_STEP1")
                         .font(.system(size: 11, weight: .medium))
@@ -344,7 +362,7 @@ private struct GatewayStep: View {
             }
 
             // ── Phase: Waiting for link ───────────────────────────────────
-            if phase == .waitingForLink {
+            if effectivePhase == .waitingForLink {
                 HStack(spacing: 10) {
                     ProgressView().controlSize(.small)
                     Text(l10n: "ONBOARDING_INSTALL_WAITING")
@@ -359,7 +377,7 @@ private struct GatewayStep: View {
             }
 
             // ── Phase: Paste Code (manual fallback) ───────────────────────
-            if phase == .pasteCode {
+            if effectivePhase == .pasteCode {
                 HStack(spacing: 8) {
                     ZStack(alignment: .leading) {
                         if setupCodeInput.isEmpty {
@@ -401,26 +419,37 @@ private struct GatewayStep: View {
         }
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 10)
-            .fill(isConnected ? Color.green.opacity(0.06) : Color.orange.opacity(0.05)))
+            .fill(effectivePhase == .connected ? Color.green.opacity(0.06) : Color.orange.opacity(0.05)))
         .overlay(RoundedRectangle(cornerRadius: 10)
-            .strokeBorder(isConnected ? Color.green.opacity(0.3) : Color.orange.opacity(0.2), lineWidth: 1))
+            .strokeBorder(effectivePhase == .connected ? Color.green.opacity(0.3) : Color.orange.opacity(0.2), lineWidth: 1))
+    }
+
+    /// Effective phase: if connected but server setup needed (Case B), override to installPrompt
+    private var effectivePhase: OnboardingView.GatewayPhase {
+        if serverSetupNeeded && isConnected && phase == .connected {
+            return .installPrompt
+        }
+        return phase
     }
 
     private var statusIcon: String {
-        switch phase {
+        switch effectivePhase {
         case .connected: return "checkmark.circle.fill"
         case .waitingForLink: return "clock.fill"
         default: return "exclamationmark.triangle.fill"
         }
     }
     private var statusColor: Color {
-        switch phase {
+        switch effectivePhase {
         case .connected: return .green
         case .waitingForLink: return .blue
         default: return .orange
         }
     }
     private var statusSubtitle: String {
+        if serverSetupNeeded && isConnected {
+            return NSLocalizedString("ONBOARDING_INSTALL_CASE_B_SUBTITLE", bundle: .clawsy, comment: "")
+        }
         switch phase {
         case .connected:      return NSLocalizedString("ONBOARDING_GATEWAY_CONNECTED", bundle: .clawsy, comment: "")
         case .waitingForLink: return NSLocalizedString("ONBOARDING_INSTALL_WAITING", bundle: .clawsy, comment: "")
@@ -430,8 +459,15 @@ private struct GatewayStep: View {
     }
 
     private func copyInstallCommand() {
+        let fullPrompt = """
+        Please install the Clawsy server on this OpenClaw instance:
+
+        curl -fsSL https://raw.githubusercontent.com/iret77/clawsy/main/server/install.sh | bash
+
+        The script will set everything up and automatically send you a setup link via your usual messaging channel (Telegram, Slack, etc.). Click that link on your Mac to connect.
+        """
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(installCommand, forType: .string)
+        NSPasteboard.general.setString(fullPrompt, forType: .string)
         promptCopied = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { promptCopied = false }
     }

@@ -998,6 +998,40 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         }.resume()
     }
 
+    /// Probes whether the clawsy-bridge gateway plugin is active on the remote host.
+    /// Called once after a successful auth handshake (Case B detection).
+    private func detectClawsyServer() {
+        let baseURL: String
+        if isUsingSshTunnel {
+            baseURL = "http://127.0.0.1:\(sshTunnelLocalPort)"
+        } else {
+            let host = serverHost.isEmpty ? "127.0.0.1" : serverHost
+            let port = serverPort.isEmpty ? "18789" : serverPort
+            baseURL = "http://\(host):\(port)"
+        }
+        guard let url = URL(string: "\(baseURL)/tools/invoke") else { return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(serverToken)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.timeoutInterval = 10
+        let body: [String: Any] = [
+            "tool": "exec",
+            "args": ["command": "openclaw plugins info clawsy-bridge 2>/dev/null | grep -q 'enabled: true' && echo ACTIVE || echo MISSING"]
+        ]
+        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        URLSession.shared.dataTask(with: req) { [weak self] data, _, _ in
+            guard let self = self, let data = data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let result = json["result"] as? [String: Any],
+                  let output = result["output"] as? String else { return }
+            let active = output.trimmingCharacters(in: .whitespacesAndNewlines) == "ACTIVE"
+            DispatchQueue.main.async {
+                self.serverSetupNeeded = !active
+            }
+        }.resume()
+    }
+
     private func handleMessage(_ text: String) {
         guard let data = text.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
@@ -1092,9 +1126,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                          self.deviceToken = dt
                      }
                      
-                     // Connected + paired = gateway IS the server. No separate probe needed.
+                     // Connected + paired = gateway IS the server.
                      self.serverDetected = true
                      self.serverSetupNeeded = false
+
+                     // Probe whether clawsy-bridge plugin is active (Case B detection)
+                     self.detectClawsyServer()
 
                      // Start gateway sessions poller
                      self.startSessionsPoller()
