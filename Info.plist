@@ -20,6 +20,17 @@
     <string>Clawsy</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>ai.clawsy.pair</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>clawsy</string>
+            </array>
+        </dict>
+    </array>
     <key>LSUIElement</key>
     <true/> <!-- This makes it a menu bar app (agent) without a dock icon -->
     <key>NSHighResolutionCapable</key>

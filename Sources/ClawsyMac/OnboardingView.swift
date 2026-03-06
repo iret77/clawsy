@@ -5,21 +5,39 @@ struct OnboardingView: View {
     @Binding var isPresented: Bool
     @Binding var onboardingCompleted: Bool
 
+    /// Live gateway connection state (provided by AppDelegate)
+    @Binding var isGatewayConnected: Bool
+
+    /// Called when user pastes a setup code. Returns true on success.
+    var onImportSetupCode: (String) -> Bool
+
+    // MARK: - Local State
+    @State private var setupCodeInput: String = ""
+    @State private var setupCodeError: Bool = false
+    @State private var setupCodeImported: Bool = false
+    @State private var isConnecting: Bool = false
+
     @State private var isInApplications = false
     @State private var isAccessibilityGranted = false
     @State private var isFinderSyncRunning = false
     @State private var showFinderSyncHint = false
     @State private var isShareOnboarded = false
-    @State private var isServerSetupDone: Bool = UserDefaults.standard.bool(forKey: "clawsy_server_setup_done")
+
     @State private var refreshTimer: Timer?
     @State private var accessibilityJustRequested = false
     @State private var accessibilityUserConfirmed = false
+    @State private var connectivityCheckTimer: Timer?
 
-    private var criticalStepsCompleted: Bool {
-        isInApplications && (isAccessibilityGranted || accessibilityUserConfirmed)
+    private var isGatewayStep完了: Bool {
+        isGatewayConnected || setupCodeImported
     }
 
-    /// True if accessibility was previously requested (persisted across launches)
+    private var criticalStepsCompleted: Bool {
+        isGatewayConnected &&
+        isInApplications &&
+        (isAccessibilityGranted || accessibilityUserConfirmed)
+    }
+
     private var accessibilityPreviouslyRequested: Bool {
         get { UserDefaults.standard.bool(forKey: "clawsy_accessibility_requested") }
         nonmutating set { UserDefaults.standard.set(newValue, forKey: "clawsy_accessibility_requested") }
@@ -34,7 +52,6 @@ struct OnboardingView: View {
                     .scaledToFit()
                     .frame(width: 48, height: 48)
                     .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
-
                 VStack(alignment: .leading, spacing: 2) {
                     Text(l10n: "ONBOARDING_TITLE")
                         .font(.system(size: 16, weight: .bold))
@@ -50,138 +67,114 @@ struct OnboardingView: View {
 
             Divider().opacity(0.3)
 
-            // Checklist (scrollable as safety net)
             ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 12) {
-                // Step 1: App Location
-                OnboardingStepRow(
-                    icon: "folder.fill",
-                    title: NSLocalizedString("ONBOARDING_APP_LOCATION", bundle: .clawsy, comment: ""),
-                    subtitle: NSLocalizedString("ONBOARDING_APP_LOCATION_DESC", bundle: .clawsy, comment: ""),
-                    isCompleted: isInApplications,
-                    isCritical: true,
-                    actionLabel: NSLocalizedString("ONBOARDING_MOVE_TO_APPS", bundle: .clawsy, comment: ""),
-                    action: moveToApplications
-                )
+                VStack(spacing: 12) {
 
-                // Step 2: Accessibility
-                if isAccessibilityGranted {
-                    OnboardingStepRow(
-                        icon: "hand.raised.fill",
-                        title: NSLocalizedString("ONBOARDING_ACCESSIBILITY", bundle: .clawsy, comment: ""),
-                        subtitle: NSLocalizedString("ONBOARDING_ACCESSIBILITY_DESC", bundle: .clawsy, comment: ""),
-                        isCompleted: true,
-                        isCritical: true,
-                        actionLabel: "",
-                        action: {}
+                    // ── Step 0: Gateway Connection (CRITICAL, FIRST) ──────────────────
+                    GatewayConnectionStep(
+                        isConnected: isGatewayConnected,
+                        setupCodeInput: $setupCodeInput,
+                        setupCodeError: $setupCodeError,
+                        isConnecting: $isConnecting,
+                        onConnect: connectWithSetupCode,
+                        onOpenSettings: openSettings
                     )
-                } else if accessibilityJustRequested {
-                    // After granting: show restart button + "skip restart" option
-                    VStack(alignment: .leading, spacing: 6) {
+
+                    // ── Step 1: App Location ──────────────────────────────────────────
+                    OnboardingStepRow(
+                        icon: "folder.fill",
+                        title: NSLocalizedString("ONBOARDING_APP_LOCATION", bundle: .clawsy, comment: ""),
+                        subtitle: NSLocalizedString("ONBOARDING_APP_LOCATION_DESC", bundle: .clawsy, comment: ""),
+                        isCompleted: isInApplications,
+                        isCritical: true,
+                        actionLabel: NSLocalizedString("ONBOARDING_MOVE_TO_APPS", bundle: .clawsy, comment: ""),
+                        action: moveToApplications
+                    )
+
+                    // ── Step 2: Accessibility ─────────────────────────────────────────
+                    if isAccessibilityGranted {
                         OnboardingStepRow(
                             icon: "hand.raised.fill",
                             title: NSLocalizedString("ONBOARDING_ACCESSIBILITY", bundle: .clawsy, comment: ""),
-                            subtitle: NSLocalizedString("ONBOARDING_ACCESSIBILITY_RESTART_HINT", bundle: .clawsy, comment: ""),
-                            isCompleted: false,
-                            isCritical: true,
-                            actionLabel: NSLocalizedString("ONBOARDING_RESTART", bundle: .clawsy, comment: ""),
-                            action: restartApp
+                            subtitle: NSLocalizedString("ONBOARDING_ACCESSIBILITY_DESC", bundle: .clawsy, comment: ""),
+                            isCompleted: true, isCritical: true, actionLabel: "", action: {}
                         )
-                        HStack {
-                            Spacer()
-                            Button(action: { accessibilityUserConfirmed = true }) {
-                                Text(l10n: "ONBOARDING_ACCESSIBILITY_SKIP_RESTART")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
+                    } else if accessibilityJustRequested {
+                        VStack(alignment: .leading, spacing: 6) {
+                            OnboardingStepRow(
+                                icon: "hand.raised.fill",
+                                title: NSLocalizedString("ONBOARDING_ACCESSIBILITY", bundle: .clawsy, comment: ""),
+                                subtitle: NSLocalizedString("ONBOARDING_ACCESSIBILITY_RESTART_HINT", bundle: .clawsy, comment: ""),
+                                isCompleted: false, isCritical: true,
+                                actionLabel: NSLocalizedString("ONBOARDING_RESTART", bundle: .clawsy, comment: ""),
+                                action: restartApp
+                            )
+                            HStack {
+                                Spacer()
+                                Button(action: { accessibilityUserConfirmed = true }) {
+                                    Text(l10n: "ONBOARDING_ACCESSIBILITY_SKIP_RESTART")
+                                        .font(.system(size: 10)).foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
-                        .padding(.trailing, 0)
+                    } else {
+                        OnboardingStepRow(
+                            icon: "hand.raised.fill",
+                            title: NSLocalizedString("ONBOARDING_ACCESSIBILITY", bundle: .clawsy, comment: ""),
+                            subtitle: NSLocalizedString("ONBOARDING_ACCESSIBILITY_DESC", bundle: .clawsy, comment: ""),
+                            isCompleted: false, isCritical: true,
+                            actionLabel: NSLocalizedString("ONBOARDING_OPEN_SETTINGS", bundle: .clawsy, comment: ""),
+                            action: requestAccessibility
+                        )
                     }
-                } else {
+
+                    // ── Step 3: FinderSync (optional) ─────────────────────────────────
+                    VStack(alignment: .leading, spacing: 6) {
+                        OnboardingStepRow(
+                            icon: "folder.badge.gearshape",
+                            title: NSLocalizedString("ONBOARDING_FINDERSYNC", bundle: .clawsy, comment: ""),
+                            subtitle: NSLocalizedString("ONBOARDING_FINDERSYNC_DESC", bundle: .clawsy, comment: ""),
+                            isCompleted: isFinderSyncRunning, isCritical: false,
+                            actionLabel: isFinderSyncRunning ? "" : NSLocalizedString("ONBOARDING_ENABLE", bundle: .clawsy, comment: ""),
+                            action: enableFinderSync
+                        )
+                        if !isFinderSyncRunning && showFinderSyncHint {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.right.circle.fill").font(.system(size: 11)).foregroundColor(.blue)
+                                Text(NSLocalizedString("ONBOARDING_FINDERSYNC_HINT", bundle: .clawsy, comment: ""))
+                                    .font(.system(size: 11)).foregroundColor(.blue)
+                            }
+                            .padding(.horizontal, 8).padding(.vertical, 5)
+                            .background(Color.blue.opacity(0.08)).cornerRadius(6)
+                        }
+                    }
+
+                    // ── Step 4: Share Extension (optional) ───────────────────────────
                     OnboardingStepRow(
-                        icon: "hand.raised.fill",
-                        title: NSLocalizedString("ONBOARDING_ACCESSIBILITY", bundle: .clawsy, comment: ""),
-                        subtitle: NSLocalizedString("ONBOARDING_ACCESSIBILITY_DESC", bundle: .clawsy, comment: ""),
-                        isCompleted: false,
-                        isCritical: true,
-                        actionLabel: NSLocalizedString("ONBOARDING_OPEN_SETTINGS", bundle: .clawsy, comment: ""),
-                        action: requestAccessibility
+                        icon: "square.and.arrow.up",
+                        title: NSLocalizedString("ONBOARDING_SHARE", bundle: .clawsy, comment: ""),
+                        subtitle: NSLocalizedString("ONBOARDING_SHARE_DESC", bundle: .clawsy, comment: ""),
+                        isCompleted: isShareOnboarded, isCritical: false,
+                        actionLabel: isShareOnboarded ? "" : NSLocalizedString("ONBOARDING_SHARE_ACTION", bundle: .clawsy, comment: ""),
+                        action: acknowledgeShare
                     )
                 }
-
-                // Step 3: FinderSync (optional)
-                VStack(alignment: .leading, spacing: 6) {
-                    OnboardingStepRow(
-                        icon: "folder.badge.gearshape",
-                        title: NSLocalizedString("ONBOARDING_FINDERSYNC", bundle: .clawsy, comment: ""),
-                        subtitle: NSLocalizedString("ONBOARDING_FINDERSYNC_DESC", bundle: .clawsy, comment: ""),
-                        isCompleted: isFinderSyncRunning,
-                        isCritical: false,
-                        actionLabel: isFinderSyncRunning ? "" : NSLocalizedString("ONBOARDING_ENABLE", bundle: .clawsy, comment: ""),
-                        action: enableFinderSync
-                    )
-                    if !isFinderSyncRunning && showFinderSyncHint {
-                        HStack(spacing: 6) {
-                            Image(systemName: "arrow.right.circle.fill")
-                                .font(.system(size: 11))
-                                .foregroundColor(.blue)
-                            Text(NSLocalizedString("ONBOARDING_FINDERSYNC_HINT", bundle: .clawsy, comment: ""))
-                                .font(.system(size: 11))
-                                .foregroundColor(.blue)
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 5)
-                        .background(Color.blue.opacity(0.08))
-                        .cornerRadius(6)
-                    }
-                }
-
-                // Step 4: Share Extension (optional)
-                OnboardingStepRow(
-                    icon: "square.and.arrow.up",
-                    title: NSLocalizedString("ONBOARDING_SHARE", bundle: .clawsy, comment: ""),
-                    subtitle: NSLocalizedString("ONBOARDING_SHARE_DESC", bundle: .clawsy, comment: ""),
-                    isCompleted: isShareOnboarded,
-                    isCritical: false,
-                    actionLabel: isShareOnboarded ? "" : NSLocalizedString("ONBOARDING_SHARE_ACTION", bundle: .clawsy, comment: ""),
-                    action: acknowledgeShare
-                )
-
-                // Step 5: Server Setup (optional)
-                OnboardingStepRow(
-                    icon: "server.rack",
-                    title: NSLocalizedString("ONBOARDING_SERVER", bundle: .clawsy, comment: ""),
-                    subtitle: NSLocalizedString("ONBOARDING_SERVER_DESC", bundle: .clawsy, comment: ""),
-                    isCompleted: isServerSetupDone,
-                    isCritical: false,
-                    actionLabel: isServerSetupDone ? "" : NSLocalizedString("ONBOARDING_SERVER_COPY", bundle: .clawsy, comment: ""),
-                    action: copyServerSetupPrompt
-                )
+                .padding(.horizontal, 24)
+                .padding(.vertical, 16)
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 16)
-            } // ScrollView
 
             Spacer(minLength: 0)
-
             Divider().opacity(0.3)
 
             // Footer
             HStack {
-                Button(action: {
-                    isPresented = false
-                }) {
+                Button(action: { isPresented = false }) {
                     Text(l10n: "ONBOARDING_SKIP")
                 }
                 .buttonStyle(.bordered)
-
                 Spacer()
-
-                Button(action: {
-                    onboardingCompleted = true
-                    isPresented = false
-                }) {
+                Button(action: { onboardingCompleted = true; isPresented = false }) {
                     Text(l10n: "ONBOARDING_DONE")
                 }
                 .buttonStyle(.borderedProminent)
@@ -190,11 +183,16 @@ struct OnboardingView: View {
             .padding(.horizontal, 24)
             .padding(.vertical, 16)
         }
-        .frame(width: 420, height: 480)
+        .frame(width: 440, height: 560)
         .onAppear {
             refreshStatus()
-            refreshTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
-                refreshStatus()
+            refreshTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in refreshStatus() }
+            // Watch for setup code imported via deep link
+            NotificationCenter.default.addObserver(forName: NSNotification.Name("ClawsySetupCodeImported"),
+                object: nil, queue: .main) { _ in
+                setupCodeImported = true
+                isConnecting = false
+                setupCodeError = false
             }
         }
         .onDisappear {
@@ -203,21 +201,34 @@ struct OnboardingView: View {
         }
     }
 
+    // MARK: - Gateway Connection
+
+    private func connectWithSetupCode() {
+        let code = setupCodeInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !code.isEmpty else { return }
+        isConnecting = true
+        setupCodeError = false
+        let success = onImportSetupCode(code)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            if !success {
+                isConnecting = false
+                setupCodeError = true
+            }
+            // If success: ClawsySetupCodeImported notification will clear isConnecting
+        }
+    }
+
+    private func openSettings() {
+        NotificationCenter.default.post(name: NSNotification.Name("ClawsyOpenSettings"), object: nil)
+    }
+
     // MARK: - Status Checks
 
     private func refreshStatus() {
         isInApplications = Bundle.main.bundlePath.hasPrefix("/Applications")
         let trusted = AXIsProcessTrusted()
         isAccessibilityGranted = trusted
-        // If already trusted: clear restart hint and persist flag
-        if trusted {
-            accessibilityJustRequested = false
-            accessibilityPreviouslyRequested = true
-        }
-        // Note: do NOT set accessibilityJustRequested = true here based on
-        // accessibilityPreviouslyRequested. That @State flag is session-only
-        // and only becomes true when the user clicks "Enable" in THIS session.
-        // After a restart it resets to false → shows "Enable" button (correct).
+        if trusted { accessibilityJustRequested = false; accessibilityPreviouslyRequested = true }
         checkFinderSyncStatus()
         isShareOnboarded = UserDefaults.standard.bool(forKey: "clawsy_share_onboarded")
     }
@@ -230,14 +241,10 @@ struct OnboardingView: View {
         task.standardOutput = pipe
         task.standardError = FileHandle.nullDevice
         do {
-            try task.run()
-            task.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let output = String(data: data, encoding: .utf8) ?? ""
+            try task.run(); task.waitUntilExit()
+            let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
             isFinderSyncRunning = output.contains("+")
-        } catch {
-            isFinderSyncRunning = false
-        }
+        } catch { isFinderSyncRunning = false }
     }
 
     // MARK: - Actions
@@ -249,43 +256,28 @@ struct OnboardingView: View {
     private func requestAccessibility() {
         let options = [kAXTrustedCheckOptionPrompt.takeRetainedValue(): true] as CFDictionary
         AXIsProcessTrustedWithOptions(options)
-        // Mark as requested so future launches show "restart needed" immediately
         accessibilityPreviouslyRequested = true
-        // After user dismisses the system dialog, show "restart" hint
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            if !AXIsProcessTrusted() {
-                accessibilityJustRequested = true
-            }
+            if !AXIsProcessTrusted() { accessibilityJustRequested = true }
         }
     }
 
     private func restartApp() {
-        // Use 'open -n' shell command — most reliable way to relaunch self
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
         task.arguments = ["-n", Bundle.main.bundlePath]
-        task.standardOutput = FileHandle.nullDevice
-        task.standardError = FileHandle.nullDevice
+        task.standardOutput = FileHandle.nullDevice; task.standardError = FileHandle.nullDevice
         try? task.run()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            NSApp.terminate(nil)
-        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { NSApp.terminate(nil) }
     }
 
     private func openFinderSyncSettings() {
-        // macOS 13+ (Ventura/Sonoma/Sequoia): Login Items & Extensions
-        // macOS 12 and below: old Extensions pane
         let urls = [
             "x-apple.systempreferences:com.apple.LoginItems-Settings.extension",
-            "x-apple.systempreferences:com.apple.ExtensionsPreferences",
-            "x-apple.systempreferences:com.apple.preferences.extensions"
+            "x-apple.systempreferences:com.apple.ExtensionsPreferences"
         ]
         for urlString in urls {
-            if let url = URL(string: urlString) {
-                NSWorkspace.shared.open(url)
-                showFinderSyncHint = true
-                return
-            }
+            if let url = URL(string: urlString) { NSWorkspace.shared.open(url); showFinderSyncHint = true; return }
         }
     }
 
@@ -294,49 +286,130 @@ struct OnboardingView: View {
         isShareOnboarded = true
     }
 
-    private func copyServerSetupPrompt() {
-        let prompt = """
-        Clawsy (macOS Companion App) is now installed and connected to this gateway. \
-        Please install the server-side components so you can access clipboard history, \
-        screenshots, and other cached events:
-
-        1. Clone the repo: git clone https://github.com/iret77/clawsy.git /tmp/clawsy-setup
-        2. Run setup: cd /tmp/clawsy-setup/server && chmod +x setup.sh && ./setup.sh
-        3. Read the integration guide: cat /tmp/clawsy-setup/server/templates/CLAWSY.md
-
-        After setup, add Clawsy heartbeat entries to your HEARTBEAT.md — \
-        send agent.info and agent.status to clawsy-service every heartbeat. \
-        See: https://github.com/iret77/clawsy/blob/main/server/templates/CLAWSY.md
-        """
-
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(prompt, forType: .string)
-
-        isServerSetupDone = true
-        UserDefaults.standard.set(true, forKey: "clawsy_server_setup_done")
-    }
-
     private func enableFinderSync() {
-        // First try pluginkit (works if extension is already registered)
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/pluginkit")
         task.arguments = ["-e", "use", "-i", "ai.clawsy.FinderSync"]
-        task.standardOutput = FileHandle.nullDevice
-        task.standardError = FileHandle.nullDevice
-        try? task.run()
-        task.waitUntilExit()
-
-        // Always show the hint so the user knows the manual path
+        task.standardOutput = FileHandle.nullDevice; task.standardError = FileHandle.nullDevice
+        try? task.run(); task.waitUntilExit()
         showFinderSyncHint = true
-
-        // Recheck after short delay; if still not active, open Settings
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             checkFinderSyncStatus()
-            if !isFinderSyncRunning {
-                openFinderSyncSettings()
+            if !isFinderSyncRunning { openFinderSyncSettings() }
+        }
+    }
+}
+
+// MARK: - Gateway Connection Step
+
+private struct GatewayConnectionStep: View {
+    let isConnected: Bool
+    @Binding var setupCodeInput: String
+    @Binding var setupCodeError: Bool
+    @Binding var isConnecting: Bool
+    var onConnect: () -> Void
+    var onOpenSettings: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // Header row
+            HStack(spacing: 12) {
+                Image(systemName: isConnected ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(isConnected ? .green : .orange)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(l10n: "ONBOARDING_GATEWAY_TITLE")
+                        .font(.system(size: 13, weight: .medium))
+                    Text(l10n: isConnected ? "ONBOARDING_GATEWAY_CONNECTED" : "ONBOARDING_GATEWAY_DESC")
+                        .font(.system(size: 11))
+                        .foregroundColor(isConnected ? .green : .secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+            }
+
+            if !isConnected {
+                // Ask-your-agent tip
+                HStack(spacing: 8) {
+                    Image(systemName: "bubble.left.and.bubble.right.fill")
+                        .font(.system(size: 13))
+                        .foregroundColor(.accentColor)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(l10n: "ONBOARDING_GATEWAY_ASK_AGENT")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.primary)
+                        Text(l10n: "ONBOARDING_GATEWAY_ASK_AGENT_DESC")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(10)
+                .background(Color.accentColor.opacity(0.08))
+                .cornerRadius(8)
+
+                // Setup code paste field
+                HStack(spacing: 8) {
+                    ZStack(alignment: .leading) {
+                        if setupCodeInput.isEmpty {
+                            Text(l10n: "ONBOARDING_GATEWAY_CODE_PLACEHOLDER")
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundColor(.secondary.opacity(0.6))
+                                .padding(.leading, 7)
+                        }
+                        TextField("", text: $setupCodeInput)
+                            .font(.system(size: 11, design: .monospaced))
+                            .textFieldStyle(.plain)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .onSubmit { onConnect() }
+                    }
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .strokeBorder(setupCodeError ? Color.red : Color.secondary.opacity(0.3), lineWidth: 1)
+                    )
+
+                    Button(action: onConnect) {
+                        if isConnecting {
+                            ProgressView().controlSize(.small).frame(width: 40)
+                        } else {
+                            Text(l10n: "ONBOARDING_GATEWAY_CONNECT")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .disabled(setupCodeInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isConnecting)
+                }
+
+                if setupCodeError {
+                    Text(l10n: "ONBOARDING_GATEWAY_CODE_ERROR")
+                        .font(.system(size: 10))
+                        .foregroundColor(.red)
+                }
+
+                // Manual fallback
+                HStack {
+                    Spacer()
+                    Button(action: onOpenSettings) {
+                        Text(l10n: "ONBOARDING_GATEWAY_MANUAL")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
         }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(isConnected ? Color.green.opacity(0.06) : Color.orange.opacity(0.05))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(isConnected ? Color.green.opacity(0.3) : Color.orange.opacity(0.2), lineWidth: 1)
+        )
     }
 }
 
@@ -362,33 +435,21 @@ private struct OnboardingStepRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    Text(title)
-                        .font(.system(size: 13, weight: .medium))
+                    Text(title).font(.system(size: 13, weight: .medium))
                     if !isCritical {
                         Text(l10n: "ONBOARDING_OPTIONAL")
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(Color.secondary.opacity(0.1))
-                            .cornerRadius(3)
+                            .font(.system(size: 10)).foregroundColor(.secondary)
+                            .padding(.horizontal, 4).padding(.vertical, 1)
+                            .background(Color.secondary.opacity(0.1)).cornerRadius(3)
                     }
                 }
-                Text(subtitle)
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                Text(subtitle).font(.system(size: 11)).foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-
             Spacer()
-
             if !isCompleted && !actionLabel.isEmpty {
-                Button(action: action) {
-                    Text(actionLabel)
-                        .font(.system(size: 11))
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+                Button(action: action) { Text(actionLabel).font(.system(size: 11)) }
+                    .buttonStyle(.bordered).controlSize(.small)
             }
         }
     }

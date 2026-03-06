@@ -273,3 +273,15 @@
 "SERVER_SETUP_NEEDED_DESC" = "Verbindung zum OpenClaw Gateway fehlgeschlagen. Stelle sicher, dass OpenClaw installiert ist und das Gateway läuft.";
 "SERVER_SETUP_COPY_PROMPT" = "Installationsanweisung kopieren";
 "SERVER_SETUP_PROMPT_COPIED" = "Kopiert!";
+
+// Gateway Connection (Onboarding Step 0)
+"ONBOARDING_GATEWAY_TITLE" = "Mit Gateway verbinden";
+"ONBOARDING_GATEWAY_DESC" = "Verbinde Clawsy mit deiner OpenClaw-Instanz. Das ist die Voraussetzung für alles andere.";
+"ONBOARDING_GATEWAY_CONNECTED" = "Verbunden ✓";
+"ONBOARDING_GATEWAY_ASK_AGENT" = "Am einfachsten: deinen Agenten fragen";
+"ONBOARDING_GATEWAY_ASK_AGENT_DESC" = "Schreibe deinem Agenten via Telegram, Slack oder einem anderen Kanal: \"pair clawsy\" — er schickt dir einen Link zum Klicken.";
+"ONBOARDING_GATEWAY_CODE_PLACEHOLDER" = "Setup-Code hier einfügen…";
+"ONBOARDING_GATEWAY_CONNECT" = "Verbinden";
+"ONBOARDING_GATEWAY_CODE_ERROR" = "Ungültiger Setup-Code. Lass deinen Agenten einen neuen generieren.";
+"ONBOARDING_GATEWAY_MANUAL" = "Host und Token manuell eingeben →";
+

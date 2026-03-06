@@ -101,6 +101,111 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         button.image = composite
     }
     
+    // MARK: - URL Scheme Handler (clawsy://pair?code=BASE64)
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls {
+            guard url.scheme == "clawsy" else { continue }
+
+            if url.host == "pair",
+               let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+               let code = components.queryItems?.first(where: { $0.name == "code" })?.value {
+                let success = handleSetupCode(code)
+                if success {
+                    // Bring app to foreground and open onboarding if needed
+                    NSApp.activate(ignoringOtherApps: true)
+                    let onboardingCompleted = UserDefaults.standard.bool(forKey: "onboardingCompleted")
+                    if !onboardingCompleted {
+                        openOnboardingWindowDirect()
+                    }
+                }
+            }
+        }
+    }
+
+    /// Decodes an OpenClaw setup code (base64 JSON: {url, token}) and configures a host profile.
+    /// Returns true on success, false if the code is invalid.
+    @discardableResult
+    func handleSetupCode(_ raw: String) -> Bool {
+        struct SetupPayload: Decodable {
+            let url: String
+            let token: String
+        }
+        // Fix base64 padding
+        var base64 = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rem = base64.count % 4
+        if rem != 0 { base64 += String(repeating: "=", count: 4 - rem) }
+
+        guard let data = Data(base64Encoded: base64),
+              let payload = try? JSONDecoder().decode(SetupPayload.self, from: data),
+              !payload.url.isEmpty, !payload.token.isEmpty
+        else {
+            os_log("handleSetupCode: invalid setup code", log: OSLog(subsystem: "ai.clawsy", category: "Setup"), type: .error)
+            return false
+        }
+
+        // Extract host + port from the URL (e.g. "wss://agenthost.ts.net" or "ws://127.0.0.1:18789")
+        let (gatewayHost, gatewayPort) = Self.parseGatewayURL(payload.url)
+        let profileName = gatewayHost.components(separatedBy: ".").first ?? gatewayHost
+
+        let profile = HostProfile(
+            name: profileName.isEmpty ? "OpenClaw" : profileName,
+            gatewayHost: gatewayHost,
+            gatewayPort: gatewayPort,
+            serverToken: payload.token,
+            useSshFallback: false   // setup code = direct WSS connection
+        )
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            if let hm = self.hostManager {
+                // Replace an empty/unconfigured profile, or add as new
+                let hasEmpty = hm.profiles.first(where: { $0.serverToken.isEmpty }) != nil
+                if hasEmpty, let first = hm.profiles.first(where: { $0.serverToken.isEmpty }) {
+                    hm.updateHost(HostProfile(
+                        id: first.id, name: profile.name, gatewayHost: profile.gatewayHost,
+                        gatewayPort: profile.gatewayPort, serverToken: profile.serverToken,
+                        useSshFallback: false
+                    ))
+                    hm.switchActiveHost(to: first.id)
+                } else {
+                    hm.addHost(profile)
+                    hm.switchActiveHost(to: profile.id)
+                }
+                hm.connectAll { nm, p in
+                    self.setupCallbacksForHost(nm: nm, profile: p)
+                }
+                self.networkManager = hm.activeNetworkManager
+            }
+            // Notify onboarding view that a setup code was imported
+            NotificationCenter.default.post(
+                name: NSNotification.Name("ClawsySetupCodeImported"),
+                object: nil,
+                userInfo: ["host": gatewayHost]
+            )
+        }
+        return true
+    }
+
+    /// Parses a gateway URL string into (host, port) for HostProfile.
+    /// Examples:
+    ///   "wss://agenthost.ts.net"    → ("agenthost.ts.net", "443")
+    ///   "ws://127.0.0.1:18789"      → ("127.0.0.1", "18789")
+    ///   "agenthost"                 → ("agenthost", "18789")
+    static func parseGatewayURL(_ urlString: String) -> (host: String, port: String) {
+        if let url = URL(string: urlString), let host = url.host {
+            let port: String
+            if let p = url.port {
+                port = String(p)
+            } else {
+                port = (url.scheme == "wss" || url.scheme == "https") ? "443" : "18789"
+            }
+            return (host, port)
+        }
+        // Fallback: treat as plain hostname
+        return (urlString, "18789")
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         // Explicitly disconnect and kill SSH tunnel process for all hosts.
         // Without sandbox, child processes are no longer auto-killed on app exit.
@@ -473,7 +578,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             return
         }
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 480, height: 460),
+            contentRect: NSRect(x: 0, y: 0, width: 460, height: 540),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -497,7 +602,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 if newVal { onComplete() }
             }
         )
-        let view = OnboardingView(isPresented: isPresented, onboardingCompleted: onboardingCompleted)
+        let isGatewayConnected = Binding<Bool>(
+            get: { self.hostManager?.isConnected ?? false },
+            set: { _ in }
+        )
+        let onImportSetupCode: (String) -> Bool = { [weak self] code in
+            self?.handleSetupCode(code) ?? false
+        }
+        let view = OnboardingView(
+            isPresented: isPresented,
+            onboardingCompleted: onboardingCompleted,
+            isGatewayConnected: isGatewayConnected,
+            onImportSetupCode: onImportSetupCode
+        )
         window.contentView = NSHostingView(rootView: view)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
