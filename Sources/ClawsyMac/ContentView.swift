@@ -23,6 +23,7 @@ struct ContentView: View {
     @State private var errorDismissed = false
     @State private var fixPromptCopied = false
     @State private var pairingCmdCopied = false
+    @State private var serverSetupPromptCopied = false
     @State private var showingAddHostFromHeader = false
     
     // Persistent Configuration (UI State only) — kept for legacy SettingsView compatibility
@@ -121,6 +122,14 @@ struct ContentView: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
+            }
+
+            // --- Server Setup Needed Banner ---
+            if network?.serverSetupNeeded == true {
+                ServerSetupBanner(copied: $serverSetupPromptCopied)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
             }
             
             Divider().opacity(0.5)
@@ -1799,6 +1808,69 @@ struct ConnectionErrorBanner: View {
                 .fill(
                     LinearGradient(
                         colors: [Color.red.opacity(0.85), Color.orange.opacity(0.85)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+    }
+}
+
+// MARK: - Server Setup Needed Banner
+
+struct ServerSetupBanner: View {
+    @Binding var copied: Bool
+
+    private let installPrompt = "Please install the Clawsy server component on this OpenClaw instance. Clone https://github.com/iret77/clawsy.git and run: cd clawsy/server && ./setup.sh"
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Header
+            HStack {
+                Image(systemName: "server.rack")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white)
+                Text(l10n: "SERVER_SETUP_NEEDED_TITLE")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.white)
+                Spacer()
+            }
+
+            // Description
+            Text(l10n: "SERVER_SETUP_NEEDED_DESC")
+                .font(.system(size: 10))
+                .foregroundColor(.white.opacity(0.85))
+                .fixedSize(horizontal: false, vertical: true)
+
+            // Copy button
+            Button(action: {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(installPrompt, forType: .string)
+                copied = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    copied = false
+                }
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: copied ? "checkmark" : "doc.on.clipboard")
+                        .font(.system(size: 10))
+                    Text(l10n: copied ? "SERVER_SETUP_PROMPT_COPIED" : "SERVER_SETUP_COPY_PROMPT")
+                        .font(.system(size: 10, weight: .medium))
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color.white.opacity(0.2))
+                .cornerRadius(6)
+                .foregroundColor(.white)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.orange.opacity(0.85), Color.yellow.opacity(0.7)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )

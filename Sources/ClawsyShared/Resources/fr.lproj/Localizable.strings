@@ -122,3 +122,9 @@
 "ONBOARDING_SHARE" = "Extension Partage";
 "ONBOARDING_SHARE_DESC" = "Utilisez le menu Partager dans n'importe quelle app pour envoyer des fichiers ou du texte directement à votre agent. Disponible automatiquement une fois Clawsy dans /Applications.";
 "ONBOARDING_SHARE_ACTION" = "Compris";
+
+// Server Probe Detection
+"SERVER_SETUP_NEEDED_TITLE" = "Serveur Clawsy non installé";
+"SERVER_SETUP_NEEDED_DESC" = "Votre agent OpenClaw a besoin du composant serveur Clawsy pour recevoir des événements. Demandez à votre agent de l'installer.";
+"SERVER_SETUP_COPY_PROMPT" = "Copier les instructions d'installation";
+"SERVER_SETUP_PROMPT_COPIED" = "Copié !";

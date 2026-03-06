@@ -47,6 +47,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     @Published public var gatewaySessions: [GatewaySession] = []
     @Published public var pairingRequestId: String = ""  // Request ID for manual pairing approval
     @Published public var retryCountdown: Int = 0  // Seconds until next retry (0 = no retry pending)
+    @Published public var serverDetected: Bool = false
+    @Published public var serverSetupNeeded: Bool = false
+    public var pendingProbeId: String? = nil
     private var retryTimer: Timer?
     private var retryAttempt: Int = 0
     private let maxRetryAttempt: Int = 10
@@ -661,6 +664,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             self.connectionStatus = "STATUS_DISCONNECTED"
             self.connectionError = nil
             self.gatewaySessions = []
+            self.serverDetected = false
+            self.serverSetupNeeded = false
+            self.pendingProbeId = nil
             self.rawLog += "\n[WSS] Disconnected"
         }
     }
@@ -791,6 +797,23 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             "params": ["name": ".clawsy_version"]
         ]
         send(json: discoveryReq)
+    }
+
+    private func probeServer() {
+        let msgId = UUID().uuidString
+        let probe: [String: Any] = ["id": msgId, "method": "clawsy.server.probe", "params": [:] as [String: Any]]
+        guard let data = try? JSONSerialization.data(withJSONObject: probe),
+              let str = String(data: data, encoding: .utf8) else { return }
+        socket?.write(string: str)
+        
+        // Wait 10s for response; if no success → server missing
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+            guard let self = self else { return }
+            if !self.serverDetected {
+                self.serverSetupNeeded = true
+            }
+        }
+        self.pendingProbeId = msgId
     }
 
     /// Called when agent info (model, agentName) is received via poll
@@ -1042,6 +1065,20 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                     return
                 }
 
+                // Server probe response
+                if let probeId = pendingProbeId, rid == probeId {
+                    pendingProbeId = nil
+                    let ok = json["ok"] as? Bool ?? (json["result"] != nil && json["error"] == nil)
+                    if ok {
+                        self.serverDetected = true
+                        self.serverSetupNeeded = false
+                    } else {
+                        self.serverDetected = false
+                        self.serverSetupNeeded = true
+                    }
+                    return
+                }
+
                 if rid.hasPrefix("discovery-") {
                     if let result = json["result"] as? [String: Any],
                        let contentB64 = result["content"] as? String,
@@ -1076,6 +1113,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                      
                      // Trigger Discovery Check
                      self.checkServerAwareness()
+
+                     // Probe for clawsy-bridge plugin
+                     self.probeServer()
 
                      // Start gateway sessions poller
                      self.startSessionsPoller()

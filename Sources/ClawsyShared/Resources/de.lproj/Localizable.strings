@@ -267,3 +267,9 @@
 "ONBOARDING_SERVER_DESC" = "Dein Agent braucht Server-Komponenten, um Zwischenablage und Screenshots zu cachen. Tippe, um einen Setup-Prompt zu kopieren — sende ihn deinem Agent per Chat.";
 "ONBOARDING_SERVER_COPY" = "Setup-Prompt kopieren";
 "ONBOARDING_SERVER_DONE" = "Fertig";
+
+// Server Probe Detection
+"SERVER_SETUP_NEEDED_TITLE" = "Clawsy-Server nicht installiert";
+"SERVER_SETUP_NEEDED_DESC" = "Dein OpenClaw-Agent benötigt die Clawsy-Server-Komponente. Bitte deinen Agenten, sie zu installieren.";
+"SERVER_SETUP_COPY_PROMPT" = "Installationsanweisung kopieren";
+"SERVER_SETUP_PROMPT_COPIED" = "Kopiert!";
