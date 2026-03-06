@@ -311,7 +311,7 @@ private struct GatewayStep: View {
                 }
                 Spacer()
                 if effectivePhase == .installPrompt || effectivePhase == .waitingForLink {
-                    Button(effectivePhase == .waitingForLink ? l10n("ONBOARDING_GATEWAY_HAVE_CODE") : "") {
+                    Button(effectivePhase == .waitingForLink ? NSLocalizedString("ONBOARDING_GATEWAY_HAVE_CODE", bundle: .clawsy, comment: "") : "") {
                         phase = .pasteCode
                     }
                     .buttonStyle(.plain)
@@ -353,7 +353,7 @@ private struct GatewayStep: View {
 
                     // "I sent it" → show waiting state
                     Button(action: { phase = .waitingForLink }) {
-                        Label(l10n("ONBOARDING_INSTALL_SENT"), systemImage: "arrow.up.circle.fill")
+                        Label(NSLocalizedString("ONBOARDING_INSTALL_SENT", bundle: .clawsy, comment: ""), systemImage: "arrow.up.circle.fill")
                             .font(.system(size: 11, weight: .medium))
                     }
                     .buttonStyle(.borderedProminent)
