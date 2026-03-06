@@ -152,6 +152,31 @@ sessions_send(sessionKey="clawsy-service", timeoutSeconds=3, message=json.dumps(
 - No file I/O, no FileWatcher, no stale data issues
 - Timeout on `sessions_send` is normal and expected — the event is delivered if Clawsy is connected
 
+### 🤖 Mandatory Snippet for Every Subagent You Spawn
+
+When you delegate work to a subagent, paste this block into **every** task prompt. Replace `<label>` with the actual subagent label/name.
+
+```
+## Mission Control Updates (MANDATORY)
+
+Report progress after each significant step using sessions_send:
+
+Step 1 — immediately after starting:
+sessions_send(sessionKey="agent:main:clawsy-service", timeoutSeconds=3,
+  message='{"kind":"agent.status","payload":{"agentName":"<label>","title":"<task title>","progress":0.05,"statusText":"Starting…"}}')
+
+Step 2 — at roughly 50% progress:
+sessions_send(sessionKey="agent:main:clawsy-service", timeoutSeconds=3,
+  message='{"kind":"agent.status","payload":{"agentName":"<label>","title":"<task title>","progress":0.5,"statusText":"<what you are doing>"}}')
+
+Final step — after commit/done:
+sessions_send(sessionKey="agent:main:clawsy-service", timeoutSeconds=3,
+  message='{"kind":"agent.status","payload":{"agentName":"<label>","title":"<task title>","progress":1.0,"statusText":"Done"}}')
+
+Use the FULL session key: agent:main:clawsy-service (not just "clawsy-service").
+Timeout is expected and normal — the event still delivers.
+```
+
 ---
 
 ## Finding the Connected Node

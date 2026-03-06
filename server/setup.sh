@@ -57,8 +57,35 @@ if [ ! -f "$WORKSPACE/CLAWSY.md" ] && [ -f "$SCRIPT_DIR/templates/CLAWSY.md" ]; 
   echo "✅ CLAWSY.md installed in workspace"
 fi
 
+# 4. Register Gateway plugin (clawsy-bridge) in openclaw.json
+OPENCLAW_CONFIG="$OPENCLAW_HOME/openclaw.json"
+PLUGIN_SRC="$SCRIPT_DIR/gateway-plugin.js"
+PLUGIN_DEST="$OPENCLAW_HOME/plugins/clawsy-bridge.js"
+
+if [ -f "$OPENCLAW_CONFIG" ] && [ -f "$PLUGIN_SRC" ]; then
+  mkdir -p "$OPENCLAW_HOME/plugins"
+  cp "$PLUGIN_SRC" "$PLUGIN_DEST"
+
+  # Check if plugin is already registered
+  if ! grep -q "clawsy-bridge" "$OPENCLAW_CONFIG" 2>/dev/null; then
+    echo ""
+    echo "⚠️  Manual step required: Register the Gateway plugin in openclaw.json"
+    echo "   Add this to plugins.entries in $OPENCLAW_CONFIG:"
+    echo ""
+    echo '     "clawsy-bridge": {'
+    echo '       "enabled": true,'
+    echo "       \"path\": \"$PLUGIN_DEST\""
+    echo '     }'
+    echo ""
+    echo "   Then restart OpenClaw: openclaw gateway restart"
+  else
+    echo "✅ Gateway plugin already registered"
+  fi
+fi
+
 echo ""
 echo "🦞 Done! Next steps:"
 echo "   1. Install Clawsy on your Mac: https://github.com/iret77/clawsy/releases/latest"
-echo "   2. Connect Clawsy to this server"
-echo "   3. Tell your agent: 'Clawsy is installed. Read the clawsy skill.'"
+echo "   2. Register the Gateway plugin (see above) and restart OpenClaw"
+echo "   3. Connect Clawsy to this server"
+echo "   4. Tell your agent: 'Clawsy is installed. Read the clawsy skill.'"
