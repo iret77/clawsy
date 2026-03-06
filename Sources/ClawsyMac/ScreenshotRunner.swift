@@ -50,9 +50,14 @@ enum ScreenshotRunner {
     private static func makeOnboardingView() -> NSView {
         var completed = false
         var presented = true
+        var connected = false
+        var serverNeeded = false
         let view = OnboardingView(
             isPresented: Binding(get: { presented }, set: { presented = $0 }),
-            onboardingCompleted: Binding(get: { completed }, set: { completed = $0 })
+            onboardingCompleted: Binding(get: { completed }, set: { completed = $0 }),
+            isGatewayConnected: Binding(get: { connected }, set: { connected = $0 }),
+            serverSetupNeeded: Binding(get: { serverNeeded }, set: { serverNeeded = $0 }),
+            onImportSetupCode: { _ in false }
         )
         return sized(host(view), 480, 460)
     }
