@@ -269,8 +269,8 @@
 "ONBOARDING_SERVER_DONE" = "Fertig";
 
 // Server Probe Detection
-"SERVER_SETUP_NEEDED_TITLE" = "Clawsy-Server nicht installiert";
-"SERVER_SETUP_NEEDED_DESC" = "Dein OpenClaw-Agent benötigt die Clawsy-Server-Komponente. Bitte deinen Agenten, sie zu installieren.";
+"SERVER_SETUP_NEEDED_TITLE" = "Clawsy Gateway-Plugin fehlt";
+"SERVER_SETUP_NEEDED_DESC" = "Das Clawsy Gateway-Plugin ist auf diesem Host nicht aktiv. Führe das Server-Setup aus.";
 "SERVER_SETUP_COPY_PROMPT" = "Installationsanweisung kopieren";
 "SERVER_SETUP_PROMPT_COPIED" = "Kopiert!";
 

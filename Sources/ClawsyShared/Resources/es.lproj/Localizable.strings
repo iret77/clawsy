@@ -124,8 +124,8 @@
 "ONBOARDING_SHARE_ACTION" = "Entendido";
 
 // Server Probe Detection
-"SERVER_SETUP_NEEDED_TITLE" = "Servidor Clawsy no instalado";
-"SERVER_SETUP_NEEDED_DESC" = "Tu agente OpenClaw necesita el componente de servidor Clawsy para recibir eventos. Pide a tu agente que lo instale.";
+"SERVER_SETUP_NEEDED_TITLE" = "Plugin de pasarela Clawsy no encontrado";
+"SERVER_SETUP_NEEDED_DESC" = "El plugin de pasarela Clawsy no está activo en este host. Ejecuta el setup del servidor para activarlo.";
 "SERVER_SETUP_COPY_PROMPT" = "Copiar instrucciones de instalación";
 "SERVER_SETUP_PROMPT_COPIED" = "¡Copiado!";
 

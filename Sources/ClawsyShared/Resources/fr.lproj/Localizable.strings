@@ -124,8 +124,8 @@
 "ONBOARDING_SHARE_ACTION" = "Compris";
 
 // Server Probe Detection
-"SERVER_SETUP_NEEDED_TITLE" = "Serveur Clawsy non installé";
-"SERVER_SETUP_NEEDED_DESC" = "Votre agent OpenClaw a besoin du composant serveur Clawsy pour recevoir des événements. Demandez à votre agent de l'installer.";
+"SERVER_SETUP_NEEDED_TITLE" = "Plugin passerelle Clawsy manquant";
+"SERVER_SETUP_NEEDED_DESC" = "Le plugin passerelle Clawsy n'est pas actif sur cet hôte. Lancez le setup serveur pour l'activer.";
 "SERVER_SETUP_COPY_PROMPT" = "Copier les instructions d'installation";
 "SERVER_SETUP_PROMPT_COPIED" = "Copié !";
 

@@ -57,35 +57,71 @@ if [ ! -f "$WORKSPACE/CLAWSY.md" ] && [ -f "$SCRIPT_DIR/templates/CLAWSY.md" ]; 
   echo "✅ CLAWSY.md installed in workspace"
 fi
 
-# 4. Register Gateway plugin (clawsy-bridge) in openclaw.json
+# 4. Register Gateway plugin in openclaw.json
 OPENCLAW_CONFIG="$OPENCLAW_HOME/openclaw.json"
 PLUGIN_SRC="$SCRIPT_DIR/gateway-plugin.js"
 PLUGIN_DEST="$OPENCLAW_HOME/plugins/clawsy-bridge.js"
+EXTENSIONS_DIR="$OPENCLAW_HOME/extensions/clawsy-bridge"
+PLUGIN_JSON_SRC="$SCRIPT_DIR/../skills/clawsy-bridge/openclaw.plugin.json"
 
 if [ -f "$OPENCLAW_CONFIG" ] && [ -f "$PLUGIN_SRC" ]; then
   mkdir -p "$OPENCLAW_HOME/plugins"
   cp "$PLUGIN_SRC" "$PLUGIN_DEST"
+  echo "✅ Gateway plugin copied to $PLUGIN_DEST"
 
-  # Check if plugin is already registered
-  if ! grep -q "clawsy-bridge" "$OPENCLAW_CONFIG" 2>/dev/null; then
-    echo ""
-    echo "⚠️  Manual step required: Register the Gateway plugin in openclaw.json"
-    echo "   Add this to plugins.entries in $OPENCLAW_CONFIG:"
-    echo ""
-    echo '     "clawsy-bridge": {'
-    echo '       "enabled": true,'
-    echo "       \"path\": \"$PLUGIN_DEST\""
-    echo '     }'
-    echo ""
-    echo "   Then restart OpenClaw: openclaw gateway restart"
+  # Create extensions directory entry with manifest
+  mkdir -p "$EXTENSIONS_DIR"
+  cp "$PLUGIN_DEST" "$EXTENSIONS_DIR/index.js"
+
+  # Copy or create openclaw.plugin.json in extensions dir
+  if [ -f "$PLUGIN_JSON_SRC" ]; then
+    cp "$PLUGIN_JSON_SRC" "$EXTENSIONS_DIR/openclaw.plugin.json"
   else
-    echo "✅ Gateway plugin already registered"
+    cat > "$EXTENSIONS_DIR/openclaw.plugin.json" << 'MANIFEST'
+{
+  "id": "clawsy-bridge",
+  "name": "Clawsy Bridge",
+  "description": "Routes Clawsy events to agent context and responds to server probes.",
+  "version": "1.0.0",
+  "configSchema": { "type": "object", "additionalProperties": false, "properties": {} }
+}
+MANIFEST
+  fi
+
+  # Add to plugins.entries in openclaw.json using Node.js
+  node -e "
+    const fs = require('fs');
+    const config = JSON.parse(fs.readFileSync('$OPENCLAW_CONFIG', 'utf8'));
+    if (!config.plugins) config.plugins = {};
+    if (!config.plugins.entries) config.plugins.entries = {};
+    if (!config.plugins.load) config.plugins.load = {};
+    if (!config.plugins.load.paths) config.plugins.load.paths = [];
+
+    // Add to load.paths if not already there
+    const pluginPath = '$EXTENSIONS_DIR';
+    if (!config.plugins.load.paths.includes(pluginPath)) {
+      config.plugins.load.paths.push(pluginPath);
+    }
+
+    // Enable in entries
+    config.plugins.entries['clawsy-bridge'] = { enabled: true };
+
+    fs.writeFileSync('$OPENCLAW_CONFIG', JSON.stringify(config, null, 2));
+    console.log('✅ clawsy-bridge registered in openclaw.json');
+  " 2>/dev/null && echo "✅ openclaw.json updated" || echo "⚠️  Could not auto-update openclaw.json — add manually"
+
+  # Restart gateway
+  if command -v openclaw &>/dev/null; then
+    echo "🔄 Restarting OpenClaw gateway..."
+    openclaw gateway restart
+    echo "✅ Gateway restarted"
+  else
+    echo "⚠️  Please restart OpenClaw gateway: openclaw gateway restart"
   fi
 fi
 
 echo ""
 echo "🦞 Done! Next steps:"
 echo "   1. Install Clawsy on your Mac: https://github.com/iret77/clawsy/releases/latest"
-echo "   2. Register the Gateway plugin (see above) and restart OpenClaw"
-echo "   3. Connect Clawsy to this server"
-echo "   4. Tell your agent: 'Clawsy is installed. Read the clawsy skill.'"
+echo "   2. Connect Clawsy to this server"
+echo "   3. Tell your agent: 'Clawsy is installed. Read the clawsy skill.'"
