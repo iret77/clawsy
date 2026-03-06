@@ -688,15 +688,7 @@ await MainActor.run {
         width: 320, height: 520, to: "\(outDir)/02-settings.png"
     )
     render(
-        ClawsyPanel(cornerRadius: 12) {
-            OnboardingView(
-                isPresented: .constant(true),
-                onboardingCompleted: .constant(false),
-                isGatewayConnected: .constant(false),
-                serverSetupNeeded: .constant(false),
-                onImportSetupCode: { _ in false }
-            )
-        }
+        ClawsyPanel(cornerRadius: 12) { OnboardingView() }
             .shadow(color: Color.black.opacity(0.4), radius: 20, x: 0, y: 8)
             .padding(20)
             .background(Color(white: 0.08)),
