@@ -168,7 +168,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         
         // Create Popover
         popover = NSPopover()
-        popover.contentSize = NSSize(width: 240, height: 360)
+        popover.contentSize = NSSize(width: 300, height: 400)
         popover.behavior = .transient
         // Inject AppDelegate into ContentView
         let contentView = ContentView().environmentObject(self)

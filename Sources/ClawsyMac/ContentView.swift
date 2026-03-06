@@ -305,7 +305,7 @@ struct ContentView: View {
             }
             .padding(6)
         }
-        .frame(width: 240)
+        .frame(width: 300)
         .onAppear {
             // Link HostManager to AppDelegate for QuickSend, hotkeys, etc.
             appDelegate.hostManager = hostManager
@@ -1754,7 +1754,7 @@ struct ConnectionErrorBanner: View {
                 Text(error.description)
                     .font(.system(size: 10))
                     .foregroundColor(.white.opacity(0.85))
-                    .lineLimit(2)
+                    .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
