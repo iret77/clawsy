@@ -315,3 +315,5 @@
 "NO_HOST_TITLE" = "No host configured";
 "NO_HOST_SUBTITLE" = "Add a host to get started.";
 "NO_HOST_ADD_BUTTON" = "Add host";
+
+"CONNECTION_HELP" = "Ask your agent to generate a setup link, or find Gateway Host, Port and Token in your OpenClaw server config.";

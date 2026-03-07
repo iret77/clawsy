@@ -311,3 +311,5 @@
 "NO_HOST_TITLE" = "Kein Host konfiguriert";
 "NO_HOST_SUBTITLE" = "Füge einen Host hinzu um loszulegen.";
 "NO_HOST_ADD_BUTTON" = "Host hinzufügen";
+
+"CONNECTION_HELP" = "Bitte deinen Agenten, einen Verbindungslink zu generieren – oder entnimm Host, Port und Token aus deiner OpenClaw-Serverkonfiguration.";

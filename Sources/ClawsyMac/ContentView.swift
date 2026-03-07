@@ -1222,6 +1222,18 @@ struct SettingsView: View {
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
 
+                            // Help text — how to get connection values
+                            HStack(alignment: .top, spacing: 6) {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.secondary)
+                                Text(l10n: "CONNECTION_HELP")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(.top, 2)
+
                             // Re-Pair button — clears deviceToken and forces fresh pairing
                             Button(action: {
                                 hostManager.repairActiveConnection()
