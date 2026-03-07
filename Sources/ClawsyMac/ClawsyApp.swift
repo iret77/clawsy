@@ -115,9 +115,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 if success {
                     // Bring app to foreground and open onboarding if needed
                     NSApp.activate(ignoringOtherApps: true)
-                    let onboardingCompleted = UserDefaults.standard.bool(forKey: "onboardingCompleted")
-                    if !onboardingCompleted {
-                        openOnboardingWindowDirect()
+                    if self.shouldShowOnboarding() {
+                        self.openOnboardingWindowDirect()
                     }
                 }
             }
@@ -397,9 +396,8 @@ Details in CLAWSY.md.
             object: nil
         )
 
-        // Show onboarding on very first launch (before user ever clicks the menu bar icon)
-        let onboardingCompleted = UserDefaults.standard.bool(forKey: "onboardingCompleted")
-        if !onboardingCompleted {
+        // Show onboarding only if no hosts are configured yet
+        if shouldShowOnboarding() {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 self.openOnboardingWindowDirect()
             }
@@ -656,6 +654,18 @@ Details in CLAWSY.md.
         showFloatingWindow(view: view, title: "Camera Preview", autosaveName: "ai.clawsy.CameraWindow")
     }
     
+    /// Returns true if onboarding should be shown.
+    /// Only shows when no hosts with a token are configured yet.
+    func shouldShowOnboarding() -> Bool {
+        let hasConfiguredHosts = hostManager?.profiles.contains(where: { !$0.serverToken.isEmpty }) ?? false
+        if hasConfiguredHosts {
+            // Mark as completed so we never ask again
+            UserDefaults.standard.set(true, forKey: "onboardingCompleted")
+            return false
+        }
+        return !UserDefaults.standard.bool(forKey: "onboardingCompleted")
+    }
+
     /// Called from ContentView (has SwiftUI binding)
     func openOnboardingWindow(onboardingCompleted: Binding<Bool>) {
         openOnboardingWindowInternal(onComplete: { onboardingCompleted.wrappedValue = true })
