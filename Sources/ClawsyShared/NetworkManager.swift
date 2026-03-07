@@ -352,6 +352,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
     
     private func scheduleRetry() {
+        // Prevent double-schedule: if a timer is already running, don't create another one
+        if let existing = retryTimer, existing.isValid {
+            rawLog += "\n[RECONNECT] scheduleRetry called but timer already running — ignoring"
+            return
+        }
+
         let delay = min(baseRetryDelay * pow(2.0, Double(retryAttempt)), maxRetryDelay)
         let jitter = Double.random(in: 0...1.0)
         let actualDelay = delay + jitter
@@ -364,14 +370,13 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         retryTimer?.invalidate()
         retryTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
             guard let self = self else { timer.invalidate(); return }
-            DispatchQueue.main.async {
-                self.retryCountdown -= 1
-                if self.retryCountdown <= 0 {
-                    timer.invalidate()
-                    self.retryTimer = nil
-                    self.isUsingSshTunnel = false
-                    self.connect()
-                }
+            self.retryCountdown -= 1
+            rawLog += "\n[TIMER] countdown=\(self.retryCountdown)"
+            if self.retryCountdown <= 0 {
+                timer.invalidate()
+                self.retryTimer = nil
+                self.isUsingSshTunnel = false
+                self.connect()
             }
         }
     }
@@ -669,7 +674,6 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             self.isConnected = false
             self.isHandshakeComplete = false
             self.connectionStatus = "STATUS_DISCONNECTED"
-            self.connectionError = nil
             self.gatewaySessions = []
             self.serverDetected = false
             self.serverSetupNeeded = false
