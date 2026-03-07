@@ -253,19 +253,6 @@ struct ContentView: View {
                     }
                 }
 
-                // Last Metadata
-                Button(action: { showingMetadata.toggle() }) {
-                    MenuItemRow(icon: "info.bubble.fill", title: "LAST_METADATA", isEnabled: true)
-                }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity)
-                .popover(isPresented: $showingMetadata, arrowEdge: .trailing) {
-                    if let nm = network {
-                        MetadataView(network: nm, isPresented: $showingMetadata)
-                            .frame(width: 350, height: 320)
-                    }
-                }
-
                 // Settings (contains Debug Log + Setup Wizard inside)
                 Button(action: { showingSettings.toggle() }) {
                     MenuItemRow(icon: "gearshape.fill", title: "SETTINGS", isEnabled: true)
@@ -286,6 +273,10 @@ struct ContentView: View {
                                 appDelegate.openOnboardingWindow(onboardingCompleted: $onboardingCompleted)
                             }
                         },
+                        onShowMetadata: {
+                            showingSettings = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { showingMetadata = true }
+                        },
                         onHostAdded: connectNewHost
                     )
                     .frame(width: 380)
@@ -296,6 +287,16 @@ struct ContentView: View {
                         .popover(isPresented: $showingLog, arrowEdge: .trailing) {
                             DebugLogView(logText: network?.rawLog ?? "", isPresented: $showingLog)
                                 .frame(width: 400, height: 300)
+                        }
+                )
+                // Metadata popover (triggered from Settings)
+                .background(
+                    Color.clear
+                        .popover(isPresented: $showingMetadata, arrowEdge: .trailing) {
+                            if let nm = network {
+                                MetadataView(network: nm, isPresented: $showingMetadata)
+                                    .frame(width: 350, height: 320)
+                            }
                         }
                 )
 
@@ -958,6 +959,7 @@ struct SettingsView: View {
     @Binding var isPresented: Bool
     var onShowDebugLog: (() -> Void)? = nil
     var onShowOnboarding: (() -> Void)? = nil
+    var onShowMetadata: (() -> Void)? = nil
     var onHostAdded: ((HostProfile) -> Void)? = nil
 
     /// Local editable copy of the active host profile; committed on dismiss
@@ -1543,6 +1545,15 @@ struct SettingsView: View {
                 Divider().opacity(0.3)
                 HStack(spacing: 4) {
                     // Icon-only buttons with tooltips — avoids text wrapping
+                    Button(action: { onShowMetadata?() }) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 13))
+                            .frame(width: 28, height: 28)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.secondary)
+                    .help(NSLocalizedString("LAST_METADATA", bundle: .clawsy, comment: ""))
+
                     Button(action: { onShowDebugLog?() }) {
                         Image(systemName: "terminal.fill")
                             .font(.system(size: 13))
