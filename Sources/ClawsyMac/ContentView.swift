@@ -1222,17 +1222,41 @@ struct SettingsView: View {
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
 
-                            // Help text — how to get connection values
-                            HStack(alignment: .top, spacing: 6) {
-                                Image(systemName: "info.circle")
-                                    .font(.system(size: 11))
+                            // Onboarding guide — 2-step setup
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(l10n: "CONNECTION_GUIDE_TITLE")
+                                    .font(.system(size: 11, weight: .semibold))
                                     .foregroundColor(.secondary)
-                                Text(l10n: "CONNECTION_HELP")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
+                                
+                                Label {
+                                    Text(l10n: "CONNECTION_GUIDE_STEP1")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                } icon: {
+                                    Text("1.")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundColor(.secondary)
+                                        .frame(width: 16, alignment: .leading)
+                                }
+                                
+                                Label {
+                                    Text(l10n: "CONNECTION_GUIDE_STEP2")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                } icon: {
+                                    Text("2.")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundColor(.secondary)
+                                        .frame(width: 16, alignment: .leading)
+                                }
                             }
-                            .padding(.top, 2)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 10)
+                            .background(Color.secondary.opacity(0.08))
+                            .cornerRadius(8)
+                            .padding(.top, 4)
 
                             // Re-Pair button — clears deviceToken and forces fresh pairing
                             Button(action: {

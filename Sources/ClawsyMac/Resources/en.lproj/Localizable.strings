@@ -312,3 +312,6 @@
 "NO_HOST_ADD_BUTTON" = "Add host";
 
 "CONNECTION_HELP" = "Ask your agent to generate a setup link, or find Gateway Host, Port and Token in your OpenClaw server config.";
+"CONNECTION_GUIDE_TITLE" = "How to connect a new host:";
+"CONNECTION_GUIDE_STEP1" = "Tell your agent: \"Install the Clawsy server package\" (clawhub install clawsy)";
+"CONNECTION_GUIDE_STEP2" = "Your agent will send you a setup link — click it and Clawsy connects automatically.";
