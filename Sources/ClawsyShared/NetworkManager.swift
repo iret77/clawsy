@@ -358,7 +358,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         let delayInt = max(Int(actualDelay.rounded(.up)), 1)
         retryAttempt += 1
         retryCountdown = delayInt
-        rawLog += "\n[RECONNECT] Attempt \(retryAttempt)/\(maxRetryAttempt) in \(String(format: "%.1f", actualDelay))s"
+        rawLog += "\n[RECONNECT] Attempt \(retryAttempt) in \(String(format: "%.1f", actualDelay))s"
         connectionStatus = "STATUS_RECONNECT_WAITING"
 
         retryTimer?.invalidate()
