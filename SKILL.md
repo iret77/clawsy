@@ -1,15 +1,77 @@
 ---
 name: clawsy
-description: Clawsy is a native macOS menu bar app that gives your OpenClaw agent real-world reach — screenshots, clipboard sync, Quick Send, camera, file access via FinderSync, and live Mission Control task view. Connects via SSH tunnel. Open source. Read this skill when Clawsy is installed or you want to use it.
+description: Clawsy is a native macOS menu bar app that gives your OpenClaw agent real-world reach — screenshots, clipboard sync, Quick Send, camera, file access via FinderSync, and live Mission Control task view. Connects via WebSocket. SSH fallback available. Open source. Read this skill when Clawsy is installed or you want to use it.
 ---
 
 # Clawsy Skill — macOS Companion App
 
 Clawsy connects your OpenClaw agent to a Mac via secure WebSocket (with SSH tunnel fallback). This skill file tells you everything you need to use it.
 
-**Current version:** v0.7.1  
+**Current version:** v0.9.12  
 **Download:** https://github.com/iret77/clawsy/releases/latest  
 **Platform:** macOS 14+ (Sonoma/Sequoia), Apple Silicon + Intel
+
+---
+
+## 🚀 First-Time Setup (New Host)
+
+If Clawsy is not yet installed on this host, follow these steps:
+
+### Step 1 — Tell Your Human to Download the App
+
+Send your human this message:
+> "Download Clawsy (free, macOS 14+): https://github.com/iret77/clawsy/releases/latest  
+> Unzip → drag to /Applications → launch. The onboarding wizard will appear."
+
+### Step 2 — Generate the Pairing Link
+
+Run this in your shell:
+```bash
+SETUP_CODE=$(openclaw qr --json 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['setupCode'])" 2>/dev/null)
+echo "clawsy://pair?code=${SETUP_CODE}"
+```
+
+Send the `clawsy://pair?code=...` link to your human. They click it on their Mac.
+Clawsy opens and auto-configures the connection.
+
+### Step 3 — Approve the Pairing Request
+
+Wait ~30 seconds, then check for pending requests:
+```bash
+openclaw nodes pending
+```
+Look for a new entry. Copy its `requestId`, then approve:
+```bash
+openclaw nodes approve <requestId>
+```
+
+### Step 4 — Update Your Workspace
+
+After successful pairing, add Clawsy integration to your workspace:
+
+**HEARTBEAT.md** — add this block:
+```markdown
+## Clawsy (every heartbeat)
+sessions_send(sessionKey="clawsy-service", timeoutSeconds=3,
+  message='{"kind":"agent.info","payload":{"agentName":"<YOUR_NAME>","model":"<MODEL>","updatedAt":"<ISO-UTC>"}}')
+```
+
+Copy the template to your workspace:
+```bash
+cp "$(dirname $(which openclaw))/../lib/node_modules/openclaw/skills/clawsy-server/CLAWSY.md" \
+   ~/.openclaw/workspace/CLAWSY.md 2>/dev/null || \
+curl -s https://raw.githubusercontent.com/iret77/clawsy/main/server/templates/CLAWSY.md \
+   > ~/.openclaw/workspace/CLAWSY.md
+```
+
+### Step 5 — Verify
+
+```bash
+openclaw nodes list
+# → Should show a node with platform="macos"
+```
+
+Done! Clawsy is connected. Read the rest of this SKILL.md to learn what you can do.
 
 ---
 
@@ -30,7 +92,7 @@ Clawsy connects your OpenClaw agent to a Mac via secure WebSocket (with SSH tunn
 | **Quick Send** | incoming | Receive text from user via `⌘⇧K` hotkey |
 | **Share Extension** | incoming | Receive files/text shared from any Mac app |
 | **FinderSync** | user-side | User configures `.clawsy` rules via Finder right-click |
-| **Multi-Host** | config | Clawsy can connect to multiple gateways simultaneously (v0.7.0+) |
+| **Multi-Host** | config | Clawsy can connect to multiple gateways simultaneously |
 
 ---
 
@@ -159,7 +221,7 @@ When the user presses `⌘⇧K` and sends a message:
   "clawsy_envelope": {
     "type": "quick_send",
     "content": "The user's message",
-    "version": "0.7.1",
+    "version": "0.9.12",
     "localTime": "2026-03-04T10:30:00Z",
     "tz": "Europe/Berlin",
     "telemetry": {
@@ -214,7 +276,7 @@ When a rule fires, the event arrives in `clawsy-service`.
 
 ---
 
-## Multi-Host (v0.7.0+)
+## Multi-Host
 
 Clawsy can connect to multiple OpenClaw gateways simultaneously. Each host has:
 - Its own WebSocket connection and device token
@@ -228,12 +290,13 @@ From the agent's perspective, nothing changes — you interact with Clawsy the s
 ## Connection Architecture
 
 ```
-Mac (Clawsy) ─── WSS ───▶ gateway:18789 (OpenClaw Gateway WebSocket)
-Mac (Clawsy) ─── SSH Tunnel ──▶ gateway:18789  (fallback if WSS fails)
+Mac (Clawsy) ─── WSS ───▶ OpenClaw Gateway (Port 18789)
+                           (SSH Tunnel optional als Fallback)
 ```
 
+- **Primary (v0.9+):** Direct WebSocket (WSS) — no SSH configuration required. The pairing code contains the gateway URL; Clawsy auto-connects.
+- **SSH fallback:** Available in Settings when direct WSS is not reachable; uses `~/.ssh` keys.
 - **Auth:** Master token → device token (persisted per host)
-- **SSH fallback:** Automatic when direct WSS fails; uses `~/.ssh` keys
 - **Token recovery:** On `AUTH_TOKEN_MISMATCH`, Clawsy auto-clears the device token and reconnects
 
 ---
