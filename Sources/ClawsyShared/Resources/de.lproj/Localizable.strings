@@ -321,3 +321,4 @@
 "CONNECTION_GUIDE_TITLE" = "So verbindest du einen neuen Host:";
 "CONNECTION_GUIDE_STEP1" = "Sag deinem Agenten: \"Installiere das Clawsy-Serverpaket\" (clawhub install clawsy)";
 "CONNECTION_GUIDE_STEP2" = "Dein Agent schickt dir einen Verbindungslink – klick ihn an und Clawsy verbindet sich automatisch.";
+"STATUS_RECONNECT_COUNTDOWN %lld" = "Neuverbindung in %lld s…";

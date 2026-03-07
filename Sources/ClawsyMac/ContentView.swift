@@ -70,6 +70,8 @@ struct ContentView: View {
                     Group {
                         if hostManager.connectionStatus == "STATUS_CONNECTING" {
                             Text(String(format: NSLocalizedString("STATUS_CONNECTING %lld", bundle: .clawsy, comment: ""), hostManager.connectionAttemptCount))
+                        } else if hostManager.connectionStatus == "STATUS_RECONNECT_WAITING" && hostManager.retryCountdown > 0 {
+                            Text(String(format: NSLocalizedString("STATUS_RECONNECT_COUNTDOWN %lld", bundle: .clawsy, comment: ""), hostManager.retryCountdown))
                         } else {
                             Text(LocalizedStringKey(hostManager.connectionStatus), bundle: .clawsy)
                         }

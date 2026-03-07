@@ -51,9 +51,8 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     @Published public var serverSetupNeeded: Bool = false
     private var retryTimer: Timer?
     private var retryAttempt: Int = 0
-    private let maxRetryAttempt: Int = 10
     private let baseRetryDelay: TimeInterval = 2.0
-    private let maxRetryDelay: TimeInterval = 300.0  // 5 minutes max
+    private let maxRetryDelay: TimeInterval = 60.0  // Cap at 60 seconds
     
     // Mood Tracking State
     private static var lastAppSwitchTime = Date()
@@ -353,13 +352,6 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
     
     private func scheduleRetry() {
-        guard retryAttempt < maxRetryAttempt else {
-            rawLog += "\n[RECONNECT] Giving up after \(retryAttempt) attempts"
-            connectionStatus = "STATUS_RECONNECT_EXHAUSTED"
-            connectionError = .reconnectExhausted
-            return
-        }
-
         let delay = min(baseRetryDelay * pow(2.0, Double(retryAttempt)), maxRetryDelay)
         let jitter = Double.random(in: 0...1.0)
         let actualDelay = delay + jitter
@@ -396,7 +388,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             let _ = err?.localizedDescription ?? "Unknown"
             
             #if os(macOS)
-            if self.useSshFallback && !self.isUsingSshTunnel {
+            if self.useSshFallback && !self.isUsingSshTunnel && !self.sshUser.isEmpty {
                 // First failure: try SSH tunnel (no backoff for the first SSH attempt)
                 self.startSshTunnel()
             } else {
@@ -712,7 +704,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 self.isConnected = true
                 self.connectionStatus = "STATUS_CONNECTED"
                 self.connectionAttemptCount = 0
-                self.connectionError = nil
+                // Note: connectionError is intentionally NOT cleared here.
+                // It is only cleared after a successful handshake (hello-ok),
+                // so the error banner stays visible during TCP-connected-but-handshake-pending states.
             case .disconnected(let reason, let code):
                 self.rawLog += "\n[WSS] Disconnected: \(reason) (code: \(code))"
                 self.isConnected = false

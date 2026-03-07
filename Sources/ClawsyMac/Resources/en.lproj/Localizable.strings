@@ -315,3 +315,4 @@
 "CONNECTION_GUIDE_TITLE" = "How to connect a new host:";
 "CONNECTION_GUIDE_STEP1" = "Tell your agent: \"Install the Clawsy server package\" (clawhub install clawsy)";
 "CONNECTION_GUIDE_STEP2" = "Your agent will send you a setup link — click it and Clawsy connects automatically.";
+"STATUS_RECONNECT_COUNTDOWN %lld" = "Reconnecting in %lld s…";

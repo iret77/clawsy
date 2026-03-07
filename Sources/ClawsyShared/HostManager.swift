@@ -63,6 +63,8 @@ public class HostManager: ObservableObject {
             .assign(to: \.isServerClawsyAware, on: self).store(in: &activeCancellables)
         nm.$pairingRequestId.receive(on: DispatchQueue.main)
             .assign(to: \.pairingRequestId, on: self).store(in: &activeCancellables)
+        nm.$retryCountdown.receive(on: DispatchQueue.main)
+            .assign(to: \.retryCountdown, on: self).store(in: &activeCancellables)
     }
 
     public init() {

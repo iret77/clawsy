@@ -133,3 +133,4 @@
 // Modo solo SSH
 "SSH_ONLY_MODE" = "Solo SSH";
 "SSH_ONLY_MODE_DESC" = "Omitir conexión directa, siempre usar túnel SSH";
+"STATUS_RECONNECT_COUNTDOWN %lld" = "Reconectando en %lld s…";
