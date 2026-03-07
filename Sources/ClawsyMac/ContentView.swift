@@ -133,10 +133,15 @@ struct ContentView: View {
             }
             
             Divider().opacity(0.5)
-            
+
+            // --- Empty State (no hosts configured) ---
+            if hostManager.profiles.isEmpty {
+                NoHostEmptyStateView(onAddHost: { showingAddHostFromHeader = true })
+            }
+
             // --- Main Actions List ---
             // Order: Quick Send (most active) → Screenshot → Clipboard → Camera (most deliberate)
-            VStack(spacing: 2) {
+            if !hostManager.profiles.isEmpty { VStack(spacing: 2) {
                 // Quick Send
                 Button(action: { appDelegate.showQuickSend() }) {
                     MenuItemRow(icon: "paperplane.fill", title: "QUICK_SEND",
@@ -304,6 +309,7 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
             }
             .padding(6)
+            } // end if !hostManager.profiles.isEmpty
         }
         .frame(width: 300)
         .onAppear {
@@ -1955,6 +1961,37 @@ struct HostSwitcherView: View {
     }
 }
 
+// MARK: - No Host Empty State
+
+struct NoHostEmptyStateView: View {
+    var onAddHost: () -> Void
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "antenna.radiowaves.left.and.right")
+                .font(.system(size: 36))
+                .foregroundColor(.secondary.opacity(0.45))
+            VStack(spacing: 4) {
+                Text(l10n: "NO_HOST_TITLE")
+                    .font(.system(size: 13, weight: .semibold))
+                Text(l10n: "NO_HOST_SUBTITLE")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            Button(action: onAddHost) {
+                Label(NSLocalizedString("NO_HOST_ADD_BUTTON", bundle: .clawsy, comment: ""), systemImage: "plus.circle.fill")
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.regular)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+        .padding(.horizontal, 20)
+    }
+}
+
 // MARK: - Add Host Sheet
 
 struct AddHostSheet: View {
@@ -1962,6 +1999,14 @@ struct AddHostSheet: View {
     @Binding var isPresented: Bool
     var onHostAdded: ((HostProfile) -> Void)? = nil
 
+    enum SetupMode { case choose, manual, agentAssist }
+    enum AgentPhase { case prompt, waiting }
+
+    @State private var setupMode: SetupMode = .choose
+    @State private var agentPhase: AgentPhase = .prompt
+    @State private var promptCopied = false
+
+    // Manual form fields
     @State private var name = ""
     @State private var host = ""
     @State private var port = "18789"
@@ -1976,11 +2021,15 @@ struct AddHostSheet: View {
         !token.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
+    private var installCommand: String {
+        NSLocalizedString("ONBOARDING_INSTALL_PROMPT_FULL", bundle: .clawsy, comment: "")
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
             HStack {
-                Text(l10n: "ADD_HOST_TITLE")
+                Text(l10n: setupMode == .choose ? "ADD_HOST_TITLE" : (setupMode == .manual ? "ADD_HOST_TITLE" : "ADD_HOST_MODE_AGENT"))
                     .font(.system(size: 15, weight: .bold))
                 Spacer()
                 Button(action: { isPresented = false }) {
@@ -1996,8 +2045,27 @@ struct AddHostSheet: View {
 
             Divider().opacity(0.3)
 
-            ScrollView {
+            // Mode: Choose
+            if setupMode == .choose {
+                chooseView
+            }
+
+            // Mode: Agent Assist
+            if setupMode == .agentAssist {
+                agentAssistView
+            }
+
+            // Mode: Manual form
+            if setupMode == .manual { ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
+
+                    // Back link
+                    Button(action: { setupMode = .choose }) {
+                        Label(NSLocalizedString("ONBOARDING_INSTALL_BACK", bundle: .clawsy, comment: ""), systemImage: "chevron.left")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
 
                     // Name + Color
                     VStack(alignment: .leading, spacing: 8) {
@@ -2067,40 +2135,181 @@ struct AddHostSheet: View {
                     }
                 }
                 .padding(20)
+            } // end ScrollView (manual)
+            } // end if setupMode == .manual
+
+            // Footer — only shown in manual mode
+            if setupMode == .manual {
+                Divider().opacity(0.3)
+                HStack {
+                    Button(NSLocalizedString("CANCEL", bundle: .clawsy, comment: "")) {
+                        isPresented = false
+                    }
+                    .buttonStyle(.bordered)
+                    Spacer()
+                    Button(NSLocalizedString("ADD_HOST_SAVE", bundle: .clawsy, comment: "")) {
+                        let safeName = name.trimmingCharacters(in: .whitespaces).isEmpty ? host : name
+                        let profile = HostProfile(
+                            name: safeName,
+                            gatewayHost: host.trimmingCharacters(in: .whitespaces),
+                            gatewayPort: port.isEmpty ? "18789" : port,
+                            serverToken: token.trimmingCharacters(in: .whitespaces),
+                            sshUser: sshUser,
+                            useSshFallback: useSshFallback,
+                            color: selectedColor,
+                            sharedFolderPath: sharedFolderPath
+                        )
+                        hostManager.addHost(profile)
+                        onHostAdded?(profile)
+                        isPresented = false
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!canSave)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
             }
+        }
+        .frame(width: 400)
+        .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
+    }
 
+    // MARK: - Sub-views
+
+    @ViewBuilder private var chooseView: some View {
+        VStack(spacing: 20) {
+            Text(l10n: "ADD_HOST_MODE_TITLE")
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+                .padding(.top, 8)
+            HStack(spacing: 16) {
+                modeButton(
+                    icon: "key.fill", color: .blue,
+                    title: NSLocalizedString("ADD_HOST_MODE_MANUAL", bundle: .clawsy, comment: ""),
+                    desc: NSLocalizedString("ADD_HOST_MODE_MANUAL_DESC", bundle: .clawsy, comment: "")
+                ) { setupMode = .manual }
+                modeButton(
+                    icon: "sparkles", color: .green,
+                    title: NSLocalizedString("ADD_HOST_MODE_AGENT", bundle: .clawsy, comment: ""),
+                    desc: NSLocalizedString("ADD_HOST_MODE_AGENT_DESC", bundle: .clawsy, comment: "")
+                ) { setupMode = .agentAssist }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
+        }
+    }
+
+    @ViewBuilder private func modeButton(icon: String, color: Color, title: String, desc: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 28))
+                    .foregroundColor(color)
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold))
+                Text(desc)
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(16)
+            .background(RoundedRectangle(cornerRadius: 10).fill(color.opacity(0.07)))
+            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(color.opacity(0.2), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder private var agentAssistView: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Button(action: { setupMode = .choose }) {
+                        Label(NSLocalizedString("ONBOARDING_INSTALL_BACK", bundle: .clawsy, comment: ""), systemImage: "chevron.left")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+
+                    if agentPhase == .prompt {
+                        agentPromptContent
+                    } else {
+                        agentWaitingContent
+                    }
+                }
+                .padding(20)
+            }
             Divider().opacity(0.3)
-
-            // Footer
             HStack {
-                Button(NSLocalizedString("CANCEL", bundle: .clawsy, comment: "")) {
-                    isPresented = false
-                }
-                .buttonStyle(.bordered)
+                Button(NSLocalizedString("CANCEL", bundle: .clawsy, comment: "")) { isPresented = false }
+                    .buttonStyle(.bordered)
                 Spacer()
-                Button(NSLocalizedString("ADD_HOST_SAVE", bundle: .clawsy, comment: "")) {
-                    let safeName = name.trimmingCharacters(in: .whitespaces).isEmpty ? host : name
-                    let profile = HostProfile(
-                        name: safeName,
-                        gatewayHost: host.trimmingCharacters(in: .whitespaces),
-                        gatewayPort: port.isEmpty ? "18789" : port,
-                        serverToken: token.trimmingCharacters(in: .whitespaces),
-                        sshUser: sshUser,
-                        useSshFallback: useSshFallback,
-                        color: selectedColor,
-                        sharedFolderPath: sharedFolderPath
-                    )
-                    hostManager.addHost(profile)
-                    onHostAdded?(profile)
-                    isPresented = false
+                if agentPhase == .waiting {
+                    Button(NSLocalizedString("ONBOARDING_GATEWAY_HAVE_CODE", bundle: .clawsy, comment: "")) { setupMode = .manual }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(!canSave)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
         }
-        .frame(width: 400)
-        .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
+    }
+
+    @ViewBuilder private var agentPromptContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(l10n: "ONBOARDING_INSTALL_STEP1")
+                .font(.system(size: 12, weight: .medium))
+            Button(action: copyInstallCommand) {
+                HStack(spacing: 8) {
+                    Text(installCommand)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(.primary.opacity(0.85))
+                        .lineLimit(4)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 4)
+                    Image(systemName: promptCopied ? "checkmark" : "doc.on.clipboard")
+                        .font(.system(size: 11))
+                        .foregroundColor(promptCopied ? .green : .secondary)
+                }
+                .padding(10)
+                .background(Color(nsColor: .textBackgroundColor).opacity(0.8))
+                .cornerRadius(6)
+                .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.secondary.opacity(0.25), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            Text(l10n: "ONBOARDING_INSTALL_STEP2")
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+            Button(action: { agentPhase = .waiting }) {
+                Label(NSLocalizedString("ONBOARDING_INSTALL_SENT", bundle: .clawsy, comment: ""), systemImage: "arrow.up.circle.fill")
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+        }
+    }
+
+    @ViewBuilder private var agentWaitingContent: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                ProgressView().controlSize(.small)
+                Text(l10n: "ONBOARDING_INSTALL_WAITING")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+            Text(l10n: "ONBOARDING_INSTALL_WAITING_HINT")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary.opacity(0.8))
+        }
+        .padding(.vertical, 8)
+    }
+
+    private func copyInstallCommand() {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(installCommand, forType: .string)
+        promptCopied = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { promptCopied = false }
     }
 }

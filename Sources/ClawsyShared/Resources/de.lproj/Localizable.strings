@@ -304,3 +304,15 @@
 "ONBOARDING_INSTALL_PROMPT_FULL" = "Bitte installiere den Clawsy-Server auf dieser OpenClaw-Instanz:\n\ncurl -fsSL https://raw.githubusercontent.com/iret77/clawsy/main/server/install.sh | bash\n\nDas Skript richtet alles ein und sendet dir automatisch einen Setup-Link über deinen üblichen Messaging-Kanal (Telegram, Slack, etc.). Klicke diesen Link auf deinem Mac, um die Verbindung herzustellen.";
 "ONBOARDING_INSTALL_CASE_B_SUBTITLE" = "Verbunden, aber Clawsy-Server ist noch nicht installiert.";
 
+
+// Host setup mode selection
+"ADD_HOST_MODE_TITLE" = "Wie möchtest du verbinden?";
+"ADD_HOST_MODE_MANUAL" = "Manuell konfigurieren";
+"ADD_HOST_MODE_MANUAL_DESC" = "Host, Port und Token direkt eingeben";
+"ADD_HOST_MODE_AGENT" = "Agent um Hilfe bitten";
+"ADD_HOST_MODE_AGENT_DESC" = "Dein Agent richtet alles ein und sendet dir den Verbindungslink";
+
+// Empty state
+"NO_HOST_TITLE" = "Kein Host konfiguriert";
+"NO_HOST_SUBTITLE" = "Füge einen Host hinzu um loszulegen.";
+"NO_HOST_ADD_BUTTON" = "Host hinzufügen";

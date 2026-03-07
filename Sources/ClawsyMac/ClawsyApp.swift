@@ -113,11 +113,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                let code = components.queryItems?.first(where: { $0.name == "code" })?.value {
                 let success = handleSetupCode(code)
                 if success {
-                    // Bring app to foreground and open onboarding if needed
                     NSApp.activate(ignoringOtherApps: true)
-                    if self.shouldShowOnboarding() {
-                        self.openOnboardingWindowDirect()
-                    }
                 }
             }
         }
@@ -396,12 +392,8 @@ Details in CLAWSY.md.
             object: nil
         )
 
-        // Show onboarding only if no hosts are configured yet
-        if shouldShowOnboarding() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                self.openOnboardingWindowDirect()
-            }
-        }
+        // Onboarding is no longer auto-triggered on launch.
+        // Users without hosts see an empty state in ContentView → AddHostSheet.
     }
     
     @objc private func appearanceChanged(_ notification: Notification) {
