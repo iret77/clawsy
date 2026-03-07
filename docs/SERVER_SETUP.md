@@ -4,6 +4,18 @@ Clawsy is a Mac client that connects to your OpenClaw Gateway. This guide covers
 
 ---
 
+## Zero-SSH Onboarding (Recommended, v0.9+)
+
+If your OpenClaw host uses Tailscale (recommended), no SSH setup is required.
+Clawsy connects directly via WebSocket over the Tailscale network.
+
+**Requirements:** OpenClaw running with Tailscale mode enabled.
+
+The Mac app will auto-detect the gateway URL from the pairing code.
+No manual host/port/SSH configuration needed.
+
+---
+
 ## Prerequisites
 
 - **OpenClaw** installed and running ([github.com/openclaw/openclaw](https://github.com/openclaw/openclaw))
@@ -42,8 +54,8 @@ The token you need is the **master token** (also called auth token or server tok
 On first connect, Clawsy sends a pairing request. You must approve it:
 
 ```bash
-# List all nodes (look for a pending pairing request)
-openclaw nodes
+# List pending pairing requests
+openclaw nodes pending
 
 # Approve the request
 openclaw nodes approve <requestId>

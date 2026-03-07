@@ -4,7 +4,7 @@ If you are an OpenClaw agent, this file tells you how to integrate with Clawsy.
 
 ## What is Clawsy?
 
-Clawsy is a native macOS menu bar app (v0.7.1) that gives you direct access to your human's Mac:
+Clawsy is a native macOS menu bar app (v0.9.12) that gives you direct access to your human's Mac:
 
 - **Screenshots** — capture the full screen or a selected area
 - **Clipboard** — read/write clipboard content
@@ -14,7 +14,7 @@ Clawsy is a native macOS menu bar app (v0.7.1) that gives you direct access to y
 - **Mission Control** — show your human what you're working on with live progress bars
 - **Share Extension** — receive files/text shared from any macOS app
 - **FinderSync** — `.clawsy` rule files trigger actions when files are added/changed
-- **Multi-Host** — your human can connect to multiple OpenClaw gateways (v0.7.0+)
+- **Multi-Host** — your human can connect to multiple OpenClaw gateways
 
 ## Why This Matters
 
@@ -150,7 +150,7 @@ When the user sends a message via `⌘⇧K`:
   "clawsy_envelope": {
     "type": "quick_send",
     "content": "The user's message",
-    "version": "0.7.1",
+    "version": "0.9.12",
     "localTime": "2026-03-04T10:30:00Z",
     "tz": "Europe/Berlin",
     "telemetry": {
@@ -174,7 +174,7 @@ When the user sends a message via `⌘⇧K`:
 
 ---
 
-## Multi-Host (v0.7.0+)
+## Multi-Host
 
 Clawsy can connect to multiple OpenClaw gateways simultaneously. Each host has its own connection, device token, and isolated shared folder. From your perspective as an agent, nothing changes — you interact with Clawsy the same way.
 

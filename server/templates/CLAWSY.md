@@ -86,7 +86,7 @@ Incoming messages from Clawsy are wrapped in `clawsy_envelope`:
   "clawsy_envelope": {
     "type": "quick_send",
     "content": "The actual message",
-    "version": "0.7.1",
+    "version": "0.9.12",
     "localTime": "2026-02-27T01:09:22.609Z",
     "tz": "Europe/Berlin",
     "telemetry": {
