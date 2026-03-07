@@ -61,6 +61,6 @@ SSH fallback triggers even when the WSS transport itself connected successfully.
 1. **Check the debug log** (Settings → Debug Log)
 2. **DEVICE_AUTH_SIGNATURE_INVALID** → Signature/params mismatch. Verify the shared constants.
 3. **NOT_PAIRED** → Device key not recognized. Should auto-resolve via SSH tunnel.
-   Without SSH: manual re-pair via `openclaw nodes approve <requestId>`.
+   Without SSH: manual re-pair via `openclaw devices approve <requestId>`.
 4. **AUTH_TOKEN_MISMATCH** → Stale deviceToken. Auto-clears and retries.
 5. **STATUS_SSH_USER_MISSING** → SSH fallback enabled but no SSH user configured.

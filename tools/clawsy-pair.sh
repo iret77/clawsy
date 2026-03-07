@@ -31,7 +31,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # 1. Setup-Code generieren
-SETUP_CODE=$(openclaw qr --setup-code-only 2>/dev/null)
+SETUP_CODE=$(openclaw qr --json 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['setupCode'])" 2>/dev/null)
 if [[ -z "$SETUP_CODE" ]]; then
   echo "ERROR=Failed to generate setup code (is OpenClaw gateway running?)"
   exit 1

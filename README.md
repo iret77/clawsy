@@ -56,7 +56,7 @@ Make sure your OpenClaw instance is running and you have the **Gateway Host**, *
    openclaw nodes
 
    # Approve (use the request ID shown)
-   openclaw nodes approve <requestId>
+   openclaw devices approve <requestId>
    ```
 
 ### 4. Tell your agent

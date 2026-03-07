@@ -14,7 +14,7 @@ Wenn ein User schreibt **"pair clawsy"**, **"clawsy verbinden"**, **"connect cla
 
 ```bash
 # Schritt 1: Setup-Link generieren
-CODE=$(openclaw qr --setup-code-only 2>/dev/null)
+CODE=$(openclaw qr --json 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['setupCode'])" 2>/dev/null)
 echo "clawsy://pair?code=${CODE}"
 
 # Schritt 2: Auto-Approve-Watcher starten (Hintergrund, max. 120s)

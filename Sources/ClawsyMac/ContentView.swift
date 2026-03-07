@@ -1678,7 +1678,7 @@ struct PairingApprovalBanner: View {
     let requestId: String
     @Binding var copied: Bool
 
-    private var command: String { "openclaw nodes approve \(requestId)" }
+    private var command: String { "openclaw devices approve \(requestId)" }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
