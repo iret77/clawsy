@@ -37,7 +37,7 @@ fi
 
 # ── 2. Install CLAWSY.md (agent instructions) ─────────────────────────────────
 mkdir -p "$WORKSPACE"
-curl -fsSL "$REPO_RAW/CLAWSY.md" -o "$WORKSPACE/CLAWSY.md" 2>/dev/null
+curl -fsSL "$REPO_RAW/server/templates/CLAWSY.md" -o "$WORKSPACE/CLAWSY.md" 2>/dev/null
 echo "   ✅ CLAWSY.md installed" >&2
 
 # ── 3. Install clawsy-pair.sh (auto-approve helper) ──────────────────────────
@@ -55,7 +55,7 @@ fi
 
 # ── 5. Generate pairing link + start auto-approve watcher ────────────────────
 if command -v openclaw &>/dev/null; then
-  SETUP_CODE=$(openclaw qr --setup-code-only 2>/dev/null)
+  SETUP_CODE=$(openclaw qr --json 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['setupCode'])" 2>/dev/null)
   if [[ -n "$SETUP_CODE" ]]; then
     # Start auto-approve watcher in background (approves when user clicks link)
     bash "$TOOLS_DIR/clawsy-pair.sh" --timeout 300 >/dev/null 2>&1 &
@@ -64,16 +64,14 @@ if command -v openclaw &>/dev/null; then
     echo "🎉 Clawsy Server installed! Notifying user..." >&2
 
     # Proactively send setup link to user via agent (agent forwards via Telegram/Slack/etc.)
-    openclaw sessions send main \
-      "🦞 Clawsy-Server ist eingerichtet! Hier ist dein Setup-Link — klicke ihn auf deinem Mac um die Verbindung herzustellen: clawsy://pair?code=${SETUP_CODE}" \
-      2>/dev/null || true
+    openclaw system event --text "🦞 Clawsy ready! Click on your Mac: clawsy://pair?code=${SETUP_CODE}" --mode now 2>/dev/null || true
 
     echo "clawsy://pair?code=${SETUP_CODE}"
     echo "" >&2
     echo "✅ Done. The link has been sent to your agent." >&2
   else
     echo "⚠️  Could not generate setup code. Gateway may still be restarting." >&2
-    echo "   Try manually: openclaw qr --setup-code-only" >&2
+    echo "   Try manually: openclaw qr --json" >&2
     exit 1
   fi
 else
