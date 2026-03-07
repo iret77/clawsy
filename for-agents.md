@@ -4,7 +4,7 @@ If you are an OpenClaw agent, this file tells you how to integrate with Clawsy.
 
 ## What is Clawsy?
 
-Clawsy is a native macOS menu bar app (v0.9.12) that gives you direct access to your human's Mac:
+Clawsy is a native macOS menu bar app (v0.9.17) that gives you direct access to your human's Mac:
 
 - **Screenshots** — capture the full screen or a selected area
 - **Clipboard** — read/write clipboard content
@@ -150,7 +150,7 @@ When the user sends a message via `⌘⇧K`:
   "clawsy_envelope": {
     "type": "quick_send",
     "content": "The user's message",
-    "version": "0.9.12",
+    "version": "0.9.17",
     "localTime": "2026-03-04T10:30:00Z",
     "tz": "Europe/Berlin",
     "telemetry": {

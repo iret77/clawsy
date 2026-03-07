@@ -53,7 +53,7 @@ Make sure your OpenClaw instance is running and you have the **Gateway Host**, *
 5. Clawsy connects and sends a pairing request. **Approve it on your server:**
    ```bash
    # List pending pairing requests
-   openclaw nodes
+   openclaw devices list
 
    # Approve (use the request ID shown)
    openclaw devices approve <requestId>
@@ -137,7 +137,7 @@ If you are an OpenClaw agent, read [for-agents.md](for-agents.md) — it has eve
 
 ---
 
-## Multi-Host Support (v0.7.0+)
+## Multi-Host Support
 
 Clawsy can connect to **multiple OpenClaw gateways simultaneously**. Each host gets:
 
@@ -152,7 +152,7 @@ Use this when you run separate OpenClaw instances (e.g., work vs. personal, dev 
 
 ---
 
-## Features at a Glance (v0.7.1)
+## Features at a Glance
 
 | Feature | Description |
 |---|---|

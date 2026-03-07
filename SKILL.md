@@ -7,7 +7,7 @@ description: Clawsy is a native macOS menu bar app that gives your OpenClaw agen
 
 Clawsy connects your OpenClaw agent to a Mac via secure WebSocket (with SSH tunnel fallback). This skill file tells you everything you need to use it.
 
-**Current version:** v0.9.16  
+**Current version:** v0.9.17  
 **Download:** https://github.com/iret77/clawsy/releases/latest  
 **Platform:** macOS 14+ (Sonoma/Sequoia), Apple Silicon + Intel
 
@@ -221,7 +221,7 @@ When the user presses `⌘⇧K` and sends a message:
   "clawsy_envelope": {
     "type": "quick_send",
     "content": "The user's message",
-    "version": "0.9.12",
+    "version": "0.9.17",
     "localTime": "2026-03-04T10:30:00Z",
     "tz": "Europe/Berlin",
     "telemetry": {
