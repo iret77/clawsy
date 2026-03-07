@@ -53,10 +53,10 @@ On first connect, Clawsy sends a pairing request. You must approve it:
 
 ```bash
 # List pending pairing requests
-openclaw nodes pending
+openclaw devices pending
 
 # Approve the request
-openclaw nodes approve <requestId>
+openclaw devices approve <requestId>
 ```
 
 If you use the OpenClaw web dashboard, the pairing request appears there too.
@@ -66,9 +66,9 @@ After approval, Clawsy receives a device token and reconnects automatically. The
 ### 3. Verify Connection
 
 ```bash
-# Check that Clawsy appears as a connected node
-openclaw nodes
-# → Should show a node with platform="macos" and status="connected"
+# Check that Clawsy appears as a connected device
+openclaw devices list
+# → Should show a device with platform="macos" and status="connected"
 ```
 
 ---
@@ -151,7 +151,7 @@ All user-data commands require approval on the Mac side.
 ### Pairing Request Not Appearing
 
 - Make sure Clawsy shows "Connecting" or "Pairing" status (not "Disconnected")
-- Run `openclaw nodes` — if no pending request, Clawsy may not have reached the gateway
+- Run `openclaw devices pending` — if no pending request, Clawsy may not have reached the gateway
 - Check OpenClaw gateway logs for connection attempts
 
 ### Agent Not Showing in Mission Control
