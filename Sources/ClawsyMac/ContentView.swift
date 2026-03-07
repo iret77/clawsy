@@ -815,6 +815,7 @@ struct DebugLogView: View {
                         .padding()
                 }
             }
+            .scrollIndicators(.visible)
             .background(Color.black.opacity(0.05))
             
             Divider().opacity(0.3)
@@ -916,6 +917,7 @@ struct MetadataView: View {
                 }
                 .padding(20)
             }
+            .scrollIndicators(.visible)
             .background(Color.black.opacity(0.05))
             
             Divider().opacity(0.3)
@@ -1081,8 +1083,7 @@ struct SettingsView: View {
             TabView(selection: $selectedTab) {
 
                 // ━━ Tab 1: Connection ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 24) {
 
                         // ── Host Management Section ──────────────────────────────
                         VStack(alignment: .leading, spacing: 10) {
@@ -1282,15 +1283,13 @@ struct SettingsView: View {
                         }
                     }
                     .padding(20)
-                }
                 .tag(0)
                 .tabItem {
                     Label(NSLocalizedString("SETTINGS_TAB_CONNECTION", bundle: .clawsy, comment: ""), systemImage: "network")
                 }
 
                 // ━━ Tab 2: Features ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 24) {
 
                         // Extended Context Section
                         VStack(alignment: .leading, spacing: 10) {
@@ -1480,15 +1479,13 @@ struct SettingsView: View {
                         }
                     }
                     .padding(20)
-                }
                 .tag(1)
                 .tabItem {
                     Label(NSLocalizedString("SETTINGS_TAB_FEATURES", bundle: .clawsy, comment: ""), systemImage: "gearshape.2")
                 }
 
                 // ━━ Tab 3: Updates ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 24) {
 
                         // Updates Section
                         VStack(alignment: .leading, spacing: 10) {
@@ -1532,13 +1529,12 @@ struct SettingsView: View {
                         }
                     }
                     .padding(20)
-                }
                 .tag(2)
                 .tabItem {
                     Label(NSLocalizedString("SETTINGS_TAB_UPDATES", bundle: .clawsy, comment: ""), systemImage: "arrow.triangle.2.circlepath")
                 }
             }
-            .frame(minHeight: 300, maxHeight: 500)
+            .fixedSize(horizontal: false, vertical: true)
             
             Divider().opacity(0.3)
             
