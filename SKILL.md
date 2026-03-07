@@ -1,6 +1,6 @@
 ---
 name: clawsy
-description: Clawsy is a native macOS menu bar app that gives your OpenClaw agent real-world reach — screenshots, clipboard sync, Quick Send, camera, file access via FinderSync, and live Mission Control task view. Connects via WebSocket (Zero-SSH via Tailscale, SSH fallback available). Open source. Read this skill when Clawsy is installed or you want to use it.
+description: Clawsy is a native macOS menu bar app that gives your OpenClaw agent real-world reach — screenshots, clipboard sync, Quick Send, camera, file access via FinderSync, and live Mission Control task view. Connects via WebSocket. SSH fallback available. Open source. Read this skill when Clawsy is installed or you want to use it.
 ---
 
 # Clawsy Skill — macOS Companion App
@@ -290,14 +290,12 @@ From the agent's perspective, nothing changes — you interact with Clawsy the s
 ## Connection Architecture
 
 ```
-Mac (Clawsy) ─── WSS ───▶ wss://hostname.tailnet.ts.net:18789  (primary, Zero-SSH via Tailscale)
-Mac (Clawsy) ─── WSS ───▶ gateway:18789                        (direct WebSocket)
-Mac (Clawsy) ─── SSH Tunnel ──▶ gateway:18789                   (fallback if WSS fails)
+Mac (Clawsy) ─── WSS ───▶ OpenClaw Gateway (Port 18789)
+                           (SSH Tunnel optional als Fallback)
 ```
 
-- **Primary (v0.9+):** WebSocket over Tailscale — no SSH setup required. The pairing code contains the gateway URL; Clawsy auto-connects.
-- **Direct WSS:** When the gateway is directly reachable (LAN, public IP).
-- **SSH fallback:** Automatic when direct WSS fails; uses `~/.ssh` keys.
+- **Primary (v0.9+):** Direct WebSocket (WSS) — no SSH configuration required. The pairing code contains the gateway URL; Clawsy auto-connects.
+- **SSH fallback:** Available in Settings when direct WSS is not reachable; uses `~/.ssh` keys.
 - **Auth:** Master token → device token (persisted per host)
 - **Token recovery:** On `AUTH_TOKEN_MISMATCH`, Clawsy auto-clears the device token and reconnects
 

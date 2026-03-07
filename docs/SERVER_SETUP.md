@@ -6,10 +6,8 @@ Clawsy is a Mac client that connects to your OpenClaw Gateway. This guide covers
 
 ## Zero-SSH Onboarding (Recommended, v0.9+)
 
-If your OpenClaw host uses Tailscale (recommended), no SSH setup is required.
-Clawsy connects directly via WebSocket over the Tailscale network.
-
-**Requirements:** OpenClaw running with Tailscale mode enabled.
+Clawsy (v0.9+) connects directly via WebSocket — no SSH setup required.
+SSH fallback is available in Settings if direct connection fails.
 
 The Mac app will auto-detect the gateway URL from the pairing code.
 No manual host/port/SSH configuration needed.
