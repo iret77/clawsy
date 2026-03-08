@@ -670,7 +670,7 @@ try FileManager.default.createDirectory(atPath: outDir, withIntermediateDirector
 
 await MainActor.run {
     // Hero — Mac desktop context (wide, landscape)
-    render(HeroView(), width: 1100, height: 820, to: "\(outDir)/00-hero.png")
+    render(HeroView(), width: 1100, height: 574, to: "\(outDir)/00-hero.png")
 
     // Individual panels — wrapped in ClawsyPanel for realistic frames
     render(
