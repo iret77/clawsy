@@ -30,6 +30,19 @@ public struct GatewaySession: Identifiable, Equatable {
     public let task: String?
 }
 
+// MARK: - DisconnectReason
+
+/// Classifies why the WebSocket connection was terminated.
+/// Only `.connectionLost` triggers automatic reconnect with backoff.
+public enum DisconnectReason: Equatable {
+    /// Connection was active (handshake complete) and dropped unexpectedly.
+    case connectionLost
+    /// User explicitly tapped the Disconnect button or removed the host.
+    case userInitiated
+    /// Connection setup failed before the session became active (pre-hello-ok).
+    case setupFailed(String)
+}
+
 // MARK: - NetworkManager (Native Node Protocol)
 
 public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUserNotificationCenterDelegate {
@@ -53,6 +66,10 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     private var retryAttempt: Int = 0
     private let baseRetryDelay: TimeInterval = 2.0
     private let maxRetryDelay: TimeInterval = 60.0  // Cap at 60 seconds
+    
+    /// Tracks the reason for the most recent disconnection.
+    /// Reconnect logic only fires when this is `.connectionLost`.
+    private var disconnectReason: DisconnectReason?
     
     // Mood Tracking State
     private static var lastAppSwitchTime = Date()
@@ -293,6 +310,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             retryTimer?.invalidate()
             retryTimer = nil
             isUsingSshTunnel = false
+            disconnectReason = nil  // Fresh connection attempt — clear prior reason
         }
         
         connectionAttemptCount += 1
@@ -352,6 +370,13 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
     
     private func scheduleRetry() {
+        // Only reconnect when the connection was lost unexpectedly.
+        // User-initiated disconnects and setup failures must NOT trigger retry.
+        if let reason = disconnectReason, reason != .connectionLost {
+            rawLog += "\n[RECONNECT] Skipping retry — disconnect reason: \(reason)"
+            return
+        }
+        
         // Prevent double-schedule: if a timer is already running, don't create another one
         if let existing = retryTimer, existing.isValid {
             rawLog += "\n[RECONNECT] scheduleRetry called but timer already running — ignoring"
@@ -390,18 +415,26 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             self.socket?.disconnect()
             self.socket = nil
 
-            let _ = err?.localizedDescription ?? "Unknown"
-            
             #if os(macOS)
             if self.useSshFallback && !self.isUsingSshTunnel && !self.sshUser.isEmpty {
-                // First failure: try SSH tunnel (no backoff for the first SSH attempt)
+                // First failure: try SSH tunnel as part of the initial setup path.
+                // Don't set setupFailed yet — SSH fallback is still "attempting to connect".
+                // If SSH also fails, the SSH failure path sets .setupFailed explicitly.
                 self.startSshTunnel()
             } else {
-                // SSH also failed OR SSH not configured → backoff retry
+                // SSH also failed OR SSH not configured → classify and attempt retry (guarded).
+                if !self.isHandshakeComplete && self.disconnectReason == nil {
+                    let detail = err?.localizedDescription ?? "Connection failed before handshake"
+                    self.disconnectReason = .setupFailed(detail)
+                }
                 self.runDiagnostics(err: err)
                 self.scheduleRetry()
             }
             #else
+            if !self.isHandshakeComplete && self.disconnectReason == nil {
+                let detail = err?.localizedDescription ?? "Connection failed before handshake"
+                self.disconnectReason = .setupFailed(detail)
+            }
             self.runDiagnostics(err: err)
             self.scheduleRetry()
             #endif
@@ -601,6 +634,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                     DispatchQueue.main.async {
                         self.rawLog += "\n[SSH] Tunnel ready on 127.0.0.1:\(tunnelPort)"
                         self.isUsingSshTunnel = true
+                        self.disconnectReason = nil  // SSH succeeded — clear any prior setup failure
                         self.connect()
                     }
                 } else {
@@ -612,6 +646,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                         self.connectionStatus = "STATUS_SSH_FAILED"
                         self.isUsingSshTunnel = false
                         self.connectionError = .sshTunnelFailed
+                        self.disconnectReason = .setupFailed("SSH tunnel: \(reason)")
                         self.scheduleRetry()
                     }
                 }
@@ -621,6 +656,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                     self.connectionStatus = "STATUS_SSH_FAILED"
                     self.isUsingSshTunnel = false
                     self.connectionError = .sshTunnelFailed
+                    self.disconnectReason = .setupFailed("SSH: \(error.localizedDescription)")
                     self.scheduleRetry()
                 }
             }
@@ -645,6 +681,8 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
     
     public func disconnect() {
+        disconnectReason = .userInitiated
+        
         isPairing = false
         pairingRequestId = ""
         pairingTimeoutTimer?.invalidate()
@@ -679,7 +717,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             self.serverSetupNeeded = false
             self.isServerClawsyAware = false
             self.serverVersion = "unknown"
-            self.rawLog += "\n[WSS] Disconnected"
+            self.rawLog += "\n[WSS] Disconnected (user-initiated)"
         }
     }
     
@@ -711,6 +749,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 // Note: connectionError is intentionally NOT cleared here.
                 // It is only cleared after a successful handshake (hello-ok),
                 // so the error banner stays visible during TCP-connected-but-handshake-pending states.
+                // disconnectReason is also NOT cleared here — only after hello-ok (full handshake).
             case .disconnected(let reason, let code):
                 self.rawLog += "\n[WSS] Disconnected: \(reason) (code: \(code))"
                 self.isConnected = false
@@ -718,13 +757,13 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                     self.connectionError = classified
                 }
                 if !self.isHandshakeComplete && !self.isPairing {
-                    // Handshake never completed (e.g. NOT_PAIRED) — treat as connection failure
-                    // so SSH fallback can trigger.
-                    self.rawLog += "\n[WSS] Handshake incomplete — treating as connection failure"
+                    // Handshake never completed (e.g. NOT_PAIRED) — treat as setup failure.
+                    // handleConnectionFailure will set .setupFailed and attempt SSH fallback once.
+                    self.rawLog += "\n[WSS] Handshake incomplete — treating as setup failure"
                     self.handleConnectionFailure(err: nil)
                 } else if self.isHandshakeComplete {
-                    // Was fully connected — auto-reconnect with backoff.
-                    // Gateway restarts can take 10-30s, so don't hammer immediately.
+                    // Was fully connected — genuine connection loss → auto-reconnect.
+                    self.disconnectReason = .connectionLost
                     self.rawLog += "\n[WSS] Connection lost after successful handshake — scheduling reconnect"
                     self.isHandshakeComplete = false
                     self.connectionAttemptCount = 0
@@ -739,6 +778,13 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             case .error(let err):
                 self.rawLog += "\n[WSS] Error: \(err?.localizedDescription ?? "nil")"
                 self.isConnected = false
+                
+                // Classify: post-handshake errors are connection losses, pre-handshake are setup failures
+                if self.isHandshakeComplete {
+                    self.disconnectReason = .connectionLost
+                }
+                // Pre-handshake: disconnectReason will be set by handleConnectionFailure
+                
                 // Fast SSH fallback: if handshake never completed (e.g. firewall block, TCP refused)
                 // and SSH fallback is available, skip retry backoff and go straight to SSH tunnel.
                 // This prevents the "Verbindung wird wiederhergestellt..." loop on blocked firewalls.
@@ -1111,6 +1157,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                      self.isHandshakeComplete = true
                      self.connectionStatus = isUsingSshTunnel ? "STATUS_ONLINE_PAIRED_SSH" : "STATUS_ONLINE_PAIRED"
                      self.connectionError = nil
+                     self.disconnectReason = nil  // Session is live — reset for future disconnect classification
                      self.onHandshakeComplete?()
                      
                      // Store deviceToken from hello-ok if present
@@ -1156,7 +1203,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                      // This is THE key insight from the 2026-03-05 connection incident.
                      if !self.isUsingSshTunnel && self.useSshFallback && !self.sshUser.isEmpty {
                          self.rawLog += "\n[PAIR] NOT_PAIRED via WSS – switching to SSH tunnel for auto-pairing"
-                         self.disconnect()
+                         // Clean up WS without setting userInitiated — this is an internal fallback, not user action.
+                         self.socket?.delegate = nil
+                         self.socket?.disconnect()
+                         self.socket = nil
+                         self.isPairing = false
+                         self.disconnectReason = nil
                          self.startSshTunnel()
                          return
                      }
@@ -1189,13 +1241,14 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 } else if let errorObj = json["error"] as? [String: Any],
                           let errorCode = errorObj["code"] as? String,
                           (errorCode == "AUTH_TOKEN_MISMATCH" || errorCode == "INVALID_REQUEST") {
-                     // Stored deviceToken is stale (gateway restarted). Clear it and retry with master token.
-                     self.rawLog += "\n[AUTH] Token mismatch – clearing deviceToken, retrying with master token"
+                     // Auth failure during setup — clear stale token but do NOT auto-reconnect.
+                     // The user must manually reconnect (or the next connect() call resets the cycle).
+                     self.rawLog += "\n[AUTH] \(errorCode) – clearing deviceToken, no auto-reconnect"
                      self.deviceToken = nil
-                     self.disconnect()
-                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                         self.connect()
-                     }
+                     self.disconnectReason = .setupFailed(errorCode)
+                     self.isHandshakeComplete = false
+                     self.connectionStatus = "STATUS_HANDSHAKE_FAILED"
+                     self.connectionError = .invalidToken
                 } else if json["error"] != nil {
                      self.isHandshakeComplete = false
                      self.connectionStatus = "STATUS_HANDSHAKE_FAILED"
