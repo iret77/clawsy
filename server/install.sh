@@ -82,26 +82,103 @@ if command -v openclaw &>/dev/null; then
     # Start auto-approve watcher in background (approves when user clicks link)
     bash "$TOOLS_DIR/clawsy-pair.sh" --timeout 300 >/dev/null 2>&1 &
 
-    LINK="clawsy://pair?code=${SETUP_CODE}"
     LINK_FILE="$WORKSPACE/clawsy-pairing-link.txt"
-
-    # Detect if gateway is loopback-only (Mac can't reach it directly)
-    GATEWAY_URL=$(openclaw config get gateway.remote.url 2>/dev/null || echo "")
-    NEEDS_SSH_TUNNEL=false
-    if [[ -z "$GATEWAY_URL" ]] || echo "$GATEWAY_URL" | grep -qE "127\.0\.0\.1|localhost"; then
-      NEEDS_SSH_TUNNEL=true
-    fi
-
-    # Get SSH connection info for tunnel instructions
-    SSH_HOST=""
-    SSH_USER=$(whoami)
     GATEWAY_PORT=$(openclaw config get gateway.port 2>/dev/null || echo "18789")
-    [[ -n "${SSH_CONNECTION:-}" ]] && SSH_HOST=$(echo "$SSH_CONNECTION" | awk '{print $3}')
-    [[ -z "$SSH_HOST" ]] && SSH_HOST=$(hostname -f 2>/dev/null || hostname)
 
-    if $NEEDS_SSH_TUNNEL; then
-      # Include SSH tunnel instructions alongside the link
-      cat > "$LINK_FILE" << LINKEOF
+    # ── Multi-scenario gateway URL detection + code patching ────────────────
+    SETUP_RESULT=$(SETUP_CODE="$SETUP_CODE" GATEWAY_PORT="$GATEWAY_PORT" \
+      SSH_CONNECTION="${SSH_CONNECTION:-}" python3 << 'PYEOF'
+import json, base64, subprocess, os, sys
+
+port = os.environ.get('GATEWAY_PORT', '18789')
+
+# Decode setup code
+raw = os.environ.get('SETUP_CODE', '')
+try:
+    decoded = json.loads(base64.b64decode(raw + '==').decode())
+    token = decoded.get('token', '')
+except Exception:
+    print(json.dumps({"error": "decode_failed", "type": "manual_required"}))
+    sys.exit(0)
+
+def make_code(url, token):
+    payload = json.dumps({"url": url, "token": token}, separators=(',', ':'))
+    return base64.b64encode(payload.encode()).decode().rstrip('=')
+
+# Scenario 0: preconfigured remote.url (non-loopback)
+try:
+    r = subprocess.run(['openclaw', 'config', 'get', 'gateway.remote.url'],
+                       capture_output=True, text=True, timeout=5)
+    configured = r.stdout.strip()
+    if configured and not any(x in configured for x in ['127.0.0.1', 'localhost', '0.0.0.0']):
+        print(json.dumps({"type": "preconfigured", "url": configured,
+                          "code": make_code(configured, token)}))
+        sys.exit(0)
+except Exception:
+    pass
+
+# Scenario 1: Tailscale
+try:
+    r = subprocess.run(['tailscale', 'ip', '-4'], capture_output=True, text=True, timeout=5)
+    ts_ip = r.stdout.strip()
+    if ts_ip and r.returncode == 0:
+        url = f"ws://{ts_ip}:{port}"
+        print(json.dumps({"type": "tailscale", "url": url, "code": make_code(url, token)}))
+        sys.exit(0)
+except Exception:
+    pass
+
+# Scenario 2: LAN IP (non-loopback)
+try:
+    r = subprocess.run(['hostname', '-I'], capture_output=True, text=True, timeout=5)
+    ips = r.stdout.strip().split()
+    lan_ip = next((ip for ip in ips if not ip.startswith('127.')), None)
+    if lan_ip:
+        url = f"ws://{lan_ip}:{port}"
+        print(json.dumps({"type": "lan", "url": url, "code": make_code(url, token)}))
+        sys.exit(0)
+except Exception:
+    pass
+
+# Scenario 3: SSH session → tunnel instructions
+ssh_conn = os.environ.get('SSH_CONNECTION', '')
+if ssh_conn:
+    parts = ssh_conn.split()
+    ssh_host = parts[2] if len(parts) >= 3 else ''
+    ssh_user = os.environ.get('USER', os.environ.get('LOGNAME', 'openclaw'))
+    url = f"ws://127.0.0.1:{port}"
+    print(json.dumps({"type": "ssh-tunnel", "url": url, "code": make_code(url, token),
+                      "ssh_host": ssh_host, "ssh_user": ssh_user, "ssh_port": port}))
+    sys.exit(0)
+
+# Scenario 4: Local (Clawsy and Gateway on same machine)
+url = f"ws://127.0.0.1:{port}"
+print(json.dumps({"type": "local", "url": url, "code": make_code(url, token)}))
+PYEOF
+    )
+
+    SETUP_TYPE=$(echo "$SETUP_RESULT" | python3 -c \
+      "import json,sys; d=json.load(sys.stdin); print(d.get('type','unknown'))" 2>/dev/null || echo "unknown")
+    PATCHED_CODE=$(echo "$SETUP_RESULT" | python3 -c \
+      "import json,sys; d=json.load(sys.stdin); print(d.get('code',''))" 2>/dev/null || echo "")
+    FINAL_CODE="${PATCHED_CODE:-$SETUP_CODE}"
+    LINK="clawsy://pair?code=${FINAL_CODE}"
+
+    case "$SETUP_TYPE" in
+      preconfigured|tailscale|lan)
+        echo "$LINK" > "$LINK_FILE"
+        echo "   ✅ Pairing link saved to: $LINK_FILE  [${SETUP_TYPE}]" >&2
+        echo "" >&2
+        echo "🎉 Clawsy Server installed!" >&2
+        echo "   $LINK"
+        ;;
+
+      ssh-tunnel)
+        SSH_HOST=$(echo "$SETUP_RESULT" | python3 -c \
+          "import json,sys; d=json.load(sys.stdin); print(d.get('ssh_host',''))" 2>/dev/null || echo "")
+        SSH_USER=$(echo "$SETUP_RESULT" | python3 -c \
+          "import json,sys; d=json.load(sys.stdin); print(d.get('ssh_user',''))" 2>/dev/null || echo "$(whoami)")
+        cat > "$LINK_FILE" << LINKEOF
 PAIRING_LINK=$LINK
 SSH_TUNNEL_REQUIRED=true
 SSH_COMMAND=ssh -L ${GATEWAY_PORT}:localhost:${GATEWAY_PORT} ${SSH_USER}@${SSH_HOST}
@@ -111,21 +188,42 @@ Dein Human muss zuerst auf seinem Mac einen SSH-Tunnel starten:
 Dann diesen Link klicken:
   $LINK
 LINKEOF
-      echo "   ✅ Pairing instructions saved to: $LINK_FILE" >&2
-    else
-      echo "$LINK" > "$LINK_FILE"
-      echo "   ✅ Pairing link saved to: $LINK_FILE" >&2
-    fi
+        echo "   ✅ Pairing instructions saved to: $LINK_FILE  [ssh-tunnel]" >&2
+        echo "" >&2
+        echo "🎉 Clawsy Server installed!" >&2
+        echo "   ⚠️  SSH tunnel required on Mac:" >&2
+        echo "   ssh -L ${GATEWAY_PORT}:localhost:${GATEWAY_PORT} ${SSH_USER}@${SSH_HOST}" >&2
+        echo "   Then click: $LINK" >&2
+        ;;
 
-    echo "" >&2
-    echo "🎉 Clawsy Server installed!" >&2
-    if $NEEDS_SSH_TUNNEL; then
-      echo "   ⚠️  Gateway is loopback-only. SSH tunnel required on the Mac:" >&2
-      echo "   ssh -L ${GATEWAY_PORT}:localhost:${GATEWAY_PORT} ${SSH_USER}@${SSH_HOST}" >&2
-      echo "   Then click: $LINK" >&2
-    else
-      echo "   $LINK"
-    fi
+      local|*)
+        # ── Last Resort ─────────────────────────────────────────────────────
+        # None of the automatic scenarios (Tailscale, LAN, SSH) produced an
+        # external address. Write agent-readable instructions so the other
+        # OpenClaw agent knows exactly what to do next.
+        cat > "$LINK_FILE" << 'LASTRESORTEOF'
+SETUP_TYPE=manual_required
+
+Keines der automatischen Szenarien hat funktioniert.
+
+Als Agent: Frage deinen Human nach der richtigen Gateway-URL für dieses Setup
+(z.B. öffentliche IP, Tailscale-Adresse, VPN-IP).
+
+Sobald du die URL kennst, bau den Pairing-Link manuell:
+
+SETUP_CODE=$(openclaw qr --json | python3 -c "import json,sys; d=json.load(sys.stdin); import base64; payload=base64.b64decode(d['setupCode']+'=='); p=json.loads(payload); p['url']='ws://DEINE_URL:18789'; import base64,json; print(base64.b64encode(json.dumps(p,separators=(',',':')).encode()).decode().rstrip('='))")
+echo "clawsy://pair?code=$SETUP_CODE"
+
+Schick diesen Link an deinen Human zum Klicken auf dem Mac.
+LASTRESORTEOF
+        echo "   ⚠️  No external address detected — manual setup required." >&2
+        echo "   Agent instructions saved to: $LINK_FILE" >&2
+        echo "" >&2
+        echo "⚠️  Clawsy Server installed — manual pairing needed." >&2
+        echo "   See: $LINK_FILE" >&2
+        ;;
+    esac
+
     echo "" >&2
     echo "✅ Done. Instructions saved to: $LINK_FILE" >&2
   else
