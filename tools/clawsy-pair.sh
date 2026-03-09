@@ -59,21 +59,23 @@ while true; do
   fi
 
   # Lese pending nodes als JSON
-  # Hinweis: 'openclaw nodes list --json' gibt erst eine Statuszeile aus,
-  # dann das JSON → grep nach '{' um nur JSON-Teil zu parsen
-  PENDING_JSON=$(openclaw nodes list --json 2>/dev/null | grep -A9999 '^{' | head -c 65536)
+  # Hinweis: 'openclaw nodes list --json' gibt erst eine Statuszeile aus, dann JSON
+  PENDING_JSON=$(openclaw nodes list --json 2>/dev/null | grep -A9999 '^\[' | head -c 65536 || true)
+  # Fallback: try object format
+  if [[ -z "$PENDING_JSON" ]]; then
+    PENDING_JSON=$(openclaw nodes list --json 2>/dev/null | grep -A9999 '^{' | head -c 65536 || true)
+  fi
   PENDING=$(echo "$PENDING_JSON" | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
 pending = data if isinstance(data, list) else data.get('pending', [])
-# Nimm den neuesten Request (letzter Eintrag)
 if pending:
     req = pending[-1]
     print(req.get('requestId', ''))
 " 2>/dev/null || true)
 
   if [[ -n "$PENDING" ]]; then
-    # Auto-approve via nodes — retry kurz falls Gateway noch nicht bereit
+    # Auto-approve — retry kurz falls Gateway noch nicht bereit
     for i in 1 2 3; do
       RESULT=$(openclaw nodes approve "$PENDING" 2>&1)
       if echo "$RESULT" | grep -qi "approved\|success\|ok"; then
