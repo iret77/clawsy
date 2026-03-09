@@ -69,24 +69,30 @@ fi
 
 # ── 5. Generate pairing link + start auto-approve watcher ────────────────────
 if command -v openclaw &>/dev/null; then
-  SETUP_CODE=$(openclaw qr --json 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['setupCode'])" 2>/dev/null)
+  # Wait for gateway to be ready after restart (retry up to 5x with 2s delay)
+  SETUP_CODE=""
+  for attempt in 1 2 3 4 5; do
+    SETUP_CODE=$(openclaw qr --json 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['setupCode'])" 2>/dev/null || true)
+    [[ -n "$SETUP_CODE" ]] && break
+    echo "   ⏳ Waiting for gateway to be ready (attempt $attempt/5)..." >&2
+    sleep 2
+  done
+
   if [[ -n "$SETUP_CODE" ]]; then
     # Start auto-approve watcher in background (approves when user clicks link)
     bash "$TOOLS_DIR/clawsy-pair.sh" --timeout 300 >/dev/null 2>&1 &
 
     echo "" >&2
-    echo "🎉 Clawsy Server installed! Notifying user..." >&2
-
-    # Proactively send setup link to user via agent (agent forwards via Telegram/Slack/etc.)
-    openclaw system event --text "🦞 Clawsy ready! Click on your Mac: clawsy://pair?code=${SETUP_CODE}" --mode now 2>/dev/null || true
+    echo "🎉 Clawsy Server installed!" >&2
 
     echo "clawsy://pair?code=${SETUP_CODE}"
     echo "" >&2
-    echo "✅ Done. The link has been sent to your agent." >&2
+    echo "✅ Done. Send the link above to your Mac." >&2
   else
-    echo "⚠️  Could not generate setup code. Gateway may still be restarting." >&2
-    echo "   Try manually: openclaw qr --json" >&2
-    exit 1
+    # Not fatal — the app may have already handled pairing, or user can run manually
+    echo "" >&2
+    echo "✅ Clawsy Server installed. Gateway still starting up." >&2
+    echo "   To get your pairing link: openclaw qr --json" >&2
   fi
 else
   echo "⚠️  openclaw not in PATH. Is OpenClaw installed?" >&2
