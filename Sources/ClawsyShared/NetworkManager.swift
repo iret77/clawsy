@@ -1325,7 +1325,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 "client": ["id": connectClientId, "version": SharedConfig.versionDisplay, "platform": Self.connectPlatform, "mode": Self.connectClientMode],
                 "role": Self.connectRole, "caps": ["clipboard", "screen", "camera", "file", "location"],
                 "scopes": Self.connectScopes,
-                "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set", "location.get", "location.start", "location.stop", "location.add_smart"],
+                "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set", "file.get.chunk", "file.set.chunk", "location.get", "location.start", "location.stop", "location.add_smart"],
                 "permissions": ["clipboard.read": true, "clipboard.write": true],
                 "auth": ["token": authToken],
                 "device": [
@@ -1435,6 +1435,94 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 executeSet()
             } else {
                 onFileSyncRequested?(name, "Upload", { duration in if let duration = duration { self.filePermissionExpiry = Date().addingTimeInterval(duration) }; executeSet() }, { self.sendError(id: id, code: -1, message: "User denied file write") })
+            }
+        case "file.set.chunk":
+            guard let name = params["name"] as? String,
+                  let chunkIndex = params["chunkIndex"] as? Int,
+                  let totalChunks = params["totalChunks"] as? Int,
+                  let content = params["content"] as? String else {
+                sendError(id: id, code: -32602, message: "Missing parameters"); return
+            }
+            let fullPathChunkSet = (baseDir as NSString).appendingPathComponent(name)
+            self.sendAck(id: id)
+            let executeChunk = {
+                DispatchQueue.global(qos: .userInitiated).async {
+                    guard let chunkData = Data(base64Encoded: content) else {
+                        self.sendError(id: id, code: -32000, message: "Invalid base64 chunk"); return
+                    }
+                    let tempPath = (baseDir as NSString).appendingPathComponent(".\(name).clawsy_chunk_\(chunkIndex)")
+                    do {
+                        try chunkData.write(to: URL(fileURLWithPath: tempPath))
+                    } catch {
+                        self.sendError(id: id, code: -32000, message: "Failed to write chunk: \(error)"); return
+                    }
+                    if chunkIndex == totalChunks - 1 {
+                        var assembled = Data()
+                        for i in 0..<totalChunks {
+                            let tp = (baseDir as NSString).appendingPathComponent(".\(name).clawsy_chunk_\(i)")
+                            if let cd = try? Data(contentsOf: URL(fileURLWithPath: tp)) {
+                                assembled.append(cd)
+                                try? FileManager.default.removeItem(atPath: tp)
+                            } else {
+                                self.sendError(id: id, code: -32000, message: "Missing chunk \(i)"); return
+                            }
+                        }
+                        let assembledB64 = assembled.base64EncodedString()
+                        if ClawsyFileManager.writeFile(at: fullPathChunkSet, base64Content: assembledB64) {
+                            self.sendResponse(id: id, result: ["status": "ok", "name": name, "assembled": true])
+                        } else {
+                            self.sendError(id: id, code: -32000, message: "Failed to assemble file")
+                        }
+                    } else {
+                        self.sendResponse(id: id, result: ["status": "chunk_received", "chunkIndex": chunkIndex])
+                    }
+                }
+            }
+            let silentChunkAllowlist: Set<String> = [".agent_status.json", ".agent_info.json", ".clawsy_version"]
+            if silentChunkAllowlist.contains(name) || chunkIndex > 0 {
+                executeChunk()
+            } else if let expiry = filePermissionExpiry, expiry > Date() {
+                executeChunk()
+            } else {
+                onFileSyncRequested?(name, "Upload (chunked)", { duration in if let d = duration { self.filePermissionExpiry = Date().addingTimeInterval(d) }; executeChunk() }, { self.sendError(id: id, code: -1, message: "User denied") })
+            }
+        case "file.get.chunk":
+            guard let name = params["name"] as? String,
+                  let chunkIndex = params["chunkIndex"] as? Int else {
+                sendError(id: id, code: -32602, message: "Missing parameters"); return
+            }
+            let chunkSizeBytes = (params["chunkSizeBytes"] as? Int) ?? 262144
+            let fullPathChunkGet = (baseDir as NSString).appendingPathComponent(name)
+            self.sendAck(id: id)
+            let executeGetChunk = {
+                DispatchQueue.global(qos: .userInitiated).async {
+                    guard let data = FileManager.default.contents(atPath: fullPathChunkGet) else {
+                        self.sendError(id: id, code: -32000, message: "Failed to read file"); return
+                    }
+                    let totalBytes = data.count
+                    let totalChunks = max(1, Int(ceil(Double(totalBytes) / Double(chunkSizeBytes))))
+                    guard chunkIndex < totalChunks else {
+                        self.sendError(id: id, code: -32000, message: "Chunk index out of range"); return
+                    }
+                    let start = chunkIndex * chunkSizeBytes
+                    let end = min(start + chunkSizeBytes, totalBytes)
+                    let chunkData = data.subdata(in: start..<end)
+                    let chunkB64 = chunkData.base64EncodedString()
+                    self.sendResponse(id: id, result: [
+                        "content": chunkB64,
+                        "chunkIndex": chunkIndex,
+                        "totalChunks": totalChunks,
+                        "totalBytes": totalBytes,
+                        "name": name
+                    ])
+                }
+            }
+            if chunkIndex > 0 {
+                executeGetChunk()
+            } else if let expiry = filePermissionExpiry, expiry > Date() {
+                executeGetChunk()
+            } else {
+                onFileSyncRequested?(name, "Download (chunked)", { duration in if let d = duration { self.filePermissionExpiry = Date().addingTimeInterval(d) }; executeGetChunk() }, { self.sendError(id: id, code: -1, message: "User denied") })
             }
         case "file.delete":
             guard let name = params["name"] as? String else { sendError(id: id, code: -32602, message: "Missing 'name' parameter"); return }
