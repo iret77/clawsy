@@ -423,6 +423,9 @@ struct ContentView: View {
                 ))
             }
         }
+        .sheet(isPresented: $showingAddHostFromHeader) {
+            AddHostSheet(hostManager: hostManager, isPresented: $showingAddHostFromHeader, onHostAdded: connectNewHost)
+        }
 
     }
     
