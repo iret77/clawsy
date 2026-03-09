@@ -13,6 +13,20 @@ Clawsy connects your OpenClaw agent to a Mac via secure WebSocket (with SSH tunn
 
 ---
 
+## ⚡ Auto-Setup (Clawsy Just Installed?)
+
+If you loaded this skill because Clawsy was **just installed** on a Mac and pairing is still pending (no Clawsy node shows up in `nodes list`), run this first:
+
+```bash
+bash ~/.openclaw/workspace/skills/clawsy-server/install.sh
+```
+
+The script auto-detects the network situation (6 scenarios: preconfigured, Tailscale, LAN, SSH-Tunnel, Public IP, Local-Fallback) and sends you a ready-to-use pairing message via `openclaw system event`. Follow its output — it tells you exactly what to relay to your human. No manual steps needed.
+
+> Skip this section if Clawsy is already paired and a node with `platform="macos"` appears in `nodes list`.
+
+---
+
 ## 🚀 First-Time Setup (New Host)
 
 If Clawsy is not yet installed on this host, follow these steps:
@@ -59,9 +73,7 @@ sessions_send(sessionKey="clawsy-service", timeoutSeconds=3,
 Copy the template to your workspace:
 ```bash
 cp "$(dirname $(which openclaw))/../lib/node_modules/openclaw/skills/clawsy-server/CLAWSY.md" \
-   ~/.openclaw/workspace/CLAWSY.md 2>/dev/null || \
-curl -s https://raw.githubusercontent.com/iret77/clawsy/main/server/templates/CLAWSY.md \
-   > ~/.openclaw/workspace/CLAWSY.md
+   ~/.openclaw/workspace/CLAWSY.md
 ```
 
 ### Step 5 — Verify
@@ -72,6 +84,17 @@ openclaw nodes list
 ```
 
 Done! Clawsy is connected. Read the rest of this SKILL.md to learn what you can do.
+
+---
+
+## Quick Pairing Script
+
+A helper script is included at `scripts/clawsy-pair.sh`. It handles Steps 2+3 automatically:
+```bash
+bash scripts/clawsy-pair.sh
+# → Outputs: LINK=clawsy://pair?code=...
+# → Waits for pairing, auto-approves, outputs: APPROVED=<deviceId>
+```
 
 ---
 
@@ -221,7 +244,7 @@ When the user presses `⌘⇧K` and sends a message:
   "clawsy_envelope": {
     "type": "quick_send",
     "content": "The user's message",
-    "version": "0.9.17",
+    "version": "0.9.12",
     "localTime": "2026-03-04T10:30:00Z",
     "tz": "Europe/Berlin",
     "telemetry": {
@@ -248,6 +271,33 @@ When the user presses `⌘⇧K` and sends a message:
 ## Shared Folder & .clawsy Rules
 
 Clawsy configures a shared folder (default: `~/Documents/Clawsy`). Use `file.list`, `file.get`, `file.set` to interact with it.
+
+### ⚠️ Large File Transfers (>50 KB)
+
+The `nodes` tool passes parameters as JSON strings — this limits `file.set` to roughly 50 KB base64 payload. For larger files, use the `openclaw nodes invoke` CLI directly:
+
+```bash
+# Find the node ID first
+openclaw nodes list
+
+# Send a large file to the shared folder
+PARAMS=$(python3 -c "
+import base64, json
+with open('/path/to/file.png', 'rb') as f:
+    content = base64.b64encode(f.read()).decode()
+print(json.dumps({'name': 'filename.png', 'content': content}))
+")
+openclaw nodes invoke \
+  --node <NODE_ID> \
+  --command file.set \
+  --params "$PARAMS" \
+  --invoke-timeout 30000
+```
+
+This works for files up to several MB. For the best avatar/image quality, resize to 512×512 px JPEG before sending (~37 KB).
+
+**Reading large files** from the shared folder works fine via the `nodes` tool — `file.get` returns base64 content that the tool handles correctly.
+
 
 ### .clawsy Manifest Files
 
