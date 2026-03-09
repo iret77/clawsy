@@ -86,6 +86,8 @@ if command -v openclaw &>/dev/null; then
     GATEWAY_PORT=$(openclaw config get gateway.port 2>/dev/null || echo "18789")
 
     # ── Multi-scenario gateway URL detection + code patching ────────────────
+    # Python detects scenario, patches the code with the correct URL, and
+    # builds a ready-to-forward notify_msg for the agent to send to the human.
     SETUP_RESULT=$(SETUP_CODE="$SETUP_CODE" GATEWAY_PORT="$GATEWAY_PORT" \
       SSH_CONNECTION="${SSH_CONNECTION:-}" python3 << 'PYEOF'
 import json, base64, subprocess, os, sys
@@ -111,8 +113,13 @@ try:
                        capture_output=True, text=True, timeout=5)
     configured = r.stdout.strip()
     if configured and not any(x in configured for x in ['127.0.0.1', 'localhost', '0.0.0.0']):
+        code = make_code(configured, token)
+        link = f"clawsy://pair?code={code}"
+        msg = (f"🦞 Clawsy ist bereit!\n"
+               f"Sage deinem Human: Klicke auf deinem Mac diesen Link:\n"
+               f"  {link}")
         print(json.dumps({"type": "preconfigured", "url": configured,
-                          "code": make_code(configured, token)}))
+                          "code": code, "notify_msg": msg}))
         sys.exit(0)
 except Exception:
     pass
@@ -123,7 +130,12 @@ try:
     ts_ip = r.stdout.strip()
     if ts_ip and r.returncode == 0:
         url = f"ws://{ts_ip}:{port}"
-        print(json.dumps({"type": "tailscale", "url": url, "code": make_code(url, token)}))
+        code = make_code(url, token)
+        link = f"clawsy://pair?code={code}"
+        msg = (f"🦞 Clawsy ist bereit!\n"
+               f"Sage deinem Human: Klicke auf deinem Mac diesen Link:\n"
+               f"  {link}")
+        print(json.dumps({"type": "tailscale", "url": url, "code": code, "notify_msg": msg}))
         sys.exit(0)
 except Exception:
     pass
@@ -135,7 +147,12 @@ try:
     lan_ip = next((ip for ip in ips if not ip.startswith('127.')), None)
     if lan_ip:
         url = f"ws://{lan_ip}:{port}"
-        print(json.dumps({"type": "lan", "url": url, "code": make_code(url, token)}))
+        code = make_code(url, token)
+        link = f"clawsy://pair?code={code}"
+        msg = (f"🦞 Clawsy ist bereit!\n"
+               f"Sage deinem Human: Klicke auf deinem Mac diesen Link:\n"
+               f"  {link}")
+        print(json.dumps({"type": "lan", "url": url, "code": code, "notify_msg": msg}))
         sys.exit(0)
 except Exception:
     pass
@@ -147,13 +164,29 @@ if ssh_conn:
     ssh_host = parts[2] if len(parts) >= 3 else ''
     ssh_user = os.environ.get('USER', os.environ.get('LOGNAME', 'openclaw'))
     url = f"ws://127.0.0.1:{port}"
-    print(json.dumps({"type": "ssh-tunnel", "url": url, "code": make_code(url, token),
+    code = make_code(url, token)
+    link = f"clawsy://pair?code={code}"
+    ssh_cmd = f"ssh -L {port}:localhost:{port} {ssh_user}@{ssh_host}"
+    msg = (f"🦞 Clawsy ist bereit zum Pairen!\n\n"
+           f"Sage deinem Human:\n"
+           f"Öffne ein Terminal auf deinem Mac und führe diesen Befehl aus:\n"
+           f"  {ssh_cmd}\n\n"
+           f"Dann klicke auf deinem Mac diesen Link:\n"
+           f"  {link}\n\n"
+           f"Ich starte jetzt den Auto-Approve-Watcher.")
+    print(json.dumps({"type": "ssh-tunnel", "url": url, "code": code, "notify_msg": msg,
                       "ssh_host": ssh_host, "ssh_user": ssh_user, "ssh_port": port}))
     sys.exit(0)
 
 # Scenario 4: Local (Clawsy and Gateway on same machine)
 url = f"ws://127.0.0.1:{port}"
-print(json.dumps({"type": "local", "url": url, "code": make_code(url, token)}))
+code = make_code(url, token)
+link = f"clawsy://pair?code={code}"
+msg = ("🦞 Clawsy Setup abgeschlossen — manuelles Pairing erforderlich.\n\n"
+       "Frage deinen Human nach der richtigen Gateway-URL für dieses Setup\n"
+       "(z.B. öffentliche IP, Tailscale-Adresse, VPN-IP).\n"
+       "Sobald du die URL kennst, baue den Pairing-Link und schicke ihn an deinen Human.")
+print(json.dumps({"type": "local", "url": url, "code": code, "notify_msg": msg}))
 PYEOF
     )
 
@@ -223,6 +256,20 @@ LASTRESORTEOF
         echo "   See: $LINK_FILE" >&2
         ;;
     esac
+
+    # ── 6. Notify agent via system event ────────────────────────────────────
+    # The Python block above built a ready-to-forward message for each scenario.
+    # Send it now so the agent wakes up and knows exactly what to tell the human.
+    NOTIFY_MSG=$(echo "$SETUP_RESULT" | python3 -c \
+      "import json,sys; d=json.load(sys.stdin); print(d.get('notify_msg',''))" 2>/dev/null || echo "")
+
+    if [[ -n "$NOTIFY_MSG" ]]; then
+      openclaw system event \
+        --text "$NOTIFY_MSG" \
+        --mode now \
+        2>/dev/null || true
+      echo "   ✅ Agent notified via system event" >&2
+    fi
 
     echo "" >&2
     echo "✅ Done. Instructions saved to: $LINK_FILE" >&2
