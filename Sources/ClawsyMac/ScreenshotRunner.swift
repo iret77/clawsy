@@ -87,7 +87,7 @@ enum ScreenshotRunner {
             onConfirm: { _ in },
             onCancel: {}
         )
-        return sized(host(view), 440, 260)
+        return sized(host(view), 440, 300)
     }
 
     private static func makeQuickSendView() -> NSView {

@@ -8,6 +8,38 @@ struct FileSyncRequestWindow: View {
     let onConfirm: (TimeInterval?) -> Void
     let onCancel: () -> Void
 
+    /// Selected duration option for time-limited permission
+    @State private var selectedDuration: DurationOption = .once
+
+    enum DurationOption: String, CaseIterable, Identifiable {
+        case once = "ALLOW_ONCE"
+        case oneHour = "ALLOW_1H"
+        case untilEndOfDay = "ALLOW_DAY"
+
+        var id: String { rawValue }
+
+        var label: String {
+            NSLocalizedString(rawValue, bundle: .clawsy, comment: "")
+        }
+
+        /// Returns the `TimeInterval` for the selected duration, or `nil` for one-time.
+        var interval: TimeInterval? {
+            switch self {
+            case .once:
+                return nil
+            case .oneHour:
+                return 3600
+            case .untilEndOfDay:
+                let now = Date()
+                let calendar = Calendar.current
+                if let endOfDay = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: now) {
+                    return endOfDay.timeIntervalSince(now)
+                }
+                return 3600 // fallback
+            }
+        }
+    }
+
     // Human-readable operation name (localized)
     private var operationLocalized: String {
         switch operation {
@@ -96,56 +128,62 @@ struct FileSyncRequestWindow: View {
 
             Divider().opacity(0.3)
 
-            // Footer Action Bar
-            HStack(spacing: 12) {
-                Button(action: { onCancel() }) {
-                    Label(NSLocalizedString("DENY", bundle: .clawsy, comment: ""), systemImage: "xmark")
-                        .lineLimit(1)
-                        .fixedSize()
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.black.opacity(0.1))
-                .cornerRadius(8)
-                .keyboardShortcut(.escape, modifiers: [])
-
-                Spacer()
-
-                Menu(NSLocalizedString("ALLOW_LIMITED", bundle: .clawsy, comment: "")) {
-                    Button(LocalizedStringKey("ALLOW_ONCE")) { onConfirm(nil) }
-                    Button(LocalizedStringKey("ALLOW_1H"))   { onConfirm(3600) }
-                    Button(LocalizedStringKey("ALLOW_DAY"))  {
-                        let now = Date()
-                        let calendar = Calendar.current
-                        if let endOfDay = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: now) {
-                            onConfirm(endOfDay.timeIntervalSince(now))
+            // Footer: Duration picker + action buttons
+            VStack(spacing: 12) {
+                // Duration picker — full width, separate from buttons
+                HStack {
+                    Text(l10n: "ALLOW_LIMITED")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Picker("", selection: $selectedDuration) {
+                        ForEach(DurationOption.allCases) { option in
+                            Text(option.label).tag(option)
                         }
                     }
+                    .pickerStyle(.menu)
+                    .frame(minWidth: 160)
+                    .labelsHidden()
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color.secondary.opacity(0.15))
-                .cornerRadius(8)
+                .padding(.horizontal, 24)
 
-                Button(action: { onConfirm(nil) }) {
-                    Label(confirmLabel, systemImage: operationIcon)
-                        .lineLimit(1)
-                        .fixedSize()
+                Divider().opacity(0.2).padding(.horizontal, 16)
+
+                // Action buttons
+                HStack(spacing: 12) {
+                    Button(action: { onCancel() }) {
+                        Label(NSLocalizedString("DENY", bundle: .clawsy, comment: ""), systemImage: "xmark")
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.black.opacity(0.1))
+                    .cornerRadius(8)
+                    .keyboardShortcut(.escape, modifiers: [])
+
+                    Spacer()
+
+                    Button(action: { onConfirm(selectedDuration.interval) }) {
+                        Label(confirmLabel, systemImage: operationIcon)
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(operation == "Delete" ? Color.red : Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                    .keyboardShortcut(.return, modifiers: [])
                 }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(operation == "Delete" ? Color.red : Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(8)
-                .keyboardShortcut(.return, modifiers: [])
+                .padding(.horizontal, 24)
             }
-            .padding(.horizontal, 24)
             .padding(.vertical, 16)
             .background(Color.black.opacity(0.03))
         }
-        .frame(width: 440, height: 260)
+        .frame(width: 440, height: 300)
         .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
