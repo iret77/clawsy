@@ -225,40 +225,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         }
 
         // ── Step 1: Install clawsy-bridge plugin + CLAWSY.md + clawsy-pair.sh ──
-        // Everything runs without sudo. openclaw plugins install handles plugin registration.
-        let REPO = "https://raw.githubusercontent.com/iret77/clawsy/main"
+        // Delegates to install.sh (single source of truth) + ClawHub skill sync.
         let serverSetupCommand = """
 set -e
-WORKSPACE="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/workspace}"
-TOOLS="$WORKSPACE/tools"
-PLUGIN_TMP="/tmp/clawsy-bridge-$$.ts"
-
 echo "[clawsy-bootstrap] Starting server setup..."
 
-# 1. Download + install gateway plugin (no sudo needed)
-if ! openclaw plugins info clawsy-bridge 2>/dev/null | grep -q "enabled: true"; then
-  curl -fsSL \(REPO)/server/clawsy-bridge.ts -o "$PLUGIN_TMP"
-  openclaw plugins install "$PLUGIN_TMP"
-  rm -f "$PLUGIN_TMP"
-  echo "[clawsy-bootstrap] clawsy-bridge installed"
-else
-  echo "[clawsy-bootstrap] clawsy-bridge already installed"
+# Install/update all server components (plugin, CLAWSY.md, clawsy-pair.sh, gateway restart)
+curl -fsSL https://raw.githubusercontent.com/iret77/clawsy/main/server/install.sh | bash
+
+# Sync Clawsy skill via ClawHub (SKILL.md + docs always up to date)
+if command -v clawhub &>/dev/null; then
+  clawhub install clawsy --no-input 2>/dev/null || clawhub update clawsy --no-input 2>/dev/null || true
+  echo "[clawsy-bootstrap] ClawHub skill synced"
 fi
 
-# 2. Install/update CLAWSY.md (agent instructions incl. 'pair clawsy')
-mkdir -p "$WORKSPACE"
-curl -fsSL \(REPO)/CLAWSY.md -o "$WORKSPACE/CLAWSY.md"
-echo "[clawsy-bootstrap] CLAWSY.md installed"
-
-# 3. Write clawsy-pair.sh (auto-approve pairing helper)
-mkdir -p "$TOOLS"
-curl -fsSL \(REPO)/tools/clawsy-pair.sh -o "$TOOLS/clawsy-pair.sh"
-chmod +x "$TOOLS/clawsy-pair.sh"
-echo "[clawsy-bootstrap] clawsy-pair.sh installed"
-
-# 4. Restart gateway so plugin becomes active
-openclaw gateway restart &
-echo "[clawsy-bootstrap] Gateway restart triggered"
 echo "[clawsy-bootstrap] Done."
 """
         invoke(tool: "exec", args: ["command": serverSetupCommand], label: "server-setup") { ok in
