@@ -83,19 +83,51 @@ if command -v openclaw &>/dev/null; then
     bash "$TOOLS_DIR/clawsy-pair.sh" --timeout 300 >/dev/null 2>&1 &
 
     LINK="clawsy://pair?code=${SETUP_CODE}"
-
-    # Save pairing link to file so the agent can read and forward it
     LINK_FILE="$WORKSPACE/clawsy-pairing-link.txt"
-    echo "$LINK" > "$LINK_FILE"
-    echo "   ✅ Pairing link saved to: $LINK_FILE" >&2
+
+    # Detect if gateway is loopback-only (Mac can't reach it directly)
+    GATEWAY_URL=$(openclaw config get gateway.remote.url 2>/dev/null || echo "")
+    NEEDS_SSH_TUNNEL=false
+    if [[ -z "$GATEWAY_URL" ]] || echo "$GATEWAY_URL" | grep -qE "127\.0\.0\.1|localhost"; then
+      NEEDS_SSH_TUNNEL=true
+    fi
+
+    # Get SSH connection info for tunnel instructions
+    SSH_HOST=""
+    SSH_USER=$(whoami)
+    GATEWAY_PORT=$(openclaw config get gateway.port 2>/dev/null || echo "18789")
+    [[ -n "${SSH_CONNECTION:-}" ]] && SSH_HOST=$(echo "$SSH_CONNECTION" | awk '{print $3}')
+    [[ -z "$SSH_HOST" ]] && SSH_HOST=$(hostname -f 2>/dev/null || hostname)
+
+    if $NEEDS_SSH_TUNNEL; then
+      # Include SSH tunnel instructions alongside the link
+      cat > "$LINK_FILE" << LINKEOF
+PAIRING_LINK=$LINK
+SSH_TUNNEL_REQUIRED=true
+SSH_COMMAND=ssh -L ${GATEWAY_PORT}:localhost:${GATEWAY_PORT} ${SSH_USER}@${SSH_HOST}
+
+Dein Human muss zuerst auf seinem Mac einen SSH-Tunnel starten:
+  ssh -L ${GATEWAY_PORT}:localhost:${GATEWAY_PORT} ${SSH_USER}@${SSH_HOST}
+Dann diesen Link klicken:
+  $LINK
+LINKEOF
+      echo "   ✅ Pairing instructions saved to: $LINK_FILE" >&2
+    else
+      echo "$LINK" > "$LINK_FILE"
+      echo "   ✅ Pairing link saved to: $LINK_FILE" >&2
+    fi
 
     echo "" >&2
     echo "🎉 Clawsy Server installed!" >&2
-
-    echo "$LINK"
+    if $NEEDS_SSH_TUNNEL; then
+      echo "   ⚠️  Gateway is loopback-only. SSH tunnel required on the Mac:" >&2
+      echo "   ssh -L ${GATEWAY_PORT}:localhost:${GATEWAY_PORT} ${SSH_USER}@${SSH_HOST}" >&2
+      echo "   Then click: $LINK" >&2
+    else
+      echo "   $LINK"
+    fi
     echo "" >&2
-    echo "✅ Done. Send the link above to your Mac." >&2
-    echo "   The agent can also read it from: $LINK_FILE" >&2
+    echo "✅ Done. Instructions saved to: $LINK_FILE" >&2
   else
     # Not fatal — the app may have already handled pairing, or user can run manually
     echo "" >&2
