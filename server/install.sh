@@ -82,12 +82,20 @@ if command -v openclaw &>/dev/null; then
     # Start auto-approve watcher in background (approves when user clicks link)
     bash "$TOOLS_DIR/clawsy-pair.sh" --timeout 300 >/dev/null 2>&1 &
 
+    LINK="clawsy://pair?code=${SETUP_CODE}"
+
+    # Save pairing link to file so the agent can read and forward it
+    LINK_FILE="$WORKSPACE/clawsy-pairing-link.txt"
+    echo "$LINK" > "$LINK_FILE"
+    echo "   ✅ Pairing link saved to: $LINK_FILE" >&2
+
     echo "" >&2
     echo "🎉 Clawsy Server installed!" >&2
 
-    echo "clawsy://pair?code=${SETUP_CODE}"
+    echo "$LINK"
     echo "" >&2
     echo "✅ Done. Send the link above to your Mac." >&2
+    echo "   The agent can also read it from: $LINK_FILE" >&2
   else
     # Not fatal — the app may have already handled pairing, or user can run manually
     echo "" >&2

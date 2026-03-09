@@ -193,3 +193,28 @@ nodes(action="invoke", node="<nodeId>", invokeCommand="file.list",
       invokeParamsJson='{"path": "."}')
 # Clawsy configures the shared folder in app settings (default: ~/Documents/Clawsy)
 ```
+
+---
+
+## After Install — Pairing Link
+
+After running `install.sh`, the pairing link is saved to a file in your workspace. Check for it and forward it to your human:
+
+```bash
+cat ~/.openclaw/workspace/clawsy-pairing-link.txt 2>/dev/null
+```
+
+If the file exists, send the link to your human — they click it on their Mac to connect Clawsy:
+
+> Here is your Clawsy pairing link — click it on your Mac:
+> `clawsy://pair?code=<CODE>`
+>
+> 1. Click the link → macOS asks "Open with Clawsy?" → Yes
+> 2. Clawsy connects automatically
+> 3. The auto-approve watcher approves the pairing — no further action needed!
+
+After successful pairing, delete the file:
+
+```bash
+rm -f ~/.openclaw/workspace/clawsy-pairing-link.txt
+```
