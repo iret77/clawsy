@@ -139,6 +139,17 @@ struct ContentView: View {
             // --- Empty State (no hosts configured) ---
             if hostManager.profiles.isEmpty {
                 NoHostEmptyStateView(onAddHost: { showingAddHostFromHeader = true })
+
+                Divider().padding(.vertical, 4).opacity(0.5).padding(.horizontal, 6)
+
+                // Quit must ALWAYS be available — even without any configured host
+                Button(action: { NSApplication.shared.terminate(nil) }) {
+                    MenuItemRow(icon: "xmark.circle.fill", title: "QUIT", isEnabled: true)
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 6)
+                .padding(.bottom, 6)
             }
 
             // --- Main Actions List ---
