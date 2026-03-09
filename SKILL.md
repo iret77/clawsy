@@ -38,11 +38,11 @@ Clawsy opens and auto-configures the connection.
 
 Wait ~30 seconds, then check for pending requests:
 ```bash
-openclaw devices list
+openclaw nodes list
 ```
 Look for a new entry. Copy its `requestId`, then approve:
 ```bash
-openclaw devices approve <requestId>
+openclaw nodes approve <requestId>
 ```
 
 ### Step 4 — Update Your Workspace
@@ -67,8 +67,8 @@ curl -s https://raw.githubusercontent.com/iret77/clawsy/main/server/templates/CL
 ### Step 5 — Verify
 
 ```bash
-openclaw devices list
-# → Should show a device with platform="macos"
+openclaw nodes list
+# → Should show a node with platform="macos"
 ```
 
 Done! Clawsy is connected. Read the rest of this SKILL.md to learn what you can do.

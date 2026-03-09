@@ -14,23 +14,37 @@ REPO_RAW="https://raw.githubusercontent.com/iret77/clawsy/main"
 OPENCLAW_HOME="${OPENCLAW_HOME:-$HOME/.openclaw}"
 WORKSPACE="${OPENCLAW_WORKSPACE:-$OPENCLAW_HOME/workspace}"
 TOOLS_DIR="$WORKSPACE/tools"
-PLUGIN_TMP="/tmp/clawsy-bridge-$$.ts"
 
 echo "🦞 Clawsy Server Setup" >&2
 echo "   Workspace: $WORKSPACE" >&2
 
-# ── 1. Install clawsy-bridge gateway plugin ───────────────────────────────────
+# ── 1. Install clawsy-bridge gateway plugin ──────────────────────────────────
 if command -v openclaw &>/dev/null; then
-  # Check if already installed and active
-  PLUGIN_STATUS=$(openclaw plugins info clawsy-bridge 2>/dev/null || true)
-  if echo "$PLUGIN_STATUS" | grep -q "enabled: true"; then
+  EXTENSIONS_DIR="$OPENCLAW_HOME/extensions"
+  mkdir -p "$EXTENSIONS_DIR"
+
+  # Check if already installed with correct ID
+  if [[ -f "$EXTENSIONS_DIR/clawsy-bridge.ts" ]] && [[ -f "$EXTENSIONS_DIR/openclaw.plugin.json" ]]; then
     echo "   ✅ clawsy-bridge already installed" >&2
   else
-    curl -fsSL "$REPO_RAW/server/clawsy-bridge.ts" -o "$PLUGIN_TMP" 2>/dev/null
-    openclaw plugins install "$PLUGIN_TMP" >/dev/null 2>&1
-    rm -f "$PLUGIN_TMP"
+    curl -fsSL "$REPO_RAW/server/clawsy-bridge.ts" -o "$EXTENSIONS_DIR/clawsy-bridge.ts" 2>/dev/null
+    curl -fsSL "$REPO_RAW/server/openclaw.plugin.json" -o "$EXTENSIONS_DIR/openclaw.plugin.json" 2>/dev/null
     echo "   ✅ clawsy-bridge plugin installed" >&2
   fi
+
+  # Cleanup: remove any broken clawsy-bridge-XXXXX entries from config
+  python3 -c "
+import json, re, os, sys
+cfg_path = os.path.expanduser('~/.openclaw/openclaw.json')
+if not os.path.exists(cfg_path): sys.exit(0)
+with open(cfg_path) as f: cfg = json.load(f)
+entries = cfg.get('plugins', {}).get('entries', {})
+to_remove = [k for k in entries if re.match(r'clawsy-bridge-\d+', k)]
+for k in to_remove: del entries[k]
+if to_remove:
+    with open(cfg_path, 'w') as f: json.dump(cfg, f, indent=2)
+    print(f'   Cleaned up broken plugin entries: {to_remove}', file=sys.stderr)
+" 2>&1 || true
 else
   echo "   ⚠️  openclaw not found in PATH — skipping plugin install" >&2
 fi
