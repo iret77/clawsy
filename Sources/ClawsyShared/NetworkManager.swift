@@ -1288,16 +1288,33 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                      self.send(json: pairReq)
                 } else if let errorObj = json["error"] as? [String: Any],
                           let errorCode = errorObj["code"] as? String,
-                          (errorCode == "AUTH_TOKEN_MISMATCH" || errorCode == "INVALID_REQUEST") {
-                     // Auth failure during setup — clear stale token but do NOT auto-reconnect.
-                     // The user must manually reconnect (or the next connect() call resets the cycle).
+                          errorCode == "AUTH_TOKEN_MISMATCH" {
+                     // Genuine auth failure — clear stale token and stop.
                      self.rawLog += "\n[AUTH] \(errorCode) – clearing deviceToken, no auto-reconnect"
                      self.deviceToken = nil
-                     self.wasEverConnected = false  // Genuine auth failure — reset lifecycle
+                     self.wasEverConnected = false
                      self.disconnectReason = .setupFailed(errorCode)
                      self.isHandshakeComplete = false
                      self.connectionStatus = "STATUS_HANDSHAKE_FAILED"
                      self.connectionError = .invalidToken
+                } else if let errorObj = json["error"] as? [String: Any],
+                          let errorCode = errorObj["code"] as? String,
+                          errorCode == "INVALID_REQUEST" {
+                     // INVALID_REQUEST may be a schema mismatch (e.g. unknown property),
+                     // not necessarily an auth problem. If we were connected before, retry.
+                     let errorMsg = (errorObj["message"] as? String) ?? errorCode
+                     if self.wasEverConnected {
+                         self.rawLog += "\n[AUTH] \(errorCode) during reconnect – retrying (\(errorMsg))"
+                         self.disconnectReason = .connectionLost
+                         self.connectionAttemptCount = 0
+                         self.scheduleRetry()
+                     } else {
+                         self.rawLog += "\n[AUTH] \(errorCode) – setup failed (\(errorMsg))"
+                         self.disconnectReason = .setupFailed(errorCode)
+                         self.isHandshakeComplete = false
+                         self.connectionStatus = "STATUS_HANDSHAKE_FAILED"
+                         self.connectionError = .invalidToken
+                     }
                 } else if json["error"] != nil {
                      self.isHandshakeComplete = false
                      self.connectionStatus = "STATUS_HANDSHAKE_FAILED"
@@ -1367,40 +1384,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         let pubKeyB64 = base64UrlEncode(publicKey.rawRepresentation)
         let sigB64 = base64UrlEncode(signature)
         
-        // --- setupState: communicate Mac-side configuration to the receiving agent ---
-        #if os(macOS)
-        let sharedFolderConfigured: Bool
-        let sharedFolderPathValue: String
-        if let dir = SharedConfig.sharedDefaults.string(forKey: "sharedFolderPath"), !dir.isEmpty {
-            let expanded = dir.replacingOccurrences(of: "~", with: NSHomeDirectory())
-            sharedFolderConfigured = FileManager.default.fileExists(atPath: expanded)
-            sharedFolderPathValue = dir
-        } else {
-            sharedFolderConfigured = false
-            sharedFolderPathValue = ""
-        }
-
-        let accessibilityGranted = AXIsProcessTrusted()
-        let screenRecordingGranted = CGPreflightScreenCaptureAccess()
-
-        let finderSyncEnabled: Bool = {
-            let runningApps = NSWorkspace.shared.runningApplications
-            return runningApps.contains { $0.bundleIdentifier == "ai.clawsy.FinderSync" }
-        }()
-
-        let firstLaunch = (deviceToken == nil || deviceToken!.isEmpty)
-
-        let setupState: [String: Any] = [
-            "sharedFolderConfigured": sharedFolderConfigured,
-            "sharedFolderPath": sharedFolderPathValue,
-            "finderSyncEnabled": finderSyncEnabled,
-            "accessibilityGranted": accessibilityGranted,
-            "screenRecordingGranted": screenRecordingGranted,
-            "firstLaunch": firstLaunch
-        ]
-        #else
-        let setupState: [String: Any] = [:]
-        #endif
+        // NOTE: setupState was removed from connect params — the current gateway rejects
+        // unknown properties with INVALID_REQUEST, breaking the connection entirely.
+        // Re-add setupState once the gateway schema is updated to accept it.
 
         let connectReq: [String: Any] = [
             "type": "req", "id": "1", "method": "connect",
@@ -1414,8 +1400,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 "auth": ["token": authToken],
                 "device": [
                     "id": deviceId, "publicKey": pubKeyB64, "signature": sigB64, "signedAt": tsMs, "nonce": nonce
-                ],
-                "setupState": setupState
+                ]
             ]
         ]
         send(json: connectReq)
