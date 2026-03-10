@@ -12,6 +12,7 @@ import Network
 
 #if canImport(AppKit)
 import AppKit
+import ApplicationServices  // AXIsProcessTrusted()
 typealias ClawsyImage = NSImage
 #elseif canImport(UIKit)
 import UIKit
@@ -1318,6 +1319,41 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         let pubKeyB64 = base64UrlEncode(publicKey.rawRepresentation)
         let sigB64 = base64UrlEncode(signature)
         
+        // --- setupState: communicate Mac-side configuration to the receiving agent ---
+        #if os(macOS)
+        let sharedFolderConfigured: Bool
+        let sharedFolderPathValue: String
+        if let dir = SharedConfig.sharedDefaults.string(forKey: "sharedFolderPath"), !dir.isEmpty {
+            let expanded = dir.replacingOccurrences(of: "~", with: NSHomeDirectory())
+            sharedFolderConfigured = FileManager.default.fileExists(atPath: expanded)
+            sharedFolderPathValue = dir
+        } else {
+            sharedFolderConfigured = false
+            sharedFolderPathValue = ""
+        }
+
+        let accessibilityGranted = AXIsProcessTrusted()
+        let screenRecordingGranted = CGPreflightScreenCaptureAccess()
+
+        let finderSyncEnabled: Bool = {
+            let runningApps = NSWorkspace.shared.runningApplications
+            return runningApps.contains { $0.bundleIdentifier == "ai.clawsy.FinderSync" }
+        }()
+
+        let firstLaunch = (deviceToken == nil || deviceToken!.isEmpty)
+
+        let setupState: [String: Any] = [
+            "sharedFolderConfigured": sharedFolderConfigured,
+            "sharedFolderPath": sharedFolderPathValue,
+            "finderSyncEnabled": finderSyncEnabled,
+            "accessibilityGranted": accessibilityGranted,
+            "screenRecordingGranted": screenRecordingGranted,
+            "firstLaunch": firstLaunch
+        ]
+        #else
+        let setupState: [String: Any] = [:]
+        #endif
+
         let connectReq: [String: Any] = [
             "type": "req", "id": "1", "method": "connect",
             "params": [
@@ -1330,7 +1366,8 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 "auth": ["token": authToken],
                 "device": [
                     "id": deviceId, "publicKey": pubKeyB64, "signature": sigB64, "signedAt": tsMs, "nonce": nonce
-                ]
+                ],
+                "setupState": setupState
             ]
         ]
         send(json: connectReq)
