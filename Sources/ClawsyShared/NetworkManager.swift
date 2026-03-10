@@ -1325,7 +1325,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 "client": ["id": connectClientId, "version": SharedConfig.versionDisplay, "platform": Self.connectPlatform, "mode": Self.connectClientMode],
                 "role": Self.connectRole, "caps": ["clipboard", "screen", "camera", "file", "location"],
                 "scopes": Self.connectScopes,
-                "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set", "file.get.chunk", "file.set.chunk", "location.get", "location.start", "location.stop", "location.add_smart"],
+                "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set", "file.get.chunk", "file.set.chunk", "file.delete", "file.rename", "file.mkdir", "file.rmdir", "location.get", "location.start", "location.stop", "location.add_smart"],
                 "permissions": ["clipboard.read": true, "clipboard.write": true],
                 "auth": ["token": authToken],
                 "device": [
@@ -1394,8 +1394,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         case "file.list":
             self.sendAck(id: id)
             let subPath = params["subPath"] as? String ?? ""
+            let recursive = params["recursive"] as? Bool ?? false
             DispatchQueue.global(qos: .userInitiated).async {
-                let files = ClawsyFileManager.listFiles(at: baseDir, subPath: subPath)
+                let files = ClawsyFileManager.listFiles(at: baseDir, subPath: subPath, recursive: recursive)
                 let result = files.map { ["name": $0.name, "isDirectory": $0.isDirectory, "size": $0.size, "modified": $0.modified.timeIntervalSince1970] }
                 self.sendResponse(id: id, result: ["files": result, "path": self.sharedFolderPath])
             }
@@ -1524,7 +1525,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             } else {
                 onFileSyncRequested?(name, "Download (chunked)", { duration in if let d = duration { self.filePermissionExpiry = Date().addingTimeInterval(d) }; executeGetChunk() }, { self.sendError(id: id, code: -1, message: "User denied") })
             }
-        case "file.delete":
+        case "file.delete", "file.rmdir":
             guard let name = params["name"] as? String else { sendError(id: id, code: -32602, message: "Missing 'name' parameter"); return }
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
             self.sendAck(id: id)
@@ -1535,6 +1536,14 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 }
             }
             if let expiry = filePermissionExpiry, expiry > Date() { executeDelete() } else { onFileSyncRequested?(name, "Delete", { duration in if let duration = duration { self.filePermissionExpiry = Date().addingTimeInterval(duration) }; executeDelete() }, { self.sendError(id: id, code: -1, message: "User denied file delete") }) }
+        case "file.mkdir":
+            guard let name = params["name"] as? String else { sendError(id: id, code: -32602, message: "Missing 'name' parameter"); return }
+            let fullPathMkdir = (baseDir as NSString).appendingPathComponent(name)
+            self.sendAck(id: id)
+            DispatchQueue.global(qos: .userInitiated).async {
+                let success = ClawsyFileManager.createDirectory(at: fullPathMkdir)
+                self.sendResponse(id: id, result: ["success": success, "name": name])
+            }
         case "file.rename":
             guard let name = params["name"] as? String, let newName = params["newName"] as? String else { sendError(id: id, code: -32602, message: "Missing 'name' or 'newName' parameter"); return }
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
