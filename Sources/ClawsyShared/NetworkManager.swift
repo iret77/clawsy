@@ -1430,7 +1430,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             
         case "file.list":
             self.sendAck(id: id)
-            let subPath = params["subPath"] as? String ?? ""
+            let subPath = params["subPath"] as? String ?? params["path"] as? String ?? ""
             let recursive = params["recursive"] as? Bool ?? false
             DispatchQueue.global(qos: .userInitiated).async {
                 let files = ClawsyFileManager.listFiles(at: baseDir, subPath: subPath, recursive: recursive)
