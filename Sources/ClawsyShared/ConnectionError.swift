@@ -9,6 +9,7 @@ public enum ConnectionError: Equatable {
     case hostUnreachable
     case gatewayNotRunning
     case reconnectExhausted
+    case skillMissingAfterSsh
     case unknownDisconnect(reason: String)
 
     // MARK: - User-Facing Strings (German)
@@ -21,6 +22,7 @@ public enum ConnectionError: Equatable {
         case .hostUnreachable:      return "Gateway nicht erreichbar"
         case .gatewayNotRunning:    return "Gateway antwortet nicht"
         case .reconnectExhausted:   return "Verbindung fehlgeschlagen"
+        case .skillMissingAfterSsh: return NSLocalizedString("ERROR_SKILL_MISSING_TITLE", bundle: .clawsy, comment: "")
         case .unknownDisconnect:    return "Verbindungsfehler"
         }
     }
@@ -39,6 +41,8 @@ public enum ConnectionError: Equatable {
             return "Der SSH-Tunnel steht, aber das Gateway antwortet nicht auf localhost."
         case .reconnectExhausted:
             return "Verbindung konnte nach mehreren Versuchen nicht hergestellt werden. Bitte Netzwerk und Gateway-Einstellungen prüfen."
+        case .skillMissingAfterSsh:
+            return NSLocalizedString("ERROR_SKILL_MISSING_DESC", bundle: .clawsy, comment: "")
         case .unknownDisconnect(let reason):
             return "Verbindung getrennt: \(reason)"
         }
@@ -73,6 +77,8 @@ public enum ConnectionError: Equatable {
             Mein Clawsy hat einen SSH-Tunnel aufgebaut, aber das Gateway antwortet nicht auf localhost. \
             Bitte prüfe ob das OpenClaw Gateway auf dem Server läuft (`openclaw gateway status`).
             """
+        case .skillMissingAfterSsh:
+            return NSLocalizedString("ERROR_SKILL_MISSING_FIX_PROMPT", bundle: .clawsy, comment: "")
         case .reconnectExhausted:
             return nil
         case .unknownDisconnect:
@@ -91,6 +97,11 @@ public enum ConnectionError: Equatable {
             return .openSettings  // User can also copy the prompt, but settings is primary
         case .sshTunnelFailed:
             return .openSettings
+        case .skillMissingAfterSsh:
+            if let prompt = fixPrompt {
+                return .copyPromptToClipboard(prompt)
+            }
+            return .none
         case .reconnectExhausted:
             return .openSettings
         case .unknownDisconnect:

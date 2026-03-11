@@ -1296,7 +1296,13 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                      self.disconnectReason = .setupFailed(errorCode)
                      self.isHandshakeComplete = false
                      self.connectionStatus = "STATUS_HANDSHAKE_FAILED"
-                     self.connectionError = .invalidToken
+                     // If we got here via SSH tunnel, the gateway is reachable but the
+                     // Clawsy server skill is likely not installed — show a specific hint.
+                     if self.isUsingSshTunnel {
+                         self.connectionError = .skillMissingAfterSsh
+                     } else {
+                         self.connectionError = .invalidToken
+                     }
                 } else if let errorObj = json["error"] as? [String: Any],
                           let errorCode = errorObj["code"] as? String,
                           errorCode == "INVALID_REQUEST" {

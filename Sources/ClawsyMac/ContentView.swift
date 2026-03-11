@@ -2074,6 +2074,7 @@ struct AddHostSheet: View {
     @State private var useSshFallback = true
     @State private var selectedColor = HostProfile.defaultColors[1] // Blue default
     @State private var sharedFolderPath = ""
+    @State private var manualHintCopied = false
 
     private var canSave: Bool {
         !host.trimmingCharacters(in: .whitespaces).isEmpty &&
@@ -2192,6 +2193,52 @@ struct AddHostSheet: View {
                             .disabled(!useSshFallback)
                             .opacity(useSshFallback ? 1.0 : 0.5)
                     }
+
+                    // Agent assist hint — subtle alternative for users who don't have connection details
+                    VStack(alignment: .leading, spacing: 8) {
+                        Divider().opacity(0.3)
+
+                        Text(l10n: "ADD_HOST_MANUAL_HINT_TITLE")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+
+                        Text(l10n: "ADD_HOST_MANUAL_HINT_DESC")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+
+                        Button(action: {
+                            let prompt = NSLocalizedString("ADD_HOST_MANUAL_HINT_PROMPT", bundle: .clawsy, comment: "")
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(prompt, forType: .string)
+                            manualHintCopied = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                                manualHintCopied = false
+                            }
+                        }) {
+                            HStack(spacing: 6) {
+                                Text(l10n: "ADD_HOST_MANUAL_HINT_PROMPT")
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundColor(.primary.opacity(0.85))
+                                Spacer(minLength: 4)
+                                Image(systemName: manualHintCopied ? "checkmark" : "doc.on.clipboard")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(manualHintCopied ? .green : .secondary)
+                            }
+                            .padding(8)
+                            .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
+                            .cornerRadius(6)
+                            .overlay(RoundedRectangle(cornerRadius: 6)
+                                .strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+
+                        if manualHintCopied {
+                            Text(l10n: "ADD_HOST_MANUAL_HINT_COPIED")
+                                .font(.system(size: 10))
+                                .foregroundColor(.green)
+                        }
+                    }
+                    .padding(.top, 8)
                 }
                 .padding(20)
             } // end ScrollView (manual)

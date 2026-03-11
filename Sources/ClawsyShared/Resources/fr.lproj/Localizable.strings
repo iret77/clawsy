@@ -134,3 +134,15 @@
 "SSH_ONLY_MODE" = "SSH uniquement";
 "SSH_ONLY_MODE_DESC" = "Ignorer la connexion directe, toujours utiliser le tunnel SSH";
 "STATUS_RECONNECT_COUNTDOWN %lld" = "Reconnexion dans %lld s…";
+
+// Onboarding UX — Skill missing after SSH (v0.9.4)
+"ERROR_SKILL_MISSING_TITLE" = "SSH connected — Clawsy skill missing";
+"ERROR_SKILL_MISSING_DESC" = "SSH connection successful — but the Clawsy server skill is not installed on this OpenClaw instance.";
+"ERROR_SKILL_MISSING_FIX_PROMPT" = "Install the Clawsy skill from clawhub";
+
+// Add Host — agent assist hint in manual mode
+"ADD_HOST_MANUAL_HINT_TITLE" = "Don't know your connection details?";
+"ADD_HOST_MANUAL_HINT_DESC" = "Tell your OpenClaw agent:";
+"ADD_HOST_MANUAL_HINT_PROMPT" = "Install the Clawsy skill from clawhub";
+"ADD_HOST_MANUAL_HINT_COPY" = "Copy";
+"ADD_HOST_MANUAL_HINT_COPIED" = "Copied!";
