@@ -33,7 +33,24 @@ Nothing happens behind your back. Every screenshot, clipboard read, or file writ
 
 ---
 
-## Quick Start
+## Getting Started
+
+The easiest way to set up Clawsy:
+
+1. **Download & install** Clawsy on your Mac ([latest release](https://github.com/iret77/clawsy/releases/latest))
+2. **Tell your OpenClaw agent:**
+
+   > "Install the Clawsy skill from clawhub"
+
+3. Your agent will install everything automatically and send you a pairing link — just click it.
+
+**That's it.** Clawsy connects, your agent gets access to screenshots, clipboard, camera, and files.
+
+---
+
+## Manual Setup (Advanced)
+
+If you prefer to configure everything yourself, follow the steps below.
 
 ### 1. Prepare your OpenClaw Gateway
 

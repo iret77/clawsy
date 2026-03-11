@@ -317,3 +317,15 @@
 "CONNECTION_GUIDE_STEP1" = "Sag deinem Agenten: \"Installiere das Clawsy-Serverpaket\" (clawhub install clawsy)";
 "CONNECTION_GUIDE_STEP2" = "Dein Agent schickt dir einen Verbindungslink – klick ihn an und Clawsy verbindet sich automatisch.";
 "STATUS_RECONNECT_COUNTDOWN %lld" = "Neuverbindung in %lld s…";
+
+// Onboarding UX — Skill fehlt nach SSH (v0.9.4)
+"ERROR_SKILL_MISSING_TITLE" = "SSH verbunden — Clawsy-Skill fehlt";
+"ERROR_SKILL_MISSING_DESC" = "SSH-Verbindung erfolgreich — aber der Clawsy-Server-Skill ist auf dieser OpenClaw-Instanz nicht installiert.";
+"ERROR_SKILL_MISSING_FIX_PROMPT" = "Installiere den Clawsy-Skill von clawhub";
+
+// Host hinzufügen — Agent-Hilfe-Hinweis im manuellen Modus
+"ADD_HOST_MANUAL_HINT_TITLE" = "Verbindungsdaten unbekannt?";
+"ADD_HOST_MANUAL_HINT_DESC" = "Sag deinem OpenClaw-Agenten:";
+"ADD_HOST_MANUAL_HINT_PROMPT" = "Installiere den Clawsy-Skill von clawhub";
+"ADD_HOST_MANUAL_HINT_COPY" = "Kopieren";
+"ADD_HOST_MANUAL_HINT_COPIED" = "Kopiert!";
