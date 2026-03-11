@@ -363,6 +363,7 @@ Details in CLAWSY.md.
         // Auto-Check for Updates (silent = background, shows notification if update found)
         UpdateManager.shared.checkForUpdates(silent: true)
         UpdateManager.shared.startPeriodicChecks()
+        UpdateManager.shared.ensureNotificationPermission()
 
         // Redraw menu bar icon when system appearance changes (Dark ↔ Light Mode)
         DistributedNotificationCenter.default().addObserver(
