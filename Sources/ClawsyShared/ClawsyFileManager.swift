@@ -138,4 +138,76 @@ public class ClawsyFileManager {
             return false
         }
     }
+
+    // MARK: - Path Sandboxing
+
+    /// Resolves a relative path against the base directory and validates it stays within the sandbox.
+    /// Returns the resolved absolute path, or nil if the path escapes the base directory.
+    public static func sandboxedPath(base: String, relativePath: String) -> String? {
+        let baseURL = URL(fileURLWithPath: base).standardized
+        let resolvedURL = baseURL.appendingPathComponent(relativePath).standardized
+        let basePath = baseURL.path.hasSuffix("/") ? baseURL.path : baseURL.path + "/"
+        let resolvedPath = resolvedURL.path
+        // The resolved path must start with the base path, or be exactly the base path (without trailing slash)
+        guard resolvedPath == baseURL.path || resolvedPath.hasPrefix(basePath) else {
+            return nil
+        }
+        return resolvedPath
+    }
+
+    // MARK: - Move File/Directory
+
+    public enum MoveError: Error, CustomStringConvertible {
+        case sourceNotFound
+        case destinationExists
+        case pathTraversal
+        case moveFailed(String)
+
+        public var description: String {
+            switch self {
+            case .sourceNotFound: return "Source file or directory not found"
+            case .destinationExists: return "Destination already exists"
+            case .pathTraversal: return "Path must stay within the shared folder"
+            case .moveFailed(let reason): return "Move failed: \(reason)"
+            }
+        }
+    }
+
+    /// Moves a file or directory within the shared folder.
+    /// Both source and destination are validated to stay within baseDir.
+    /// Intermediate directories at the destination are created automatically.
+    public static func moveFile(baseDir: String, source: String, destination: String) -> Result<Void, MoveError> {
+        let fileManager = Foundation.FileManager.default
+
+        guard let sourcePath = sandboxedPath(base: baseDir, relativePath: source) else {
+            return .failure(.pathTraversal)
+        }
+        guard let destPath = sandboxedPath(base: baseDir, relativePath: destination) else {
+            return .failure(.pathTraversal)
+        }
+
+        guard fileManager.fileExists(atPath: sourcePath) else {
+            return .failure(.sourceNotFound)
+        }
+        if fileManager.fileExists(atPath: destPath) {
+            return .failure(.destinationExists)
+        }
+
+        // Create intermediate directories at destination (mkdir -p)
+        let destParent = (destPath as NSString).deletingLastPathComponent
+        if !fileManager.fileExists(atPath: destParent) {
+            do {
+                try fileManager.createDirectory(atPath: destParent, withIntermediateDirectories: true, attributes: nil)
+            } catch {
+                return .failure(.moveFailed("Failed to create destination directory: \(error.localizedDescription)"))
+            }
+        }
+
+        do {
+            try fileManager.moveItem(atPath: sourcePath, toPath: destPath)
+            return .success(())
+        } catch {
+            return .failure(.moveFailed(error.localizedDescription))
+        }
+    }
 }
