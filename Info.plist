@@ -9,9 +9,9 @@
     <key>CFBundleIdentifier</key>
     <string>ai.clawsy</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.6.3</string>
+    <string>0.9.32</string>
     <key>CFBundleVersion</key>
-    <string>133</string>
+    <string>155</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleSignature</key>

@@ -2,7 +2,7 @@
 
 Clawsy ist die macOS Companion App. Sie gibt dem Agenten direkten Zugriff auf den Mac des Users — Screenshots, Kamera, Zwischenablage, Dateien und mehr. Nutze diese Fähigkeiten proaktiv für eine bessere UX.
 
-**Aktuelle stabile Version:** v0.4.17  
+**Aktuelle stabile Version:** v0.9.32  
 **Repo:** `iret77/clawsy` (GitHub, öffentlich)  
 **Build:** GitHub Actions (niemals lokal bauen — immer via CI/CD)
 
@@ -110,7 +110,7 @@ nodes(action="invoke", invokeCommand="file.list", invokeParamsJson='{"path": "."
 nodes(action="invoke", invokeCommand="file.get", invokeParamsJson='{"name":"report.pdf"}')
 ```
 
-Verfügbare Kommandos: `screen.capture`, `clipboard.read`, `clipboard.write`, `camera.list`, `camera.snap`, `file.list`, `file.get`, `file.set`, `location.get`
+Verfügbare Kommandos: `screen.capture`, `clipboard.read`, `clipboard.write`, `camera.list`, `camera.snap`, `file.list`, `file.get`, `file.set`, `file.get.chunk`, `file.set.chunk`, `file.move`, `file.copy`, `file.rename`, `file.stat`, `file.exists`, `file.batch`, `file.delete`, `file.rmdir`, `file.mkdir`, `location.get`
 
 ---
 
