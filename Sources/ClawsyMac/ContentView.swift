@@ -306,7 +306,7 @@ struct ContentView: View {
                     Color.clear
                         .popover(isPresented: $showingMetadata, arrowEdge: .trailing) {
                             if let nm = network {
-                                MetadataView(network: nm, isPresented: $showingMetadata)
+                                MetadataView(network: nm, hostManager: hostManager, isPresented: $showingMetadata)
                                     .frame(width: 350, height: 320)
                             }
                         }
@@ -860,6 +860,7 @@ struct DebugLogView: View {
 
 struct MetadataView: View {
     @ObservedObject var network: NetworkManager
+    @ObservedObject var hostManager: HostManager
     @Binding var isPresented: Bool
     
     func moodString(for score: Double) -> String {
