@@ -1411,7 +1411,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 "client": ["id": connectClientId, "version": SharedConfig.versionDisplay, "platform": Self.connectPlatform, "mode": Self.connectClientMode],
                 "role": Self.connectRole, "caps": ["clipboard", "screen", "camera", "file", "location"],
                 "scopes": Self.connectScopes,
-                "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set", "file.get.chunk", "file.set.chunk", "file.delete", "file.rename", "file.mkdir", "file.rmdir", "location.get", "location.start", "location.stop", "location.add_smart"],
+                "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set", "file.get.chunk", "file.set.chunk", "file.delete", "file.rename", "file.move", "file.mkdir", "file.rmdir", "location.get", "location.start", "location.stop", "location.add_smart"],
                 "permissions": ["clipboard.read": true, "clipboard.write": true],
                 "auth": ["token": authToken],
                 "device": [
@@ -1630,6 +1630,31 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 let success = ClawsyFileManager.createDirectory(at: fullPathMkdir)
                 self.sendResponse(id: id, result: ["success": success, "name": name])
             }
+        case "file.move":
+            guard let source = params["source"] as? String, let destination = params["destination"] as? String else {
+                sendError(id: id, code: -32602, message: "Missing 'source' or 'destination' parameter"); return
+            }
+            self.sendAck(id: id)
+            let executeMove = {
+                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: "Moved: \(source) → \(destination)", isAuto: ({ if let exp = self.filePermissionExpiry { return exp > Date() } else { return false } }()))
+                DispatchQueue.global(qos: .userInitiated).async {
+                    let result = ClawsyFileManager.moveFile(baseDir: baseDir, source: source, destination: destination)
+                    switch result {
+                    case .success:
+                        self.sendResponse(id: id, result: ["status": "ok", "source": source, "destination": destination])
+                    case .failure(let error):
+                        let code: Int
+                        switch error {
+                        case .sourceNotFound: code = -32001
+                        case .destinationExists: code = -32002
+                        case .pathTraversal: code = -32003
+                        case .moveFailed: code = -32000
+                        }
+                        self.sendError(id: id, code: code, message: error.description)
+                    }
+                }
+            }
+            if let expiry = filePermissionExpiry, expiry > Date() { executeMove() } else { onFileSyncRequested?(source, "Move to \(destination)", { duration in if let duration = duration { self.filePermissionExpiry = Date().addingTimeInterval(duration) }; executeMove() }, { self.sendError(id: id, code: -1, message: "User denied file move") }) }
         case "file.rename":
             guard let name = params["name"] as? String, let newName = params["newName"] as? String else { sendError(id: id, code: -32602, message: "Missing 'name' or 'newName' parameter"); return }
             let fullPath = (baseDir as NSString).appendingPathComponent(name)
