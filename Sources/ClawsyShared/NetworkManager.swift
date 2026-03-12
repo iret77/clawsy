@@ -1411,7 +1411,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 "client": ["id": connectClientId, "version": SharedConfig.versionDisplay, "platform": Self.connectPlatform, "mode": Self.connectClientMode],
                 "role": Self.connectRole, "caps": ["clipboard", "screen", "camera", "file", "location"],
                 "scopes": Self.connectScopes,
-                "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set", "file.get.chunk", "file.set.chunk", "file.delete", "file.rename", "file.move", "file.mkdir", "file.rmdir", "location.get", "location.start", "location.stop", "location.add_smart"],
+                "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set", "file.get.chunk", "file.set.chunk", "file.delete", "file.rename", "file.move", "file.copy", "file.mkdir", "file.rmdir", "file.stat", "file.exists", "file.batch", "location.get", "location.start", "location.stop", "location.add_smart"],
                 "permissions": ["clipboard.read": true, "clipboard.write": true],
                 "auth": ["token": authToken],
                 "device": [
@@ -1613,12 +1613,28 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             }
         case "file.delete", "file.rmdir":
             guard let name = params["name"] as? String else { sendError(id: id, code: -32602, message: "Missing 'name' parameter"); return }
-            let fullPath = (baseDir as NSString).appendingPathComponent(name)
             self.sendAck(id: id)
             let executeDelete = {
                 self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: "Deleted: \(name)", isAuto: ({ if let exp = self.filePermissionExpiry { return exp > Date() } else { return false } }()))
                 DispatchQueue.global(qos: .userInitiated).async {
-                    if ClawsyFileManager.deleteFile(at: fullPath) { self.sendResponse(id: id, result: ["status": "ok", "name": name]) } else { self.sendError(id: id, code: -32000, message: "Failed to delete file") }
+                    // Glob pattern support
+                    if ClawsyFileManager.isGlobPattern(name) {
+                        guard let matches = ClawsyFileManager.resolveGlob(baseDir: baseDir, pattern: name) else {
+                            self.sendError(id: id, code: -32003, message: "Path must stay within the shared folder"); return
+                        }
+                        var successCount = 0
+                        var errors: [[String: Any]] = []
+                        for match in matches {
+                            if let fullPath = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: match) {
+                                if ClawsyFileManager.deleteFile(at: fullPath) { successCount += 1 }
+                                else { errors.append(["file": match, "error": "Delete failed"]) }
+                            } else { errors.append(["file": match, "error": "Path traversal"]) }
+                        }
+                        self.sendResponse(id: id, result: ["status": "ok", "matched": matches.count, "success": successCount, "errors": errors])
+                    } else {
+                        let fullPath = (baseDir as NSString).appendingPathComponent(name)
+                        if ClawsyFileManager.deleteFile(at: fullPath) { self.sendResponse(id: id, result: ["status": "ok", "name": name]) } else { self.sendError(id: id, code: -32000, message: "Failed to delete file") }
+                    }
                 }
             }
             if let expiry = filePermissionExpiry, expiry > Date() { executeDelete() } else { onFileSyncRequested?(name, "Delete", { duration in if let duration = duration { self.filePermissionExpiry = Date().addingTimeInterval(duration) }; executeDelete() }, { self.sendError(id: id, code: -1, message: "User denied file delete") }) }
@@ -1638,10 +1654,94 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             let executeMove = {
                 self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: "Moved: \(source) → \(destination)", isAuto: ({ if let exp = self.filePermissionExpiry { return exp > Date() } else { return false } }()))
                 DispatchQueue.global(qos: .userInitiated).async {
-                    let result = ClawsyFileManager.moveFile(baseDir: baseDir, source: source, destination: destination)
+                    // Glob pattern support
+                    if ClawsyFileManager.isGlobPattern(source) {
+                        guard let matches = ClawsyFileManager.resolveGlob(baseDir: baseDir, pattern: source) else {
+                            self.sendError(id: id, code: -32003, message: "Path must stay within the shared folder"); return
+                        }
+                        var successCount = 0
+                        var errors: [[String: Any]] = []
+                        for match in matches {
+                            let destPath = (destination as NSString).appendingPathComponent((match as NSString).lastPathComponent)
+                            let result = ClawsyFileManager.moveFile(baseDir: baseDir, source: match, destination: destPath)
+                            switch result {
+                            case .success: successCount += 1
+                            case .failure(let err): errors.append(["file": match, "error": err.description])
+                            }
+                        }
+                        self.sendResponse(id: id, result: ["status": "ok", "matched": matches.count, "success": successCount, "errors": errors])
+                    } else {
+                        let result = ClawsyFileManager.moveFile(baseDir: baseDir, source: source, destination: destination)
+                        switch result {
+                        case .success:
+                            self.sendResponse(id: id, result: ["status": "ok", "source": source, "destination": destination])
+                        case .failure(let error):
+                            let code: Int
+                            switch error {
+                            case .sourceNotFound: code = -32001
+                            case .destinationExists: code = -32002
+                            case .pathTraversal: code = -32003
+                            case .moveFailed: code = -32000
+                            }
+                            self.sendError(id: id, code: code, message: error.description)
+                        }
+                    }
+                }
+            }
+            if let expiry = filePermissionExpiry, expiry > Date() { executeMove() } else { onFileSyncRequested?(source, "Move to \(destination)", { duration in if let duration = duration { self.filePermissionExpiry = Date().addingTimeInterval(duration) }; executeMove() }, { self.sendError(id: id, code: -1, message: "User denied file move") }) }
+        case "file.copy":
+            guard let source = params["source"] as? String, let destination = params["destination"] as? String else {
+                sendError(id: id, code: -32602, message: "Missing 'source' or 'destination' parameter"); return
+            }
+            self.sendAck(id: id)
+            let executeCopy = {
+                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: "Copied: \(source) → \(destination)", isAuto: ({ if let exp = self.filePermissionExpiry { return exp > Date() } else { return false } }()))
+                DispatchQueue.global(qos: .userInitiated).async {
+                    if ClawsyFileManager.isGlobPattern(source) {
+                        guard let matches = ClawsyFileManager.resolveGlob(baseDir: baseDir, pattern: source) else {
+                            self.sendError(id: id, code: -32003, message: "Path must stay within the shared folder"); return
+                        }
+                        var successCount = 0
+                        var errors: [[String: Any]] = []
+                        for match in matches {
+                            let destPath = (destination as NSString).appendingPathComponent((match as NSString).lastPathComponent)
+                            let result = ClawsyFileManager.copyFile(baseDir: baseDir, source: match, destination: destPath)
+                            switch result {
+                            case .success: successCount += 1
+                            case .failure(let err): errors.append(["file": match, "error": err.description])
+                            }
+                        }
+                        self.sendResponse(id: id, result: ["status": "ok", "matched": matches.count, "success": successCount, "errors": errors])
+                    } else {
+                        let result = ClawsyFileManager.copyFile(baseDir: baseDir, source: source, destination: destination)
+                        switch result {
+                        case .success:
+                            self.sendResponse(id: id, result: ["status": "ok", "source": source, "destination": destination])
+                        case .failure(let error):
+                            let code: Int
+                            switch error {
+                            case .sourceNotFound: code = -32001
+                            case .destinationExists: code = -32002
+                            case .pathTraversal: code = -32003
+                            case .moveFailed: code = -32000
+                            }
+                            self.sendError(id: id, code: code, message: error.description)
+                        }
+                    }
+                }
+            }
+            if let expiry = filePermissionExpiry, expiry > Date() { executeCopy() } else { onFileSyncRequested?(source, "Copy to \(destination)", { duration in if let duration = duration { self.filePermissionExpiry = Date().addingTimeInterval(duration) }; executeCopy() }, { self.sendError(id: id, code: -1, message: "User denied file copy") }) }
+        case "file.rename":
+            let path = params["path"] as? String ?? params["name"] as? String
+            guard let path = path, let newName = params["newName"] as? String else { sendError(id: id, code: -32602, message: "Missing 'path' or 'newName' parameter"); return }
+            self.sendAck(id: id)
+            let executeRename = {
+                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: "Renamed: \(path) → \(newName)", isAuto: ({ if let exp = self.filePermissionExpiry { return exp > Date() } else { return false } }()))
+                DispatchQueue.global(qos: .userInitiated).async {
+                    let result = ClawsyFileManager.renameFile(baseDir: baseDir, path: path, newName: newName)
                     switch result {
                     case .success:
-                        self.sendResponse(id: id, result: ["status": "ok", "source": source, "destination": destination])
+                        self.sendResponse(id: id, result: ["status": "ok", "path": path, "newName": newName])
                     case .failure(let error):
                         let code: Int
                         switch error {
@@ -1654,18 +1754,136 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                     }
                 }
             }
-            if let expiry = filePermissionExpiry, expiry > Date() { executeMove() } else { onFileSyncRequested?(source, "Move to \(destination)", { duration in if let duration = duration { self.filePermissionExpiry = Date().addingTimeInterval(duration) }; executeMove() }, { self.sendError(id: id, code: -1, message: "User denied file move") }) }
-        case "file.rename":
-            guard let name = params["name"] as? String, let newName = params["newName"] as? String else { sendError(id: id, code: -32602, message: "Missing 'name' or 'newName' parameter"); return }
-            let fullPath = (baseDir as NSString).appendingPathComponent(name)
+            if let expiry = filePermissionExpiry, expiry > Date() { executeRename() } else { onFileSyncRequested?(path, "Rename to \(newName)", { duration in if let duration = duration { self.filePermissionExpiry = Date().addingTimeInterval(duration) }; executeRename() }, { self.sendError(id: id, code: -1, message: "User denied file rename") }) }
+        case "file.stat":
+            let path = params["path"] as? String ?? ""
+            guard !path.isEmpty else { sendError(id: id, code: -32602, message: "Missing 'path' parameter"); return }
             self.sendAck(id: id)
-            let executeRename = {
-                self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: "Renamed: \(name) -> \(newName)", isAuto: ({ if let exp = self.filePermissionExpiry { return exp > Date() } else { return false } }()))
+            DispatchQueue.global(qos: .userInitiated).async {
+                let stat = ClawsyFileManager.statFile(baseDir: baseDir, relativePath: path)
+                self.sendResponse(id: id, result: stat)
+            }
+        case "file.exists":
+            let path = params["path"] as? String ?? ""
+            guard !path.isEmpty else { sendError(id: id, code: -32602, message: "Missing 'path' parameter"); return }
+            self.sendAck(id: id)
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = ClawsyFileManager.existsFile(baseDir: baseDir, relativePath: path)
+                self.sendResponse(id: id, result: result)
+            }
+        case "file.batch":
+            guard let ops = params["ops"] as? [[String: Any]] else {
+                sendError(id: id, code: -32602, message: "Missing 'ops' parameter"); return
+            }
+            self.sendAck(id: id)
+            let executeBatch = {
                 DispatchQueue.global(qos: .userInitiated).async {
-                    if ClawsyFileManager.renameFile(at: fullPath, to: newName) { self.sendResponse(id: id, result: ["status": "ok", "name": newName]) } else { self.sendError(id: id, code: -32000, message: "Failed to rename file") }
+                    var results: [[String: Any]] = []
+                    for (index, op) in ops.enumerated() {
+                        guard let opType = op["op"] as? String else {
+                            results.append(["index": index, "op": "unknown", "success": false, "error": "Missing 'op' field"])
+                            continue
+                        }
+                        switch opType {
+                        case "move":
+                            guard let src = op["src"] as? String, let dst = op["dst"] as? String else {
+                                results.append(["index": index, "op": opType, "success": false, "error": "Missing src/dst"]); continue
+                            }
+                            if ClawsyFileManager.isGlobPattern(src) {
+                                guard let matches = ClawsyFileManager.resolveGlob(baseDir: baseDir, pattern: src) else {
+                                    results.append(["index": index, "op": opType, "success": false, "error": "Path traversal"]); continue
+                                }
+                                var successCount = 0; var errors: [[String: Any]] = []
+                                for match in matches {
+                                    let destPath = (dst as NSString).appendingPathComponent((match as NSString).lastPathComponent)
+                                    switch ClawsyFileManager.moveFile(baseDir: baseDir, source: match, destination: destPath) {
+                                    case .success: successCount += 1
+                                    case .failure(let e): errors.append(["file": match, "error": e.description])
+                                    }
+                                }
+                                results.append(["index": index, "op": opType, "success": errors.isEmpty, "matched": matches.count, "successCount": successCount, "errors": errors])
+                            } else {
+                                switch ClawsyFileManager.moveFile(baseDir: baseDir, source: src, destination: dst) {
+                                case .success: results.append(["index": index, "op": opType, "success": true])
+                                case .failure(let e): results.append(["index": index, "op": opType, "success": false, "error": e.description])
+                                }
+                            }
+                        case "copy":
+                            guard let src = op["src"] as? String, let dst = op["dst"] as? String else {
+                                results.append(["index": index, "op": opType, "success": false, "error": "Missing src/dst"]); continue
+                            }
+                            if ClawsyFileManager.isGlobPattern(src) {
+                                guard let matches = ClawsyFileManager.resolveGlob(baseDir: baseDir, pattern: src) else {
+                                    results.append(["index": index, "op": opType, "success": false, "error": "Path traversal"]); continue
+                                }
+                                var successCount = 0; var errors: [[String: Any]] = []
+                                for match in matches {
+                                    let destPath = (dst as NSString).appendingPathComponent((match as NSString).lastPathComponent)
+                                    switch ClawsyFileManager.copyFile(baseDir: baseDir, source: match, destination: destPath) {
+                                    case .success: successCount += 1
+                                    case .failure(let e): errors.append(["file": match, "error": e.description])
+                                    }
+                                }
+                                results.append(["index": index, "op": opType, "success": errors.isEmpty, "matched": matches.count, "successCount": successCount, "errors": errors])
+                            } else {
+                                switch ClawsyFileManager.copyFile(baseDir: baseDir, source: src, destination: dst) {
+                                case .success: results.append(["index": index, "op": opType, "success": true])
+                                case .failure(let e): results.append(["index": index, "op": opType, "success": false, "error": e.description])
+                                }
+                            }
+                        case "delete":
+                            guard let src = op["src"] as? String else {
+                                results.append(["index": index, "op": opType, "success": false, "error": "Missing src"]); continue
+                            }
+                            if ClawsyFileManager.isGlobPattern(src) {
+                                guard let matches = ClawsyFileManager.resolveGlob(baseDir: baseDir, pattern: src) else {
+                                    results.append(["index": index, "op": opType, "success": false, "error": "Path traversal"]); continue
+                                }
+                                var successCount = 0; var errors: [[String: Any]] = []
+                                for match in matches {
+                                    if let fullPath = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: match) {
+                                        if ClawsyFileManager.deleteFile(at: fullPath) { successCount += 1 }
+                                        else { errors.append(["file": match, "error": "Delete failed"]) }
+                                    } else { errors.append(["file": match, "error": "Path traversal"]) }
+                                }
+                                results.append(["index": index, "op": opType, "success": errors.isEmpty, "matched": matches.count, "successCount": successCount, "errors": errors])
+                            } else {
+                                if let fullPath = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: src) {
+                                    results.append(["index": index, "op": opType, "success": ClawsyFileManager.deleteFile(at: fullPath)])
+                                } else { results.append(["index": index, "op": opType, "success": false, "error": "Path traversal"]) }
+                            }
+                        case "mkdir":
+                            guard let dst = op["dst"] as? String else {
+                                results.append(["index": index, "op": opType, "success": false, "error": "Missing dst"]); continue
+                            }
+                            if let fullPath = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: dst) {
+                                results.append(["index": index, "op": opType, "success": ClawsyFileManager.createDirectory(at: fullPath)])
+                            } else { results.append(["index": index, "op": opType, "success": false, "error": "Path traversal"]) }
+                        case "rename":
+                            guard let path = op["path"] as? String, let newName = op["newName"] as? String else {
+                                results.append(["index": index, "op": opType, "success": false, "error": "Missing path/newName"]); continue
+                            }
+                            switch ClawsyFileManager.renameFile(baseDir: baseDir, path: path, newName: newName) {
+                            case .success: results.append(["index": index, "op": opType, "success": true])
+                            case .failure(let e): results.append(["index": index, "op": opType, "success": false, "error": e.description])
+                            }
+                        case "stat":
+                            guard let path = op["path"] as? String else {
+                                results.append(["index": index, "op": opType, "success": false, "error": "Missing path"]); continue
+                            }
+                            var stat = ClawsyFileManager.statFile(baseDir: baseDir, relativePath: path)
+                            stat["index"] = index
+                            stat["op"] = opType
+                            stat["success"] = stat["exists"] as? Bool ?? false
+                            results.append(stat)
+                        default:
+                            results.append(["index": index, "op": opType, "success": false, "error": "Unknown operation: \(opType)"])
+                        }
+                    }
+                    self.sendResponse(id: id, result: ["status": "ok", "results": results])
                 }
             }
-            if let expiry = filePermissionExpiry, expiry > Date() { executeRename() } else { onFileSyncRequested?(name, "Rename to \(newName)", { duration in if let duration = duration { self.filePermissionExpiry = Date().addingTimeInterval(duration) }; executeRename() }, { self.sendError(id: id, code: -1, message: "User denied file rename") }) }
+            if let expiry = filePermissionExpiry, expiry > Date() { executeBatch() } else { onFileSyncRequested?("batch (\(ops.count) ops)", "Batch file operations", { duration in if let duration = duration { self.filePermissionExpiry = Date().addingTimeInterval(duration) }; executeBatch() }, { self.sendError(id: id, code: -1, message: "User denied batch operations") }) }
         default: sendError(id: id, code: -32601, message: "Method not found")
         }
     }

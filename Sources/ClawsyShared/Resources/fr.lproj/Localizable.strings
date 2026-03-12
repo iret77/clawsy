@@ -11,6 +11,8 @@
 "NOTIFICATION_TITLE" = "Clawsy Synchro";
 "NOTIFICATION_BODY_DOWNLOADING" = "Téléchargement : %@";
 "NOTIFICATION_BODY_UPLOADING" = "Envoi : %@";
+"NOTIFICATION_BODY_COPYING" = "Copie : %@";
+"NOTIFICATION_BODY_BATCH" = "Opération par lot : %@ ops";
 "REVOKE_PERMISSION" = "Révoquer l'accès";
 "CLIPBOARD_SYNC" = "Synchro Presse-papiers";
 "CHAR_COUNT %lld" = "%lld caractères";

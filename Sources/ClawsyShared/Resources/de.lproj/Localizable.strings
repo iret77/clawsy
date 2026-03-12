@@ -11,6 +11,8 @@
 "NOTIFICATION_TITLE" = "Clawsy Dateisync";
 "NOTIFICATION_BODY_DOWNLOADING" = "Lade herunter: %@";
 "NOTIFICATION_BODY_UPLOADING" = "Lade hoch: %@";
+"NOTIFICATION_BODY_COPYING" = "Kopiere: %@";
+"NOTIFICATION_BODY_BATCH" = "Batch-Operation: %@ Ops";
 "REVOKE_PERMISSION" = "Zugriff widerrufen";
 "CLIPBOARD_SYNC" = "Zwischenablage-Sync";
 "CHAR_COUNT %lld" = "%lld Zeichen";
