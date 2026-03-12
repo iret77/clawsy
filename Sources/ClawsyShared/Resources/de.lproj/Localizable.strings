@@ -201,6 +201,7 @@
 "ONBOARDING_OPEN_SETTINGS" = "Zugriff erlauben";
 "ONBOARDING_FINDERSYNC" = "Finder-Erweiterung";
 "ONBOARDING_FINDERSYNC_DESC" = "Fügt 'An Agent senden' zum Rechtsklick-Menü im Finder hinzu. Muss in den Systemeinstellungen aktiviert werden.";
+"ONBOARDING_FINDERSYNC_OPEN_SETTINGS" = "Finder-Einstellungen öffnen";
 "ONBOARDING_ENABLE" = "Aktivieren";
 "ONBOARDING_OPTIONAL" = "optional";
 "ONBOARDING_SKIP" = "Später";

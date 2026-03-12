@@ -200,6 +200,7 @@
 "ONBOARDING_OPEN_SETTINGS" = "Grant Access";
 "ONBOARDING_FINDERSYNC" = "Finder Extension";
 "ONBOARDING_FINDERSYNC_DESC" = "Adds 'Send to Agent' to Finder's right-click menu. Requires manual activation in System Settings.";
+"ONBOARDING_FINDERSYNC_OPEN_SETTINGS" = "Open Finder Settings";
 "ONBOARDING_ENABLE" = "Enable";
 "ONBOARDING_OPTIONAL" = "optional";
 "ONBOARDING_SKIP" = "Later";

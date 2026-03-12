@@ -1508,7 +1508,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             let executeGet = {
                 self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: String(format: NSLocalizedString("NOTIFICATION_BODY_DOWNLOADING", bundle: .clawsy, comment: ""), name), isAuto: ({ if let exp = self.filePermissionExpiry { return exp > Date() } else { return false } }()))
                 DispatchQueue.global(qos: .userInitiated).async {
-                    if let b64 = ClawsyFileManager.readFile(at: fullPath) { self.sendResponse(id: id, result: ["content": b64, "name": name]) } else { self.sendError(id: id, code: -32000, message: "Failed to read file") }
+                    switch ClawsyFileManager.readFile(at: fullPath) {
+                    case .success(let b64):
+                        self.sendResponse(id: id, result: ["content": b64, "name": name])
+                    case .failure(let error):
+                        self.sendError(id: id, code: -32000, message: "Failed to read file: \(error.description)")
+                    }
                 }
             }
             if let expiry = filePermissionExpiry, expiry > Date() { executeGet() } else { onFileSyncRequested?(name, "Download", { duration in if let duration = duration { self.filePermissionExpiry = Date().addingTimeInterval(duration) }; executeGet() }, { self.sendError(id: id, code: -1, message: "User denied file access") }) }
@@ -1521,7 +1526,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             let executeSet = {
                 self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: String(format: NSLocalizedString("NOTIFICATION_BODY_UPLOADING", bundle: .clawsy, comment: ""), name), isAuto: ({ if let exp = self.filePermissionExpiry { return exp > Date() } else { return false } }()))
                 DispatchQueue.global(qos: .userInitiated).async {
-                    if ClawsyFileManager.writeFile(at: fullPath, base64Content: content) { self.sendResponse(id: id, result: ["status": "ok", "name": name]) } else { self.sendError(id: id, code: -32000, message: "Failed to write file") }
+                    switch ClawsyFileManager.writeFile(at: fullPath, base64Content: content) {
+                    case .success:
+                        self.sendResponse(id: id, result: ["status": "ok", "name": name])
+                    case .failure(let error):
+                        self.sendError(id: id, code: -32000, message: "Failed to write file: \(error.description)")
+                    }
                 }
             }
             // System-internal files are always allowed silently — no permission dialog
@@ -1571,9 +1581,10 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                             }
                         }
                         let assembledB64 = assembled.base64EncodedString()
-                        if ClawsyFileManager.writeFile(at: fullPathChunkSet, base64Content: assembledB64) {
+                        switch ClawsyFileManager.writeFile(at: fullPathChunkSet, base64Content: assembledB64) {
+                        case .success:
                             self.sendResponse(id: id, result: ["status": "ok", "name": name, "assembled": true])
-                        } else {
+                        case .failure:
                             self.sendError(id: id, code: -32000, message: "Failed to assemble file")
                         }
                     } else {
@@ -1644,8 +1655,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                         var errors: [[String: Any]] = []
                         for match in matches {
                             if let fullPath = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: match) {
-                                if ClawsyFileManager.deleteFile(at: fullPath) { successCount += 1 }
-                                else { errors.append(["file": match, "error": "Delete failed"]) }
+                                switch ClawsyFileManager.deleteFile(at: fullPath) {
+                                case .success:
+                                    successCount += 1
+                                case .failure(let error):
+                                    errors.append(["file": match, "error": "Delete failed: \(error.description)"])
+                                }
                             } else { errors.append(["file": match, "error": "Path traversal"]) }
                         }
                         self.sendResponse(id: id, result: ["status": "ok", "matched": matches.count, "success": successCount, "errors": errors])
@@ -1653,7 +1668,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                         guard let fullPath = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: name) else {
                             self.sendError(id: id, code: -32003, message: "Path must stay within the shared folder"); return
                         }
-                        if ClawsyFileManager.deleteFile(at: fullPath) { self.sendResponse(id: id, result: ["status": "ok", "name": name]) } else { self.sendError(id: id, code: -32000, message: "Failed to delete file") }
+                        switch ClawsyFileManager.deleteFile(at: fullPath) {
+                        case .success:
+                            self.sendResponse(id: id, result: ["status": "ok", "name": name])
+                        case .failure(let error):
+                            self.sendError(id: id, code: -32000, message: "Failed to delete file: \(error.description)")
+                        }
                     }
                 }
             }
@@ -1665,8 +1685,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             }
             self.sendAck(id: id)
             DispatchQueue.global(qos: .userInitiated).async {
-                let success = ClawsyFileManager.createDirectory(at: fullPathMkdir)
-                self.sendResponse(id: id, result: ["success": success, "name": name])
+                switch ClawsyFileManager.createDirectory(at: fullPathMkdir) {
+                case .success:
+                    self.sendResponse(id: id, result: ["success": true, "name": name])
+                case .failure(let error):
+                    self.sendResponse(id: id, result: ["success": false, "name": name, "error": error.description])
+                }
             }
         case "file.move":
             guard let source = params["source"] as? String, let destination = params["destination"] as? String else {
@@ -1783,7 +1807,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             self.sendAck(id: id)
             DispatchQueue.global(qos: .userInitiated).async {
                 let stat = ClawsyFileManager.statFile(baseDir: baseDir, relativePath: path)
-                self.sendResponse(id: id, result: stat)
+                if let data = try? JSONEncoder().encode(stat),
+                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    self.sendResponse(id: id, result: dict)
+                } else {
+                    self.sendError(id: id, code: -32000, message: "Failed to serialize file stat")
+                }
             }
         case "file.exists":
             let path = params["path"] as? String ?? ""
@@ -1791,7 +1820,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             self.sendAck(id: id)
             DispatchQueue.global(qos: .userInitiated).async {
                 let result = ClawsyFileManager.existsFile(baseDir: baseDir, relativePath: path)
-                self.sendResponse(id: id, result: result)
+                if let data = try? JSONEncoder().encode(result),
+                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    self.sendResponse(id: id, result: dict)
+                } else {
+                    self.sendError(id: id, code: -32000, message: "Failed to serialize existence check")
+                }
             }
         case "file.batch":
             guard let ops = params["ops"] as? [[String: Any]] else {
@@ -1864,14 +1898,23 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                                 var successCount = 0; var errors: [[String: Any]] = []
                                 for match in matches {
                                     if let fullPath = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: match) {
-                                        if ClawsyFileManager.deleteFile(at: fullPath) { successCount += 1 }
-                                        else { errors.append(["file": match, "error": "Delete failed"]) }
+                                        switch ClawsyFileManager.deleteFile(at: fullPath) {
+                                        case .success:
+                                            successCount += 1
+                                        case .failure(let error):
+                                            errors.append(["file": match, "error": "Delete failed: \(error.description)"])
+                                        }
                                     } else { errors.append(["file": match, "error": "Path traversal"]) }
                                 }
                                 results.append(["index": index, "op": opType, "success": errors.isEmpty, "matched": matches.count, "successCount": successCount, "errors": errors])
                             } else {
                                 if let fullPath = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: src) {
-                                    results.append(["index": index, "op": opType, "success": ClawsyFileManager.deleteFile(at: fullPath)])
+                                    switch ClawsyFileManager.deleteFile(at: fullPath) {
+                                    case .success:
+                                        results.append(["index": index, "op": opType, "success": true])
+                                    case .failure(let error):
+                                        results.append(["index": index, "op": opType, "success": false, "error": error.description])
+                                    }
                                 } else { results.append(["index": index, "op": opType, "success": false, "error": "Path traversal"]) }
                             }
                         case "mkdir":
@@ -1879,7 +1922,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                                 results.append(["index": index, "op": opType, "success": false, "error": "Missing dst"]); continue
                             }
                             if let fullPath = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: dst) {
-                                results.append(["index": index, "op": opType, "success": ClawsyFileManager.createDirectory(at: fullPath)])
+                                switch ClawsyFileManager.createDirectory(at: fullPath) {
+                                case .success:
+                                    results.append(["index": index, "op": opType, "success": true])
+                                case .failure(let error):
+                                    results.append(["index": index, "op": opType, "success": false, "error": error.description])
+                                }
                             } else { results.append(["index": index, "op": opType, "success": false, "error": "Path traversal"]) }
                         case "rename":
                             guard let path = op["path"] as? String, let newName = op["newName"] as? String else {
@@ -1893,11 +1941,15 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                             guard let path = op["path"] as? String else {
                                 results.append(["index": index, "op": opType, "success": false, "error": "Missing path"]); continue
                             }
-                            var stat = ClawsyFileManager.statFile(baseDir: baseDir, relativePath: path)
-                            stat["index"] = index
-                            stat["op"] = opType
-                            stat["success"] = stat["exists"] as? Bool ?? false
-                            results.append(stat)
+                            let stat = ClawsyFileManager.statFile(baseDir: baseDir, relativePath: path)
+                            if var dict = (try? JSONEncoder().encode(stat)).flatMap({ try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }) {
+                                dict["index"] = index
+                                dict["op"] = opType
+                                dict["success"] = dict["exists"] as? Bool ?? false
+                                results.append(dict)
+                            } else {
+                                results.append(["index": index, "op": opType, "success": false, "error": "Failed to serialize stat"])
+                            }
                         default:
                             results.append(["index": index, "op": opType, "success": false, "error": "Unknown operation: \(opType)"])
                         }

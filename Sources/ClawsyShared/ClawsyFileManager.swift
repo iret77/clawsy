@@ -15,6 +15,21 @@ public class ClawsyFileManager {
             self.modified = modified
         }
     }
+
+    public struct FileStat: Codable {
+        public let exists: Bool
+        public let isDirectory: Bool
+        public let size: Int64?
+        public let modified: String?
+        public let created: String?
+        public let error: String?
+    }
+
+    public struct FileExistence: Codable {
+        public let exists: Bool
+        public let isDirectory: Bool
+        public let error: String?
+    }
     
     public static func folderExists(at path: String) -> Bool {
         let fileManager = Foundation.FileManager.default
@@ -96,57 +111,51 @@ public class ClawsyFileManager {
         return results
     }
     
-    public static func readFile(at path: String) -> String? {
+    public static func readFile(at path: String) -> Result<String, FileError> {
         let url = URL(fileURLWithPath: path)
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        return data.base64EncodedString()
+        do {
+            let data = try Data(contentsOf: url)
+            return .success(data.base64EncodedString())
+        } catch {
+            return .failure(.readFailed(error.localizedDescription))
+        }
     }
     
-    public static func writeFile(at path: String, base64Content: String) -> Bool {
-        guard let data = Data(base64Encoded: base64Content) else { return false }
+    public static func writeFile(at path: String, base64Content: String) -> Result<Void, FileError> {
+        guard let data = Data(base64Encoded: base64Content) else { return .failure(.invalidBase64) }
         let url = URL(fileURLWithPath: path)
         
         do {
             try data.write(to: url)
-            return true
+            return .success(())
         } catch {
-            return false
+            return .failure(.writeFailed(error.localizedDescription))
         }
     }
 
-    public static func createDirectory(at path: String) -> Bool {
+    public static func createDirectory(at path: String) -> Result<Void, FileError> {
         let fileManager = Foundation.FileManager.default
         let url = URL(fileURLWithPath: path)
         do {
             try fileManager.createDirectory(at: url, withIntermediateDirectories: true, attributes: nil)
-            return true
+            return .success(())
         } catch {
-            return false
+            return .failure(.createFailed(error.localizedDescription))
         }
     }
     
-    public static func deleteFile(at path: String) -> Bool {
+    public static func deleteFile(at path: String) -> Result<Void, FileError> {
         let fileManager = Foundation.FileManager.default
         let url = URL(fileURLWithPath: path)
         do {
             try fileManager.removeItem(at: url)
-            return true
+            return .success(())
         } catch {
-            return false
+            return .failure(.deleteFailed(error.localizedDescription))
         }
     }
     
-    public static func renameFile(at path: String, to newName: String) -> Bool {
-        let fileManager = Foundation.FileManager.default
-        let url = URL(fileURLWithPath: path)
-        let newUrl = url.deletingLastPathComponent().appendingPathComponent(newName)
-        do {
-            try fileManager.moveItem(at: url, to: newUrl)
-            return true
-        } catch {
-            return false
-        }
-    }
+
 
     // MARK: - Path Sandboxing
 
@@ -178,6 +187,24 @@ public class ClawsyFileManager {
             case .destinationExists: return "Destination already exists"
             case .pathTraversal: return "Path must stay within the shared folder"
             case .moveFailed(let reason): return "Move failed: \(reason)"
+            }
+        }
+    }
+
+    public enum FileError: Error, CustomStringConvertible {
+        case invalidBase64
+        case writeFailed(String)
+        case createFailed(String)
+        case deleteFailed(String)
+        case readFailed(String)
+
+        public var description: String {
+            switch self {
+            case .invalidBase64: return "Invalid Base64 content"
+            case .writeFailed(let reason): return "Write failed: \(reason)"
+            case .createFailed(let reason): return "Create failed: \(reason)"
+            case .deleteFailed(let reason): return "Delete failed: \(reason)"
+            case .readFailed(let reason): return "Read failed: \(reason)"
             }
         }
     }
@@ -306,52 +333,51 @@ public class ClawsyFileManager {
     // MARK: - File Stat
 
     /// Returns metadata for a file or directory within the shared folder.
-    public static func statFile(baseDir: String, relativePath: String) -> [String: Any] {
+    public static func statFile(baseDir: String, relativePath: String) -> FileStat {
         guard let fullPath = sandboxedPath(base: baseDir, relativePath: relativePath) else {
-            return ["exists": false, "error": "Path must stay within the shared folder"]
+            return FileStat(exists: false, isDirectory: false, size: nil, modified: nil, created: nil, error: "Path must stay within the shared folder")
         }
 
         let fileManager = Foundation.FileManager.default
         var isDir: ObjCBool = false
         guard fileManager.fileExists(atPath: fullPath, isDirectory: &isDir) else {
-            return ["exists": false]
+            return FileStat(exists: false, isDirectory: false, size: nil, modified: nil, created: nil, error: nil)
         }
 
         let url = URL(fileURLWithPath: fullPath)
         let keys: Set<URLResourceKey> = [.fileSizeKey, .contentModificationDateKey, .creationDateKey]
         guard let values = try? url.resourceValues(forKeys: keys) else {
-            return ["exists": true, "isDirectory": isDir.boolValue]
+            return FileStat(exists: true, isDirectory: isDir.boolValue, size: nil, modified: nil, created: nil, error: "Failed to get file resource values")
         }
 
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
 
-        var result: [String: Any] = [
-            "exists": true,
-            "isDirectory": isDir.boolValue,
-            "size": Int64(values.fileSize ?? 0)
-        ]
-        if let modified = values.contentModificationDate {
-            result["modified"] = formatter.string(from: modified)
-        }
-        if let created = values.creationDate {
-            result["created"] = formatter.string(from: created)
-        }
-        return result
+        let modified = values.contentModificationDate.map { formatter.string(from: $0) }
+        let created = values.creationDate.map { formatter.string(from: $0) }
+
+        return FileStat(
+            exists: true,
+            isDirectory: isDir.boolValue,
+            size: Int64(values.fileSize ?? 0),
+            modified: modified,
+            created: created,
+            error: nil
+        )
     }
 
     // MARK: - File Exists
 
     /// Quick existence check for a path within the shared folder.
-    public static func existsFile(baseDir: String, relativePath: String) -> [String: Any] {
+    public static func existsFile(baseDir: String, relativePath: String) -> FileExistence {
         guard let fullPath = sandboxedPath(base: baseDir, relativePath: relativePath) else {
-            return ["exists": false, "error": "Path must stay within the shared folder"]
+            return FileExistence(exists: false, isDirectory: false, error: "Path must stay within the shared folder")
         }
 
         let fileManager = Foundation.FileManager.default
         var isDir: ObjCBool = false
         let exists = fileManager.fileExists(atPath: fullPath, isDirectory: &isDir)
-        return ["exists": exists, "isDirectory": exists ? isDir.boolValue : false]
+        return FileExistence(exists: exists, isDirectory: exists ? isDir.boolValue : false, error: nil)
     }
 
     // MARK: - Glob Pattern Matching
