@@ -26,7 +26,16 @@ public class ClawsyFileManager {
     public static func listFiles(at path: String, subPath: String = "", recursive: Bool = false) -> [FileEntry] {
         let fileManager = Foundation.FileManager.default
         let expandedBasePath = path.replacingOccurrences(of: "~", with: NSHomeDirectory())
-        let targetPath = subPath.isEmpty ? expandedBasePath : (expandedBasePath as NSString).appendingPathComponent(subPath)
+        let targetPath: String
+        if subPath.isEmpty {
+            targetPath = expandedBasePath
+        } else {
+            // Validate subPath stays within sandbox
+            guard let validated = sandboxedPath(base: expandedBasePath, relativePath: subPath) else {
+                return []
+            }
+            targetPath = validated
+        }
         let url = URL(fileURLWithPath: targetPath)
         
         if recursive {

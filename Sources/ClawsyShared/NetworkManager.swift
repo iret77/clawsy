@@ -1481,6 +1481,12 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             self.sendAck(id: id)
             let subPath = params["subPath"] as? String ?? params["path"] as? String ?? ""
             let recursive = params["recursive"] as? Bool ?? false
+            // Validate subPath stays within sandbox
+            if !subPath.isEmpty {
+                guard ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: subPath) != nil else {
+                    sendError(id: id, code: -32003, message: "Path must stay within the shared folder"); return
+                }
+            }
             DispatchQueue.global(qos: .userInitiated).async {
                 let files = ClawsyFileManager.listFiles(at: baseDir, subPath: subPath, recursive: recursive)
                 let result = files.map { ["name": $0.name, "isDirectory": $0.isDirectory, "size": $0.size, "modified": $0.modified.timeIntervalSince1970] }
@@ -1495,7 +1501,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 self.sendResponse(id: id, result: ["content": versionData.base64EncodedString(), "name": name])
                 return
             }
-            let fullPath = (baseDir as NSString).appendingPathComponent(name)
+            guard let fullPath = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: name) else {
+                sendError(id: id, code: -32003, message: "Path must stay within the shared folder"); return
+            }
             self.sendAck(id: id)
             let executeGet = {
                 self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: String(format: NSLocalizedString("NOTIFICATION_BODY_DOWNLOADING", bundle: .clawsy, comment: ""), name), isAuto: ({ if let exp = self.filePermissionExpiry { return exp > Date() } else { return false } }()))
@@ -1506,7 +1514,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             if let expiry = filePermissionExpiry, expiry > Date() { executeGet() } else { onFileSyncRequested?(name, "Download", { duration in if let duration = duration { self.filePermissionExpiry = Date().addingTimeInterval(duration) }; executeGet() }, { self.sendError(id: id, code: -1, message: "User denied file access") }) }
         case "file.set":
             guard let name = params["name"] as? String, let content = params["content"] as? String else { sendError(id: id, code: -32602, message: "Missing 'name' or 'content' parameter"); return }
-            let fullPath = (baseDir as NSString).appendingPathComponent(name)
+            guard let fullPath = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: name) else {
+                sendError(id: id, code: -32003, message: "Path must stay within the shared folder"); return
+            }
             self.sendAck(id: id)
             let executeSet = {
                 self.notifyAction(title: NSLocalizedString("NOTIFICATION_TITLE", bundle: .clawsy, comment: ""), body: String(format: NSLocalizedString("NOTIFICATION_BODY_UPLOADING", bundle: .clawsy, comment: ""), name), isAuto: ({ if let exp = self.filePermissionExpiry { return exp > Date() } else { return false } }()))
@@ -1530,14 +1540,18 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                   let content = params["content"] as? String else {
                 sendError(id: id, code: -32602, message: "Missing parameters"); return
             }
-            let fullPathChunkSet = (baseDir as NSString).appendingPathComponent(name)
+            guard let fullPathChunkSet = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: name) else {
+                sendError(id: id, code: -32003, message: "Path must stay within the shared folder"); return
+            }
             self.sendAck(id: id)
             let executeChunk = {
                 DispatchQueue.global(qos: .userInitiated).async {
                     guard let chunkData = Data(base64Encoded: content) else {
                         self.sendError(id: id, code: -32000, message: "Invalid base64 chunk"); return
                     }
-                    let tempPath = (baseDir as NSString).appendingPathComponent(".\(name).clawsy_chunk_\(chunkIndex)")
+                    guard let tempPath = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: ".\(name).clawsy_chunk_\(chunkIndex)") else {
+                        self.sendError(id: id, code: -32003, message: "Path must stay within the shared folder"); return
+                    }
                     do {
                         try chunkData.write(to: URL(fileURLWithPath: tempPath))
                     } catch {
@@ -1546,7 +1560,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                     if chunkIndex == totalChunks - 1 {
                         var assembled = Data()
                         for i in 0..<totalChunks {
-                            let tp = (baseDir as NSString).appendingPathComponent(".\(name).clawsy_chunk_\(i)")
+                            guard let tp = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: ".\(name).clawsy_chunk_\(i)") else {
+                                self.sendError(id: id, code: -32003, message: "Path must stay within the shared folder"); return
+                            }
                             if let cd = try? Data(contentsOf: URL(fileURLWithPath: tp)) {
                                 assembled.append(cd)
                                 try? FileManager.default.removeItem(atPath: tp)
@@ -1579,7 +1595,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 sendError(id: id, code: -32602, message: "Missing parameters"); return
             }
             let chunkSizeBytes = (params["chunkSizeBytes"] as? Int) ?? 262144
-            let fullPathChunkGet = (baseDir as NSString).appendingPathComponent(name)
+            guard let fullPathChunkGet = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: name) else {
+                sendError(id: id, code: -32003, message: "Path must stay within the shared folder"); return
+            }
             self.sendAck(id: id)
             let executeGetChunk = {
                 DispatchQueue.global(qos: .userInitiated).async {
@@ -1632,7 +1650,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                         }
                         self.sendResponse(id: id, result: ["status": "ok", "matched": matches.count, "success": successCount, "errors": errors])
                     } else {
-                        let fullPath = (baseDir as NSString).appendingPathComponent(name)
+                        guard let fullPath = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: name) else {
+                            self.sendError(id: id, code: -32003, message: "Path must stay within the shared folder"); return
+                        }
                         if ClawsyFileManager.deleteFile(at: fullPath) { self.sendResponse(id: id, result: ["status": "ok", "name": name]) } else { self.sendError(id: id, code: -32000, message: "Failed to delete file") }
                     }
                 }
@@ -1640,7 +1660,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             if let expiry = filePermissionExpiry, expiry > Date() { executeDelete() } else { onFileSyncRequested?(name, "Delete", { duration in if let duration = duration { self.filePermissionExpiry = Date().addingTimeInterval(duration) }; executeDelete() }, { self.sendError(id: id, code: -1, message: "User denied file delete") }) }
         case "file.mkdir":
             guard let name = params["name"] as? String else { sendError(id: id, code: -32602, message: "Missing 'name' parameter"); return }
-            let fullPathMkdir = (baseDir as NSString).appendingPathComponent(name)
+            guard let fullPathMkdir = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: name) else {
+                sendError(id: id, code: -32003, message: "Path must stay within the shared folder"); return
+            }
             self.sendAck(id: id)
             DispatchQueue.global(qos: .userInitiated).async {
                 let success = ClawsyFileManager.createDirectory(at: fullPathMkdir)
