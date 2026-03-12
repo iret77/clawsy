@@ -1,0 +1,329 @@
+"FILE_SYNC_REQUEST" = "Demande de synchronisation de fichier";
+"AGENT_WANTS_TO" = "L'agent veut %@ un fichier.";
+"LOCATION" = "Emplacement : %@";
+"DENY" = "Refuser";
+"ALLOW" = "Autoriser";
+"CLIPBOARD_WRITE_TITLE" = "L'agent veut écrire dans le presse-papiers";
+"CLIPBOARD_READ_TITLE" = "L'agent veut lire le presse-papiers";
+"ALLOW_ONCE" = "Juste cette fois";
+"ALLOW_1H" = "Pour 1 heure";
+"ALLOW_DAY" = "Pour le reste de la journée";
+"NOTIFICATION_TITLE" = "Clawsy Synchronisation";
+"NOTIFICATION_BODY_DOWNLOADING" = "Téléchargement : %@";
+"NOTIFICATION_BODY_UPLOADING" = "Envoi : %@";
+"REVOKE_PERMISSION" = "Révoquer les permissions";
+"CLIPBOARD_SYNC" = "Synchronisation du presse-papiers";
+"CHAR_COUNT %lld" = "%lld caractères";
+"COPY_LOCAL" = "Copier localement";
+"CLIPBOARD_WANTS_WRITE" = "L'agent veut écrire dans votre presse-papiers :";
+"CLIPBOARD_WANTS_READ" = "L'agent veut lire votre presse-papiers.";
+
+"CAMERA_PREVIEW_TITLE" = "Aperçu caméra";
+"SEND_TO_AGENT" = "Envoyer à l'agent";
+
+"SCREENSHOT_REQUEST" = "Demande de capture d'écran";
+"REMOTE_USER_ASKING" = "L'agent demande une capture d'écran.";
+"SCREENSHOT_REQUEST_BODY" = "Choisissez le mode de capture :";
+
+/* Main Menu */
+"APP_NAME" = "Clawsy";
+"SCREENSHOT" = "Capture d'écran";
+"FULL_SCREEN" = "Plein écran";
+"INTERACTIVE_AREA" = "Zone interactive";
+"PUSH_CLIPBOARD" = "Presse-papiers";
+"COPY_TO_AGENT" = "Copier vers l'agent";
+"QUICK_SEND" = "Envoi rapide";
+"SEND_AND_FORGET" = "Envoyer le texte à l'agent";
+"QUICK_SEND_PLACEHOLDER" = "Envoyer quelque chose à OpenClaw...";
+"SENDING_TO_OPENCLAW" = "Envoi à OpenClaw...";
+"SHARE_SUCCESS" = "Partagé avec succès";
+"SHARE_FAILED" = "Partage échoué";
+"FILE_SYNC" = "Synchronisation de fichiers";
+"MANAGED_FOLDER" = "Dossier géré";
+"CAMERA" = "Caméra";
+"TAKE_PHOTO" = "Prendre une photo";
+"LIST_CAMERAS" = "Lister les caméras";
+"CONNECT" = "Connecter";
+"DISCONNECT" = "Déconnecter";
+"SETTINGS" = "Paramètres...";
+"DEBUG_LOG" = "Journal de débogage";
+"QUIT" = "Quitter";
+
+/* Status */
+"STATUS_CONNECTED" = "Connecté";
+"STATUS_DISCONNECTED" = "Déconnecté";
+"STATUS_CONNECTING %lld" = "Connexion (tentative %lld)...";
+"STATUS_OFFLINE_REFUSED" = "Hors ligne (serveur refusé)";
+"STATUS_OFFLINE_TIMEOUT" = "Hors ligne (délai dépassé)";
+"STATUS_ERROR" = "Erreur";
+"STATUS_ONLINE_PAIRED" = "En ligne (apparié)";
+"STATUS_ONLINE_PAIRED_SSH" = "En ligne (apparié via SSH)";
+"STATUS_HANDSHAKE_FAILED" = "Poignée de main échouée";
+"STATUS_STARTING_SSH" = "Démarrage du tunnel SSH...";
+"STATUS_SSH_FAILED" = "Tunnel SSH échoué";
+"STATUS_SSH_USER_MISSING" = "Utilisateur SSH requis";
+"STATUS_SSH_KEY_MISSING" = "Clé SSH requise";
+
+/* Alerts */
+"ALERT_SCREENSHOT_TITLE" = "Autoriser la capture d'écran ?";
+"ALERT_SCREENSHOT_BODY" = "L'agent a demandé à voir votre écran.";
+"ALERT_DENY" = "Refuser";
+"ALERT_ALLOW" = "Autoriser";
+
+/* Settings */
+"SETTINGS_TITLE" = "Paramètres";
+"GATEWAY" = "Gateway";
+"HOST" = "Hôte / IP";
+"PORT" = "Port";
+"TOKEN" = "Token";
+"SSH_USER" = "Utilisateur SSH";
+"SSH_FALLBACK" = "Repli SSH";
+"SSH_FALLBACK_DESC" = "Tunnel automatique du port 18789 si la connexion directe échoue.";
+"SHARED_FOLDER" = "Dossier partagé";
+"PATH" = "Chemin";
+"SHARED_FOLDER_DESC" = "Seuls les fichiers de ce dossier sont visibles par l'agent.";
+"VIBRANT_SECURE" = "Vos données restent locales.";
+"DONE" = "Terminé";
+
+/* Settings Window */
+"SETTINGS_WINDOW_TITLE" = "Paramètres Clawsy";
+"VERSION_FORMAT %@" = "Version %@";
+
+/* Debug Log */
+"DEBUG_LOG_TITLE" = "Journal de débogage réseau";
+"NO_DATA" = "Aucune donnée reçue.";
+"SELECT_TEXT_COPY" = "Sélectionnez du texte pour copier.";
+"COPY_ALL" = "Tout copier";
+
+/* Shared Folder */
+"FOLDER_MISSING_TITLE" = "Dossier introuvable";
+"FOLDER_MISSING_BODY" = "Le dossier partagé configuré n'existe plus : %@. Le paramètre a été réinitialisé.";
+"SELECT_SHARED_FOLDER" = "Sélectionner le dossier partagé";
+"SELECT_FOLDER_BUTTON" = "Sélectionner le dossier...";
+"SHOW_IN_FINDER" = "Afficher dans le Finder";
+
+/* HUD */
+"CLIPBOARD_SENT" = "Copié dans le cloud";
+"SCREENSHOT_SENT" = "Image transférée";
+
+/* Settings Addition */
+"HOTKEYS" = "Raccourcis clavier";
+"HOTKEY_QUICK_SEND" = "Envoi rapide";
+"HOTKEY_PUSH_CLIPBOARD" = "Presse-papiers";
+"HOTKEY_CAMERA" = "Caméra (Prendre une photo)";
+"HOTKEY_SCREENSHOT_FULL" = "Capture plein écran";
+"HOTKEY_SCREENSHOT_AREA" = "Capture de zone";
+
+/* Metadata View */
+"LAST_METADATA" = "Dernières métadonnées";
+"EXTENDED_CONTEXT" = "Contexte étendu";
+"EXTENDED_CONTEXT_DESC" = "Inclut la télémétrie (batterie, appareil) pour un traitement plus précis.";
+"EXTENDED_CONTEXT_HELP" = "Lorsque activé, l'agent voit des détails supplémentaires sur votre contexte (ex. niveau de batterie).";
+"EXTENDED_CONTEXT_DISABLED" = "Contexte étendu désactivé.";
+"METADATA_VIEW_DESC" = "Ces données seront incluses dans la prochaine transmission.";
+
+/* Updates */
+"UPDATES" = "Mises à jour";
+"CHECK_NOW" = "Vérifier maintenant";
+"INSTALL_VERSION %@" = "Installer %@";
+"UPDATE_AVAILABLE %@" = "Mise à jour disponible : %@";
+"NO_UPDATES" = "Clawsy est à jour.";
+"CHECKING" = "Vérification…";
+"CURRENT_VERSION %@" = "Installé : %@";
+
+/* SSH Key */
+"IMPORT_SSH_KEY" = "Importer…";
+"REMOVE_SSH_KEY" = "Supprimer";
+"KEY_INSTALLED" = "Clé : installée";
+"KEY_NOT_SET" = "Clé : non définie";
+
+/* Quick Send */
+"SEND" = "Envoyer";
+"CANCEL" = "Annuler";
+
+/* Node Pairing */
+"STATUS_PAIRING" = "Appairage…";
+"STATUS_PAIRING_PENDING" = "En attente d'approbation…";
+"STATUS_PAIRING_REJECTED" = "Appairage rejeté";
+"STATUS_PAIRING_TIMEOUT" = "Délai d'appairage dépassé";
+"STATUS_AWAITING_PAIR_APPROVE" = "En attente d'approbation…";
+"PAIRING_REQUIRED_TITLE" = "Approbation d'appairage nécessaire";
+"PAIRING_REQUIRED_DESC" = "Exécutez cette commande sur votre serveur :";
+"PAIRING_REQUIRED_HINT" = "Le serveur doit approuver cet appareil avant la connexion.";
+"PAIRING_COPY_CMD" = "Copier";
+"PAIRING_COPIED" = "Copié !";
+
+"MISSION_CONTROL_TITLE" = "Aperçu des tâches";
+"MISSION_CONTROL_TITLE_COUNT" = "Aperçu des tâches (%d)";
+"MISSION_CONTROL_ALL_PAUSED" = "Toutes les tâches en pause";
+"MISSION_CONTROL_COMPLETE" = "Terminé";
+"WAITING_FOR_TASKS" = "En attente de tâches…";
+
+/* Share Extension */
+"SHARE_ERROR_NO_DATA" = "Aucun contenu à partager.";
+"SHARE_ERROR_SEND_FAILED" = "Échec de l'envoi à OpenClaw. Vérifiez vos paramètres de connexion.";
+
+/* FinderSync Extension */
+"FINDERSYNC_RULES" = "Règles pour ce dossier…";
+"FINDERSYNC_SEND_STATUS" = "Envoyer le statut et la télémétrie";
+"FINDERSYNC_RUN_ACTIONS" = "Exécuter les actions du dossier";
+
+/* Rule Editor */
+"RULE_EDITOR_TITLE" = "Règles du dossier";
+"RULE_EDITOR_EMPTY" = "Aucune règle";
+"RULE_EDITOR_EMPTY_HINT" = "Ajoutez une règle pour déclencher des actions sur les événements de fichiers.";
+"RULE_ADD" = "Ajouter une règle";
+"RULE_COUNT %lld" = "%lld règle(s)";
+"RULE_NEW" = "Nouvelle règle";
+"RULE_EDIT" = "Modifier la règle";
+"RULE_TRIGGER" = "Déclencheur";
+"RULE_TRIGGER_FILE_ADDED" = "Fichier ajouté";
+"RULE_TRIGGER_FILE_CHANGED" = "Fichier modifié";
+"RULE_TRIGGER_MANUAL" = "Manuel";
+"RULE_ACTION" = "Action";
+"RULE_ACTION_SEND_TO_AGENT" = "Envoyer à l'agent";
+"RULE_ACTION_NOTIFY" = "Notification";
+"RULE_PROMPT_PREFIX" = "Préfixe du prompt (optionnel)";
+"RULE_SAVE" = "Enregistrer";
+
+/* Onboarding */
+"SETUP" = "Assistant de configuration";
+"ONBOARDING_TITLE" = "Bienvenue dans Clawsy";
+"ONBOARDING_SUBTITLE" = "Quelques étapes pour tirer le meilleur de Clawsy.";
+"ONBOARDING_APP_LOCATION" = "Emplacement de l'app";
+"ONBOARDING_APP_LOCATION_DESC" = "Clawsy doit être dans /Applications pour que les extensions fonctionnent.";
+"ONBOARDING_MOVE_TO_APPS" = "Afficher dans le Finder";
+"ONBOARDING_ACCESSIBILITY" = "Accessibilité";
+"ONBOARDING_ACCESSIBILITY_DESC" = "Nécessaire pour les raccourcis globaux (Envoi rapide, Presse-papiers).";
+"ONBOARDING_OPEN_SETTINGS" = "Accorder l'accès";
+"ONBOARDING_FINDERSYNC" = "Extension Finder";
+"ONBOARDING_FINDERSYNC_DESC" = "Ajoute 'Envoyer à l'agent' au menu contextuel du Finder. Nécessite une activation manuelle dans les Réglages Système.";
+"ONBOARDING_ENABLE" = "Activer";
+"ONBOARDING_OPTIONAL" = "optionnel";
+"ONBOARDING_SKIP" = "Plus tard";
+"ONBOARDING_DONE" = "Terminé";
+"RULE_NOTIFY_TITLE" = "Règle Clawsy déclenchée";
+"ONBOARDING_ACCESSIBILITY_RESTART_HINT" = "Clawsy est activé dans Accessibilité ✓ — un redémarrage est nécessaire pour que la permission prenne effet.";
+"ONBOARDING_RESTART" = "Redémarrer maintenant";
+"ONBOARDING_ACCESSIBILITY_SKIP_RESTART" = "J'ai accordé l'accès, passer le redémarrage →";
+"MISSION_CONTROL_EMPTY" = "Aucune tâche active";
+"MISSION_CONTROL_EMPTY_HINT" = "Quand votre assistant travaille sur quelque chose, cela apparaîtra ici.";
+"FILESYNC_TITLE" = "Demande d'accès aux fichiers";
+"FILESYNC_WINDOW_TITLE" = "Clawsy — Accès aux fichiers";
+"OP_UPLOAD" = "Envoyer";
+"OP_DOWNLOAD" = "Télécharger";
+"OP_DELETE" = "Supprimer";
+"AGENT_WANTS_TO_OP" = "L'agent veut %@ le fichier « %@ ».";
+"FILENAME_AGENT_STATUS" = "Statut de l'agent (interne)";
+"ALLOW_LIMITED" = "Autoriser pour…";
+"ALLOW_UPLOAD" = "Autoriser l'envoi";
+"ALLOW_DOWNLOAD" = "Autoriser le téléchargement";
+"ALLOW_DELETE" = "Autoriser la suppression";
+"ALLOW_GENERIC" = "Autoriser";
+
+"ACCESSIBILITY_GRANTED" = "Accessibilité accordée";
+"GRANT_ACCESSIBILITY" = "Accorder l'accessibilité";
+"ONBOARDING_FINDERSYNC_HINT" = "Ouvrir Réglages Système → Général → Ouverture et extensions → défiler jusqu'à Extensions du Finder → activer Clawsy";
+
+// Multi-host management
+"HOSTS" = "Hôtes";
+"ADD_HOST" = "Ajouter un hôte";
+"ACTIVE" = "Actif";
+"HOST_NAME" = "Nom";
+"HOST_COLOR" = "Couleur";
+"HOST_IDENTITY" = "Identité";
+"ADD_HOST_TITLE" = "Ajouter un nouvel hôte";
+"ADD_HOST_SAVE" = "Ajouter l'hôte";
+"DELETE_HOST_TITLE %@" = "Supprimer « %@ » ?";
+"DELETE_HOST_CONFIRM" = "Supprimer";
+"DELETE_HOST_MESSAGE" = "Cela déconnectera et supprimera définitivement cette configuration d'hôte.";
+
+// Re-Pair Connection
+"REPAIR_CONNECTION" = "Ré-appairer l'appareil";
+"REPAIR_CONNECTION_HELP" = "Utilisez si la connexion est rejetée après un redémarrage du gateway. Efface le token de l'appareil et initie un nouvel appairage.";
+
+// Settings tabs
+"SETTINGS_TAB_CONNECTION" = "Connexion";
+"SETTINGS_TAB_FEATURES" = "Fonctionnalités";
+"SETTINGS_TAB_UPDATES" = "Mises à jour";
+
+// HUD keys
+"SCREENSHOT_FAILED" = "Capture d'écran échouée";
+"CAPTURE_FAILED" = "Capture échouée";
+"PHOTO_SENT" = "Photo envoyée";
+
+"STATUS_RECONNECT_WAITING" = "Reconnexion...";
+"STATUS_RECONNECTING" = "Reconnexion…";
+"STATUS_RECONNECT_EXHAUSTED" = "Connexion échouée";
+
+// Onboarding – Share Extension
+"ONBOARDING_SHARE" = "Extension de partage";
+"ONBOARDING_SHARE_DESC" = "Utilisez le menu Partager dans n'importe quelle app pour envoyer des fichiers ou du texte directement à votre agent. Disponible automatiquement quand Clawsy est dans /Applications.";
+"ONBOARDING_SHARE_ACTION" = "Compris";
+
+// Onboarding – Server Setup
+"ONBOARDING_SERVER" = "Configuration du serveur";
+"ONBOARDING_SERVER_DESC" = "Votre agent a besoin de composants côté serveur pour mettre en cache les événements presse-papiers et captures d'écran. Appuyez pour copier un prompt de configuration — collez-le à votre agent via le chat.";
+"ONBOARDING_SERVER_COPY" = "Copier le prompt de configuration";
+"ONBOARDING_SERVER_DONE" = "Terminé";
+
+// Server Probe Detection
+"SERVER_SETUP_NEEDED_TITLE" = "Gateway OpenClaw injoignable";
+"SERVER_SETUP_NEEDED_DESC" = "Impossible de se connecter au Gateway OpenClaw. Assurez-vous qu'OpenClaw est installé et que le gateway est en cours d'exécution sur votre serveur.";
+"SERVER_SETUP_COPY_PROMPT" = "Copier le prompt d'installation";
+"SERVER_SETUP_PROMPT_COPIED" = "Copié !";
+
+// Gateway Connection (Onboarding Step 0)
+"ONBOARDING_GATEWAY_TITLE" = "Connexion au Gateway";
+"ONBOARDING_GATEWAY_DESC" = "Connectez Clawsy à votre instance OpenClaw. Ceci est nécessaire pour que tout fonctionne.";
+"ONBOARDING_GATEWAY_CONNECTED" = "Connecté ✓";
+"ONBOARDING_GATEWAY_ASK_AGENT" = "Le plus simple : demandez à votre agent";
+"ONBOARDING_GATEWAY_ASK_AGENT_DESC" = "Envoyez exactement ce message à votre agent via Telegram, Slack ou tout autre canal :";
+"ONBOARDING_GATEWAY_CODE_PLACEHOLDER" = "Collez le code de configuration ici…";
+"ONBOARDING_GATEWAY_CONNECT" = "Connecter";
+"ONBOARDING_GATEWAY_CODE_ERROR" = "Code de configuration invalide. Demandez à votre agent d'en générer un nouveau.";
+"ONBOARDING_GATEWAY_MANUAL" = "Saisir l'hôte et le token manuellement →";
+
+// Server Install Flow (Onboarding Step 0)
+"ONBOARDING_INSTALL_SUBTITLE" = "Envoyez cette commande à votre agent pour installer le serveur Clawsy.";
+"ONBOARDING_INSTALL_STEP1" = "1. Copiez cette commande et envoyez-la à votre agent (Telegram, Slack, etc.) :";
+"ONBOARDING_INSTALL_STEP2" = "2. Votre agent installera Clawsy et vous enverra un lien à cliquer.";
+"ONBOARDING_INSTALL_SENT" = "Je l'ai envoyé — en attente du lien";
+"ONBOARDING_INSTALL_WAITING" = "En attente du lien de votre agent…";
+"ONBOARDING_INSTALL_WAITING_HINT" = "Cliquez sur le lien clawsy:// que votre agent vous envoie. Clawsy se connectera automatiquement.";
+"ONBOARDING_INSTALL_BACK" = "← Retour";
+"ONBOARDING_GATEWAY_HAVE_CODE" = "Vous avez déjà un code ? →";
+
+// v0.9.3
+"ONBOARDING_INSTALL_PROMPT_FULL" = "Veuillez installer le serveur Clawsy sur cette instance OpenClaw :\n\ncurl -fsSL https://raw.githubusercontent.com/iret77/clawsy/main/server/install.sh | bash\n\nLe script configurera tout et vous enverra automatiquement un lien de configuration via votre canal de messagerie habituel (Telegram, Slack, etc.). Cliquez sur ce lien sur votre Mac pour vous connecter.";
+"ONBOARDING_INSTALL_CASE_B_SUBTITLE" = "Connecté, mais le serveur Clawsy n'est pas encore installé.";
+
+// Host setup mode selection
+"ADD_HOST_MODE_TITLE" = "Comment voulez-vous vous connecter ?";
+"ADD_HOST_MODE_MANUAL" = "Configurer manuellement";
+"ADD_HOST_MODE_MANUAL_DESC" = "Saisir l'hôte, le port et le token directement";
+"ADD_HOST_MODE_AGENT" = "Demander à mon agent";
+"ADD_HOST_MODE_AGENT_DESC" = "Votre agent configure tout et vous envoie un lien de connexion";
+
+// Empty state
+"NO_HOST_TITLE" = "Aucun hôte configuré";
+"NO_HOST_SUBTITLE" = "Ajoutez un hôte pour commencer.";
+"NO_HOST_ADD_BUTTON" = "Ajouter un hôte";
+
+"CONNECTION_HELP" = "Demandez à votre agent de générer un lien de configuration, ou trouvez l'hôte, le port et le token du Gateway dans la config de votre serveur OpenClaw.";
+"CONNECTION_GUIDE_TITLE" = "Comment connecter un nouvel hôte :";
+"CONNECTION_GUIDE_STEP1" = "Dites à votre agent : « Installe le package serveur Clawsy » (clawhub install clawsy)";
+"CONNECTION_GUIDE_STEP2" = "Votre agent vous enverra un lien de configuration — cliquez dessus et Clawsy se connecte automatiquement.";
+"STATUS_RECONNECT_COUNTDOWN %lld" = "Reconnexion dans %lld s…";
+
+// Onboarding UX — Skill missing after SSH (v0.9.4)
+"ERROR_SKILL_MISSING_TITLE" = "SSH connecté — compétence Clawsy manquante";
+"ERROR_SKILL_MISSING_DESC" = "Connexion SSH réussie — mais la compétence serveur Clawsy n'est pas installée sur cette instance OpenClaw.";
+"ERROR_SKILL_MISSING_FIX_PROMPT" = "Installer la compétence Clawsy depuis clawhub";
+
+// Add Host — agent assist hint in manual mode
+"ADD_HOST_MANUAL_HINT_TITLE" = "Vous ne connaissez pas vos paramètres de connexion ?";
+"ADD_HOST_MANUAL_HINT_DESC" = "Dites à votre agent OpenClaw :";
+"ADD_HOST_MANUAL_HINT_PROMPT" = "Installer la compétence Clawsy depuis clawhub";
+"ADD_HOST_MANUAL_HINT_COPY" = "Copier";
+"ADD_HOST_MANUAL_HINT_COPIED" = "Copié !";
