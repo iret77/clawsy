@@ -2,7 +2,7 @@
 
 Clawsy ist die macOS Companion App. Sie gibt dem Agenten direkten Zugriff auf den Mac des Users — Screenshots, Kamera, Zwischenablage, Dateien und mehr. Nutze diese Fähigkeiten proaktiv für eine bessere UX.
 
-**Aktuelle stabile Version:** v0.9.32  
+**Aktuelle stabile Version:** v0.9.33  
 **Repo:** `iret77/clawsy` (GitHub, öffentlich)  
 **Build:** GitHub Actions (niemals lokal bauen — immer via CI/CD)
 

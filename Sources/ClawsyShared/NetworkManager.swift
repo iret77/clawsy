@@ -1218,7 +1218,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                      self.disconnectReason = nil  // Session is live — reset for future disconnect classification
                      self.onHandshakeComplete?()
                      
-                     // Store deviceToken from hello-ok if present
+                     // Store deviceToken from hello-ok if present.
+                     // NOTE: deviceToken is for node pairing identity only — NOT for gateway auth.
+                     // Gateway auth always uses serverToken (gateway.auth.token). See performHandshake().
                      if let result = json["result"] as? [String: Any],
                         let auth = result["auth"] as? [String: Any],
                         let dt = auth["deviceToken"] as? String {
@@ -1388,7 +1390,10 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         let tsMs = Int64(Date().timeIntervalSince1970 * 1000)
         let deviceId = self.deviceId
         
-        let authToken = deviceToken ?? serverToken
+        // deviceToken is for node pairing, NOT gateway auth.
+        // Using deviceToken here caused AUTH_TOKEN_MISMATCH on reconnect
+        // for non-Tailscale connections (SSH tunnel, direct WSS).
+        let authToken = serverToken
         let scopesString = Self.connectScopes.joined(separator: ",")
         
         // Protocol V2: version|deviceId|clientId|clientMode|role|scopes|ts|token|nonce
