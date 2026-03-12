@@ -33,7 +33,6 @@ struct ContentView: View {
     @AppStorage("sshUser", store: SharedConfig.sharedDefaults) private var sshUser = ""
     @AppStorage("useSshFallback", store: SharedConfig.sharedDefaults) private var useSshFallback = true
     @AppStorage("sharedFolderPath", store: SharedConfig.sharedDefaults) private var sharedFolderPath = "~/Documents/Clawsy"
-    @AppStorage("extendedContextEnabled", store: SharedConfig.sharedDefaults) private var extendedContextEnabled = false
     
     @State private var fileWatcher: FileWatcher?
     @State private var agentModel: String? = nil
@@ -307,7 +306,7 @@ struct ContentView: View {
                     Color.clear
                         .popover(isPresented: $showingMetadata, arrowEdge: .trailing) {
                             if let nm = network {
-                                MetadataView(network: nm, isPresented: $showingMetadata)
+                                MetadataView(network: nm, hostManager: hostManager, isPresented: $showingMetadata)
                                     .frame(width: 350, height: 320)
                             }
                         }
@@ -557,7 +556,7 @@ struct ContentView: View {
                 "content": content
             ]
             
-            if SharedConfig.extendedContextEnabled {
+            if activeNM.extendedContextEnabled {
                 envelopeData["telemetry"] = NetworkManager.getTelemetry()
             }
 
@@ -861,6 +860,7 @@ struct DebugLogView: View {
 
 struct MetadataView: View {
     @ObservedObject var network: NetworkManager
+    @ObservedObject var hostManager: HostManager
     @Binding var isPresented: Bool
     
     func moodString(for score: Double) -> String {
@@ -898,7 +898,7 @@ struct MetadataView: View {
                     MetadataRow(label: "Local Time", value: ISO8601DateFormatter().string(from: Date()))
                     MetadataRow(label: "Timezone", value: TimeZone.current.identifier)
                     
-                    if SharedConfig.extendedContextEnabled {
+                    if hostManager.activeNetworkManager?.extendedContextEnabled ?? SharedConfig.extendedContextEnabled {
                         Divider().padding(.vertical, 4).opacity(0.3)
                         Text(l10n: "EXTENDED_CONTEXT")
                             .font(.system(size: 10, weight: .bold))
@@ -988,8 +988,7 @@ struct SettingsView: View {
     @State private var showDeleteConfirm = false
     @State private var selectedTab = 0
 
-    // Non-host global settings (shared across all hosts)
-    @AppStorage("extendedContextEnabled", store: SharedConfig.sharedDefaults) private var extendedContextEnabled = false
+    // Global settings (shared across all hosts — hotkeys are device-level, not per-host)
     @AppStorage("quickSendHotkey", store: SharedConfig.sharedDefaults) private var quickSendHotkey = "K"
     @AppStorage("pushClipboardHotkey", store: SharedConfig.sharedDefaults) private var pushClipboardHotkey = "V"
     @AppStorage("cameraHotkey", store: SharedConfig.sharedDefaults) private var cameraHotkey = "P"
@@ -1015,6 +1014,7 @@ struct SettingsView: View {
             legacySshUser = editedProfile.sshUser
             legacyUseSshFallback = editedProfile.useSshFallback
             legacySharedFolderPath = editedProfile.sharedFolderPath
+            SharedConfig.sharedDefaults.set(editedProfile.extendedContextEnabled, forKey: "extendedContextEnabled")
         } else {
             // Ensure name falls back to host if blank
             if editedProfile.name.trimmingCharacters(in: .whitespaces).isEmpty {
@@ -1361,7 +1361,7 @@ struct SettingsView: View {
                                 .help(NSLocalizedString("EXTENDED_CONTEXT_HELP", bundle: .clawsy, comment: ""))
 
                                 Spacer()
-                                Toggle("", isOn: $extendedContextEnabled)
+                                Toggle("", isOn: $editedProfile.extendedContextEnabled)
                                     .toggleStyle(.switch)
                                     .scaleEffect(0.7)
                             }
@@ -1646,7 +1646,8 @@ struct SettingsView: View {
                     serverToken: legacyServerToken,
                     sshUser: legacySshUser,
                     useSshFallback: legacyUseSshFallback,
-                    sharedFolderPath: legacySharedFolderPath
+                    sharedFolderPath: legacySharedFolderPath,
+                    extendedContextEnabled: SharedConfig.extendedContextEnabled
                 )
             }
         }

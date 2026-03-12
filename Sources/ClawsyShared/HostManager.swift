@@ -108,6 +108,7 @@ public class HostManager: ObservableObject {
             defaults.set(active.sshUser, forKey: "sshUser")
             defaults.set(active.useSshFallback, forKey: "useSshFallback")
             defaults.set(active.sharedFolderPath, forKey: "sharedFolderPath")
+            defaults.set(active.extendedContextEnabled, forKey: "extendedContextEnabled")
             defaults.synchronize()
         }
     }
@@ -128,6 +129,7 @@ public class HostManager: ObservableObject {
             return defaults.bool(forKey: "useSshFallback")
         }()
         let legacyFolder = defaults.string(forKey: "sharedFolderPath") ?? "~/Documents/Clawsy"
+        let legacyExtendedContext = defaults.bool(forKey: "extendedContextEnabled")
 
         let profile = HostProfile(
             name: legacyHost,
@@ -137,7 +139,8 @@ public class HostManager: ObservableObject {
             sshUser: legacySshUser,
             useSshFallback: legacyFallback,
             color: HostProfile.defaultColors[0],
-            sharedFolderPath: legacyFolder
+            sharedFolderPath: legacyFolder,
+            extendedContextEnabled: legacyExtendedContext
         )
 
         profiles = [profile]

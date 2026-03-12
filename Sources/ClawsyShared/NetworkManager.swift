@@ -148,6 +148,11 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         hostProfile?.sharedFolderPath ?? (SharedConfig.sharedDefaults.string(forKey: "sharedFolderPath") ?? "~/Documents/Clawsy")
     }
     
+    /// Whether to include telemetry in envelopes — per-host when profile exists, global fallback otherwise.
+    public var extendedContextEnabled: Bool {
+        hostProfile?.extendedContextEnabled ?? SharedConfig.extendedContextEnabled
+    }
+    
     // Device token for node pairing (per-host)
     private var deviceTokenKey: String { "clawsy_device_token_\(serverHost)" }
     private var deviceToken: String? {
@@ -270,11 +275,16 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
     
     public func configure(host: String, port: String, token: String, sshUser: String? = nil, fallback: Bool? = nil) {
-        SharedConfig.save(host: host, port: port, token: token)
-        if let user = sshUser { SharedConfig.sharedDefaults.set(user, forKey: "sshUser") }
-        if let fback = fallback { SharedConfig.sharedDefaults.set(fback, forKey: "useSshFallback") }
-        
-        SharedConfig.sharedDefaults.synchronize()
+        // Only write to SharedConfig globals in legacy (no hostProfile) mode.
+        // In multi-host mode the HostProfile is the source of truth; writing
+        // globals here would let the last-connected host overwrite the active
+        // host's values, breaking FinderSync / Share extension reads.
+        if hostProfile == nil {
+            SharedConfig.save(host: host, port: port, token: token)
+            if let user = sshUser { SharedConfig.sharedDefaults.set(user, forKey: "sshUser") }
+            if let fback = fallback { SharedConfig.sharedDefaults.set(fback, forKey: "useSshFallback") }
+            SharedConfig.sharedDefaults.synchronize()
+        }
         os_log("Configured with Host: %{public}@, Port: %{public}@", log: logger, type: .info, host, port)
     }
 
