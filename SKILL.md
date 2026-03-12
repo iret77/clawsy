@@ -110,6 +110,10 @@ bash scripts/clawsy-pair.sh
 | **File List** | `file.list` | List files in the shared folder |
 | **File Read** | `file.get` | Read a file from the shared folder |
 | **File Write** | `file.set` | Write a file to the shared folder |
+| **File Copy** | `file.copy` | Copy files (supports glob patterns like `*.jpg`) |
+| **File Stat** | `file.stat` | Get file metadata (size, dates, type) |
+| **File Exists** | `file.exists` | Quick existence check |
+| **File Batch** | `file.batch` | Multiple file ops in a single call |
 | **Location** | `location.get` | Get device location |
 | **Mission Control** | via `agent.status` | Show live task progress in Clawsy UI |
 | **Quick Send** | incoming | Receive text from user via `⌘⇧K` hotkey |
@@ -157,6 +161,55 @@ nodes(action="invoke", invokeCommand="location.get")
 ```
 
 > **Note:** All commands that access user data (screenshot, clipboard, camera, files) require user approval on the Mac side. The user sees a permission dialog and can allow once, allow for 1 hour, or deny.
+
+### New File Commands (v0.10+)
+
+```python
+# Copy a file
+nodes(action="invoke", invokeCommand="file.copy",
+      invokeParamsJson='{"source": "report.pdf", "destination": "archive/report.pdf"}')
+
+# Copy with glob pattern — destination must be a directory
+nodes(action="invoke", invokeCommand="file.copy",
+      invokeParamsJson='{"source": "*.jpg", "destination": "photos/"}')
+
+# Rename a file (newName = filename only, no path)
+nodes(action="invoke", invokeCommand="file.rename",
+      invokeParamsJson='{"path": "old-name.txt", "newName": "new-name.txt"}')
+
+# File stat — get metadata
+nodes(action="invoke", invokeCommand="file.stat",
+      invokeParamsJson='{"path": "report.pdf"}')
+# → {"exists": true, "isDirectory": false, "size": 12345, "modified": "2026-...", "created": "2026-..."}
+
+# File exists — quick check
+nodes(action="invoke", invokeCommand="file.exists",
+      invokeParamsJson='{"path": "photos/cover.jpg"}')
+# → {"exists": true, "isDirectory": false}
+
+# Delete with glob
+nodes(action="invoke", invokeCommand="file.delete",
+      invokeParamsJson='{"name": "tmp_*"}')
+# → {"status": "ok", "matched": 3, "success": 3, "errors": []}
+
+# Move with glob
+nodes(action="invoke", invokeCommand="file.move",
+      invokeParamsJson='{"source": "*.jpg", "destination": "photos/"}')
+
+# Batch operations — multiple ops in one call
+nodes(action="invoke", invokeCommand="file.batch",
+      invokeParamsJson='{"ops": [{"op": "copy", "src": "cover.png", "dst": "archive/cover-bak.png"}, {"op": "delete", "src": "tmp_*"}, {"op": "mkdir", "dst": "new-folder/"}, {"op": "rename", "path": "old.txt", "newName": "new.txt"}, {"op": "stat", "path": "photos/"}]}')
+```
+
+### Glob Pattern Support
+
+Commands `file.move`, `file.copy`, and `file.delete` support glob patterns:
+- `*` matches any characters (except `/`)
+- `?` matches exactly one character
+- Examples: `*.jpg`, `tmp_*`, `photo?.png`
+- For move/copy with globs: destination must be a directory
+- All matched paths are validated against the sandbox
+- Response includes `matched`, `success`, and `errors` counts
 
 ---
 
@@ -369,6 +422,42 @@ Mac (Clawsy) ─── WSS ───▶ OpenClaw Gateway (Port 18789)
 | **FinderSync** | System Settings → Privacy → Extensions → Finder |
 | **Share Extension** | App must be in `/Applications` |
 | **Global Hotkeys** | System Settings → Privacy → Accessibility |
+
+---
+
+## Gateway allowCommands Sync
+
+The OpenClaw Gateway has a `gateway.nodes.allowCommands` config that restricts which commands nodes can execute. Clawsy sends its full command list during the hello handshake (the `commands` array in the connect request).
+
+### After Pairing a New Clawsy Node
+
+The gateway **may** need its `allowCommands` updated to include the new file commands. **Do NOT modify gateway config automatically** — this is a security-sensitive setting.
+
+Instead, check and suggest:
+
+```bash
+# Check current allowCommands
+cat ~/.openclaw/openclaw.json | python3 -c "
+import json, sys
+cfg = json.load(sys.stdin)
+allowed = cfg.get('gateway', {}).get('nodes', {}).get('allowCommands', [])
+print('Current allowCommands:', allowed if allowed else '(not set = all allowed)')
+"
+```
+
+If `allowCommands` is set (non-empty array), the following commands need to be included for full Clawsy functionality:
+
+```
+clipboard.read, clipboard.write, screen.capture, camera.list, camera.snap,
+file.list, file.get, file.set, file.get.chunk, file.set.chunk,
+file.delete, file.rename, file.move, file.copy, file.mkdir, file.rmdir,
+file.stat, file.exists, file.batch,
+location.get, location.start, location.stop, location.add_smart
+```
+
+If `allowCommands` is empty or not set, all commands are allowed by default — no action needed.
+
+> **Security note:** Always show the user what commands will be allowed and get confirmation before suggesting any config changes.
 
 ---
 

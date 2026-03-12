@@ -11,6 +11,8 @@
 "NOTIFICATION_TITLE" = "Clawsy Sincronización";
 "NOTIFICATION_BODY_DOWNLOADING" = "Descargando: %@";
 "NOTIFICATION_BODY_UPLOADING" = "Subiendo: %@";
+"NOTIFICATION_BODY_COPYING" = "Copiando: %@";
+"NOTIFICATION_BODY_BATCH" = "Operación por lotes: %@ ops";
 "REVOKE_PERMISSION" = "Revocar acceso";
 "CLIPBOARD_SYNC" = "Sincronización de portapapeles";
 "CHAR_COUNT %lld" = "%lld caracteres";
