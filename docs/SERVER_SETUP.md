@@ -133,6 +133,15 @@ Once connected, the agent uses the `nodes` tool to interact with Clawsy:
 | `file.list` | List shared folder contents |
 | `file.get` | Read a file |
 | `file.set` | Write a file |
+| `file.move` | Move/rename a file (supports glob patterns) |
+| `file.copy` | Copy a file (supports glob patterns) |
+| `file.rename` | Rename a file (name only, no path change) |
+| `file.stat` | Get file metadata (size, dates, type) |
+| `file.exists` | Check if a file exists |
+| `file.batch` | Execute multiple file operations atomically |
+| `file.delete` | Delete a file (supports glob patterns) |
+| `file.mkdir` | Create a directory |
+| `file.rmdir` | Remove a directory |
 | `location.get` | Get device location |
 
 All user-data commands require approval on the Mac side.

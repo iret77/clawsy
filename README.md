@@ -281,9 +281,25 @@ nodes(action="invoke", invokeCommand="file.get",
 # Write a file
 nodes(action="invoke", invokeCommand="file.set",
       invokeParamsJson='{"name": "notes.txt", "content": "<base64>"}')
+
+# Move, copy, rename files
+nodes(action="invoke", invokeCommand="file.move",
+      invokeParamsJson='{"source": "old.txt", "destination": "new.txt"}')
+nodes(action="invoke", invokeCommand="file.copy",
+      invokeParamsJson='{"source": "a.txt", "destination": "b.txt"}')
+nodes(action="invoke", invokeCommand="file.rename",
+      invokeParamsJson='{"path": "old-name.txt", "newName": "new-name.txt"}')
+
+# File info and batch operations
+nodes(action="invoke", invokeCommand="file.stat",
+      invokeParamsJson='{"path": "report.pdf"}')
+nodes(action="invoke", invokeCommand="file.exists",
+      invokeParamsJson='{"path": "report.pdf"}')
+nodes(action="invoke", invokeCommand="file.batch",
+      invokeParamsJson='{"ops": [{"op": "copy", "source": "a.txt", "destination": "b.txt"}]}')
 ```
 
-Available commands: `screen.capture`, `clipboard.read`, `clipboard.write`, `camera.list`, `camera.snap`, `file.list`, `file.get`, `file.set`, `location.get`
+Available commands: `screen.capture`, `clipboard.read`, `clipboard.write`, `camera.list`, `camera.snap`, `file.list`, `file.get`, `file.set`, `file.get.chunk`, `file.set.chunk`, `file.move`, `file.copy`, `file.rename`, `file.stat`, `file.exists`, `file.batch`, `file.delete`, `file.rmdir`, `file.mkdir`, `location.get`
 
 > For complete agent integration docs, see [for-agents.md](for-agents.md) and [CLAWSY.md](CLAWSY.md).
 

@@ -4,7 +4,7 @@ If you are an OpenClaw agent, this file tells you how to integrate with Clawsy.
 
 ## What is Clawsy?
 
-Clawsy is a native macOS menu bar app (v0.9.17) that gives you direct access to your human's Mac:
+Clawsy is a native macOS menu bar app (v0.9.32) that gives you direct access to your human's Mac:
 
 - **Screenshots** — capture the full screen or a selected area
 - **Clipboard** — read/write clipboard content
@@ -133,9 +133,30 @@ nodes(action="invoke", invokeCommand="file.get",
       invokeParamsJson='{"name": "report.pdf"}')
 nodes(action="invoke", invokeCommand="file.set",
       invokeParamsJson='{"name": "output.txt", "content": "<base64>"}')
+nodes(action="invoke", invokeCommand="file.move",
+      invokeParamsJson='{"source": "old/file.txt", "destination": "new/file.txt"}')
+nodes(action="invoke", invokeCommand="file.copy",
+      invokeParamsJson='{"source": "original.txt", "destination": "backup.txt"}')
+nodes(action="invoke", invokeCommand="file.rename",
+      invokeParamsJson='{"path": "old-name.txt", "newName": "new-name.txt"}')
+nodes(action="invoke", invokeCommand="file.stat",
+      invokeParamsJson='{"path": "report.pdf"}')
+nodes(action="invoke", invokeCommand="file.exists",
+      invokeParamsJson='{"path": "report.pdf"}')
+nodes(action="invoke", invokeCommand="file.mkdir",
+      invokeParamsJson='{"name": "new-folder/subfolder"}')
+nodes(action="invoke", invokeCommand="file.delete",
+      invokeParamsJson='{"name": "old-file.txt"}')
+# Batch operations
+nodes(action="invoke", invokeCommand="file.batch",
+      invokeParamsJson='{"ops": [{"op": "copy", "source": "a.txt", "destination": "b.txt"}, {"op": "move", "source": "c.txt", "destination": "d.txt"}]}')
 ```
 
-Available commands: `screen.capture`, `clipboard.read`, `clipboard.write`, `camera.list`, `camera.snap`, `file.list`, `file.get`, `file.set`, `location.get`
+Available commands: `screen.capture`, `clipboard.read`, `clipboard.write`, `camera.list`, `camera.snap`, `file.list`, `file.get`, `file.set`, `file.get.chunk`, `file.set.chunk`, `file.move`, `file.copy`, `file.rename`, `file.stat`, `file.exists`, `file.batch`, `file.delete`, `file.rmdir`, `file.mkdir`, `location.get`
+
+**Glob patterns:** `file.move`, `file.copy`, `file.delete`, and `file.stat` support glob patterns (`*.txt`, `docs/*.pdf`) in the source/path parameter. Results include matched file count.
+
+**Path sandboxing:** All file operations are sandboxed to the shared folder. Path traversal attempts (e.g., `../../etc/passwd`) are rejected with error code `-32003`.
 
 > All commands that access user data require user approval on the Mac side.
 
@@ -150,7 +171,7 @@ When the user sends a message via `⌘⇧K`:
   "clawsy_envelope": {
     "type": "quick_send",
     "content": "The user's message",
-    "version": "0.9.17",
+    "version": "0.9.32",
     "localTime": "2026-03-04T10:30:00Z",
     "tz": "Europe/Berlin",
     "telemetry": {
