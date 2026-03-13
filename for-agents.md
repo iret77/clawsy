@@ -4,7 +4,7 @@ If you are an OpenClaw agent, this file tells you how to integrate with Clawsy.
 
 ## What is Clawsy?
 
-Clawsy is a native macOS menu bar app (v0.9.32) that gives you direct access to your human's Mac:
+Clawsy is a native macOS menu bar app (v0.9.33) that gives you direct access to your human's Mac:
 
 - **Screenshots** — capture the full screen or a selected area
 - **Clipboard** — read/write clipboard content
@@ -158,7 +158,7 @@ Available commands: `screen.capture`, `clipboard.read`, `clipboard.write`, `came
 
 **Path sandboxing:** All file operations are sandboxed to the shared folder. Path traversal attempts (e.g., `../../etc/passwd`) are rejected with error code `-32003`.
 
-> All commands that access user data require user approval on the Mac side.
+> Most commands that access user data require user approval on the Mac side. Note: clipboard.read currently has a known issue where it does not show an approval dialog (see #18).
 
 ---
 
@@ -171,7 +171,7 @@ When the user sends a message via `⌘⇧K`:
   "clawsy_envelope": {
     "type": "quick_send",
     "content": "The user's message",
-    "version": "0.9.32",
+    "version": "0.9.33",
     "localTime": "2026-03-04T10:30:00Z",
     "tz": "Europe/Berlin",
     "telemetry": {
