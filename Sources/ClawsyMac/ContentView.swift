@@ -667,10 +667,17 @@ struct ContentView: View {
         }
         
         nm.onClipboardReadRequested = { requestId in
-            if let content = ClipboardManager.getClipboardContent() {
-                nm.sendResponse(id: requestId, result: ["text": content])
-            } else {
-                nm.sendError(id: requestId, code: -1, message: "Clipboard empty or unavailable")
+            DispatchQueue.main.async {
+                let content = ClipboardManager.getClipboardContent() ?? ""
+                self.appDelegate.showClipboardRequest(content: content, direction: .read, onConfirm: {
+                    if let current = ClipboardManager.getClipboardContent() {
+                        nm.sendResponse(id: requestId, result: ["text": current])
+                    } else {
+                        nm.sendError(id: requestId, code: -1, message: "Clipboard empty or unavailable")
+                    }
+                }, onCancel: {
+                    nm.sendError(id: requestId, code: -1, message: "User denied clipboard read")
+                })
             }
         }
         
@@ -747,10 +754,17 @@ struct ContentView: View {
         }
         
         network.onClipboardReadRequested = { requestId in
-            if let content = ClipboardManager.getClipboardContent() {
-                network.sendResponse(id: requestId, result: ["text": content])
-            } else {
-                network.sendError(id: requestId, code: -1, message: "Clipboard empty or unavailable")
+            DispatchQueue.main.async {
+                let content = ClipboardManager.getClipboardContent() ?? ""
+                self.appDelegate.showClipboardRequest(content: content, direction: .read, onConfirm: {
+                    if let current = ClipboardManager.getClipboardContent() {
+                        network.sendResponse(id: requestId, result: ["text": current])
+                    } else {
+                        network.sendError(id: requestId, code: -1, message: "Clipboard empty or unavailable")
+                    }
+                }, onCancel: {
+                    network.sendError(id: requestId, code: -1, message: "User denied clipboard read")
+                })
             }
         }
         
