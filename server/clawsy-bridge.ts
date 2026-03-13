@@ -32,6 +32,16 @@ export default function (api: any) {
   const contextPath = join(workspaceDir, CONTEXT_FILE);
   try { mkdirSync(workspaceDir, { recursive: true }); } catch {}
 
+  // Resolve enqueueSystemEvent from runtime API for main-session nudges
+  const enqueueSystemEvent: ((text: string, opts: { sessionKey: string }) => boolean) | null =
+    typeof api.runtime?.system?.enqueueSystemEvent === "function"
+      ? api.runtime.system.enqueueSystemEvent
+      : null;
+
+  if (!enqueueSystemEvent) {
+    api.logger.warn("[clawsy-bridge] enqueueSystemEvent not available — nudges disabled");
+  }
+
   api.logger.info(`[clawsy-bridge] active — ${contextPath}`);
 
   api.registerGatewayMethod("node.event", ({ params }: any) => {
@@ -56,6 +66,17 @@ export default function (api: any) {
         default: ctx.raw = ring([...ctx.raw, entry], MAX_ENTRIES);
       }
       writeContext(contextPath, ctx);
+
+      // Nudge the main session so the agent knows new data arrived
+      if (enqueueSystemEvent) {
+        const mainSessionKey = "agent:main:slack:channel:c0ak476l97e";
+        const nudge = `[Clawsy] Neue Daten empfangen (${type}). Abrufen mit: sessions_history(sessionKey="clawsy-service", limit=1)`;
+        try {
+          enqueueSystemEvent(nudge, { sessionKey: mainSessionKey });
+        } catch (nudgeErr: any) {
+          api.logger.warn(`[clawsy-bridge] nudge failed: ${nudgeErr?.message}`);
+        }
+      }
     } catch (err: any) {
       api.logger.warn(`[clawsy-bridge] error: ${err?.message}`);
     }
