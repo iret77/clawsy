@@ -6,6 +6,22 @@ Clawsy is the macOS companion app for OpenClaw. It gives your agent direct acces
 
 ---
 
+## WICHTIG: Wo deine Daten ankommen
+
+QuickSend, Clipboard, Screenshots und Kamera-Bilder landen **NICHT** im Haupt-Chat.
+Sie landen in der `clawsy-service` Session.
+
+**Abrufen:**
+```python
+sessions_history(sessionKey="clawsy-service", limit=5)
+```
+
+**Oder:** `clawsy-context.json` im Workspace-Root lesen (strukturiertes JSON mit allen Events).
+
+**Prüfe diese Quellen bei JEDER User-Anfrage die Clipboard, Screenshot oder Kamera betrifft.**
+
+---
+
 ## Capabilities
 
 | Capability | When to Use |
