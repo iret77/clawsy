@@ -1,118 +1,187 @@
-# CLAWSY.md — Clawsy Mac Companion Integration Guide
+# CLAWSY.md — Clawsy Integration (v0.9.33)
 
-Clawsy is the macOS companion app for OpenClaw. It gives your agent direct access to the user's Mac — screenshots, camera, clipboard, files, and more.
+Clawsy is a macOS companion app for OpenClaw. It gives your agent access to the user's Mac: screenshots, clipboard, camera, files, and live task progress.
 
-**Repo:** [iret77/clawsy](https://github.com/iret77/clawsy) (GitHub, public)
+## Common Mistakes
 
----
-
-## WICHTIG: Wo deine Daten ankommen
-
-QuickSend, Clipboard, Screenshots und Kamera-Bilder landen **NICHT** im Haupt-Chat.
-Sie landen in der `clawsy-service` Session.
-
-**Abrufen:**
-```python
-sessions_history(sessionKey="clawsy-service", limit=5)
-```
-
-**Oder:** `clawsy-context.json` im Workspace-Root lesen (strukturiertes JSON mit allen Events).
-
-**Prüfe diese Quellen bei JEDER User-Anfrage die Clipboard, Screenshot oder Kamera betrifft.**
-
----
-
-## Capabilities
-
-| Capability | When to Use |
+| Mistake | Correct |
 |---|---|
-| **Screenshot** | When the user asks what's on screen, debug UI issues, visual feedback |
-| **Camera** | When user wants to show something, environment context |
-| **Clipboard Read** | When user says "check what I copied" or wants to share text |
-| **Clipboard Write** | Push code/text directly to their clipboard — very useful! |
-| **Quick Send** | Text sent directly to the agent (user types, you receive) |
-| **Files** | Read/write files in the configured shared folder |
-| **FinderSync** | Right-click folders → "Clawsy >" submenu → rules/telemetry/actions |
-
-**Rule:** If Clawsy is connected and it improves UX — use it. Don't ask for permission first.
+| `file.list` with `{"path": "."}` | `file.list` with **no params** (root) or `{"subPath": "folder/"}` |
+| `file.set` with plain text content | `file.set` content is **always Base64-encoded** |
+| `file.get` with `{"path": "..."}` | `file.get` uses `{"name": "filename.txt"}` |
+| `file.exists` with `{"name": "..."}` | `file.exists` uses `{"path": "filename.txt"}` |
+| `file.rename` moving to a new dir | `file.rename` changes name only (same dir); use `file.move` for paths |
+| Writing `.agent_status.json` to shared folder | Obsolete since v0.5.6 — use `agent.status` via `sessions_send` |
 
 ---
 
-## Commands (nodes tool)
+## File API Reference
 
-Clawsy registers as a `node`. Use the `nodes` tool:
+All file operations are sandboxed to the shared folder (default: `~/Documents/Clawsy`). Path traversal is rejected.
+
+### List Files
 
 ```python
-nodes(action="invoke", invokeCommand="screen.capture")
-nodes(action="invoke", invokeCommand="clipboard.read")
-nodes(action="invoke", invokeCommand="clipboard.write", invokeParamsJson='{"text":"..."}')
-nodes(action="invoke", invokeCommand="camera.snap", invokeParamsJson='{"facing":"front"}')
-nodes(action="invoke", invokeCommand="camera.list")
-nodes(action="invoke", invokeCommand="file.list", invokeParamsJson='{"path": "."}')
-nodes(action="invoke", invokeCommand="file.get", invokeParamsJson='{"name":"report.pdf"}')
-nodes(action="invoke", invokeCommand="file.set", invokeParamsJson='{"name":"notes.txt", "content":"<base64>"}')
-nodes(action="invoke", invokeCommand="location.get")
+# Root directory (NO parameters)
+nodes(action="invoke", invokeCommand="file.list")
+
+# Subdirectory
+nodes(action="invoke", invokeCommand="file.list",
+      invokeParamsJson='{"subPath": "reports/"}')
+
+# Recursive (all files, max depth 5)
+nodes(action="invoke", invokeCommand="file.list",
+      invokeParamsJson='{"recursive": true}')
 ```
 
-Available commands: `screen.capture`, `clipboard.read`, `clipboard.write`, `camera.list`, `camera.snap`, `file.list`, `file.get`, `file.set`, `location.get`
+### Read / Write Files
+
+```python
+# Read a file (returns base64-encoded content)
+nodes(action="invoke", invokeCommand="file.get",
+      invokeParamsJson='{"name": "report.pdf"}')
+
+# Write a file (content MUST be base64-encoded)
+nodes(action="invoke", invokeCommand="file.set",
+      invokeParamsJson='{"name": "output.txt", "content": "<base64-encoded>"}')
+```
+
+### Check / Inspect Files
+
+```python
+# Check if file exists → {"exists": true/false}
+nodes(action="invoke", invokeCommand="file.exists",
+      invokeParamsJson='{"path": "report.pdf"}')
+
+# Get metadata (size, dates, type; supports glob)
+nodes(action="invoke", invokeCommand="file.stat",
+      invokeParamsJson='{"path": "report.pdf"}')
+```
+
+### Create / Delete
+
+```python
+# Create directory (creates intermediate dirs)
+nodes(action="invoke", invokeCommand="file.mkdir",
+      invokeParamsJson='{"name": "folder/subfolder"}')
+
+# Delete file or directory
+nodes(action="invoke", invokeCommand="file.delete",
+      invokeParamsJson='{"name": "old-file.txt"}')
+
+# Remove directory (including non-empty)
+nodes(action="invoke", invokeCommand="file.rmdir",
+      invokeParamsJson='{"name": "old-folder"}')
+```
+
+### Move / Copy / Rename
+
+```python
+# Move (supports glob in source)
+nodes(action="invoke", invokeCommand="file.move",
+      invokeParamsJson='{"source": "old/path.txt", "destination": "new/path.txt"}')
+
+# Copy (supports glob in source)
+nodes(action="invoke", invokeCommand="file.copy",
+      invokeParamsJson='{"source": "original.txt", "destination": "backup.txt"}')
+
+# Rename (name only, same directory)
+nodes(action="invoke", invokeCommand="file.rename",
+      invokeParamsJson='{"path": "old-name.txt", "newName": "new-name.txt"}')
+```
+
+### Batch Operations
+
+```python
+nodes(action="invoke", invokeCommand="file.batch",
+      invokeParamsJson='{"ops": [{"op": "copy", "source": "a.txt", "destination": "b.txt"}, {"op": "move", "source": "c.txt", "destination": "d.txt"}]}')
+```
+
+### Large Files (> 200 KB)
+
+Use `file.get.chunk` / `file.set.chunk` for reliable chunked transfers. See SKILL.md for details.
+
+---
+
+## Mission Control Protocol
+
+Clawsy displays agent status in its Mission Control UI via WebSocket events.
+
+### agent.info — Header Identity (send on session start + every heartbeat, TTL: 45 min)
+
+```python
+sessions_send(sessionKey="clawsy-service", timeoutSeconds=3,
+  message='{"kind":"agent.info","payload":{"agentName":"<AGENT_NAME>","model":"<YOUR_MODEL>","updatedAt":"<ISO-UTC>"}}')
+```
+
+### agent.status — Task Progress (send during active work)
+
+```python
+sessions_send(sessionKey="clawsy-service", timeoutSeconds=3,
+  message='{"kind":"agent.status","payload":{"agentName":"<AGENT_NAME>","title":"Building feature X","progress":0.5,"statusText":"Running tests..."}}')
+```
+
+- `progress`: Float `0.0`-`1.0`. At `1.0`, task auto-removes after 10 seconds.
+- **Timeout errors are normal.** The event is delivered when Clawsy is connected. Do not retry.
+
+### Subagent Snippet
+
+Include this in every subagent task prompt:
+
+```
+## Clawsy Mission Control (MANDATORY)
+sessions_send(sessionKey="clawsy-service", timeoutSeconds=3,
+  message='{"kind":"agent.status","payload":{"agentName":"<label>","title":"<task>","progress":<0.0-1.0>,"statusText":"<details>"}}')
+Start=0.05 | Mid=0.5 | Done=1.0
+```
+
+---
+
+## Other Capabilities
+
+| Command | Usage |
+|---|---|
+| `screen.capture` | `nodes(action="invoke", invokeCommand="screen.capture")` |
+| `clipboard.read` | `nodes(action="invoke", invokeCommand="clipboard.read")` |
+| `clipboard.write` | `nodes(action="invoke", invokeCommand="clipboard.write", invokeParamsJson='{"text": "..."}')` |
+| `camera.list` | `nodes(action="invoke", invokeCommand="camera.list")` |
+| `camera.snap` | `nodes(action="invoke", invokeCommand="camera.snap", invokeParamsJson='{"facing": "front"}')` |
+| `location.get` | `nodes(action="invoke", invokeCommand="location.get")` |
+
+Most commands require user approval on the Mac side (allow once / allow 1 hour / deny).
 
 ---
 
 ## clawsy-service Session
 
-Screenshots, camera photos, and other automatic Clawsy events land in the dedicated `clawsy-service` session — **not in the main chat**. This keeps the main chat clean.
+Screenshots, clipboard events, camera photos, and Quick Send messages arrive in the `clawsy-service` session — not in the main chat.
 
-### Why?
-Without a separate channel, every screenshot would interrupt the main chat. With `clawsy-service`, all push events collect there and the agent can retrieve them on demand.
-
-### How to Retrieve
 ```python
-sessions_history(sessionKey="clawsy-service", limit=5)
+sessions_history(sessionKey="clawsy-service", limit=10)
 ```
 
-### How It Works (Technical)
-The app sends screenshots via `node.event` with `event: "agent.deeplink"` and `sessionKey: "clawsy-service"` in payloadJSON. The Gateway routes it to this session instead of the active chat.
+Look for `clawsy_envelope` messages with `type`: `"screenshot"`, `"clipboard"`, `"camera"`, `"quick_send"`.
 
 ---
 
-## clawsy-context.json
+## Quick Send Envelope Format
 
-The `clawsy-monitor` service (see `server/monitor.mjs`) watches the `clawsy-service` session JSONL and extracts events into a structured JSON file in your workspace:
-
-```json
-{
-  "clipboard": { "text": "...", "ts": 1234567890, "receivedAt": "..." },
-  "screenshots": [{ "filePath": "clawsy-cache/screenshot-123.jpg", "ts": ..., "receivedAt": "..." }],
-  "shares": [{ "text": "...", "ts": ..., "receivedAt": "..." }],
-  "quickSend": [{ "text": "...", "ts": ..., "receivedAt": "..." }],
-  "updatedAt": "..."
-}
-```
-
-Each bucket is a ring buffer (max 20 items, 24h TTL). Screenshots are saved as files in the `clawsy-cache/` directory.
-
----
-
-## Envelope Format
-
-Incoming messages from Clawsy are wrapped in `clawsy_envelope`:
+When the user sends a message via the global hotkey:
 
 ```json
 {
   "clawsy_envelope": {
     "type": "quick_send",
-    "content": "The actual message",
-    "version": "0.9.12",
-    "localTime": "2026-02-27T01:09:22.609Z",
+    "content": "The user's message",
+    "version": "0.9.33",
+    "localTime": "2026-03-14T10:30:00Z",
     "tz": "Europe/Berlin",
     "telemetry": {
-      "deviceName": "<device-name>",
-      "deviceModel": "Mac",
-      "batteryLevel": 0.51,
-      "isCharging": false,
+      "deviceName": "MacBook Pro",
+      "batteryLevel": 0.75,
+      "isCharging": true,
       "thermalState": 0,
-      "activeApp": "Clawsy",
-      "appSwitchRate": 0.22,
+      "activeApp": "Safari",
       "moodScore": 70,
       "isUnusualHour": false
     }
@@ -120,117 +189,28 @@ Incoming messages from Clawsy are wrapped in `clawsy_envelope`:
 }
 ```
 
-### Telemetry Hints
-- `thermalState > 1` → Mac is running hot, avoid heavy tasks
-- `batteryLevel < 0.2` → mention battery if relevant
-- `moodScore < 40` → user is stressed/busy, keep it short
-- `isUnusualHour: true` → unusual time, be considerate
+**Telemetry hints:** `thermalState > 1` = overheating | `batteryLevel < 0.2` = low battery | `moodScore < 40` = user stressed | `isUnusualHour` = odd hours
 
 ---
 
-## Mission Control Protocol
-
-Clawsy displays agent status in its Mission Control view via WebSocket events.
-
-> **Mandatory for every agent:** Send `agent.info` at session start AND every heartbeat (TTL: 45 min). Send `agent.status` during active work and close with `progress: 1.0`.
-
-### agent.info — Show Model in Popover Header
-
-```python
-sessions_send(sessionKey="clawsy-service", timeoutSeconds=3, message=json.dumps({
-    "kind": "agent.info",
-    "payload": {
-        "agentName": "<YOUR_AGENT_NAME>",
-        "model": "<CURRENT_MODEL>",
-        "updatedAt": "<ISO-UTC>"
-    }
-}))
-```
-
-### agent.status — Show Tasks in Mission Control
-
-```python
-sessions_send(sessionKey="clawsy-service", timeoutSeconds=3, message=json.dumps({
-    "kind": "agent.status",
-    "payload": {
-        "agentName": "<YOUR_AGENT_NAME>",
-        "title": "Building feature X",
-        "progress": 0.6,
-        "statusText": "Compiling sources…"
-    }
-}))
-```
-
-### Behavior
-- Clawsy receives events live over the existing WS connection
-- `progress >= 1.0` → task disappears after 10 seconds
-- On disconnect → all tasks are automatically cleared
-- No file I/O, no FileWatcher, no stale data issues
-- Timeout on `sessions_send` is normal and expected — the event is delivered if Clawsy is connected
-
-### 🤖 Mandatory Snippet for Every Subagent You Spawn
-
-When you delegate work to a subagent, paste this block into **every** task prompt. Replace `<label>` with the actual subagent label/name.
-
-```
-## Mission Control Updates (MANDATORY)
-
-Report progress after each significant step using sessions_send:
-
-Step 1 — immediately after starting:
-sessions_send(sessionKey="agent:main:clawsy-service", timeoutSeconds=3,
-  message='{"kind":"agent.status","payload":{"agentName":"<label>","title":"<task title>","progress":0.05,"statusText":"Starting…"}}')
-
-Step 2 — at roughly 50% progress:
-sessions_send(sessionKey="agent:main:clawsy-service", timeoutSeconds=3,
-  message='{"kind":"agent.status","payload":{"agentName":"<label>","title":"<task title>","progress":0.5,"statusText":"<what you are doing>"}}')
-
-Final step — after commit/done:
-sessions_send(sessionKey="agent:main:clawsy-service", timeoutSeconds=3,
-  message='{"kind":"agent.status","payload":{"agentName":"<label>","title":"<task title>","progress":1.0,"statusText":"Done"}}')
-
-Use the FULL session key: agent:main:clawsy-service (not just "clawsy-service").
-Timeout is expected and normal — the event still delivers.
-```
-
----
-
-## Finding the Connected Node
+## Finding the Clawsy Node
 
 ```python
 nodes(action="status")
-# → List of all connected nodes; pick the one with platform="macos" and connected=true
-# → Note the nodeId for all subsequent calls
-```
-
-Find the shared folder path:
-```python
-nodes(action="invoke", node="<nodeId>", invokeCommand="file.list",
-      invokeParamsJson='{"path": "."}')
-# Clawsy configures the shared folder in app settings (default: ~/Documents/Clawsy)
+# Look for platform="macos", connected=true
 ```
 
 ---
 
-## After Install — Pairing Link
+## Setup & Pairing
 
-After running `install.sh`, the pairing link is saved to a file in your workspace. Check for it and forward it to your human:
+For first-time setup, pairing, and install scripts, see the full SKILL.md:
+`~/.openclaw/workspace/skills/clawsy-server/SKILL.md`
 
-```bash
-cat ~/.openclaw/workspace/clawsy-pairing-link.txt 2>/dev/null
-```
+**HEARTBEAT.md snippet:**
 
-If the file exists, send the link to your human — they click it on their Mac to connect Clawsy:
-
-> Here is your Clawsy pairing link — click it on your Mac:
-> `clawsy://pair?code=<CODE>`
->
-> 1. Click the link → macOS asks "Open with Clawsy?" → Yes
-> 2. Clawsy connects automatically
-> 3. The auto-approve watcher approves the pairing — no further action needed!
-
-After successful pairing, delete the file:
-
-```bash
-rm -f ~/.openclaw/workspace/clawsy-pairing-link.txt
+```markdown
+## Clawsy (every heartbeat)
+sessions_send(sessionKey="clawsy-service", timeoutSeconds=3,
+  message='{"kind":"agent.info","payload":{"agentName":"<NAME>","model":"<MODEL>","updatedAt":"<ISO-UTC>"}}')
 ```
