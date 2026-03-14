@@ -268,6 +268,8 @@ sessions_send(sessionKey="clawsy-service", timeoutSeconds=3,
 - `agentName`: Your agent's display name.
 - **Timeout errors are normal and expected.** The event is still delivered when Clawsy is connected. Do not retry on timeout.
 
+> **Session key resolution:** The short key `clawsy-service` works in most configurations. If it fails to resolve, use the fully qualified key (`agent:<agentId>:clawsy-service`). Run `sessions_list` to find the correct key.
+
 ### Subagent Prompt Snippet
 
 When spawning subagents, include this block so they report progress too:
@@ -310,6 +312,8 @@ Screenshots, camera photos, clipboard events, and other push data from Clawsy ar
 # Fetch recent events
 sessions_history(sessionKey="clawsy-service", limit=10)
 ```
+
+> **Session key resolution:** If the short key `clawsy-service` does not resolve, use the fully qualified key (`agent:<agentId>:clawsy-service`). Run `sessions_list` to find it.
 
 Look for messages containing:
 - **Screenshots:** `clawsy_envelope` with `type: "screenshot"` — includes image data
@@ -354,20 +358,23 @@ When the user presses `⌘⇧K` and sends a message:
 
 Clawsy configures a shared folder (default: `~/Documents/Clawsy`). Use `file.list`, `file.get`, `file.set` to interact with it.
 
-### ⚠️ Large File Transfers (> 200 KB)
+### Large File Transfers (> 200 KB)
 
-The `nodes` tool has limitations for large payloads. For files larger than ~200KB, use the built-in chunking mechanism for reliable transfers.
+The `nodes` tool has a payload limit (~512 KB). For files larger than ~200 KB, use `file.get.chunk` / `file.set.chunk` for chunked transfers.
 
-**`file.get.chunk` / `file.set.chunk`**
+**Upload (agent to Mac):**
+1. Read the local file, split into ~150 KB chunks, base64-encode each chunk.
+2. For each chunk: `nodes(action="invoke", invokeCommand="file.set.chunk", invokeParamsJson='{"name": "file.pdf", "chunk": "<base64>", "index": 0, "total": 5}')`.
+3. Clawsy assembles the final file after the last chunk arrives.
 
-These commands handle splitting large files into smaller chunks and reassembling them on the other side. This is the recommended way to transfer large files.
+**Download (Mac to agent):**
+1. Get file size via `file.stat`.
+2. For each chunk index: `nodes(action="invoke", invokeCommand="file.get.chunk", invokeParamsJson='{"name": "file.pdf", "index": 0, "chunkSize": 153600}')`.
+3. Decode and reassemble chunks locally.
 
-**Example flow for uploading a large file:**
-1. Read the file in chunks on the agent side.
-2. For each chunk, call `nodes(action="invoke", invokeCommand="file.set.chunk", ...)` with the chunk data and index.
-3. Clawsy will save the chunks and assemble the final file when the last chunk is received.
+See `for-agents.md` or `CLAWSY.md` for complete code examples.
 
-A helper script `tools/clawsy_file_transfer.py` is available in the workspace to automate this process.
+> **Important:** Use the `nodes` tool-call API (not the `openclaw nodes invoke` CLI). The CLI has reliability issues with large payloads.
 
 
 

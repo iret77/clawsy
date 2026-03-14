@@ -99,7 +99,61 @@ nodes(action="invoke", invokeCommand="file.batch",
 
 ### Large Files (> 200 KB)
 
-Use `file.get.chunk` / `file.set.chunk` for reliable chunked transfers. See SKILL.md for details.
+The `nodes` tool has a payload limit (~512 KB). For files larger than ~200 KB, use chunked transfer with `file.get.chunk` / `file.set.chunk`. These commands split files into smaller pieces and reassemble them automatically.
+
+**Uploading a large file (agent to Mac):**
+
+```python
+import base64
+
+# 1. Read the local file and split into ~150 KB chunks
+chunk_size = 150 * 1024  # 150 KB per chunk (safe margin under 512 KB limit)
+with open("large-file.pdf", "rb") as f:
+    data = f.read()
+
+total_chunks = (len(data) + chunk_size - 1) // chunk_size
+
+for i in range(total_chunks):
+    chunk = base64.b64encode(data[i * chunk_size : (i + 1) * chunk_size]).decode()
+    nodes(action="invoke", invokeCommand="file.set.chunk",
+          invokeParamsJson=json.dumps({
+              "name": "large-file.pdf",
+              "chunk": chunk,
+              "index": i,
+              "total": total_chunks
+          }))
+# Clawsy assembles the final file after the last chunk arrives.
+```
+
+**Downloading a large file (Mac to agent):**
+
+```python
+import base64, json
+
+# 1. Get file info to determine chunk count
+result = nodes(action="invoke", invokeCommand="file.stat",
+               invokeParamsJson='{"path": "large-file.pdf"}')
+file_size = result["size"]
+chunk_size = 150 * 1024
+total_chunks = (file_size + chunk_size - 1) // chunk_size
+
+# 2. Download each chunk
+chunks = []
+for i in range(total_chunks):
+    result = nodes(action="invoke", invokeCommand="file.get.chunk",
+                   invokeParamsJson=json.dumps({
+                       "name": "large-file.pdf",
+                       "index": i,
+                       "chunkSize": chunk_size
+                   }))
+    chunks.append(base64.b64decode(result["chunk"]))
+
+# 3. Reassemble
+with open("large-file.pdf", "wb") as f:
+    f.write(b"".join(chunks))
+```
+
+> **Important:** Use the `nodes` tool-call API (not the `openclaw nodes invoke` CLI). The CLI has reliability issues with large payloads and may time out. All examples above use tool calls which are routed directly through the gateway.
 
 ---
 
@@ -123,6 +177,8 @@ sessions_send(sessionKey="clawsy-service", timeoutSeconds=3,
 
 - `progress`: Float `0.0`-`1.0`. At `1.0`, task auto-removes after 10 seconds.
 - **Timeout errors are normal.** The event is delivered when Clawsy is connected. Do not retry.
+
+> **Note:** The short session key `clawsy-service` works in most configurations. If it fails to resolve, use the fully qualified key (`agent:<agentId>:clawsy-service`). See the "clawsy-service Session" section below for details.
 
 ### Subagent Snippet
 
@@ -159,6 +215,8 @@ Screenshots, clipboard events, camera photos, and Quick Send messages arrive in 
 ```python
 sessions_history(sessionKey="clawsy-service", limit=10)
 ```
+
+> **Session key resolution:** The short key `clawsy-service` may or may not resolve depending on your gateway configuration. If it does not work, use the fully qualified session key instead. The full key follows the pattern `agent:<agentId>:clawsy-service` (e.g., `agent:main:clawsy-service`). You can find the correct key by checking `sessions_list` for a session containing `clawsy-service`.
 
 Look for `clawsy_envelope` messages with `type`: `"screenshot"`, `"clipboard"`, `"camera"`, `"quick_send"`.
 
@@ -213,4 +271,5 @@ For first-time setup, pairing, and install scripts, see the full SKILL.md:
 ## Clawsy (every heartbeat)
 sessions_send(sessionKey="clawsy-service", timeoutSeconds=3,
   message='{"kind":"agent.info","payload":{"agentName":"<NAME>","model":"<MODEL>","updatedAt":"<ISO-UTC>"}}')
+# If the short key fails, use the fully qualified key: agent:<agentId>:clawsy-service
 ```
