@@ -146,7 +146,7 @@
 "STATUS_PAIRING_PENDING" = "Esperando aprobación de emparejamiento…";
 "STATUS_PAIRING_REJECTED" = "Emparejamiento rechazado";
 "STATUS_PAIRING_TIMEOUT" = "Tiempo de emparejamiento agotado";
-"STATUS_AWAITING_PAIR_APPROVE" = "Esperando aprobación de emparejamiento…";
+"STATUS_AWAITING_PAIR_APPROVE" = "Esperando aprobación";
 "PAIRING_REQUIRED_TITLE" = "Se necesita aprobación de emparejamiento";
 "PAIRING_REQUIRED_DESC" = "Ejecuta este comando en tu servidor:";
 "PAIRING_REQUIRED_HINT" = "El servidor debe aprobar este dispositivo antes de conectarse.";

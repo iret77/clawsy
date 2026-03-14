@@ -149,7 +149,7 @@
 "STATUS_PAIRING_PENDING" = "Warte auf Kopplung…";
 "STATUS_PAIRING_REJECTED" = "Kopplung abgelehnt";
 "STATUS_PAIRING_TIMEOUT" = "Kopplung – Zeitüberschreitung";
-"STATUS_AWAITING_PAIR_APPROVE" = "Warte auf Pairing-Bestätigung…";
+"STATUS_AWAITING_PAIR_APPROVE" = "Freigabe ausstehend";
 "PAIRING_REQUIRED_TITLE" = "Pairing-Bestätigung erforderlich";
 "PAIRING_REQUIRED_DESC" = "Führe diesen Befehl auf deinem Server aus:";
 "PAIRING_REQUIRED_HINT" = "Der Server muss dieses Gerät erst genehmigen.";

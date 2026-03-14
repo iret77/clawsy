@@ -494,6 +494,7 @@ struct ContentView: View {
     func getStatusColor() -> Color {
         if hostManager.isConnected { return .green }
         if hostManager.connectionStatus.contains("CONNECTING") || hostManager.connectionStatus.contains("STARTING") { return .orange }
+        if hostManager.connectionStatus == "STATUS_AWAITING_PAIR_APPROVE" || hostManager.connectionStatus == "STATUS_PAIRING" { return .blue }
         return .red
     }
     
@@ -667,10 +668,17 @@ struct ContentView: View {
         }
         
         nm.onClipboardReadRequested = { requestId in
-            if let content = ClipboardManager.getClipboardContent() {
-                nm.sendResponse(id: requestId, result: ["text": content])
-            } else {
-                nm.sendError(id: requestId, code: -1, message: "Clipboard empty or unavailable")
+            DispatchQueue.main.async {
+                let content = ClipboardManager.getClipboardContent() ?? ""
+                self.appDelegate.showClipboardRequest(content: content, direction: .read, onConfirm: {
+                    if let current = ClipboardManager.getClipboardContent() {
+                        nm.sendResponse(id: requestId, result: ["text": current])
+                    } else {
+                        nm.sendError(id: requestId, code: -1, message: "Clipboard empty or unavailable")
+                    }
+                }, onCancel: {
+                    nm.sendError(id: requestId, code: -1, message: "User denied clipboard read")
+                })
             }
         }
         
@@ -747,10 +755,17 @@ struct ContentView: View {
         }
         
         network.onClipboardReadRequested = { requestId in
-            if let content = ClipboardManager.getClipboardContent() {
-                network.sendResponse(id: requestId, result: ["text": content])
-            } else {
-                network.sendError(id: requestId, code: -1, message: "Clipboard empty or unavailable")
+            DispatchQueue.main.async {
+                let content = ClipboardManager.getClipboardContent() ?? ""
+                self.appDelegate.showClipboardRequest(content: content, direction: .read, onConfirm: {
+                    if let current = ClipboardManager.getClipboardContent() {
+                        network.sendResponse(id: requestId, result: ["text": current])
+                    } else {
+                        network.sendError(id: requestId, code: -1, message: "Clipboard empty or unavailable")
+                    }
+                }, onCancel: {
+                    network.sendError(id: requestId, code: -1, message: "User denied clipboard read")
+                })
             }
         }
         
@@ -1141,6 +1156,8 @@ struct SettingsView: View {
                                         Circle().fill(Color.green).frame(width: 6, height: 6)
                                     } else if isConnecting {
                                         Circle().fill(Color.orange).frame(width: 6, height: 6)
+                                    } else if nm?.connectionStatus == "STATUS_AWAITING_PAIR_APPROVE" || nm?.connectionStatus == "STATUS_PAIRING" {
+                                        Circle().fill(Color.blue).frame(width: 6, height: 6)
                                     } else {
                                         Circle().fill(Color.secondary.opacity(0.4)).frame(width: 6, height: 6)
                                     }
@@ -1988,7 +2005,7 @@ struct HostSwitcherView: View {
                         HStack(spacing: 4) {
                             // Per-host connection status dot
                             Circle()
-                                .fill(connected ? Color.green : (connecting ? Color.orange : Color.secondary.opacity(0.5)))
+                                .fill(connected ? Color.green : (connecting ? Color.orange : ((nm?.connectionStatus == "STATUS_AWAITING_PAIR_APPROVE" || nm?.connectionStatus == "STATUS_PAIRING") ? Color.blue : Color.secondary.opacity(0.5))))
                                 .frame(width: 5, height: 5)
                             Text(profile.name.isEmpty ? profile.gatewayHost : profile.name)
                                 .font(.system(size: 11, weight: isActive ? .semibold : .regular))
