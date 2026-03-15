@@ -59,6 +59,12 @@ public struct SharedConfig {
     
     public static var extendedContextEnabled: Bool { sharedDefaults.bool(forKey: "extendedContextEnabled") }
     
+    /// The session key that events are routed to (persisted for Share Extension access).
+    public static var targetSessionKey: String {
+        get { sharedDefaults.string(forKey: "targetSessionKey") ?? "clawsy-service" }
+        set { sharedDefaults.set(newValue, forKey: "targetSessionKey"); sharedDefaults.synchronize() }
+    }
+    
     public static var quickSendHotkey: String { sharedDefaults.string(forKey: "quickSendHotkey") ?? "K" }
     public static var pushClipboardHotkey: String { sharedDefaults.string(forKey: "pushClipboardHotkey") ?? "V" }
     public static var cameraHotkey: String { sharedDefaults.string(forKey: "cameraHotkey") ?? "P" }

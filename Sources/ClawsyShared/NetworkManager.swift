@@ -63,6 +63,15 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     @Published public var retryCountdown: Int = 0  // Seconds until next retry (0 = no retry pending)
     @Published public var serverDetected: Bool = false
     @Published public var serverSetupNeeded: Bool = false
+    
+    /// The session key that all events (QuickSend, Clipboard, Screenshot, Camera, Share) are routed to.
+    /// Persisted in SharedConfig.sharedDefaults so the Share Extension can read it too.
+    @Published public var targetSessionKey: String = "clawsy-service" {
+        didSet {
+            SharedConfig.sharedDefaults.set(targetSessionKey, forKey: "targetSessionKey")
+            SharedConfig.sharedDefaults.synchronize()
+        }
+    }
     private var retryTimer: Timer?
     private var retryAttempt: Int = 0
     private let baseRetryDelay: TimeInterval = 2.0
@@ -184,6 +193,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     public init(hostProfile: HostProfile) {
         self.hostProfile = hostProfile
         super.init()
+        loadPersistedTargetSession()
         loadOrGenerateSigningKey()
         setupNotifications()
         setupLocation()
@@ -192,9 +202,17 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     /// Legacy init (single-host mode, reads from SharedConfig)
     public override init() {
         super.init()
+        loadPersistedTargetSession()
         loadOrGenerateSigningKey()
         setupNotifications()
         setupLocation()
+    }
+    
+    /// Loads the persisted target session key from SharedConfig.sharedDefaults.
+    private func loadPersistedTargetSession() {
+        if let saved = SharedConfig.sharedDefaults.string(forKey: "targetSessionKey"), !saved.isEmpty {
+            targetSessionKey = saved
+        }
     }
     
     /// Returns the UserDefaults key for this host's signing key.
@@ -953,7 +971,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     public func sendOneShot(message: String, completion: @escaping (Bool) -> Void) {
         let send = { [weak self] in
             guard let self = self else { return }
-            self.sendDeeplink(message: message, sessionKey: "clawsy-service")
+            self.sendDeeplink(message: message, sessionKey: self.targetSessionKey)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 completion(true)
                 self.disconnect()
@@ -1113,7 +1131,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
 
         let body: [String: Any] = [
             "tool": "sessions_history",
-            "args": ["sessionKey": "clawsy-service", "limit": 20]
+            "args": ["sessionKey": targetSessionKey, "limit": 20]
         ]
         req.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
@@ -2100,9 +2118,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     public func sendScreenshot(base64: String, mimeType: String = "image/jpeg") {
         let deviceName = Host.current().localizedName ?? "Mac"
 
-        // 1. Store in clawsy-service for agent context (silent)
+        // 1. Store in target session for agent context (silent)
         let storagePayload: [String: Any] = [
-            "sessionKey": "clawsy-service",
+            "sessionKey": targetSessionKey,
             "message": "📸 Screenshot von \(deviceName)",
             "deliver": false,
             "receipt": false,
@@ -2176,16 +2194,16 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         send(json: frame)
     }
 
-    /// Send a message to clawsy-service session (silent, no Telegram delivery).
+    /// Send a message to the target session (silent, no Telegram delivery).
     public func sendServiceEvent(message: String, payload: [String: Any] = [:]) {
-        sendDeeplink(message: message, sessionKey: "clawsy-service", deliver: false)
+        sendDeeplink(message: message, sessionKey: targetSessionKey, deliver: false)
     }
 
-    /// Send a camera photo: stores in clawsy-service (context) AND triggers main chat delivery.
+    /// Send a camera photo: stores in target session (context) AND triggers main chat delivery.
     public func sendPhoto(base64: String, deviceName: String = "Kamera") {
-        // 1. Store in clawsy-service for agent context (silent)
+        // 1. Store in target session for agent context (silent)
         let storagePayload: [String: Any] = [
-            "sessionKey": "clawsy-service",
+            "sessionKey": targetSessionKey,
             "message": "📷 Kamerafoto von \(Host.current().localizedName ?? "Mac") (\(deviceName))",
             "deliver": false,
             "receipt": false,

@@ -151,6 +151,11 @@ struct ContentView: View {
                 .padding(.bottom, 6)
             }
 
+            // --- Agent Picker ---
+            if !hostManager.profiles.isEmpty, hostManager.isConnected {
+                agentPickerSection
+            }
+
             // --- Main Actions List ---
             // Order: Quick Send (most active) → Screenshot → Clipboard → Camera (most deliberate)
             if !hostManager.profiles.isEmpty { VStack(spacing: 2) {
@@ -544,6 +549,78 @@ struct ContentView: View {
                 appDelegate.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT")
             }
         }
+    }
+
+    /// Compact agent picker — lets user choose which session receives events.
+    @ViewBuilder
+    private var agentPickerSection: some View {
+        let sessions = availableAgentSessions
+        HStack(spacing: 6) {
+            Image(systemName: "person.crop.circle")
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+            Text(l10n: "AGENT_PICKER_LABEL")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.secondary)
+            Spacer()
+            Picker("", selection: agentPickerBinding) {
+                Text(NSLocalizedString("AGENT_PICKER_DEFAULT", bundle: .clawsy, comment: ""))
+                    .tag("clawsy-service")
+                ForEach(sessions, id: \.id) { session in
+                    Text(agentDisplayName(for: session))
+                        .tag(session.id)
+                }
+            }
+            .pickerStyle(.menu)
+            .frame(maxWidth: 160)
+            .labelsHidden()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
+    }
+
+    /// Sessions eligible for the agent picker: direct, running, not clawsy-service or main.
+    private var availableAgentSessions: [GatewaySession] {
+        guard let nm = network else { return [] }
+        return nm.gatewaySessions.filter { session in
+            session.kind == "direct" &&
+            session.status == "running" &&
+            session.id != "clawsy-service" &&
+            !session.id.hasSuffix(":main")
+        }
+    }
+
+    /// Binding that syncs Picker selection with NetworkManager.targetSessionKey,
+    /// falling back to "clawsy-service" when the chosen session disappears.
+    private var agentPickerBinding: Binding<String> {
+        Binding<String>(
+            get: {
+                guard let nm = network else { return "clawsy-service" }
+                let current = nm.targetSessionKey
+                // Validate: must be clawsy-service or still in available list
+                if current == "clawsy-service" { return current }
+                let valid = nm.gatewaySessions.contains { $0.id == current && $0.status == "running" }
+                if !valid {
+                    DispatchQueue.main.async { nm.targetSessionKey = "clawsy-service" }
+                    return "clawsy-service"
+                }
+                return current
+            },
+            set: { newValue in
+                network?.targetSessionKey = newValue
+            }
+        )
+    }
+
+    /// Display name for a session in the picker.
+    private func agentDisplayName(for session: GatewaySession) -> String {
+        if let label = session.label, !label.isEmpty {
+            return label
+        }
+        // Derive from key: "agent:main:slack:..." → "main"
+        let parts = session.id.split(separator: ":")
+        if parts.count >= 2 { return String(parts[1]) }
+        return session.id
     }
 
         func handleManualClipboardSend() {

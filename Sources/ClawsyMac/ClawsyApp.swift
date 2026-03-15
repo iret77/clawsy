@@ -435,7 +435,7 @@ Details in CLAWSY.md.
                 includeTelemetry: network.extendedContextEnabled) {
             network.sendEvent(kind: "agent.request", payload: [
                 "message": jsonString,
-                "sessionKey": "clawsy-service",
+                "sessionKey": network.targetSessionKey,
                 "deliver": false
             ])
             self.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
@@ -529,8 +529,8 @@ Details in CLAWSY.md.
                         type: "quick_send",
                         content: text,
                         includeTelemetry: network.extendedContextEnabled) {
-                        // Full envelope → clawsy-service (context storage)
-                        network.sendDeeplink(message: jsonString, sessionKey: "clawsy-service")
+                        // Full envelope → target session (context storage)
+                        network.sendDeeplink(message: jsonString, sessionKey: network.targetSessionKey)
                         // Trigger → main session (agent responds, quoting the message)
                         let trigger: [String: Any] = ["clawsy_envelope": [
                             "type": "quick_send_trigger",
