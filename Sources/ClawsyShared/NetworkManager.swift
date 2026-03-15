@@ -1511,7 +1511,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 "client": ["id": connectClientId, "version": SharedConfig.versionDisplay, "platform": Self.connectPlatform, "mode": Self.connectClientMode],
                 "role": Self.connectRole, "caps": ["clipboard", "screen", "camera", "file", "location"],
                 "scopes": Self.connectScopes,
-                "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set", "file.get.chunk", "file.set.chunk", "file.delete", "file.rename", "file.move", "file.copy", "file.mkdir", "file.rmdir", "file.stat", "file.exists", "file.batch", "location.get", "location.start", "location.stop", "location.add_smart"],
+                "commands": ["clipboard.read", "clipboard.write", "screen.capture", "camera.list", "camera.snap", "file.list", "file.get", "file.set", "file.get.chunk", "file.set.chunk", "file.checksum", "file.delete", "file.rename", "file.move", "file.copy", "file.mkdir", "file.rmdir", "file.stat", "file.exists", "file.batch", "location.get", "location.start", "location.stop", "location.add_smart"],
                 "permissions": ["clipboard.read": true, "clipboard.write": true],
                 "auth": ["token": authToken],
                 "device": [
@@ -1683,7 +1683,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                         let assembledB64 = assembled.base64EncodedString()
                         switch ClawsyFileManager.writeFile(at: fullPathChunkSet, base64Content: assembledB64) {
                         case .success:
-                            self.sendResponse(id: id, result: ["status": "ok", "name": name, "assembled": true])
+                            let digest = SHA256.hash(data: assembled)
+                            let checksum = digest.map { String(format: "%02x", $0) }.joined()
+                            self.sendResponse(id: id, result: ["status": "ok", "name": name, "assembled": true, "checksum": checksum, "size": assembled.count])
                         case .failure:
                             self.sendError(id: id, code: -32000, message: "Failed to assemble file")
                         }
@@ -1705,7 +1707,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                   let chunkIndex = params["chunkIndex"] as? Int else {
                 sendError(id: id, code: -32602, message: "Missing parameters"); return
             }
-            let chunkSizeBytes = (params["chunkSizeBytes"] as? Int) ?? 262144
+            let chunkSizeBytes = (params["chunkSizeBytes"] as? Int) ?? 358400
             guard let fullPathChunkGet = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: name) else {
                 sendError(id: id, code: -32003, message: "Path must stay within the shared folder"); return
             }
@@ -1739,6 +1741,22 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 executeGetChunk()
             } else {
                 onFileSyncRequested?(name, "Download (chunked)", { duration in if let d = duration { self.filePermissionExpiry = Date().addingTimeInterval(d) }; executeGetChunk() }, { self.sendError(id: id, code: -1, message: "User denied") })
+            }
+        case "file.checksum":
+            guard let name = params["name"] as? String else {
+                sendError(id: id, code: -32602, message: "Missing 'name' parameter"); return
+            }
+            guard let fullPathChecksum = ClawsyFileManager.sandboxedPath(base: baseDir, relativePath: name) else {
+                sendError(id: id, code: -32003, message: "Path must stay within the shared folder"); return
+            }
+            self.sendAck(id: id)
+            DispatchQueue.global(qos: .userInitiated).async {
+                guard let data = FileManager.default.contents(atPath: fullPathChecksum) else {
+                    self.sendError(id: id, code: -32000, message: "Failed to read file"); return
+                }
+                let digest = SHA256.hash(data: data)
+                let checksum = digest.map { String(format: "%02x", $0) }.joined()
+                self.sendResponse(id: id, result: ["checksum": checksum, "size": data.count, "name": name])
             }
         case "file.delete", "file.rmdir":
             guard let name = params["name"] as? String else { sendError(id: id, code: -32602, message: "Missing 'name' parameter"); return }
