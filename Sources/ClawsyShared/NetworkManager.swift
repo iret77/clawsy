@@ -748,6 +748,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 }
             }
         }
+    }
     
     /// Monitors the SSH process for unexpected termination.
     /// When the SSH tunnel dies while we have an active WS connection,
