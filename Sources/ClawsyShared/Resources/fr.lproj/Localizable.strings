@@ -289,3 +289,6 @@
 "UPDATE_AVAILABLE %@" = "Mise à jour disponible : %@";
 "UPDATES" = "Mises à jour";
 "WAITING_FOR_TASKS" = "En attente de tâches…";
+
+// SSH Auto-Reconnect
+"STATUS_SSH_RECONNECTING" = "Reconnexion du tunnel SSH…";
