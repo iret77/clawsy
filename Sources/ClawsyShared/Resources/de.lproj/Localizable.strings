@@ -340,3 +340,7 @@
 
 // SSH Auto-Reconnect
 "STATUS_SSH_RECONNECTING" = "SSH-Tunnel wird wiederhergestellt…";
+
+// Agent Picker
+"AGENT_PICKER_LABEL" = "Aktiver Agent";
+"AGENT_PICKER_DEFAULT" = "Standard (clawsy-service)";
