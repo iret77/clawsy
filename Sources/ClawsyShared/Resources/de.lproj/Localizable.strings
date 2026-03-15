@@ -13,6 +13,7 @@
 "NOTIFICATION_BODY_UPLOADING" = "Lade hoch: %@";
 "NOTIFICATION_BODY_COPYING" = "Kopiere: %@";
 "NOTIFICATION_BODY_BATCH" = "Batch-Operation: %@ Ops";
+"NOTIFICATION_BODY_CHECKSUM" = "Prüfsumme: %@";
 "REVOKE_PERMISSION" = "Zugriff widerrufen";
 "CLIPBOARD_SYNC" = "Zwischenablage-Sync";
 "CHAR_COUNT %lld" = "%lld Zeichen";

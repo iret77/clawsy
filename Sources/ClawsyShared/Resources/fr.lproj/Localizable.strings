@@ -13,6 +13,7 @@
 "NOTIFICATION_BODY_UPLOADING" = "Envoi : %@";
 "NOTIFICATION_BODY_COPYING" = "Copie : %@";
 "NOTIFICATION_BODY_BATCH" = "Opération par lot : %@ ops";
+"NOTIFICATION_BODY_CHECKSUM" = "Somme de contrôle : %@";
 "REVOKE_PERMISSION" = "Révoquer l'accès";
 "CLIPBOARD_SYNC" = "Synchro Presse-papiers";
 "CHAR_COUNT %lld" = "%lld caractères";

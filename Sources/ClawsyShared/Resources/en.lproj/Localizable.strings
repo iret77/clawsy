@@ -13,6 +13,7 @@
 "NOTIFICATION_BODY_UPLOADING" = "Uploading: %@";
 "NOTIFICATION_BODY_COPYING" = "Copying: %@";
 "NOTIFICATION_BODY_BATCH" = "Batch operation: %@ ops";
+"NOTIFICATION_BODY_CHECKSUM" = "Checksum: %@";
 "REVOKE_PERMISSION" = "Revoke Permissions";
 "CLIPBOARD_SYNC" = "Clipboard Sync";
 "CHAR_COUNT %lld" = "%lld characters";
