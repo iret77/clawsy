@@ -103,6 +103,13 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     #endif
     private var isUsingSshTunnel = false
     
+    /// Remembers whether the last successful connection (hello-ok) was via SSH tunnel.
+    /// Used during reconnect to skip WSS and go directly to SSH tunnel rebuild.
+    private var wasConnectedViaSsh = false
+    
+    /// Maximum number of reconnect attempts before giving up.
+    private let maxReconnectAttempts = 5
+    
     // Callbacks for UI/Logic
     public var onHandshakeComplete: (() -> Void)?
     public var onScreenshotRequested: ((Bool, Any) -> Void)?
@@ -400,6 +407,14 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             return
         }
         
+        // Enforce max retry limit
+        if retryAttempt >= maxReconnectAttempts {
+            rawLog += "\n[RECONNECT] Max attempts (\(maxReconnectAttempts)) reached — giving up"
+            connectionStatus = "STATUS_RECONNECT_EXHAUSTED"
+            disconnectReason = .setupFailed("Reconnect exhausted after \(maxReconnectAttempts) attempts")
+            return
+        }
+        
         // Prevent double-schedule: if a timer is already running, don't create another one
         if let existing = retryTimer, existing.isValid {
             rawLog += "\n[RECONNECT] scheduleRetry called but timer already running — ignoring"
@@ -424,7 +439,18 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 timer.invalidate()
                 self.retryTimer = nil
                 self.isUsingSshTunnel = false
+                #if os(macOS)
+                if self.wasConnectedViaSsh && !self.sshUser.isEmpty {
+                    // Skip WSS attempt — go directly to SSH tunnel rebuild
+                    self.connectionStatus = "STATUS_SSH_RECONNECTING"
+                    self.rawLog += "\n[SSH] Reconnect: rebuilding SSH tunnel directly"
+                    self.startSshTunnel()
+                } else {
+                    self.connect()
+                }
+                #else
                 self.connect()
+                #endif
             }
         }
     }
@@ -443,7 +469,19 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 // First-time failure: try SSH tunnel as part of the initial setup path.
                 // Don't set setupFailed yet — SSH fallback is still "attempting to connect".
                 // If SSH also fails, the SSH failure path sets .setupFailed explicitly.
-                // Skip SSH fallback during reconnect (wasEverConnected=true) — direct WSS worked before.
+                self.startSshTunnel()
+            } else if self.wasConnectedViaSsh && !self.isUsingSshTunnel && !self.sshUser.isEmpty && self.wasEverConnected {
+                // SSH reconnect: The previous successful connection was via SSH tunnel.
+                // Direct WSS failed (as expected — it failed the first time too).
+                // Go straight to SSH tunnel rebuild instead of looping on WSS retries.
+                if self.retryAttempt >= self.maxReconnectAttempts {
+                    self.rawLog += "\n[SSH] Max reconnect attempts (\(self.maxReconnectAttempts)) reached — giving up"
+                    self.connectionStatus = "STATUS_RECONNECT_EXHAUSTED"
+                    self.disconnectReason = .setupFailed("SSH reconnect exhausted after \(self.maxReconnectAttempts) attempts")
+                    return
+                }
+                self.rawLog += "\n[SSH] Reconnect: WSS failed, rebuilding SSH tunnel (attempt \(self.retryAttempt + 1)/\(self.maxReconnectAttempts))"
+                self.connectionStatus = "STATUS_SSH_RECONNECTING"
                 self.startSshTunnel()
             } else {
                 // Classify the failure:
@@ -667,6 +705,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 }
 
                 if tunnelReady {
+                    // Monitor SSH process for unexpected termination (tunnel death detection)
+                    self.monitorSshProcess(process)
+                    
                     DispatchQueue.main.async {
                         self.rawLog += "\n[SSH] Tunnel ready on 127.0.0.1:\(tunnelPort)"
                         self.isUsingSshTunnel = true
@@ -707,6 +748,39 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 }
             }
         }
+    
+    /// Monitors the SSH process for unexpected termination.
+    /// When the SSH tunnel dies while we have an active WS connection,
+    /// this triggers reconnect before the WS timeout fires (faster detection).
+    private func monitorSshProcess(_ process: Process) {
+        process.terminationHandler = { [weak self] proc in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                // Only react if we were actually using SSH and had a connection
+                guard self.isUsingSshTunnel else { return }
+                // Don't interfere with user-initiated disconnect
+                guard self.disconnectReason != .userInitiated else { return }
+                
+                self.rawLog += "\n[SSH] Process terminated (code \(proc.terminationStatus)) — tunnel lost"
+                self.isUsingSshTunnel = false
+                self.sshProcess = nil
+                
+                // If WS is still "connected", force-close it so we get a clean reconnect
+                if self.isConnected {
+                    self.socket?.delegate = nil
+                    self.socket?.disconnect()
+                    self.socket = nil
+                    self.isConnected = false
+                    self.isHandshakeComplete = false
+                }
+                
+                self.disconnectReason = .connectionLost
+                self.connectionStatus = "STATUS_SSH_RECONNECTING"
+                self.rawLog += "\n[SSH] Scheduling SSH tunnel reconnect"
+                self.connectionAttemptCount = 0
+                self.scheduleRetry()
+            }
+        }
     }
     #endif
     
@@ -729,6 +803,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     public func disconnect() {
         disconnectReason = .userInitiated
         wasEverConnected = false  // User-initiated disconnect resets the lifecycle
+        wasConnectedViaSsh = false  // Reset SSH connection memory
         
         isPairing = false
         pairingRequestId = ""
@@ -1213,6 +1288,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 if payload?["type"] as? String == "hello-ok" || json["result"] != nil {
                      self.isHandshakeComplete = true
                      self.wasEverConnected = true  // Mark: handshake succeeded at least once
+                     self.wasConnectedViaSsh = self.isUsingSshTunnel  // Remember connection method for reconnect
                      self.connectionStatus = isUsingSshTunnel ? "STATUS_ONLINE_PAIRED_SSH" : "STATUS_ONLINE_PAIRED"
                      self.connectionError = nil
                      self.disconnectReason = nil  // Session is live — reset for future disconnect classification

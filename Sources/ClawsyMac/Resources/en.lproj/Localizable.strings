@@ -328,3 +328,6 @@
 "ADD_HOST_MANUAL_HINT_PROMPT" = "Install the Clawsy skill from clawhub";
 "ADD_HOST_MANUAL_HINT_COPY" = "Copy";
 "ADD_HOST_MANUAL_HINT_COPIED" = "Copied!";
+
+// SSH Auto-Reconnect
+"STATUS_SSH_RECONNECTING" = "Reconnecting SSH Tunnel…";
