@@ -102,7 +102,6 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
 
     // Gateway Sessions Polling
     private var sessionsPollerTimer: Timer?
-    private var pendingSessionsListReqId: String?
     private let sessionsPollerInterval: TimeInterval = 10
     private let sessionsActiveWindowSeconds: TimeInterval = 300  // 5 min = "running"
     
@@ -1051,19 +1050,46 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     private func stopSessionsPoller() {
         sessionsPollerTimer?.invalidate()
         sessionsPollerTimer = nil
-        pendingSessionsListReqId = nil
     }
 
     private func requestSessionsList() {
         guard isHandshakeComplete, isConnected else { return }
-        let reqId = UUID().uuidString
-        pendingSessionsListReqId = reqId
-        send(json: [
-            "type": "req",
-            "id": reqId,
-            "method": "sessions.list",
-            "params": ["activeMinutes": 60]
-        ])
+
+        // Use same base URL logic as pollAgentState() (SSH-Tunnel-Awareness)
+        let baseURL: String
+        if isUsingSshTunnel {
+            baseURL = "http://127.0.0.1:\(sshTunnelLocalPort)"
+        } else {
+            let host = serverHost.isEmpty ? "127.0.0.1" : serverHost
+            let port = serverPort.isEmpty ? "18789" : serverPort
+            let scheme = host.contains("://") ? "" : "http"
+            baseURL = host.contains("://") ? host : "\(scheme)://\(host):\(port)"
+        }
+        guard let url = URL(string: "\(baseURL)/tools/invoke") else { return }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(serverToken)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.timeoutInterval = 10
+
+        let body: [String: Any] = [
+            "tool": "sessions_list",
+            "args": ["activeMinutes": 60]
+        ]
+        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        URLSession.shared.dataTask(with: req) { [weak self] data, _, _ in
+            guard let self, let data else { return }
+            guard let outer = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let ok = outer["ok"] as? Bool, ok,
+                  let result = outer["result"] as? [String: Any],
+                  let contentArr = result["content"] as? [[String: Any]],
+                  let text = contentArr.first?["text"] as? String,
+                  let textData = text.data(using: .utf8),
+                  let payload = try? JSONSerialization.jsonObject(with: textData) as? [String: Any] else { return }
+            self.parseSessionsListResponse(payload)
+        }.resume()
     }
 
     private func parseSessionsListResponse(_ result: Any) {
@@ -1293,14 +1319,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         let type = json["type"] as? String
         if type == "res" || type == "response" || type == "error" {
             if let rid = rawId as? String {
-                // sessions.list response
-                if let pendingId = pendingSessionsListReqId, rid == pendingId {
-                    pendingSessionsListReqId = nil
-                    if let result = json["result"] {
-                        parseSessionsListResponse(result)
-                    }
-                    return
-                }
+
 
                 if rid == "1" {
                 let payload = json["payload"] as? [String: Any]
