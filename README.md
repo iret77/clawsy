@@ -38,7 +38,8 @@ Nothing happens behind your back. Every screenshot, clipboard read, or file writ
 The easiest way to set up Clawsy:
 
 1. **Download & install** Clawsy on your Mac ([latest release](https://github.com/iret77/clawsy/releases/latest))
-2. **Tell your OpenClaw agent:**
+2. **Remove quarantine** — run `xattr -cr /Applications/Clawsy.app` in Terminal
+3. **Tell your OpenClaw agent:**
 
    > "Install the Clawsy skill from clawhub"
 
@@ -62,12 +63,17 @@ Make sure your OpenClaw instance is running and you have the **Gateway Host**, *
 
 1. Download **Clawsy.app.zip** from the [latest release](https://github.com/iret77/clawsy/releases/latest)
 2. Unzip → drag `Clawsy.app` to `/Applications`
-3. Launch Clawsy — the onboarding assistant walks you through permissions
+3. **Remove the quarantine flag** (required for apps distributed outside the App Store):
+   ```bash
+   xattr -cr /Applications/Clawsy.app
+   ```
+   Without this, macOS Gatekeeper will block the app from launching.
+4. Launch Clawsy — the onboarding assistant walks you through permissions
 
 ### 3. Connect
 
-4. Open **Settings** → enter your OpenClaw **Gateway Host**, **Port**, and **Token**
-5. Clawsy connects and sends a pairing request. **Approve it on your server:**
+5. Open **Settings** → enter your OpenClaw **Gateway Host**, **Port**, and **Token**
+6. Clawsy connects and sends a pairing request. **Approve it on your server:**
    ```bash
    # List pending pairing requests
    openclaw devices list
@@ -78,7 +84,7 @@ Make sure your OpenClaw instance is running and you have the **Gateway Host**, *
 
 ### 4. Tell your agent
 
-6. Copy-paste this into your chat or add it to your `AGENTS.md`:
+7. Copy-paste this into your chat or add it to your `AGENTS.md`:
    ```
    Clawsy (macOS companion app) is installed and connected.
    Read the Clawsy skill file for full integration details.
@@ -88,7 +94,7 @@ Make sure your OpenClaw instance is running and you have the **Gateway Host**, *
    See: https://github.com/iret77/clawsy/blob/main/for-agents.md
    ```
 
-7. **Done.** Your agent can now take screenshots, read your clipboard, access files, and show live task progress.
+8. **Done.** Your agent can now take screenshots, read your clipboard, access files, and show live task progress.
 
 ---
 
