@@ -8,7 +8,7 @@ import AppKit
 func render<V: View>(_ view: V, width: CGFloat, height: CGFloat, to path: String) {
     let renderer = ImageRenderer(content:
         view
-            .frame(width: width, height: height)
+            .frame(width: width, height: height, alignment: .top)
             .environment(\.colorScheme, .dark)
     )
     renderer.scale = 2.0
