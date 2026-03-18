@@ -102,7 +102,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
 
     // Gateway Sessions Polling
     private var sessionsPollerTimer: Timer?
-    private let sessionsPollerInterval: TimeInterval = 10
+    private let sessionsPollerInterval: TimeInterval = 30
     private let sessionsActiveWindowSeconds: TimeInterval = 300  // 5 min = "running"
     
     // SSH Tunnel Management (macOS only)
@@ -145,6 +145,18 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     private var serverPort: String {
         hostProfile?.gatewayPort ?? SharedConfig.serverPort
     }
+
+    /// Base URL for REST API calls, SSH-Tunnel-aware.
+    private var gatewayBaseURL: String? {
+        if isUsingSshTunnel {
+            return "http://127.0.0.1:\(sshTunnelLocalPort)"
+        }
+        let host = serverHost.isEmpty ? "127.0.0.1" : serverHost
+        let port = serverPort.isEmpty ? "18789" : serverPort
+        if host.contains("://") { return host }
+        return "http://\(host):\(port)"
+    }
+
     private var serverToken: String {
         hostProfile?.serverToken ?? SharedConfig.serverToken
     }
@@ -1037,7 +1049,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         statePollerTimer = nil
     }
 
-    // MARK: - Gateway Sessions Polling (sessions.list every 10s)
+    // MARK: - Gateway Sessions Polling (sessions.list every 30s)
 
     private func startSessionsPoller() {
         requestSessionsList()
@@ -1055,17 +1067,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     private func requestSessionsList() {
         guard isHandshakeComplete, isConnected else { return }
 
-        // Use same base URL logic as pollAgentState() (SSH-Tunnel-Awareness)
-        let baseURL: String
-        if isUsingSshTunnel {
-            baseURL = "http://127.0.0.1:\(sshTunnelLocalPort)"
-        } else {
-            let host = serverHost.isEmpty ? "127.0.0.1" : serverHost
-            let port = serverPort.isEmpty ? "18789" : serverPort
-            let scheme = host.contains("://") ? "" : "http"
-            baseURL = host.contains("://") ? host : "\(scheme)://\(host):\(port)"
-        }
-        guard let url = URL(string: "\(baseURL)/tools/invoke") else { return }
+        guard let base = gatewayBaseURL, let url = URL(string: "\(base)/tools/invoke") else { return }
 
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -1137,17 +1139,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
 
     private func pollAgentState() {
-        // Use same base URL logic as WebSocket connection
-        let baseURL: String
-        if isUsingSshTunnel {
-            baseURL = "http://127.0.0.1:\(sshTunnelLocalPort)"
-        } else {
-            let host = serverHost.isEmpty ? "127.0.0.1" : serverHost
-            let port = serverPort.isEmpty ? "18789" : serverPort
-            let scheme = host.contains("://") ? "" : "http"
-            baseURL = host.contains("://") ? host : "\(scheme)://\(host):\(port)"
-        }
-        guard let url = URL(string: "\(baseURL)/tools/invoke") else { return }
+        guard let base = gatewayBaseURL, let url = URL(string: "\(base)/tools/invoke") else { return }
 
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -1222,15 +1214,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     /// Probes whether the clawsy-bridge gateway plugin is active on the remote host.
     /// Called once after a successful auth handshake (Case B detection).
     private func detectClawsyServer() {
-        let baseURL: String
-        if isUsingSshTunnel {
-            baseURL = "http://127.0.0.1:\(sshTunnelLocalPort)"
-        } else {
-            let host = serverHost.isEmpty ? "127.0.0.1" : serverHost
-            let port = serverPort.isEmpty ? "18789" : serverPort
-            baseURL = "http://\(host):\(port)"
-        }
-        guard let url = URL(string: "\(baseURL)/tools/invoke") else { return }
+        guard let base = gatewayBaseURL, let url = URL(string: "\(base)/tools/invoke") else { return }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(serverToken)", forHTTPHeaderField: "Authorization")

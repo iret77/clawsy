@@ -579,14 +579,14 @@ struct ContentView: View {
         .padding(.vertical, 6)
     }
 
-    /// Sessions eligible for the agent picker: direct, running, not clawsy-service or main.
+    /// Sessions eligible for the agent picker: running, not clawsy-service, main, or subagent sessions.
     private var availableAgentSessions: [GatewaySession] {
         guard let nm = network else { return [] }
         return nm.gatewaySessions.filter { session in
-            session.kind == "direct" &&
             session.status == "running" &&
             session.id != "clawsy-service" &&
-            !session.id.hasSuffix(":main")
+            !session.id.hasSuffix(":main") &&
+            !session.id.contains(":subagent:")
         }
     }
 
