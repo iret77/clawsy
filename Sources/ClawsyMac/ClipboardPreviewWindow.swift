@@ -21,17 +21,17 @@ struct ClipboardPreviewWindow: View {
         agentName ?? NSLocalizedString("GENERIC_AGENT", bundle: .clawsy, comment: "")
     }
 
-    private var clipboardDescription: String {
+    private var clipboardTitle: String {
         if direction == .write {
-            if agentName != nil {
-                return String(format: NSLocalizedString("CLIPBOARD_NAMED_WANTS_WRITE", bundle: .clawsy, comment: ""), displayAgent)
+            if let name = agentName {
+                return String(format: NSLocalizedString("CLIPBOARD_NAMED_WRITE_TITLE", bundle: .clawsy, comment: ""), name)
             }
-            return NSLocalizedString("CLIPBOARD_WANTS_WRITE", bundle: .clawsy, comment: "")
+            return NSLocalizedString("CLIPBOARD_WRITE_TITLE", bundle: .clawsy, comment: "")
         } else {
-            if agentName != nil {
-                return String(format: NSLocalizedString("CLIPBOARD_NAMED_WANTS_READ", bundle: .clawsy, comment: ""), displayAgent)
+            if let name = agentName {
+                return String(format: NSLocalizedString("CLIPBOARD_NAMED_READ_TITLE", bundle: .clawsy, comment: ""), name)
             }
-            return NSLocalizedString("CLIPBOARD_WANTS_READ", bundle: .clawsy, comment: "")
+            return NSLocalizedString("CLIPBOARD_READ_TITLE", bundle: .clawsy, comment: "")
         }
     }
 
@@ -60,7 +60,7 @@ struct ClipboardPreviewWindow: View {
                         )
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(clipboardDescription)
+                        Text(clipboardTitle)
                             .font(.system(size: 15, weight: .semibold))
                         
                         Text("CHAR_COUNT \(charCount)")

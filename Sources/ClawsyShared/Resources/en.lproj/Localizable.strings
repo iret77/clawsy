@@ -217,7 +217,9 @@
 "OP_UPLOAD" = "Upload";
 "OP_DOWNLOAD" = "Download";
 "OP_DELETE" = "Delete";
-"AGENT_WANTS_TO_OP" = "The agent wants to %@ the file \"%@\".";
+"AGENT_WANTS_TO_OP" = "The agent wants to %2$@ the file \"%1$@\".";
+"CLIPBOARD_NAMED_WRITE_TITLE" = "%@ wants to write to clipboard";
+"CLIPBOARD_NAMED_READ_TITLE" = "%@ wants to read clipboard";
 "FILENAME_AGENT_STATUS" = "Agent Status (internal)";
 "ALLOW_LIMITED" = "Allow for…";
 "ALLOW_UPLOAD" = "Allow Upload";
@@ -348,7 +350,7 @@
 // Agent Identity (named agent dialogs)
 "GENERIC_AGENT" = "The agent";
 "AGENT_NAMED_WANTS_TO" = "%@ wants to %@ a file.";
-"AGENT_NAMED_WANTS_TO_OP" = "%@ wants to %@ the file \"%@\".";
+"AGENT_NAMED_WANTS_TO_OP" = "%1$@ wants to %3$@ the file \"%2$@\".";
 "CLIPBOARD_NAMED_WANTS_WRITE" = "%@ wants to write to your clipboard:";
 "CLIPBOARD_NAMED_WANTS_READ" = "%@ wants to read your clipboard.";
 "ALERT_SCREENSHOT_NAMED_BODY" = "%@ wants to see your screen.";

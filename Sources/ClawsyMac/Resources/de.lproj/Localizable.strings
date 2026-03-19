@@ -146,7 +146,7 @@
 "STATUS_PAIRING" = "Kopplung…";
 "STATUS_PAIRING_PENDING" = "Warte auf Kopplung…";
 "STATUS_PAIRING_REJECTED" = "Kopplung abgelehnt";
-"STATUS_PAIRING_TIMEOUT" = "Kopplung – Zeitüberschreitung";
+"STATUS_PAIRING_TIMEOUT" = "Kopplung - Zeitüberschreitung";
 "STATUS_AWAITING_PAIR_APPROVE" = "Freigabe ausstehend";
 "PAIRING_REQUIRED_TITLE" = "Pairing-Bestätigung erforderlich";
 "PAIRING_REQUIRED_DESC" = "Führe diesen Befehl auf deinem Server aus:";
@@ -204,17 +204,19 @@
 "ONBOARDING_SKIP" = "Später";
 "ONBOARDING_DONE" = "Fertig";
 "RULE_NOTIFY_TITLE" = "Clawsy Regel ausgelöst";
-"ONBOARDING_ACCESSIBILITY_RESTART_HINT" = "Clawsy ist in Bedienungshilfen aktiviert ✓ — ein Neustart ist erforderlich, damit der Zugriff wirksam wird.";
+"ONBOARDING_ACCESSIBILITY_RESTART_HINT" = "Clawsy ist in Bedienungshilfen aktiviert ✓ - ein Neustart ist erforderlich, damit der Zugriff wirksam wird.";
 "ONBOARDING_RESTART" = "Jetzt neu starten";
 "ONBOARDING_ACCESSIBILITY_SKIP_RESTART" = "Ich habe Zugriff erteilt, ohne Neustart fortfahren →";
 "MISSION_CONTROL_EMPTY" = "Keine aktiven Aufgaben";
 "MISSION_CONTROL_EMPTY_HINT" = "Sobald dein Assistent eine Aufgabe bearbeitet, erscheint sie hier.";
 "FILESYNC_TITLE" = "Dateizugriff angefragt";
-"FILESYNC_WINDOW_TITLE" = "Clawsy — Dateizugriff";
+"FILESYNC_WINDOW_TITLE" = "Clawsy - Dateizugriff";
 "OP_UPLOAD" = "Hochladen";
 "OP_DOWNLOAD" = "Herunterladen";
 "OP_DELETE" = "Löschen";
-"AGENT_WANTS_TO_OP" = "Der Agent möchte die Datei „%@“ %@.";
+"AGENT_WANTS_TO_OP" = "Der Agent möchte die Datei „%1$@“ %2$@.";
+"CLIPBOARD_NAMED_WRITE_TITLE" = "%@ möchte in die Zwischenablage schreiben";
+"CLIPBOARD_NAMED_READ_TITLE" = "%@ möchte die Zwischenablage lesen";
 "FILENAME_AGENT_STATUS" = "Agentenstatus (intern)";
 "ALLOW_LIMITED" = "Zeitlich erlauben…";
 "ALLOW_UPLOAD" = "Hochladen erlauben";
@@ -257,14 +259,14 @@
 "STATUS_RECONNECTING" = "Verbindung wird wiederhergestellt…";
 "STATUS_RECONNECT_EXHAUSTED" = "Verbindung fehlgeschlagen";
 
-// Onboarding – Teilen-Erweiterung
+// Onboarding - Teilen-Erweiterung
 "ONBOARDING_SHARE" = "Teilen-Erweiterung";
 "ONBOARDING_SHARE_DESC" = "Nutze das Teilen-Menü in jeder App, um Dateien oder Text direkt an deinen Agent zu senden. Automatisch verfügbar, wenn Clawsy in /Programme liegt.";
 "ONBOARDING_SHARE_ACTION" = "Verstanden";
 
-// Onboarding – Server einrichten
+// Onboarding - Server einrichten
 "ONBOARDING_SERVER" = "Server einrichten";
-"ONBOARDING_SERVER_DESC" = "Dein Agent braucht Server-Komponenten, um Zwischenablage und Screenshots zu cachen. Tippe, um einen Setup-Prompt zu kopieren — sende ihn deinem Agent per Chat.";
+"ONBOARDING_SERVER_DESC" = "Dein Agent braucht Server-Komponenten, um Zwischenablage und Screenshots zu cachen. Tippe, um einen Setup-Prompt zu kopieren - sende ihn deinem Agent per Chat.";
 "ONBOARDING_SERVER_COPY" = "Setup-Prompt kopieren";
 "ONBOARDING_SERVER_DONE" = "Fertig";
 
@@ -289,13 +291,13 @@
 "ONBOARDING_INSTALL_SUBTITLE" = "Schick diesen Befehl deinem Agenten, um den Clawsy-Server zu installieren.";
 "ONBOARDING_INSTALL_STEP1" = "1. Kopiere diesen Befehl und schicke ihn deinem Agenten (Telegram, Slack, etc.):";
 "ONBOARDING_INSTALL_STEP2" = "2. Dein Agent installiert Clawsy und schickt dir einen Link zum Klicken zurück.";
-"ONBOARDING_INSTALL_SENT" = "Gesendet — ich warte auf den Link";
+"ONBOARDING_INSTALL_SENT" = "Gesendet - ich warte auf den Link";
 "ONBOARDING_INSTALL_WAITING" = "Warte auf den Link von deinem Agenten…";
 "ONBOARDING_INSTALL_WAITING_HINT" = "Klicke den clawsy://-Link den dein Agent schickt. Clawsy verbindet sich automatisch.";
 "ONBOARDING_INSTALL_BACK" = "← Zurück";
 "ONBOARDING_GATEWAY_HAVE_CODE" = "Code bereits vorhanden? →";
 
-// v0.9.3 — Onboarding Install-Prompt & Case B
+// v0.9.3 - Onboarding Install-Prompt & Case B
 "ONBOARDING_INSTALL_PROMPT_FULL" = "Bitte installiere den Clawsy-Server auf dieser OpenClaw-Instanz:\n\ncurl -fsSL https://raw.githubusercontent.com/iret77/clawsy/main/server/install.sh | bash\n\nDas Skript richtet alles ein und sendet dir automatisch einen Setup-Link über deinen üblichen Messaging-Kanal (Telegram, Slack, etc.). Klicke diesen Link auf deinem Mac, um die Verbindung herzustellen.";
 "ONBOARDING_INSTALL_CASE_B_SUBTITLE" = "Verbunden, aber Clawsy-Server ist noch nicht installiert.";
 
@@ -312,18 +314,18 @@
 "NO_HOST_SUBTITLE" = "Füge einen Host hinzu um loszulegen.";
 "NO_HOST_ADD_BUTTON" = "Host hinzufügen";
 
-"CONNECTION_HELP" = "Bitte deinen Agenten, einen Verbindungslink zu generieren – oder entnimm Host, Port und Token aus deiner OpenClaw-Serverkonfiguration.";
+"CONNECTION_HELP" = "Bitte deinen Agenten, einen Verbindungslink zu generieren - oder entnimm Host, Port und Token aus deiner OpenClaw-Serverkonfiguration.";
 "CONNECTION_GUIDE_TITLE" = "So verbindest du einen neuen Host:";
 "CONNECTION_GUIDE_STEP1" = "Sag deinem Agenten: \"Installiere das Clawsy-Serverpaket\" (clawhub install clawsy)";
-"CONNECTION_GUIDE_STEP2" = "Dein Agent schickt dir einen Verbindungslink – klick ihn an und Clawsy verbindet sich automatisch.";
+"CONNECTION_GUIDE_STEP2" = "Dein Agent schickt dir einen Verbindungslink - klick ihn an und Clawsy verbindet sich automatisch.";
 "STATUS_RECONNECT_COUNTDOWN %lld" = "Neuverbindung in %lld s…";
 
-// Onboarding UX — Skill fehlt nach SSH (v0.9.4)
-"ERROR_SKILL_MISSING_TITLE" = "SSH verbunden — Clawsy-Skill fehlt";
-"ERROR_SKILL_MISSING_DESC" = "SSH-Verbindung erfolgreich — aber der Clawsy-Server-Skill ist auf dieser OpenClaw-Instanz nicht installiert.";
+// Onboarding UX - Skill fehlt nach SSH (v0.9.4)
+"ERROR_SKILL_MISSING_TITLE" = "SSH verbunden - Clawsy-Skill fehlt";
+"ERROR_SKILL_MISSING_DESC" = "SSH-Verbindung erfolgreich - aber der Clawsy-Server-Skill ist auf dieser OpenClaw-Instanz nicht installiert.";
 "ERROR_SKILL_MISSING_FIX_PROMPT" = "Installiere den Clawsy-Skill von clawhub";
 
-// Host hinzufügen — Agent-Hilfe-Hinweis im manuellen Modus
+// Host hinzufügen - Agent-Hilfe-Hinweis im manuellen Modus
 "ADD_HOST_MANUAL_HINT_TITLE" = "Verbindungsdaten unbekannt?";
 "ADD_HOST_MANUAL_HINT_DESC" = "Sag deinem OpenClaw-Agenten:";
 "ADD_HOST_MANUAL_HINT_PROMPT" = "Installiere den Clawsy-Skill von clawhub";
@@ -341,7 +343,7 @@
 // Agent Identity (named agent dialogs)
 "GENERIC_AGENT" = "Der Agent";
 "AGENT_NAMED_WANTS_TO" = "%@ möchte eine Datei %@.";
-"AGENT_NAMED_WANTS_TO_OP" = "%@ möchte die Datei „%@" %@.";
+"AGENT_NAMED_WANTS_TO_OP" = "%1$@ möchte die Datei „%2$@“ %3$@.";
 "CLIPBOARD_NAMED_WANTS_WRITE" = "%@ möchte in deine Zwischenablage schreiben:";
 "CLIPBOARD_NAMED_WANTS_READ" = "%@ möchte deine Zwischenablage lesen.";
 "ALERT_SCREENSHOT_NAMED_BODY" = "%@ möchte deinen Bildschirm sehen.";
