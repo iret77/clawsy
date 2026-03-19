@@ -583,29 +583,32 @@ Details in CLAWSY.md.
         }
     }
     
-    func showClipboardRequest(content: String, direction: ClipboardDirection = .write, onConfirm: @escaping () -> Void, onCancel: @escaping () -> Void) {
+    func showClipboardRequest(content: String, direction: ClipboardDirection = .write, agentName: String? = nil, onConfirm: @escaping () -> Void, onCancel: @escaping () -> Void) {
         let view = ClipboardPreviewWindow(
             content: content,
             direction: direction,
+            agentName: agentName,
             onConfirm: { onConfirm(); self.alertWindow?.close() },
             onCancel: { onCancel(); self.alertWindow?.close() }
         )
         showFloatingWindow(view: view, title: "Clipboard Sync", autosaveName: "ai.clawsy.ClipboardWindow")
     }
     
-    func showFileSyncRequest(filename: String, operation: String, onConfirm: @escaping (TimeInterval?) -> Void, onCancel: @escaping () -> Void) {
+    func showFileSyncRequest(filename: String, operation: String, agentName: String? = nil, onConfirm: @escaping (TimeInterval?) -> Void, onCancel: @escaping () -> Void) {
         let view = FileSyncRequestWindow(
             filename: filename,
             operation: operation,
+            agentName: agentName,
             onConfirm: { duration in onConfirm(duration); self.alertWindow?.close() },
             onCancel: { onCancel(); self.alertWindow?.close() }
         )
         showFloatingWindow(view: view, title: NSLocalizedString("FILESYNC_WINDOW_TITLE", bundle: .clawsy, comment: ""), autosaveName: "ai.clawsy.FileWindow")
     }
 
-    func showScreenshotRequest(requestedInteractive: Bool, onConfirm: @escaping (Bool) -> Void, onCancel: @escaping () -> Void) {
+    func showScreenshotRequest(requestedInteractive: Bool, agentName: String? = nil, onConfirm: @escaping (Bool) -> Void, onCancel: @escaping () -> Void) {
         let view = ScreenshotRequestWindow(
             requestedInteractive: requestedInteractive,
+            agentName: agentName,
             onConfirm: { interactive in
                 onConfirm(interactive)
                 self.alertWindow?.close()
@@ -618,9 +621,10 @@ Details in CLAWSY.md.
         showFloatingWindow(view: view, title: "Screenshot Request", autosaveName: "ai.clawsy.ScreenshotWindow")
     }
 
-    func showCameraPreview(image: NSImage, onConfirm: @escaping () -> Void, onCancel: @escaping () -> Void) {
+    func showCameraPreview(image: NSImage, agentName: String? = nil, onConfirm: @escaping () -> Void, onCancel: @escaping () -> Void) {
         let view = CameraPreviewView(
             image: image,
+            agentName: agentName,
             onConfirm: { onConfirm(); self.alertWindow?.close() },
             onCancel: { onCancel(); self.alertWindow?.close() }
         )

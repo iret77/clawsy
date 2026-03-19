@@ -337,3 +337,12 @@
 "AGENT_PICKER_LABEL" = "Aktiver Agent";
 "AGENT_PICKER_DEFAULT" = "Standard (clawsy-service)";
 "NOTIFICATION_BODY_CHECKSUM" = "Prüfsumme: %@";
+
+// Agent Identity (named agent dialogs)
+"GENERIC_AGENT" = "Der Agent";
+"AGENT_NAMED_WANTS_TO" = "%@ möchte eine Datei %@.";
+"AGENT_NAMED_WANTS_TO_OP" = "%@ möchte die Datei „%@" %@.";
+"CLIPBOARD_NAMED_WANTS_WRITE" = "%@ möchte in deine Zwischenablage schreiben:";
+"CLIPBOARD_NAMED_WANTS_READ" = "%@ möchte deine Zwischenablage lesen.";
+"ALERT_SCREENSHOT_NAMED_BODY" = "%@ möchte deinen Bildschirm sehen.";
+"REMOTE_NAMED_USER_ASKING" = "%@ bittet um eine Aufnahme.";

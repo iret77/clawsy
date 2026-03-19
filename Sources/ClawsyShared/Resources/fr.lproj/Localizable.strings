@@ -297,3 +297,12 @@
 // Agent Picker
 "AGENT_PICKER_LABEL" = "Agent actif";
 "AGENT_PICKER_DEFAULT" = "Par défaut (clawsy-service)";
+
+// Agent Identity (named agent dialogs)
+"GENERIC_AGENT" = "L'agent";
+"AGENT_NAMED_WANTS_TO" = "%@ veut %@ un fichier.";
+"AGENT_NAMED_WANTS_TO_OP" = "%@ veut %@ le fichier « %@ ».";
+"CLIPBOARD_NAMED_WANTS_WRITE" = "%@ veut écrire dans votre presse-papiers :";
+"CLIPBOARD_NAMED_WANTS_READ" = "%@ veut lire votre presse-papiers.";
+"ALERT_SCREENSHOT_NAMED_BODY" = "%@ veut voir votre écran.";
+"REMOTE_NAMED_USER_ASKING" = "%@ demande une capture.";

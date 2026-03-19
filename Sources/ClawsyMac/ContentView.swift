@@ -579,14 +579,15 @@ struct ContentView: View {
         .padding(.vertical, 6)
     }
 
-    /// Sessions eligible for the agent picker: running, not clawsy-service, main, or subagent sessions.
+    /// Sessions eligible for the agent picker: running main agent sessions only.
     private var availableAgentSessions: [GatewaySession] {
         guard let nm = network else { return [] }
         return nm.gatewaySessions.filter { session in
             session.status == "running" &&
             session.id != "clawsy-service" &&
-            !session.id.hasSuffix(":main") &&
-            !session.id.contains(":subagent:")
+            session.id.hasSuffix(":main") &&
+            !session.id.contains(":subagent:") &&
+            !session.id.contains(":cron:")
         }
     }
 
@@ -617,10 +618,20 @@ struct ContentView: View {
         if let label = session.label, !label.isEmpty {
             return label
         }
-        // Derive from key: "agent:main:slack:..." → "main"
+        // Derive from key: "agent:elliot:main" → "Elliot"
         let parts = session.id.split(separator: ":")
-        if parts.count >= 2 { return String(parts[1]) }
+        if parts.count >= 2 { return String(parts[1]).capitalized }
         return session.id
+    }
+
+    /// Derive display name from the active targetSessionKey. Returns nil for "clawsy-service" or unparseable keys.
+    private func currentAgentDisplayName() -> String? {
+        guard let nm = network else { return nil }
+        let key = nm.targetSessionKey
+        if key == "clawsy-service" { return nil }
+        let parts = key.split(separator: ":")
+        guard parts.count >= 2 else { return nil }
+        return String(parts[1]).capitalized
     }
 
         func handleManualClipboardSend() {
@@ -728,8 +739,10 @@ struct ContentView: View {
     func setupCallbacksForHost(nm: NetworkManager, profile: HostProfile) {
         nm.onScreenshotRequested = { interactive, requestId in
             DispatchQueue.main.async {
+                let agentName = self.currentAgentDisplayName()
                 self.appDelegate.showScreenshotRequest(
                     requestedInteractive: interactive,
+                    agentName: agentName,
                     onConfirm: { userInteractive in
                         if let b64 = ScreenshotManager.takeScreenshot(interactive: userInteractive) {
                             nm.sendResponse(id: requestId, result: ["format": "jpeg", "base64": b64])
@@ -746,8 +759,9 @@ struct ContentView: View {
         
         nm.onClipboardReadRequested = { requestId in
             DispatchQueue.main.async {
+                let agentName = self.currentAgentDisplayName()
                 let content = ClipboardManager.getClipboardContent() ?? ""
-                self.appDelegate.showClipboardRequest(content: content, direction: .read, onConfirm: {
+                self.appDelegate.showClipboardRequest(content: content, direction: .read, agentName: agentName, onConfirm: {
                     if let current = ClipboardManager.getClipboardContent() {
                         nm.sendResponse(id: requestId, result: ["text": current])
                     } else {
@@ -761,7 +775,8 @@ struct ContentView: View {
         
         nm.onClipboardWriteRequested = { content, requestId in
             DispatchQueue.main.async {
-                self.appDelegate.showClipboardRequest(content: content, onConfirm: {
+                let agentName = self.currentAgentDisplayName()
+                self.appDelegate.showClipboardRequest(content: content, agentName: agentName, onConfirm: {
                     ClipboardManager.setClipboardContent(content)
                     nm.sendResponse(id: requestId, result: ["status": "ok"])
                 }, onCancel: {
@@ -772,7 +787,8 @@ struct ContentView: View {
         
         nm.onFileSyncRequested = { filename, operation, onConfirm, onCancel in
             DispatchQueue.main.async {
-                self.appDelegate.showFileSyncRequest(filename: filename, operation: operation, onConfirm: { duration in
+                let agentName = self.currentAgentDisplayName()
+                self.appDelegate.showFileSyncRequest(filename: filename, operation: operation, agentName: agentName, onConfirm: { duration in
                     onConfirm(duration)
                 }, onCancel: {
                     onCancel()
@@ -781,7 +797,8 @@ struct ContentView: View {
         }
 
         nm.onCameraPreviewRequested = { image, onConfirm, onCancel in
-            self.appDelegate.showCameraPreview(image: image, onConfirm: onConfirm, onCancel: onCancel)
+            let agentName = self.currentAgentDisplayName()
+            self.appDelegate.showCameraPreview(image: image, agentName: agentName, onConfirm: onConfirm, onCancel: onCancel)
         }
         
         // Wire agent info updates only for the active host
@@ -815,8 +832,10 @@ struct ContentView: View {
     func setupCallbacksLegacy(_ network: NetworkManager) {
         network.onScreenshotRequested = { interactive, requestId in
             DispatchQueue.main.async {
+                let agentName = self.currentAgentDisplayName()
                 self.appDelegate.showScreenshotRequest(
                     requestedInteractive: interactive,
+                    agentName: agentName,
                     onConfirm: { userInteractive in
                         if let b64 = ScreenshotManager.takeScreenshot(interactive: userInteractive) {
                             network.sendResponse(id: requestId, result: ["format": "jpeg", "base64": b64])
@@ -833,8 +852,9 @@ struct ContentView: View {
         
         network.onClipboardReadRequested = { requestId in
             DispatchQueue.main.async {
+                let agentName = self.currentAgentDisplayName()
                 let content = ClipboardManager.getClipboardContent() ?? ""
-                self.appDelegate.showClipboardRequest(content: content, direction: .read, onConfirm: {
+                self.appDelegate.showClipboardRequest(content: content, direction: .read, agentName: agentName, onConfirm: {
                     if let current = ClipboardManager.getClipboardContent() {
                         network.sendResponse(id: requestId, result: ["text": current])
                     } else {
@@ -848,7 +868,8 @@ struct ContentView: View {
         
         network.onClipboardWriteRequested = { content, requestId in
             DispatchQueue.main.async {
-                self.appDelegate.showClipboardRequest(content: content, onConfirm: {
+                let agentName = self.currentAgentDisplayName()
+                self.appDelegate.showClipboardRequest(content: content, agentName: agentName, onConfirm: {
                     ClipboardManager.setClipboardContent(content)
                     network.sendResponse(id: requestId, result: ["status": "ok"])
                 }, onCancel: {
@@ -859,7 +880,8 @@ struct ContentView: View {
         
         network.onFileSyncRequested = { filename, operation, onConfirm, onCancel in
             DispatchQueue.main.async {
-                self.appDelegate.showFileSyncRequest(filename: filename, operation: operation, onConfirm: { duration in
+                let agentName = self.currentAgentDisplayName()
+                self.appDelegate.showFileSyncRequest(filename: filename, operation: operation, agentName: agentName, onConfirm: { duration in
                     onConfirm(duration)
                 }, onCancel: {
                     onCancel()
@@ -868,7 +890,8 @@ struct ContentView: View {
         }
 
         network.onCameraPreviewRequested = { image, onConfirm, onCancel in
-            self.appDelegate.showCameraPreview(image: image, onConfirm: onConfirm, onCancel: onCancel)
+            let agentName = self.currentAgentDisplayName()
+            self.appDelegate.showCameraPreview(image: image, agentName: agentName, onConfirm: onConfirm, onCancel: onCancel)
         }
     }
 }

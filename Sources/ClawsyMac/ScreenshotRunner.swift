@@ -84,6 +84,7 @@ enum ScreenshotRunner {
         let view = FileSyncRequestWindow(
             filename: "report_2026.pdf",
             operation: "Upload",
+            agentName: nil,
             onConfirm: { _ in },
             onCancel: {}
         )

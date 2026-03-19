@@ -3,8 +3,20 @@ import AVFoundation
 
 struct CameraPreviewView: View {
     let image: NSImage
+    let agentName: String?
     let onConfirm: () -> Void
     let onCancel: () -> Void
+
+    private var displayAgent: String {
+        agentName ?? NSLocalizedString("GENERIC_AGENT", bundle: .clawsy, comment: "")
+    }
+
+    private var remoteUserText: String {
+        if agentName != nil {
+            return String(format: NSLocalizedString("REMOTE_NAMED_USER_ASKING", bundle: .clawsy, comment: ""), displayAgent)
+        }
+        return NSLocalizedString("REMOTE_USER_ASKING", bundle: .clawsy, comment: "")
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -25,7 +37,7 @@ struct CameraPreviewView: View {
                     Text("CAMERA_PREVIEW_TITLE")
                         .font(.system(size: 15, weight: .bold))
                     
-                    Text("REMOTE_USER_ASKING")
+                    Text(remoteUserText)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
                 }
