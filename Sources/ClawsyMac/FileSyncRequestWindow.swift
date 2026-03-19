@@ -83,9 +83,9 @@ struct FileSyncRequestWindow: View {
 
     private var fileSyncDescription: String {
         if agentName != nil {
-            return String(format: NSLocalizedString("AGENT_NAMED_WANTS_TO_OP", bundle: .clawsy, comment: ""), displayAgent, operationLocalized.lowercased(), displayFilename)
+            return String(format: NSLocalizedString("AGENT_NAMED_WANTS_TO_OP", bundle: .clawsy, comment: ""), displayAgent, displayFilename, operationLocalized.lowercased())
         }
-        return String(format: NSLocalizedString("AGENT_WANTS_TO_OP", bundle: .clawsy, comment: ""), operationLocalized.lowercased(), displayFilename)
+        return String(format: NSLocalizedString("AGENT_WANTS_TO_OP", bundle: .clawsy, comment: ""), displayFilename, operationLocalized.lowercased())
     }
 
     var body: some View {

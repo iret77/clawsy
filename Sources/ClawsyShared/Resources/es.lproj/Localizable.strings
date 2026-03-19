@@ -159,7 +159,9 @@
 "ADD_HOST_MODE_TITLE" = "¿Cómo quieres conectarte?";
 "ADD_HOST_SAVE" = "Añadir host";
 "ADD_HOST_TITLE" = "Añadir nuevo host";
-"AGENT_WANTS_TO_OP" = "El agente quiere %@ el archivo «%@».";
+"AGENT_WANTS_TO_OP" = "El agente quiere %2$@ el archivo «%1$@».";
+"CLIPBOARD_NAMED_WRITE_TITLE" = "%@ quiere escribir en el portapapeles";
+"CLIPBOARD_NAMED_READ_TITLE" = "%@ quiere leer el portapapeles";
 "ALLOW_DELETE" = "Permitir eliminación";
 "ALLOW_DOWNLOAD" = "Permitir descarga";
 "ALLOW_GENERIC" = "Permitir";
@@ -301,7 +303,7 @@
 // Agent Identity (named agent dialogs)
 "GENERIC_AGENT" = "El agente";
 "AGENT_NAMED_WANTS_TO" = "%@ quiere %@ un archivo.";
-"AGENT_NAMED_WANTS_TO_OP" = "%@ quiere %@ el archivo «%@».";
+"AGENT_NAMED_WANTS_TO_OP" = "%1$@ quiere %3$@ el archivo «%2$@».";
 "CLIPBOARD_NAMED_WANTS_WRITE" = "%@ quiere escribir en tu portapapeles:";
 "CLIPBOARD_NAMED_WANTS_READ" = "%@ quiere leer tu portapapeles.";
 "ALERT_SCREENSHOT_NAMED_BODY" = "%@ quiere ver tu pantalla.";

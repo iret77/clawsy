@@ -213,7 +213,9 @@
 "OP_UPLOAD" = "Envoyer";
 "OP_DOWNLOAD" = "Télécharger";
 "OP_DELETE" = "Supprimer";
-"AGENT_WANTS_TO_OP" = "L'agent veut %@ le fichier « %@ ».";
+"AGENT_WANTS_TO_OP" = "L'agent veut %2$@ le fichier « %1$@ ».";
+"CLIPBOARD_NAMED_WRITE_TITLE" = "%@ veut écrire dans le presse-papiers";
+"CLIPBOARD_NAMED_READ_TITLE" = "%@ veut lire le presse-papiers";
 "FILENAME_AGENT_STATUS" = "Statut de l'agent (interne)";
 "ALLOW_LIMITED" = "Autoriser pour…";
 "ALLOW_UPLOAD" = "Autoriser l'envoi";
@@ -339,7 +341,7 @@
 // Agent Identity (named agent dialogs)
 "GENERIC_AGENT" = "L'agent";
 "AGENT_NAMED_WANTS_TO" = "%@ veut %@ un fichier.";
-"AGENT_NAMED_WANTS_TO_OP" = "%@ veut %@ le fichier « %@ ».";
+"AGENT_NAMED_WANTS_TO_OP" = "%1$@ veut %3$@ le fichier « %2$@ ».";
 "CLIPBOARD_NAMED_WANTS_WRITE" = "%@ veut écrire dans votre presse-papiers :";
 "CLIPBOARD_NAMED_WANTS_READ" = "%@ veut lire votre presse-papiers.";
 "ALERT_SCREENSHOT_NAMED_BODY" = "%@ veut voir votre écran.";
