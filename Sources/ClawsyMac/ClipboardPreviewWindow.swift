@@ -9,6 +9,7 @@ enum ClipboardDirection {
 struct ClipboardPreviewWindow: View {
     let content: String
     let direction: ClipboardDirection
+    let agentName: String?
     let onConfirm: () -> Void
     let onCancel: () -> Void
     
@@ -16,6 +17,24 @@ struct ClipboardPreviewWindow: View {
         content.count
     }
     
+    private var displayAgent: String {
+        agentName ?? NSLocalizedString("GENERIC_AGENT", bundle: .clawsy, comment: "")
+    }
+
+    private var clipboardDescription: String {
+        if direction == .write {
+            if agentName != nil {
+                return String(format: NSLocalizedString("CLIPBOARD_NAMED_WANTS_WRITE", bundle: .clawsy, comment: ""), displayAgent)
+            }
+            return NSLocalizedString("CLIPBOARD_WANTS_WRITE", bundle: .clawsy, comment: "")
+        } else {
+            if agentName != nil {
+                return String(format: NSLocalizedString("CLIPBOARD_NAMED_WANTS_READ", bundle: .clawsy, comment: ""), displayAgent)
+            }
+            return NSLocalizedString("CLIPBOARD_WANTS_READ", bundle: .clawsy, comment: "")
+        }
+    }
+
     private func copyToSystem() {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
@@ -41,7 +60,7 @@ struct ClipboardPreviewWindow: View {
                         )
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(l10n: direction == .write ? "CLIPBOARD_WRITE_TITLE" : "CLIPBOARD_READ_TITLE")
+                        Text(clipboardDescription)
                             .font(.system(size: 15, weight: .semibold))
                         
                         Text("CHAR_COUNT \(charCount)")

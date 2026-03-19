@@ -5,6 +5,7 @@ import ClawsyShared
 struct FileSyncRequestWindow: View {
     let filename: String
     let operation: String // "Upload" or "Download" or "Delete"
+    let agentName: String?
     let onConfirm: (TimeInterval?) -> Void
     let onCancel: () -> Void
 
@@ -76,6 +77,17 @@ struct FileSyncRequestWindow: View {
         }
     }
 
+    private var displayAgent: String {
+        agentName ?? NSLocalizedString("GENERIC_AGENT", bundle: .clawsy, comment: "")
+    }
+
+    private var fileSyncDescription: String {
+        if agentName != nil {
+            return String(format: NSLocalizedString("AGENT_NAMED_WANTS_TO_OP", bundle: .clawsy, comment: ""), displayAgent, operationLocalized.lowercased(), displayFilename)
+        }
+        return String(format: NSLocalizedString("AGENT_WANTS_TO_OP", bundle: .clawsy, comment: ""), operationLocalized.lowercased(), displayFilename)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -109,7 +121,7 @@ struct FileSyncRequestWindow: View {
 
             // Content
             VStack(spacing: 12) {
-                Text(String(format: NSLocalizedString("AGENT_WANTS_TO_OP", bundle: .clawsy, comment: ""), operationLocalized.lowercased(), displayFilename))
+                Text(fileSyncDescription)
                     .font(.system(size: 13))
                     .multilineTextAlignment(.center)
 
