@@ -585,9 +585,10 @@ struct ContentView: View {
         return nm.gatewaySessions.filter { session in
             session.status == "running" &&
             session.id != "clawsy-service" &&
-            session.id.hasSuffix(":main") &&
+            session.id.hasPrefix("agent:") &&
             !session.id.contains(":subagent:") &&
-            !session.id.contains(":cron:")
+            !session.id.contains(":cron:") &&
+            !session.id.contains(":run:")
         }
     }
 
