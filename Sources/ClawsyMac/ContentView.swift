@@ -582,7 +582,7 @@ struct ContentView: View {
     /// Sessions eligible for the agent picker: running main agent sessions only.
     private var availableAgentSessions: [GatewaySession] {
         guard let nm = network else { return [] }
-        return nm.gatewaySessions.filter { session in
+        let eligible = nm.gatewaySessions.filter { session in
             session.status == "running" &&
             session.id != "clawsy-service" &&
             session.id.hasPrefix("agent:") &&
@@ -590,6 +590,24 @@ struct ContentView: View {
             !session.id.contains(":cron:") &&
             !session.id.contains(":run:")
         }
+        // Deduplicate by agentId — keep most recently active session per agent
+        var bestByAgent: [String: GatewaySession] = [:]
+        for session in eligible {
+            let agentId = extractAgentId(from: session.id)
+            if let existing = bestByAgent[agentId] {
+                if let newDate = session.startedAt, let oldDate = existing.startedAt, newDate > oldDate {
+                    bestByAgent[agentId] = session
+                }
+            } else {
+                bestByAgent[agentId] = session
+            }
+        }
+        return Array(bestByAgent.values).sorted { ($0.startedAt ?? .distantPast) > ($1.startedAt ?? .distantPast) }
+    }
+
+    private func extractAgentId(from sessionKey: String) -> String {
+        let parts = sessionKey.split(separator: ":")
+        return parts.count >= 2 ? String(parts[1]) : sessionKey
     }
 
     /// Binding that syncs Picker selection with NetworkManager.targetSessionKey,
@@ -614,15 +632,17 @@ struct ContentView: View {
         )
     }
 
+    private static let agentNameMap: [String: String] = [
+        "main": "CyberClaw"
+    ]
+
     /// Display name for a session in the picker.
     private func agentDisplayName(for session: GatewaySession) -> String {
-        if let label = session.label, !label.isEmpty {
-            return label
+        let agentId = extractAgentId(from: session.id)
+        if let mapped = Self.agentNameMap[agentId] {
+            return mapped
         }
-        // Derive from key: "agent:elliot:main" → "Elliot"
-        let parts = session.id.split(separator: ":")
-        if parts.count >= 2 { return String(parts[1]).capitalized }
-        return session.id
+        return agentId.capitalized
     }
 
     /// Derive display name from the active targetSessionKey. Returns nil for "clawsy-service" or unparseable keys.
@@ -630,9 +650,11 @@ struct ContentView: View {
         guard let nm = network else { return nil }
         let key = nm.targetSessionKey
         if key == "clawsy-service" { return nil }
-        let parts = key.split(separator: ":")
-        guard parts.count >= 2 else { return nil }
-        return String(parts[1]).capitalized
+        let agentId = extractAgentId(from: key)
+        if let mapped = Self.agentNameMap[agentId] {
+            return mapped
+        }
+        return agentId.capitalized
     }
 
         func handleManualClipboardSend() {

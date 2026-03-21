@@ -116,7 +116,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     private var wasConnectedViaSsh = false
     
     /// Maximum number of reconnect attempts before giving up.
-    private let maxReconnectAttempts = 5
+    private let maxReconnectAttempts = 20
     
     // Callbacks for UI/Logic
     public var onHandshakeComplete: (() -> Void)?
