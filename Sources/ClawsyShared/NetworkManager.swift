@@ -19,6 +19,13 @@ import UIKit
 typealias ClawsyImage = UIImage
 #endif
 
+// MARK: - GatewayAgent Model
+
+public struct GatewayAgent: Identifiable, Equatable {
+    public let id: String      // agent id (e.g. "main", "elliot")
+    public let name: String    // display name (e.g. "CyberClaw", "Elliot")
+}
+
 // MARK: - GatewaySession Model
 
 public struct GatewaySession: Identifiable, Equatable {
@@ -59,6 +66,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     @Published public var serverVersion = "unknown"
     @Published public var connectionError: ConnectionError?
     @Published public var gatewaySessions: [GatewaySession] = []
+    @Published public var configuredAgents: [GatewayAgent] = []
     @Published public var pairingRequestId: String = ""  // Request ID for manual pairing approval
     @Published public var retryCountdown: Int = 0  // Seconds until next retry (0 = no retry pending)
     @Published public var serverDetected: Bool = false
@@ -1131,6 +1139,41 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         }.resume()
     }
 
+    private func requestAgentsList() {
+        guard isHandshakeComplete, isConnected else { return }
+        guard let base = gatewayBaseURL, let url = URL(string: "\(base)/tools/invoke") else { return }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(serverToken)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.timeoutInterval = 10
+
+        let body: [String: Any] = ["tool": "agents_list", "args": [:]]
+        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        URLSession.shared.dataTask(with: req) { [weak self] data, _, _ in
+            guard let self, let data else { return }
+            guard let outer = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let ok = outer["ok"] as? Bool, ok,
+                  let result = outer["result"] as? [String: Any],
+                  let contentArr = result["content"] as? [[String: Any]],
+                  let text = contentArr.first?["text"] as? String,
+                  let textData = text.data(using: .utf8),
+                  let payload = try? JSONSerialization.jsonObject(with: textData) as? [String: Any],
+                  let agents = payload["agents"] as? [[String: Any]] else { return }
+
+            let parsed: [GatewayAgent] = agents.compactMap { a in
+                guard let id = a["id"] as? String, let name = a["name"] as? String else { return nil }
+                return GatewayAgent(id: id, name: name)
+            }
+
+            DispatchQueue.main.async {
+                self.configuredAgents = parsed
+            }
+        }.resume()
+    }
+
     private func parseSessionsListResponse(_ result: Any) {
         guard let resultDict = result as? [String: Any],
               let sessions = resultDict["sessions"] as? [[String: Any]] else { return }
@@ -1376,6 +1419,9 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
 
                      // Start gateway sessions poller
                      self.startSessionsPoller()
+
+                     // Fetch configured agents (one-shot, not polled)
+                     self.requestAgentsList()
                      
                      // Check for pending one-shot
                      if let (kind, payload) = self.oneShotPayload {

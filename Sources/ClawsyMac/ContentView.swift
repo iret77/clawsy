@@ -554,7 +554,6 @@ struct ContentView: View {
     /// Compact agent picker — lets user choose which session receives events.
     @ViewBuilder
     private var agentPickerSection: some View {
-        let sessions = availableAgentSessions
         HStack(spacing: 6) {
             Image(systemName: "person.crop.circle")
                 .font(.system(size: 11))
@@ -566,9 +565,9 @@ struct ContentView: View {
             Picker("", selection: agentPickerBinding) {
                 Text(NSLocalizedString("AGENT_PICKER_DEFAULT", bundle: .clawsy, comment: ""))
                     .tag("clawsy-service")
-                ForEach(sessions, id: \.id) { session in
-                    Text(agentDisplayName(for: session))
-                        .tag(session.id)
+                ForEach(availableAgents) { agent in
+                    Text(agent.name)
+                        .tag("agent:\(agent.id)")
                 }
             }
             .pickerStyle(.menu)
@@ -579,69 +578,44 @@ struct ContentView: View {
         .padding(.vertical, 6)
     }
 
-    /// Sessions eligible for the agent picker: running main agent sessions only.
-    private var availableAgentSessions: [GatewaySession] {
+    /// All configured agents from the agents_list API.
+    private var availableAgents: [GatewayAgent] {
         guard let nm = network else { return [] }
-        let eligible = nm.gatewaySessions.filter { session in
-            session.id != "clawsy-service" &&
-            session.id.hasPrefix("agent:") &&
-            !session.id.contains(":subagent:") &&
-            !session.id.contains(":cron:") &&
-            !session.id.contains(":run:")
-        }
-        // Deduplicate by agentId — keep most recently active session per agent
-        var bestByAgent: [String: GatewaySession] = [:]
-        for session in eligible {
-            let agentId = extractAgentId(from: session.id)
-            if let existing = bestByAgent[agentId] {
-                if let newDate = session.startedAt, let oldDate = existing.startedAt, newDate > oldDate {
-                    bestByAgent[agentId] = session
-                }
-            } else {
-                bestByAgent[agentId] = session
-            }
-        }
-        return Array(bestByAgent.values).sorted { ($0.startedAt ?? .distantPast) > ($1.startedAt ?? .distantPast) }
+        return nm.configuredAgents
     }
 
-    private func extractAgentId(from sessionKey: String) -> String {
-        let parts = sessionKey.split(separator: ":")
-        return parts.count >= 2 ? String(parts[1]) : sessionKey
-    }
-
-    /// Binding that syncs Picker selection with NetworkManager.targetSessionKey,
-    /// falling back to "clawsy-service" when the chosen session disappears.
+    /// Binding that syncs Picker selection with NetworkManager.targetSessionKey.
+    /// Picker tags use "agent:<id>" format; the binding maps to/from actual session keys.
     private var agentPickerBinding: Binding<String> {
         Binding<String>(
             get: {
                 guard let nm = network else { return "clawsy-service" }
                 let current = nm.targetSessionKey
-                // Validate: must be clawsy-service or still in available list
                 if current == "clawsy-service" { return current }
-                let valid = nm.gatewaySessions.contains { $0.id == current }
-                if !valid {
-                    DispatchQueue.main.async { nm.targetSessionKey = "clawsy-service" }
-                    return "clawsy-service"
+                // Map current targetSessionKey back to picker tag "agent:<id>"
+                let parts = current.split(separator: ":")
+                if parts.count >= 2, parts[0] == "agent" {
+                    return "agent:\(parts[1])"
                 }
-                return current
+                return "clawsy-service"
             },
             set: { newValue in
-                network?.targetSessionKey = newValue
+                guard let nm = network else { return }
+                if newValue == "clawsy-service" {
+                    nm.targetSessionKey = "clawsy-service"
+                    return
+                }
+                // newValue is "agent:<id>" — find best matching session
+                let agentId = String(newValue.dropFirst("agent:".count))
+                // Look for an active session for this agent
+                let matching = nm.gatewaySessions.first { session in
+                    let parts = session.id.split(separator: ":")
+                    return parts.count >= 2 && parts[0] == "agent" && String(parts[1]) == agentId &&
+                        !session.id.contains(":cron:") && !session.id.contains(":subagent:") && !session.id.contains(":run:")
+                }
+                nm.targetSessionKey = matching?.id ?? "agent:\(agentId):main"
             }
         )
-    }
-
-    private static let agentNameMap: [String: String] = [
-        "main": "CyberClaw"
-    ]
-
-    /// Display name for a session in the picker.
-    private func agentDisplayName(for session: GatewaySession) -> String {
-        let agentId = extractAgentId(from: session.id)
-        if let mapped = Self.agentNameMap[agentId] {
-            return mapped
-        }
-        return agentId.capitalized
     }
 
     /// Derive display name from the active targetSessionKey. Returns nil for "clawsy-service" or unparseable keys.
@@ -649,11 +623,10 @@ struct ContentView: View {
         guard let nm = network else { return nil }
         let key = nm.targetSessionKey
         if key == "clawsy-service" { return nil }
-        let agentId = extractAgentId(from: key)
-        if let mapped = Self.agentNameMap[agentId] {
-            return mapped
-        }
-        return agentId.capitalized
+        let parts = key.split(separator: ":")
+        guard parts.count >= 2, parts[0] == "agent" else { return nil }
+        let agentId = String(parts[1])
+        return nm.configuredAgents.first { $0.id == agentId }?.name ?? agentId.capitalized
     }
 
         func handleManualClipboardSend() {
