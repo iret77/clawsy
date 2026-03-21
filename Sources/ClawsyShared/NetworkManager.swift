@@ -74,8 +74,10 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     }
     private var retryTimer: Timer?
     private var retryAttempt: Int = 0
-    private let baseRetryDelay: TimeInterval = 2.0
-    private let maxRetryDelay: TimeInterval = 60.0  // Cap at 60 seconds
+    private let retryDelays: [TimeInterval] = [0, 5, 15, 30]  // First 4 attempts
+    private let sustainedRetryInterval: TimeInterval = 60  // After that: every 60s
+    private let maxRetryDuration: TimeInterval = 30 * 60  // Give up after 30 minutes total
+    private var retryStartTime: Date?  // Track when retries started
     
     /// Tracks the reason for the most recent disconnection.
     /// Reconnect logic only fires when this is `.connectionLost`.
@@ -115,8 +117,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
     /// Used during reconnect to skip WSS and go directly to SSH tunnel rebuild.
     private var wasConnectedViaSsh = false
     
-    /// Maximum number of reconnect attempts before giving up.
-    private let maxReconnectAttempts = 20
+
     
     // Callbacks for UI/Logic
     public var onHandshakeComplete: (() -> Void)?
@@ -436,11 +437,17 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             return
         }
         
-        // Enforce max retry limit
-        if retryAttempt >= maxReconnectAttempts {
-            rawLog += "\n[RECONNECT] Max attempts (\(maxReconnectAttempts)) reached — giving up"
+        // Initialize retry start time on first attempt
+        if retryStartTime == nil {
+            retryStartTime = Date()
+        }
+        
+        // Check 30-minute total duration limit
+        if let start = retryStartTime, Date().timeIntervalSince(start) >= maxRetryDuration {
+            rawLog += "\n[RECONNECT] 30-minute retry window exhausted — giving up"
             connectionStatus = "STATUS_RECONNECT_EXHAUSTED"
-            disconnectReason = .setupFailed("Reconnect exhausted after \(maxReconnectAttempts) attempts")
+            disconnectReason = .setupFailed("Reconnect exhausted after 30 minutes")
+            retryStartTime = nil
             return
         }
         
@@ -450,13 +457,38 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
             return
         }
 
-        let delay = min(baseRetryDelay * pow(2.0, Double(retryAttempt)), maxRetryDelay)
-        let jitter = Double.random(in: 0...1.0)
-        let actualDelay = delay + jitter
-        let delayInt = max(Int(actualDelay.rounded(.up)), 1)
+        // Determine delay based on attempt number
+        let delay: TimeInterval
+        if retryAttempt < retryDelays.count {
+            delay = retryDelays[retryAttempt]
+        } else {
+            delay = sustainedRetryInterval
+        }
+        
         retryAttempt += 1
+        
+        // Immediate retry (delay == 0)
+        if delay == 0 {
+            rawLog += "\n[RECONNECT] Attempt \(retryAttempt) — immediate retry"
+            retryCountdown = 0
+            isUsingSshTunnel = false
+            #if os(macOS)
+            if wasConnectedViaSsh && !sshUser.isEmpty {
+                connectionStatus = "STATUS_SSH_RECONNECTING"
+                rawLog += "\n[SSH] Reconnect: rebuilding SSH tunnel directly"
+                startSshTunnel()
+            } else {
+                connect()
+            }
+            #else
+            connect()
+            #endif
+            return
+        }
+        
+        let delayInt = max(Int(delay.rounded(.up)), 1)
         retryCountdown = delayInt
-        rawLog += "\n[RECONNECT] Attempt \(retryAttempt) in \(String(format: "%.1f", actualDelay))s"
+        rawLog += "\n[RECONNECT] Attempt \(retryAttempt) in \(delayInt)s"
         connectionStatus = "STATUS_RECONNECT_WAITING"
 
         retryTimer?.invalidate()
@@ -470,7 +502,6 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 self.isUsingSshTunnel = false
                 #if os(macOS)
                 if self.wasConnectedViaSsh && !self.sshUser.isEmpty {
-                    // Skip WSS attempt — go directly to SSH tunnel rebuild
                     self.connectionStatus = "STATUS_SSH_RECONNECTING"
                     self.rawLog += "\n[SSH] Reconnect: rebuilding SSH tunnel directly"
                     self.startSshTunnel()
@@ -503,13 +534,17 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 // SSH reconnect: The previous successful connection was via SSH tunnel.
                 // Direct WSS failed (as expected — it failed the first time too).
                 // Go straight to SSH tunnel rebuild instead of looping on WSS retries.
-                if self.retryAttempt >= self.maxReconnectAttempts {
-                    self.rawLog += "\n[SSH] Max reconnect attempts (\(self.maxReconnectAttempts)) reached — giving up"
+                if self.retryStartTime == nil {
+                    self.retryStartTime = Date()
+                }
+                if let start = self.retryStartTime, Date().timeIntervalSince(start) >= self.maxRetryDuration {
+                    self.rawLog += "\n[SSH] 30-minute retry window exhausted — giving up"
                     self.connectionStatus = "STATUS_RECONNECT_EXHAUSTED"
-                    self.disconnectReason = .setupFailed("SSH reconnect exhausted after \(self.maxReconnectAttempts) attempts")
+                    self.disconnectReason = .setupFailed("SSH reconnect exhausted after 30 minutes")
+                    self.retryStartTime = nil
                     return
                 }
-                self.rawLog += "\n[SSH] Reconnect: WSS failed, rebuilding SSH tunnel (attempt \(self.retryAttempt + 1)/\(self.maxReconnectAttempts))"
+                self.rawLog += "\n[SSH] Reconnect: WSS failed, rebuilding SSH tunnel (attempt \(self.retryAttempt + 1))"
                 self.connectionStatus = "STATUS_SSH_RECONNECTING"
                 self.startSshTunnel()
             } else {
@@ -834,6 +869,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
         disconnectReason = .userInitiated
         wasEverConnected = false  // User-initiated disconnect resets the lifecycle
         wasConnectedViaSsh = false  // Reset SSH connection memory
+        retryStartTime = nil
         
         isPairing = false
         pairingRequestId = ""
@@ -892,6 +928,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                 self.retryCountdown = 0
                 self.retryTimer?.invalidate()
                 self.retryTimer = nil
+                self.retryStartTime = nil
                 self.rawLog += "\n[WSS] Connected (headers: \(headers.count))"
                 self.connectionWatchdog?.invalidate()
                 self.connectionWatchdog = nil
@@ -1314,6 +1351,7 @@ public class NetworkManager: NSObject, ObservableObject, WebSocketDelegate, UNUs
                      self.connectionStatus = isUsingSshTunnel ? "STATUS_ONLINE_PAIRED_SSH" : "STATUS_ONLINE_PAIRED"
                      self.connectionError = nil
                      self.disconnectReason = nil  // Session is live — reset for future disconnect classification
+                     self.retryStartTime = nil
                      self.onHandshakeComplete?()
                      
                      // Store deviceToken from hello-ok if present.

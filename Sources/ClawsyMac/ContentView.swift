@@ -583,7 +583,6 @@ struct ContentView: View {
     private var availableAgentSessions: [GatewaySession] {
         guard let nm = network else { return [] }
         let eligible = nm.gatewaySessions.filter { session in
-            session.status == "running" &&
             session.id != "clawsy-service" &&
             session.id.hasPrefix("agent:") &&
             !session.id.contains(":subagent:") &&
@@ -619,7 +618,7 @@ struct ContentView: View {
                 let current = nm.targetSessionKey
                 // Validate: must be clawsy-service or still in available list
                 if current == "clawsy-service" { return current }
-                let valid = nm.gatewaySessions.contains { $0.id == current && $0.status == "running" }
+                let valid = nm.gatewaySessions.contains { $0.id == current }
                 if !valid {
                     DispatchQueue.main.async { nm.targetSessionKey = "clawsy-service" }
                     return "clawsy-service"
