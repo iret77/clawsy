@@ -5,10 +5,7 @@ let package = Package(
     name: "Clawsy",
     defaultLocalization: "en",
     platforms: [
-        .macOS(.v14),
-        .iOS(.v17),
-        .tvOS(.v16),
-        .watchOS(.v9)
+        .macOS(.v14)
     ],
     products: [
         .executable(name: "ClawsyMac", targets: ["ClawsyMac"]),
@@ -20,12 +17,10 @@ let package = Package(
         .package(url: "https://github.com/daltoniam/Starscream.git", from: "4.0.0")
     ],
     targets: [
-        // Shared logic for all platforms
+        // Shared logic (macOS)
         .target(
             name: "ClawsyShared",
-            dependencies: [
-                "Starscream"
-            ],
+            dependencies: ["Starscream"],
             path: "Sources/ClawsyShared",
             resources: [
                 .process("Resources/de.lproj"),
@@ -34,14 +29,11 @@ let package = Package(
                 .process("Resources/fr.lproj")
             ]
         ),
-        
+
         // macOS App
         .executableTarget(
             name: "ClawsyMac",
-            dependencies: [
-                "ClawsyShared",
-                "Starscream"
-            ],
+            dependencies: ["ClawsyShared", "Starscream"],
             path: "Sources/ClawsyMac",
             resources: [
                 .process("Assets.xcassets"),
@@ -49,8 +41,8 @@ let package = Package(
                 .process("Resources/de.lproj")
             ]
         ),
-        
-        // macOS Share Extension (Dynamic Library for Plugin Host)
+
+        // macOS Share Extension
         .target(
             name: "ClawsyMacShare",
             dependencies: ["ClawsyShared", "Starscream"],
@@ -66,33 +58,12 @@ let package = Package(
                 .linkedFramework("FinderSync")
             ]
         ),
-        
-        // Screenshot CLI — renders all views headlessly via ImageRenderer
+
+        // Screenshot CLI — headless view rendering for marketing/docs
         .executableTarget(
             name: "ScreenshotCLI",
             dependencies: [],
             path: "Sources/ScreenshotCLI"
-        ),
-
-        // iOS App Placeholder
-        .target(
-            name: "ClawsyIOS",
-            dependencies: ["ClawsyShared"],
-            path: "Sources/ClawsyIOS"
-        ),
-        
-        // tvOS App Placeholder
-        .target(
-            name: "ClawsyTV",
-            dependencies: ["ClawsyShared"],
-            path: "Sources/ClawsyTV"
-        ),
-        
-        // watchOS App Placeholder
-        .target(
-            name: "ClawsyWatch",
-            dependencies: ["ClawsyShared"],
-            path: "Sources/ClawsyWatch"
         )
     ]
 )
