@@ -94,16 +94,13 @@ public class ShareHandler {
             }
             
             // Build envelope and send via agent.deeplink → clawsy-service
-            var envelopeData: [String: Any] = [
+            let envelopeData: [String: Any] = [
                 "type": "share",
                 "version": SharedConfig.versionDisplay,
                 "localTime": ISO8601DateFormatter().string(from: Date()),
                 "tz": TimeZone.current.identifier,
                 "content": finalContent
             ]
-            if SharedConfig.extendedContextEnabled {
-                envelopeData["telemetry"] = NetworkManager.getTelemetry()
-            }
             let envelope: [String: Any] = ["clawsy_envelope": envelopeData]
             guard let jsonData = try? JSONSerialization.data(withJSONObject: envelope),
                   let jsonString = String(data: jsonData, encoding: .utf8) else {

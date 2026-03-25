@@ -7,13 +7,12 @@ public struct ClawsyEnvelopeBuilder {
         return formatter
     }()
     
-    /// Builds a standardized `clawsy_envelope` payload, optionally enriching it with telemetry
+    /// Builds a standardized `clawsy_envelope` payload
     /// and persists the latest JSON string to the shared defaults for later introspection.
     @discardableResult
     public static func build(type: String,
                              content: Any,
-                             metadata: [String: Any] = [:],
-                             includeTelemetry: Bool = false) -> String? {
+                             metadata: [String: Any] = [:]) -> String? {
         var envelopeData: [String: Any] = [
             "version": SharedConfig.shortVersion,
             "type": type,
@@ -21,13 +20,9 @@ public struct ClawsyEnvelopeBuilder {
             "tz": TimeZone.current.identifier,
             "content": content
         ]
-        
+
         metadata.forEach { envelopeData[$0.key] = $0.value }
-        
-        if includeTelemetry {
-            envelopeData["telemetry"] = NetworkManager.getTelemetry()
-        }
-        
+
         let envelope: [String: Any] = ["clawsy_envelope": envelopeData]
         guard let data = try? JSONSerialization.data(withJSONObject: envelope, options: []),
               let jsonString = String(data: data, encoding: .utf8) else {
