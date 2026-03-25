@@ -2,77 +2,97 @@ import Foundation
 import Combine
 import os.log
 
-/// Manages multiple host profiles and their NetworkManager connections.
-/// One NetworkManager per host, all connected simultaneously.
-/// Outbound actions route through the active host only.
+// MARK: - Host Connection State
+
+/// Aggregated state for one host, exposed to UI
+public struct HostConnectionState: Equatable {
+    public var connectionState: ConnectionState = .disconnected
+    public var failure: ConnectionFailure? = nil
+    public var retryCountdown: Int = 0
+    public var gatewayVersion: String? = nil
+    public var connId: String? = nil
+    public var pairingRequestId: String? = nil
+}
+
+// MARK: - Host Manager
+
+/// Manages multiple host profiles and their connections.
+/// Each host gets its own ConnectionManager + HandshakeManager + CommandRouter.
+/// The active host's state is forwarded to the UI via @Published properties.
 public class HostManager: ObservableObject {
     private let logger = OSLog(subsystem: "ai.clawsy", category: "HostManager")
+
+    // MARK: - Profile Management
 
     @Published public var profiles: [HostProfile] = []
     @Published public var activeHostId: UUID?
 
-    // MARK: - Forwarded NetworkManager state (observed by SwiftUI via HostManager)
-    @Published public var isConnected: Bool = false
-    @Published public var connectionStatus: String = "STATUS_DISCONNECTED"
-    @Published public var connectionAttemptCount: Int = 0
-    @Published public var connectionError: ConnectionError? = nil
-    @Published public var isServerClawsyAware: Bool = false
-    @Published public var pairingRequestId: String = ""
+    // MARK: - Active Host State (forwarded to UI)
+
+    @Published public var state: ConnectionState = .disconnected
+    @Published public var failure: ConnectionFailure? = nil
     @Published public var retryCountdown: Int = 0
+    @Published public var pairingRequestId: String? = nil
+    @Published public var rawLog: String = ""
+
+    // MARK: - Per-Host Connections
+
+    /// Connection managers, one per host profile
+    private var connections: [UUID: ConnectionManager] = [:]
+
+    /// Handshake managers, one per host profile
+    private var handshakes: [UUID: HandshakeManager] = [:]
+
+    /// Command routers, one per host profile
+    public var commandRouters: [UUID: CommandRouter] = [:]
+
+    /// Per-host connection state (for multi-host status views)
+    @Published public var hostStates: [UUID: HostConnectionState] = [:]
 
     private var activeCancellables = Set<AnyCancellable>()
 
-    /// One NetworkManager per host, keyed by profile UUID
-    public var networkManagers: [UUID: NetworkManager] = [:]
+    // MARK: - Callbacks (set by AppDelegate/ContentView)
 
-    /// The currently active profile (convenience)
+    /// Called when a command requires user approval (screenshot, clipboard.read, camera)
+    public var onApprovalRequired: ((
+        _ hostId: UUID,
+        _ command: String,
+        _ params: [String: Any],
+        _ completion: @escaping (Bool) -> Void
+    ) -> Void)?
+
+    /// Called when a command handler needs to execute a platform action
+    public var onRegisterHandlers: ((_ router: CommandRouter, _ hostId: UUID) -> Void)?
+
+    // MARK: - Convenience
+
     public var activeProfile: HostProfile? {
         guard let id = activeHostId else { return profiles.first }
         return profiles.first(where: { $0.id == id })
     }
 
-    /// The currently active NetworkManager
-    public var activeNetworkManager: NetworkManager? {
+    public var activeConnection: ConnectionManager? {
         guard let id = activeHostId ?? profiles.first?.id else { return nil }
-        return networkManagers[id]
+        return connections[id]
     }
 
-    /// Subscribe to the active NM's published properties so HostManager
-    /// re-publishes them → SwiftUI re-renders ContentView automatically.
-    public func subscribeToActiveNM() {
-        activeCancellables.removeAll()
-        guard let nm = activeNetworkManager else {
-            isConnected = false
-            connectionStatus = "STATUS_DISCONNECTED"
-            connectionAttemptCount = 0
-            connectionError = nil
-            isServerClawsyAware = false
-            pairingRequestId = ""
-            retryCountdown = 0
-            return
-        }
-        nm.$isConnected.receive(on: DispatchQueue.main)
-            .assign(to: \.isConnected, on: self).store(in: &activeCancellables)
-        nm.$connectionStatus.receive(on: DispatchQueue.main)
-            .assign(to: \.connectionStatus, on: self).store(in: &activeCancellables)
-        nm.$connectionAttemptCount.receive(on: DispatchQueue.main)
-            .assign(to: \.connectionAttemptCount, on: self).store(in: &activeCancellables)
-        nm.$connectionError.receive(on: DispatchQueue.main)
-            .assign(to: \.connectionError, on: self).store(in: &activeCancellables)
-        nm.$isServerClawsyAware.receive(on: DispatchQueue.main)
-            .assign(to: \.isServerClawsyAware, on: self).store(in: &activeCancellables)
-        nm.$pairingRequestId.receive(on: DispatchQueue.main)
-            .assign(to: \.pairingRequestId, on: self).store(in: &activeCancellables)
-        nm.$retryCountdown.receive(on: DispatchQueue.main)
-            .assign(to: \.retryCountdown, on: self).store(in: &activeCancellables)
+    public var activeRouter: CommandRouter? {
+        guard let id = activeHostId ?? profiles.first?.id else { return nil }
+        return commandRouters[id]
     }
+
+    public var isConnected: Bool {
+        state.isConnected
+    }
+
+    // MARK: - Init
 
     public init() {
         loadProfiles()
         migrateFromLegacyIfNeeded()
     }
 
-    // MARK: - Persistence
+    // MARK: - Profile Persistence
 
     private func loadProfiles() {
         let defaults = SharedConfig.sharedDefaults
@@ -84,7 +104,6 @@ public class HostManager: ObservableObject {
            let uuid = UUID(uuidString: activeId) {
             self.activeHostId = uuid
         }
-        // Ensure activeHostId points to an existing profile
         if activeHostId == nil || !profiles.contains(where: { $0.id == activeHostId }) {
             activeHostId = profiles.first?.id
         }
@@ -100,7 +119,7 @@ public class HostManager: ObservableObject {
         }
         defaults.synchronize()
 
-        // Also keep legacy keys in sync for backward compatibility (FinderSync, Share Extension)
+        // Keep legacy keys in sync for FinderSync/Share Extension
         if let active = activeProfile {
             defaults.set(active.gatewayHost, forKey: "serverHost")
             defaults.set(active.gatewayPort, forKey: "serverPort")
@@ -108,70 +127,46 @@ public class HostManager: ObservableObject {
             defaults.set(active.sshUser, forKey: "sshUser")
             defaults.set(active.useSshFallback, forKey: "useSshFallback")
             defaults.set(active.sharedFolderPath, forKey: "sharedFolderPath")
-            defaults.set(active.extendedContextEnabled, forKey: "extendedContextEnabled")
             defaults.synchronize()
         }
     }
 
     // MARK: - Legacy Migration
 
-    /// If no hostProfiles exist but legacy keys do, create a first profile silently.
     private func migrateFromLegacyIfNeeded() {
         guard profiles.isEmpty else { return }
         let defaults = SharedConfig.sharedDefaults
         guard let legacyHost = defaults.string(forKey: "serverHost"), !legacyHost.isEmpty else { return }
 
-        let legacyPort = defaults.string(forKey: "serverPort") ?? "18789"
-        let legacyToken = defaults.string(forKey: "serverToken") ?? ""
-        let legacySshUser = defaults.string(forKey: "sshUser") ?? ""
-        let legacyFallback: Bool = {
-            if defaults.object(forKey: "useSshFallback") == nil { return true }
-            return defaults.bool(forKey: "useSshFallback")
-        }()
-        let legacyFolder = defaults.string(forKey: "sharedFolderPath") ?? "~/Documents/Clawsy"
-        let legacyExtendedContext = defaults.bool(forKey: "extendedContextEnabled")
-
         let profile = HostProfile(
             name: legacyHost,
             gatewayHost: legacyHost,
-            gatewayPort: legacyPort,
-            serverToken: legacyToken,
-            sshUser: legacySshUser,
-            useSshFallback: legacyFallback,
+            gatewayPort: defaults.string(forKey: "serverPort") ?? "18789",
+            serverToken: defaults.string(forKey: "serverToken") ?? "",
+            sshUser: defaults.string(forKey: "sshUser") ?? "",
+            useSshFallback: defaults.object(forKey: "useSshFallback") == nil ? true : defaults.bool(forKey: "useSshFallback"),
             color: HostProfile.defaultColors[0],
-            sharedFolderPath: legacyFolder,
-            extendedContextEnabled: legacyExtendedContext
+            sharedFolderPath: defaults.string(forKey: "sharedFolderPath") ?? "~/Documents/Clawsy"
         )
 
         profiles = [profile]
         activeHostId = profile.id
         saveProfiles()
-        os_log("Migrated legacy config to first HostProfile: %{public}@", log: logger, type: .info, profile.name)
+        os_log("Migrated legacy config to HostProfile: %{public}@", log: logger, type: .info, profile.name)
     }
 
-    // MARK: - Host Management
+    // MARK: - Host CRUD
 
-    public func switchActiveHost(to id: UUID) {
-        guard profiles.contains(where: { $0.id == id }) else { return }
-        activeHostId = id
-        saveProfiles()
-        subscribeToActiveNM()
-        os_log("Switched active host to: %{public}@", log: logger, type: .info, activeProfile?.name ?? "unknown")
-    }
-
-    /// Add a new host profile. Returns a migration info tuple if migration is needed for the 2nd host.
-    /// The caller (UI) should handle migration dialogs.
     public func addHost(_ profile: HostProfile) {
         var newProfile = profile
 
-        // Auto-create shared folder if empty
         if newProfile.sharedFolderPath.isEmpty {
-            let safeName = newProfile.name.replacingOccurrences(of: "/", with: "-")
+            let safeName = newProfile.name
+                .replacingOccurrences(of: "/", with: "-")
                 .replacingOccurrences(of: ":", with: "-")
             newProfile.sharedFolderPath = "~/Clawsy/\(safeName)"
         }
 
-        // Ensure the folder exists
         let resolved = newProfile.sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
         try? FileManager.default.createDirectory(atPath: resolved, withIntermediateDirectories: true)
 
@@ -184,16 +179,16 @@ public class HostManager: ObservableObject {
     }
 
     public func removeHost(id: UUID) {
-        // Disconnect and remove the NetworkManager
-        if let nm = networkManagers[id] {
-            nm.disconnect()
-            networkManagers.removeValue(forKey: id)
-        }
+        disconnectHost(id)
+        connections.removeValue(forKey: id)
+        handshakes.removeValue(forKey: id)
+        commandRouters.removeValue(forKey: id)
+        hostStates.removeValue(forKey: id)
         profiles.removeAll(where: { $0.id == id })
 
-        // If we removed the active host, switch to the first remaining
         if activeHostId == id {
             activeHostId = profiles.first?.id
+            subscribeToActiveConnection()
         }
         saveProfiles()
     }
@@ -204,104 +199,247 @@ public class HostManager: ObservableObject {
         saveProfiles()
     }
 
-    // MARK: - Re-Pair / Repair Connection
+    public func switchActiveHost(to id: UUID) {
+        guard profiles.contains(where: { $0.id == id }) else { return }
+        activeHostId = id
+        saveProfiles()
+        subscribeToActiveConnection()
+        os_log("Switched active host to: %{public}@", log: logger, type: .info, activeProfile?.name ?? "unknown")
+    }
 
-    /// Clears the stored deviceToken for the active host and forces a fresh connection.
-    /// Use when the gateway has lost pairing state (e.g. after a restart) and Clawsy is stuck
-    /// in a DEVICE_AUTH_SIGNATURE_INVALID loop.
+    // MARK: - Connection Lifecycle
+
+    /// Connect all configured hosts
+    public func connectAll() {
+        for profile in profiles {
+            connectHost(profile.id)
+        }
+        subscribeToActiveConnection()
+    }
+
+    /// Connect a single host
+    public func connectHost(_ id: UUID) {
+        guard let profile = profiles.first(where: { $0.id == id }) else { return }
+
+        // Create or reuse ConnectionManager
+        let conn: ConnectionManager
+        if let existing = connections[id] {
+            conn = existing
+        } else {
+            conn = ConnectionManager()
+            connections[id] = conn
+        }
+
+        // Create HandshakeManager with profile config
+        let hsConfig = HandshakeManager.Config(
+            gatewayToken: profile.serverToken,
+            deviceToken: profile.deviceToken,
+            displayName: profile.name
+        )
+        let hs = HandshakeManager(config: hsConfig)
+        handshakes[id] = hs
+
+        // Create CommandRouter
+        let router = CommandRouter()
+        commandRouters[id] = router
+
+        // Wire HandshakeManager ↔ ConnectionManager
+        wireHandshake(hs, to: conn, profileId: id)
+
+        // Wire CommandRouter ↔ ConnectionManager
+        wireCommandRouter(router, to: conn, profileId: id)
+
+        // Register platform-specific command handlers
+        onRegisterHandlers?(router, id)
+
+        // Build connection config from profile
+        let connConfig = ConnectionConfig(
+            gatewayHost: profile.gatewayHost,
+            gatewayPort: profile.gatewayPort,
+            serverToken: profile.serverToken,
+            sshUser: profile.sshUser,
+            useSshFallback: profile.useSshFallback,
+            sshOnly: profile.sshOnly
+        )
+
+        // Initialize host state
+        hostStates[id] = HostConnectionState()
+
+        // Connect
+        conn.connect(config: connConfig)
+    }
+
+    /// Disconnect a single host
+    public func disconnectHost(_ id: UUID) {
+        connections[id]?.disconnect()
+    }
+
+    /// Disconnect all hosts
+    public func disconnectAll() {
+        for id in connections.keys {
+            disconnectHost(id)
+        }
+    }
+
+    /// Re-pair the active connection (clear device token, reconnect)
     public func repairActiveConnection() {
         guard let profile = activeProfile else { return }
         var updated = profile
         updated.deviceToken = nil
         updateHost(updated)
-        if let nm = activeNetworkManager {
-            nm.disconnect()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                nm.connect()
+
+        if let id = activeHostId {
+            disconnectHost(id)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.connectHost(id)
             }
         }
     }
 
-    // MARK: - Connection Management
+    // MARK: - Wiring
 
-    /// Create and connect NetworkManagers for all profiles
-    public func connectAll(setupCallbacks: @escaping (NetworkManager, HostProfile) -> Void) {
-        for profile in profiles {
-            let nm: NetworkManager
-            if let existing = networkManagers[profile.id] {
-                nm = existing
-            } else {
-                nm = NetworkManager(hostProfile: profile)
-                networkManagers[profile.id] = nm
+    private func wireHandshake(_ hs: HandshakeManager, to conn: ConnectionManager, profileId: UUID) {
+        // HandshakeManager sends messages via ConnectionManager
+        hs.onSendMessage = { [weak conn] message in
+            guard let data = try? JSONSerialization.data(withJSONObject: message),
+                  let text = String(data: data, encoding: .utf8) else { return }
+            conn?.send(text)
+        }
+
+        // HandshakeManager reports results to ConnectionManager
+        hs.onHandshakeComplete = { [weak self, weak conn] result in
+            // Store device token
+            if let token = result.deviceToken, let self = self {
+                if var profile = self.profiles.first(where: { $0.id == profileId }) {
+                    profile.deviceToken = token
+                    self.updateHost(profile)
+                }
             }
-            setupCallbacks(nm, profile)
-            nm.configure(
-                host: profile.gatewayHost,
-                port: profile.gatewayPort,
-                token: profile.serverToken,
-                sshUser: profile.sshUser,
-                fallback: profile.useSshFallback
-            )
-            nm.connect()
+
+            // Update host state
+            DispatchQueue.main.async {
+                self?.hostStates[profileId]?.gatewayVersion = result.serverVersion
+                self?.hostStates[profileId]?.connId = result.connId
+                self?.hostStates[profileId]?.pairingRequestId = nil
+            }
+
+            conn?.handleHandshakeComplete(deviceToken: result.deviceToken)
         }
-        subscribeToActiveNM()
-    }
 
-    /// Disconnect all NetworkManagers
-    public func disconnectAll() {
-        for (_, nm) in networkManagers {
-            nm.disconnect()
+        hs.onHandshakeFailed = { [weak conn] reason in
+            conn?.handleHandshakeFailed(reason)
+        }
+
+        hs.onPairingRequired = { [weak self, weak conn] requestId in
+            DispatchQueue.main.async {
+                self?.hostStates[profileId]?.pairingRequestId = requestId
+                if profileId == self?.activeHostId {
+                    self?.pairingRequestId = requestId
+                }
+            }
+            conn?.handlePairingRequired(requestId: requestId)
+        }
+
+        // ConnectionManager forwards messages to HandshakeManager during handshake
+        let existingOnConnected = conn.onConnected
+        conn.onConnected = { [weak hs] in
+            existingOnConnected?()
+            // Handshake starts when WS connects — messages route through processMessage
+        }
+
+        // Route incoming messages: first to handshake, then to command router
+        conn.onMessage = { [weak hs, weak self] text in
+            // Try handshake first
+            if hs?.processMessage(text) == true { return }
+            // Then try command router
+            if let router = self?.commandRouters[profileId],
+               router.processMessage(text) { return }
+            // Unhandled messages (tick events, etc.) — ignore
         }
     }
 
-    /// Connect a specific host
-    public func connectHost(_ id: UUID, setupCallbacks: @escaping (NetworkManager, HostProfile) -> Void) {
-        guard let profile = profiles.first(where: { $0.id == id }) else { return }
-        let nm: NetworkManager
-        if let existing = networkManagers[id] {
-            nm = existing
-        } else {
-            nm = NetworkManager(hostProfile: profile)
-            networkManagers[id] = nm
+    private func wireCommandRouter(_ router: CommandRouter, to conn: ConnectionManager, profileId: UUID) {
+        // Router sends responses via ConnectionManager
+        router.onSendMessage = { [weak conn] message in
+            guard let data = try? JSONSerialization.data(withJSONObject: message),
+                  let text = String(data: data, encoding: .utf8) else { return }
+            conn?.send(text)
         }
-        setupCallbacks(nm, profile)
-        nm.configure(
-            host: profile.gatewayHost,
-            port: profile.gatewayPort,
-            token: profile.serverToken,
-            sshUser: profile.sshUser,
-            fallback: profile.useSshFallback
-        )
-        nm.connect()
+
+        // Router delegates approval to the HostManager's callback
+        router.onApprovalRequired = { [weak self] command, params, completion in
+            self?.onApprovalRequired?(profileId, command, params, completion)
+        }
     }
 
-    /// Disconnect a specific host
-    public func disconnectHost(_ id: UUID) {
-        networkManagers[id]?.disconnect()
+    // MARK: - Active Host Subscription
+
+    private func subscribeToActiveConnection() {
+        activeCancellables.removeAll()
+
+        guard let id = activeHostId ?? profiles.first?.id,
+              let conn = connections[id] else {
+            state = .disconnected
+            failure = nil
+            retryCountdown = 0
+            pairingRequestId = nil
+            rawLog = ""
+            return
+        }
+
+        conn.$state.receive(on: DispatchQueue.main)
+            .assign(to: \.state, on: self)
+            .store(in: &activeCancellables)
+
+        conn.$connectionFailure.receive(on: DispatchQueue.main)
+            .assign(to: \.failure, on: self)
+            .store(in: &activeCancellables)
+
+        conn.$retryCountdown.receive(on: DispatchQueue.main)
+            .assign(to: \.retryCountdown, on: self)
+            .store(in: &activeCancellables)
+
+        conn.$rawLog.receive(on: DispatchQueue.main)
+            .assign(to: \.rawLog, on: self)
+            .store(in: &activeCancellables)
     }
 
-    /// Check if adding a 2nd host requires folder migration
-    /// Returns (firstProfile, oldPath) if migration is needed, nil otherwise
+    // MARK: - Send via Active Connection
+
+    /// Send a text message through the active connection
+    @discardableResult
+    public func send(_ text: String) -> Bool {
+        activeConnection?.send(text) ?? false
+    }
+
+    /// Send a JSON dictionary through the active connection
+    @discardableResult
+    public func sendJSON(_ dict: [String: Any]) -> Bool {
+        activeConnection?.sendJSON(dict) ?? false
+    }
+
+    /// Gateway base URL for the active connection (for REST API calls)
+    public var activeGatewayBaseURL: String? {
+        activeConnection?.gatewayBaseURL
+    }
+
+    // MARK: - Multi-Host Folder Migration
+
     public func checkMigrationNeeded() -> (HostProfile, String)? {
         guard profiles.count == 1, let first = profiles.first else { return nil }
-        let defaultNewPath = "~/Clawsy/\(first.name.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-"))"
-        // If the first host uses a non-standard path (not under ~/Clawsy/), migration is needed
         if !first.sharedFolderPath.hasPrefix("~/Clawsy/") {
             return (first, first.sharedFolderPath)
         }
         return nil
     }
 
-    /// Perform folder migration for the first host when adding a second
     public func migrateFirstHostFolder(to newPath: String) {
         guard var first = profiles.first else { return }
         let oldResolved = first.sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
         let newResolved = newPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
 
-        // Create new directory
         try? FileManager.default.createDirectory(atPath: newResolved, withIntermediateDirectories: true)
 
-        // Move files from old to new
         if let contents = try? FileManager.default.contentsOfDirectory(atPath: oldResolved) {
             for item in contents {
                 let src = (oldResolved as NSString).appendingPathComponent(item)
@@ -310,9 +448,8 @@ public class HostManager: ObservableObject {
             }
         }
 
-        // Update profile
         first.sharedFolderPath = newPath
         updateHost(first)
-        os_log("Migrated first host folder from %{public}@ to %{public}@", log: logger, type: .info, oldResolved, newResolved)
+        os_log("Migrated first host folder: %{public}@ → %{public}@", log: logger, type: .info, oldResolved, newResolved)
     }
 }
