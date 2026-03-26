@@ -205,7 +205,7 @@ struct SettingsView: View {
 
             if updateManager.updateAvailable {
                 Button(action: { updateManager.downloadAndInstall() }) {
-                    Label("Update Available: \(updateManager.latestVersion)", systemImage: "arrow.down.circle")
+                    Label("Update Available: \(updateManager.updateVersion)", systemImage: "arrow.down.circle")
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.borderedProminent)

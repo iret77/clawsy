@@ -523,16 +523,9 @@ Details in CLAWSY.md.
         let onboardingBinding = Binding<Bool>(
             get: { UserDefaults.standard.bool(forKey: "onboardingCompleted") },
             set: { if $0 { onComplete() } })
-        let isConnected = Binding<Bool>(
-            get: { self.hostManager?.isConnected ?? false },
-            set: { _ in })
-        let serverSetupNeeded = Binding<Bool>(get: { false }, set: { _ in })
-
         let view = OnboardingView(
             isPresented: isPresented,
             onboardingCompleted: onboardingBinding,
-            isGatewayConnected: isConnected,
-            serverSetupNeeded: serverSetupNeeded,
             onImportSetupCode: { [weak self] code in self?.handleSetupCode(code) ?? false }
         )
         window.contentView = NSHostingView(rootView: view)
