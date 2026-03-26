@@ -4,9 +4,8 @@ import os.log
 
 // MARK: - Gateway Poller
 
-/// Polls the gateway REST API for agents and sessions.
-/// Replaces the session polling that was buried in the old NetworkManager.
-/// Runs independently of the WebSocket connection.
+/// Fetches agents and sessions via Protocol V3 WebSocket requests.
+/// All communication goes through the WebSocket — no REST needed.
 public final class GatewayPoller: ObservableObject {
 
     @Published public var agents: [GatewayAgent] = []
@@ -23,20 +22,40 @@ public final class GatewayPoller: ObservableObject {
     private var timer: Timer?
     private let interval: TimeInterval
     private let logger = OSLog(subsystem: "ai.clawsy", category: "Poller")
-    private var baseURL: String?
-    private var token: String?
+
+    /// Pending response handlers keyed by request ID
+    private var responseHandlers: [String: ([String: Any]) -> Void] = [:]
+
+    /// Debug log callback — wired to ConnectionManager's rawLog
+    public var onLog: ((String) -> Void)?
+
+    /// Callback to send a Protocol V3 frame via the WebSocket
+    public var onSendWebSocket: (([String: Any]) -> Void)?
+
+    /// Callback to process incoming WS messages (check if they're responses to our requests)
+    /// Returns true if the message was consumed.
+    public func processMessage(_ text: String) -> Bool {
+        guard let data = text.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let type = json["type"] as? String, type == "res",
+              let id = json["id"] as? String,
+              let handler = responseHandlers.removeValue(forKey: id) else {
+            return false
+        }
+        handler(json)
+        return true
+    }
 
     public init(interval: TimeInterval = 30) {
         self.interval = interval
         self.targetSessionKey = SharedConfig.sharedDefaults.string(forKey: "targetSessionKey") ?? "main"
     }
 
-    /// Start polling against the given gateway base URL.
-    public func start(baseURL: String, token: String) {
-        self.baseURL = baseURL
-        self.token = token
+    /// Start periodic polling.
+    public func start() {
         stop()
-        poll() // immediate first poll
+        log("Poller started (interval: \(Int(interval))s)")
+        poll()
         timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             self?.poll()
         }
@@ -50,6 +69,36 @@ public final class GatewayPoller: ObservableObject {
 
     deinit { stop() }
 
+    // MARK: - WebSocket Requests
+
+    private func sendRequest(method: String, params: [String: Any] = [:], handler: @escaping ([String: Any]) -> Void) {
+        let id = UUID().uuidString
+        responseHandlers[id] = handler
+
+        var frame: [String: Any] = [
+            "type": "req",
+            "id": id,
+            "method": method
+        ]
+        if !params.isEmpty {
+            frame["params"] = params
+        }
+
+        guard let sender = onSendWebSocket else {
+            log("ERROR: onSendWebSocket not wired — \(method) dropped!")
+            responseHandlers.removeValue(forKey: id)
+            return
+        }
+        sender(frame)
+
+        // Timeout: clean up handler after 15s if no response
+        DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self] in
+            if self?.responseHandlers.removeValue(forKey: id) != nil {
+                self?.log("\(method) timed out")
+            }
+        }
+    }
+
     // MARK: - Polling
 
     private func poll() {
@@ -58,76 +107,94 @@ public final class GatewayPoller: ObservableObject {
     }
 
     private func fetchAgents() {
-        guard let baseURL = baseURL, let token = token else { return }
-        guard let url = URL(string: "\(baseURL)/agents/list") else { return }
-
-        var request = URLRequest(url: url)
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.timeoutInterval = 10
-
-        URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
-            guard let data = data,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let agentsList = json["agents"] as? [[String: Any]] else {
+        sendRequest(method: "agent") { [weak self] response in
+            guard let payload = response["payload"] as? [String: Any] else {
+                // Try direct response format
+                if let ok = response["ok"] as? Bool, ok,
+                   let payload = response["payload"] as? [String: Any] {
+                    self?.parseAgents(payload)
+                }
                 return
             }
+            self?.parseAgents(payload)
+        }
+    }
 
-            let parsed: [GatewayAgent] = agentsList.compactMap { a in
-                guard let id = a["id"] as? String, let name = a["name"] as? String else { return nil }
-                return GatewayAgent(id: id, name: name)
+    private func parseAgents(_ payload: [String: Any]) {
+        // The "agent" method returns agent config — extract agents from it
+        var parsed: [GatewayAgent] = []
+
+        // Try "agents" array format
+        if let agentsList = payload["agents"] as? [[String: Any]] {
+            for a in agentsList {
+                if let id = a["id"] as? String, let name = a["name"] as? String {
+                    parsed.append(GatewayAgent(id: id, name: name))
+                }
             }
+        }
+        // Try single agent format (the "agent" method might return current agent info)
+        else if let id = payload["id"] as? String, let name = payload["name"] as? String {
+            parsed.append(GatewayAgent(id: id, name: name))
+        }
+        // Try "config" sub-object
+        else if let config = payload["config"] as? [String: Any],
+                let agents = config["agents"] as? [String: [String: Any]] {
+            for (id, info) in agents {
+                let name = info["name"] as? String ?? id
+                parsed.append(GatewayAgent(id: id, name: name))
+            }
+        }
 
+        if !parsed.isEmpty {
             DispatchQueue.main.async {
-                self?.agents = parsed
+                self.agents = parsed.sorted { $0.name < $1.name }
+                self.log("Agents: \(parsed.map { $0.name }.joined(separator: ", "))")
             }
-        }.resume()
+        }
     }
 
     private func fetchSessions() {
-        guard let baseURL = baseURL, let token = token else { return }
-        guard let url = URL(string: "\(baseURL)/sessions/list") else { return }
+        sendRequest(method: "status") { [weak self] response in
+            guard let payload = response["payload"] as? [String: Any] else { return }
 
-        var request = URLRequest(url: url)
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.timeoutInterval = 10
-
-        URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
-            guard let data = data,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let sessionsList = json["sessions"] as? [[String: Any]] else {
+            // "status" returns presence info with sessions
+            guard let sessions = payload["sessions"] as? [[String: Any]] else {
+                // Try "presence" sub-object
+                if let presence = payload["presence"] as? [[String: Any]] {
+                    self?.parseSessions(presence)
+                }
                 return
             }
-
-            let isoFormatter = ISO8601DateFormatter()
-            isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-
-            let parsed: [GatewaySession] = sessionsList.compactMap { s in
-                guard let key = s["key"] as? String else { return nil }
-                let startedAt: Date? = (s["startedAt"] as? String).flatMap { isoFormatter.date(from: $0) }
-                return GatewaySession(
-                    id: key,
-                    label: s["label"] as? String,
-                    kind: s["kind"] as? String ?? "unknown",
-                    status: s["status"] as? String ?? "unknown",
-                    model: s["model"] as? String,
-                    startedAt: startedAt,
-                    task: s["task"] as? String
-                )
-            }
-
-            DispatchQueue.main.async {
-                self?.sessions = parsed
-            }
-        }.resume()
+            self?.parseSessions(sessions)
+        }
     }
 
-    // MARK: - Send Events via REST
+    private func parseSessions(_ sessionsList: [[String: Any]]) {
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
 
-    /// Send messages to agent sessions via the WebSocket.
-    public var onSendWebSocket: (([String: Any]) -> Void)?
+        let parsed: [GatewaySession] = sessionsList.compactMap { s in
+            guard let key = s["key"] as? String ?? s["sessionKey"] as? String else { return nil }
+            let startedAt: Date? = (s["startedAt"] as? String).flatMap { isoFormatter.date(from: $0) }
+            return GatewaySession(
+                id: key,
+                label: s["label"] as? String,
+                kind: s["kind"] as? String ?? "unknown",
+                status: s["status"] as? String ?? "unknown",
+                model: s["model"] as? String,
+                startedAt: startedAt,
+                task: s["task"] as? String
+            )
+        }
+
+        DispatchQueue.main.async {
+            self.sessions = parsed
+        }
+    }
+
+    // MARK: - Send Messages
 
     /// Send a message to an agent session via Protocol V3 `chat.send`.
-    /// This is the same method the official OpenClaw app uses.
     public func sendMessage(_ message: String, sessionKey: String, deliver: Bool = false) {
         let frame: [String: Any] = [
             "type": "req",
@@ -141,12 +208,24 @@ public final class GatewayPoller: ObservableObject {
             ]
         ]
 
-        onSendWebSocket?(frame)
+        log("chat.send → \(sessionKey) (\(message.prefix(60))…)")
+
+        guard let sender = onSendWebSocket else {
+            log("ERROR: onSendWebSocket not wired — message dropped!")
+            return
+        }
+        sender(frame)
     }
 
     /// Send a clawsy_envelope as a chat message to the target session.
-    /// Wraps the envelope JSON in a message that the agent can parse.
     public func sendEnvelope(_ jsonString: String, sessionKey: String, deliver: Bool = false) {
         sendMessage(jsonString, sessionKey: sessionKey, deliver: deliver)
+    }
+
+    // MARK: - Logging
+
+    private func log(_ message: String) {
+        os_log("[Poller] %{public}@", log: logger, type: .info, message)
+        onLog?("[POLLER] \(message)")
     }
 }

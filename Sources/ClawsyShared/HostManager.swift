@@ -254,9 +254,12 @@ public class HostManager: ObservableObject {
         let router = CommandRouter()
         commandRouters[id] = router
 
-        // Create GatewayPoller
+        // Create GatewayPoller — log to ConnectionManager's rawLog
         let poller = GatewayPoller()
         pollers[id] = poller
+        poller.onLog = { [weak conn] msg in
+            DispatchQueue.main.async { conn?.rawLog += "\n\(msg)" }
+        }
 
         // Wire Poller → WebSocket (for sending envelopes via node.event)
         poller.onSendWebSocket = { [weak conn] frame in
@@ -357,10 +360,7 @@ public class HostManager: ObservableObject {
             }
 
             // Start polling for agents/sessions now that we're connected
-            if let baseURL = conn?.gatewayBaseURL,
-               let profile = self?.profiles.first(where: { $0.id == profileId }) {
-                poller?.start(baseURL: baseURL, token: profile.serverToken)
-            }
+            poller?.start()
 
             conn?.handleHandshakeComplete(deviceToken: result.deviceToken)
         }
@@ -386,14 +386,16 @@ public class HostManager: ObservableObject {
             // Handshake starts when WS connects — messages route through processMessage
         }
 
-        // Route incoming messages: first to handshake, then to command router
-        conn.onMessage = { [weak hs, weak self] text in
+        // Route incoming messages: handshake → poller → command router
+        conn.onMessage = { [weak hs, weak self, weak poller] text in
             // Try handshake first
             if hs?.processMessage(text) == true { return }
-            // Then try command router
+            // Then try poller (responses to agent/status/chat.send requests)
+            if poller?.processMessage(text) == true { return }
+            // Then try command router (node.invoke.request)
             if let router = self?.commandRouters[profileId],
                router.processMessage(text) { return }
-            // Unhandled messages (tick events, etc.) — ignore
+            // Unhandled messages (tick events, etc.)
         }
     }
 
