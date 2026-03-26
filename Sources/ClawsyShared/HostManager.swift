@@ -258,6 +258,13 @@ public class HostManager: ObservableObject {
         let poller = GatewayPoller()
         pollers[id] = poller
 
+        // Wire Poller → WebSocket (for sending envelopes via node.event)
+        poller.onSendWebSocket = { [weak conn] frame in
+            guard let data = try? JSONSerialization.data(withJSONObject: frame),
+                  let text = String(data: data, encoding: .utf8) else { return }
+            conn?.send(text)
+        }
+
         // Wire HandshakeManager ↔ ConnectionManager
         wireHandshake(hs, to: conn, profileId: id, poller: poller)
 

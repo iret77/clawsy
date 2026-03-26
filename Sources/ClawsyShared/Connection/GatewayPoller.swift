@@ -123,13 +123,43 @@ public final class GatewayPoller: ObservableObject {
 
     // MARK: - Send Events via REST
 
-    /// Send a clawsy_envelope to the gateway via REST (for QuickSend, Clipboard, etc.)
+    /// Send a clawsy_envelope to the gateway via Protocol V3 `node.event`.
+    /// This goes over the existing WebSocket connection, not REST.
+    public var onSendWebSocket: (([String: Any]) -> Void)?
+
+    /// Send a clawsy_envelope to the gateway.
+    /// Routes through the WebSocket as a `node.event` frame (Protocol V3).
     public func sendEnvelope(_ jsonString: String, sessionKey: String, deliver: Bool = false) {
+        let payload: [String: Any] = [
+            "sessionKey": sessionKey,
+            "message": jsonString,
+            "deliver": deliver
+        ]
+
+        guard let payloadData = try? JSONSerialization.data(withJSONObject: payload),
+              let payloadJSON = String(data: payloadData, encoding: .utf8) else { return }
+
+        let frame: [String: Any] = [
+            "type": "req",
+            "id": UUID().uuidString,
+            "method": "node.event",
+            "params": [
+                "event": "clawsy_envelope",
+                "payloadJSON": payloadJSON
+            ]
+        ]
+
+        onSendWebSocket?(frame)
+    }
+
+    /// Fallback: Send via REST API (for contexts without WS, e.g. Share Extension)
+    public func sendEnvelopeREST(_ jsonString: String, sessionKey: String, deliver: Bool = false) {
         guard let baseURL = baseURL, let token = token else { return }
-        guard let url = URL(string: "\(baseURL)/sessions/event") else { return }
+
+        // Try the system-event endpoint (standard OpenClaw API)
+        guard let url = URL(string: "\(baseURL)/api/sessions/\(sessionKey)/events") else { return }
 
         let body: [String: Any] = [
-            "sessionKey": sessionKey,
             "message": jsonString,
             "deliver": deliver
         ]
