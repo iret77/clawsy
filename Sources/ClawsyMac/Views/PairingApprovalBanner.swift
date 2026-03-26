@@ -5,7 +5,17 @@ struct PairingApprovalBanner: View {
     let requestId: String
     @Binding var copied: Bool
 
-    private var command: String { "openclaw devices approve \(requestId)" }
+    /// Show the device ID (first 12 chars) — this is what `openclaw devices list` shows
+    private var deviceIdShort: String {
+        String(DeviceIdentity.shared.deviceId.prefix(12))
+    }
+
+    private var command: String {
+        // Use `openclaw devices list` to find the pending request, then approve.
+        // We can't show the gateway's request UUID because it's sent to operator
+        // clients, not to the node. So we show the device-ID-based hint.
+        "openclaw devices approve \(deviceIdShort)..."
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -24,15 +34,17 @@ struct PairingApprovalBanner: View {
                 .foregroundColor(.white.opacity(0.85))
 
             HStack(spacing: 6) {
-                Text(command)
+                Text("openclaw devices list")
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundColor(.white)
                     .textSelection(.enabled)
                     .lineLimit(1)
                 Spacer()
                 Button(action: {
+                    // Copy the full approve workflow hint
+                    let hint = "openclaw devices list  # Find the pending request, then:\nopenclaw devices approve <REQUEST_ID>"
                     NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(command, forType: .string)
+                    NSPasteboard.general.setString(hint, forType: .string)
                     copied = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { copied = false }
                 }) {
