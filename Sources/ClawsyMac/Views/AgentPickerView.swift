@@ -34,10 +34,10 @@ struct AgentPickerView: View {
         if hostManager.isConnected && agents.count > 1 {
             HStack(spacing: 6) {
                 Image(systemName: "person.crop.circle")
-                    .font(.system(size: 11))
+                    .font(ClawsyTheme.Font.bannerBody)
                     .foregroundColor(.secondary)
                 Text(l10n: "AGENT_PICKER_LABEL")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(ClawsyTheme.Font.headerHostName)
                     .foregroundColor(.secondary)
                 Spacer()
                 Picker("", selection: targetSessionKey) {

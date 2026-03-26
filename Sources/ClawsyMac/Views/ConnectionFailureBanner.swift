@@ -11,36 +11,42 @@ struct ConnectionFailureBanner: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 14))
-                    .foregroundColor(.red)
+                    .font(ClawsyTheme.Font.menuItem)
+                    .foregroundColor(ClawsyTheme.Colors.failed)
                     .accessibilityLabel(NSLocalizedString("CONNECTION_FAILURE_ICON", bundle: .clawsy, comment: ""))
                 Text(title)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(ClawsyTheme.Font.bannerTitle)
                     .foregroundColor(.primary)
             }
 
             Text(detail)
-                .font(.system(size: 11))
+                .font(ClawsyTheme.Font.bannerBody)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 8) {
                 if isRetryable {
-                    Button(NSLocalizedString("RETRY", bundle: .clawsy, comment: ""), action: onRetry)
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                    Button(action: onRetry) {
+                        Label(NSLocalizedString("FAILURE_RETRY", bundle: .clawsy, comment: ""), systemImage: ClawsyTheme.Icons.retry)
+                            .font(ClawsyTheme.Font.bannerBody)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
                 }
                 if needsRepair {
-                    Button(NSLocalizedString("REPAIR_CONNECTION", bundle: .clawsy, comment: ""), action: onRepair)
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                    Button(action: onRepair) {
+                        Label(NSLocalizedString("REPAIR_CONNECTION", bundle: .clawsy, comment: ""), systemImage: ClawsyTheme.Icons.repair)
+                            .font(ClawsyTheme.Font.bannerBody)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
                 }
             }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.red.opacity(0.08))
-        .cornerRadius(8)
+        .background(ClawsyTheme.Colors.errorBannerBackground)
+        .cornerRadius(ClawsyTheme.Spacing.cornerRadius)
     }
 
     private var icon: String {
@@ -52,20 +58,20 @@ struct ConnectionFailureBanner: View {
         case .gatewayNotRunning: return "server.rack"
         case .reconnectExhausted: return "clock.badge.exclamationmark"
         case .skillMissing: return "puzzlepiece.extension"
-        case .unknown: return "exclamationmark.triangle"
+        case .unknown: return ClawsyTheme.Icons.warning
         }
     }
 
     private var title: String {
         switch failure {
-        case .originNotAllowed: return "Origin Not Allowed"
-        case .invalidToken: return "Invalid Token"
-        case .sshTunnelFailed: return "SSH Tunnel Failed"
-        case .hostUnreachable: return "Host Unreachable"
-        case .gatewayNotRunning: return "Gateway Not Running"
-        case .reconnectExhausted: return "Reconnect Exhausted"
-        case .skillMissing: return "Clawsy Skill Missing"
-        case .unknown: return "Connection Failed"
+        case .originNotAllowed: return NSLocalizedString("FAILURE_ORIGIN_NOT_ALLOWED", bundle: .clawsy, comment: "")
+        case .invalidToken: return NSLocalizedString("FAILURE_INVALID_TOKEN", bundle: .clawsy, comment: "")
+        case .sshTunnelFailed: return NSLocalizedString("FAILURE_SSH_FAILED", bundle: .clawsy, comment: "")
+        case .hostUnreachable: return NSLocalizedString("FAILURE_HOST_UNREACHABLE", bundle: .clawsy, comment: "")
+        case .gatewayNotRunning: return NSLocalizedString("FAILURE_GATEWAY_NOT_RUNNING", bundle: .clawsy, comment: "")
+        case .reconnectExhausted: return NSLocalizedString("FAILURE_RECONNECT_EXHAUSTED", bundle: .clawsy, comment: "")
+        case .skillMissing: return NSLocalizedString("FAILURE_SKILL_MISSING", bundle: .clawsy, comment: "")
+        case .unknown: return NSLocalizedString("FAILURE_UNKNOWN", bundle: .clawsy, comment: "")
         }
     }
 

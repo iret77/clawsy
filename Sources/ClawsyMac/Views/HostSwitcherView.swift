@@ -40,7 +40,7 @@ struct HostSwitcherView: View {
 
                 Button(action: { showingAddHost = true }) {
                     Image(systemName: "plus")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(ClawsyTheme.Font.caption)
                         .foregroundColor(.secondary)
                         .frame(width: 22, height: 22)
                         .background(Circle().stroke(Color.secondary.opacity(0.4), lineWidth: 1.2))
@@ -86,13 +86,13 @@ struct NoHostEmptyStateView: View {
                 Text(l10n: "NO_HOST_TITLE")
                     .font(.system(size: 13, weight: .semibold))
                 Text(l10n: "NO_HOST_SUBTITLE")
-                    .font(.system(size: 11))
+                    .font(ClawsyTheme.Font.bannerBody)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
             }
             Button(action: onAddHost) {
                 Label(NSLocalizedString("NO_HOST_ADD_BUTTON", bundle: .clawsy, comment: ""), systemImage: "plus.circle.fill")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(ClawsyTheme.Font.sectionHeader)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.regular)

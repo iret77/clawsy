@@ -38,7 +38,7 @@ struct CameraPreviewView: View {
                         .font(.system(size: 15, weight: .bold))
                     
                     Text(remoteUserText)
-                        .font(.system(size: 11, weight: .medium))
+                        .font(ClawsyTheme.Font.headerHostName)
                         .foregroundColor(.secondary)
                 }
                 
@@ -48,8 +48,8 @@ struct CameraPreviewView: View {
             .padding(.top, 24)
             .padding(.bottom, 16)
             
-            Divider().opacity(0.3)
-            
+            Divider().clawsy()
+
             // Content Area (Image Preview)
             VStack(spacing: 0) {
                 Image(nsImage: image)
@@ -61,8 +61,8 @@ struct CameraPreviewView: View {
             .background(Color.black.opacity(0.1))
             .frame(maxHeight: .infinity)
             
-            Divider().opacity(0.3)
-            
+            Divider().clawsy()
+
             // Action Bar Footer
             HStack(spacing: 12) {
                 Button("ALERT_DENY") {
@@ -96,9 +96,9 @@ struct CameraPreviewView: View {
         .background(
             VisualEffectView(material: .popover, blendingMode: .behindWindow)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .clipShape(RoundedRectangle(cornerRadius: ClawsyTheme.Spacing.popoverCornerRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: ClawsyTheme.Spacing.popoverCornerRadius)
                 .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
         )
     }

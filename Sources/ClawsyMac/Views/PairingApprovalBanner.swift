@@ -6,10 +6,6 @@ struct PairingApprovalBanner: View {
     @Binding var copied: Bool
     @State private var showShellCommand = false
 
-    private var deviceIdShort: String {
-        String(DeviceIdentity.shared.deviceId.prefix(12))
-    }
-
     private var deviceId: String {
         DeviceIdentity.shared.deviceId
     }
@@ -26,24 +22,24 @@ struct PairingApprovalBanner: View {
         VStack(alignment: .leading, spacing: 8) {
             // Title
             HStack {
-                Image(systemName: "link.badge.plus")
-                    .font(.system(size: 12))
+                Image(systemName: ClawsyTheme.Icons.pairing)
+                    .font(ClawsyTheme.Font.formLabel)
                     .foregroundColor(.white)
                 Text(l10n: "PAIRING_REQUIRED_TITLE")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(ClawsyTheme.Font.bannerTitle)
                     .foregroundColor(.white)
                 Spacer()
             }
 
             // Instruction
             Text(NSLocalizedString("PAIRING_SEND_HINT", bundle: .clawsy, comment: ""))
-                .font(.system(size: 10))
+                .font(ClawsyTheme.Font.caption)
                 .foregroundColor(.white.opacity(0.85))
 
             // Agent prompt (primary)
             HStack(spacing: 6) {
                 Text(agentPrompt)
-                    .font(.system(size: 10))
+                    .font(ClawsyTheme.Font.caption)
                     .foregroundColor(.white)
                     .textSelection(.enabled)
                     .lineLimit(2)
@@ -56,9 +52,9 @@ struct PairingApprovalBanner: View {
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                            .font(.system(size: 10))
+                            .font(ClawsyTheme.Font.caption)
                         Text(l10n: copied ? "PAIRING_COPIED" : "PAIRING_COPY_CMD")
-                            .font(.system(size: 10, weight: .medium))
+                            .font(ClawsyTheme.Font.caption)
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
@@ -70,7 +66,7 @@ struct PairingApprovalBanner: View {
             }
 
             // Shell command (secondary, expandable)
-            Button(action: { withAnimation(.easeInOut(duration: 0.2)) { showShellCommand.toggle() } }) {
+            Button(action: { withAnimation(ClawsyTheme.Animation.stateChange) { showShellCommand.toggle() } }) {
                 HStack(spacing: 4) {
                     Image(systemName: showShellCommand ? "chevron.down" : "chevron.right")
                         .font(.system(size: 8))
@@ -91,10 +87,8 @@ struct PairingApprovalBanner: View {
         }
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(LinearGradient(
-                    colors: [Color.blue.opacity(0.85), Color.indigo.opacity(0.85)],
-                    startPoint: .topLeading, endPoint: .bottomTrailing))
+            RoundedRectangle(cornerRadius: ClawsyTheme.Spacing.cornerRadius + 2)
+                .fill(ClawsyTheme.Colors.pairingBannerGradient)
         )
     }
 }

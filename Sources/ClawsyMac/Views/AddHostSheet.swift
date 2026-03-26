@@ -38,7 +38,7 @@ struct AddHostSheet: View {
             .padding(.top, 20)
             .padding(.bottom, 16)
 
-            Divider().opacity(0.3)
+            Divider().clawsy()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
@@ -52,7 +52,7 @@ struct AddHostSheet: View {
                             .textFieldStyle(.roundedBorder)
 
                         HStack(spacing: 6) {
-                            Text(NSLocalizedString("ADD_HOST_SECTION_COLOR", bundle: .clawsy, comment: "")).font(.system(size: 11)).foregroundColor(.secondary)
+                            Text(NSLocalizedString("ADD_HOST_SECTION_COLOR", bundle: .clawsy, comment: "")).font(ClawsyTheme.Font.bannerBody).foregroundColor(.secondary)
                             Spacer()
                             ForEach(HostProfile.defaultColors, id: \.self) { hex in
                                 let c = Color(hex: hex) ?? .red
@@ -66,7 +66,7 @@ struct AddHostSheet: View {
                         }
                     }
 
-                    Divider().opacity(0.3)
+                    Divider().clawsy()
 
                     // Connection
                     VStack(alignment: .leading, spacing: 8) {
@@ -86,7 +86,7 @@ struct AddHostSheet: View {
                             .textFieldStyle(.roundedBorder)
                     }
 
-                    Divider().opacity(0.3)
+                    Divider().clawsy()
 
                     // SSH
                     VStack(alignment: .leading, spacing: 8) {
@@ -97,15 +97,15 @@ struct AddHostSheet: View {
                         TextField("SSH User", text: $sshUser)
                             .textFieldStyle(.roundedBorder)
                         Toggle("SSH Fallback", isOn: $useSshFallback)
-                            .font(.system(size: 12))
+                            .font(ClawsyTheme.Font.formLabel)
                         Toggle("SSH Only", isOn: $sshOnly)
-                            .font(.system(size: 12))
+                            .font(ClawsyTheme.Font.formLabel)
                     }
                 }
                 .padding(20)
             }
 
-            Divider().opacity(0.3)
+            Divider().clawsy()
 
             // Footer
             HStack {

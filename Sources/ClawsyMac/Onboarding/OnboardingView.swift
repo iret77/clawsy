@@ -60,7 +60,7 @@ struct OnboardingView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .transition(.slide)
 
-            Divider().opacity(0.3)
+            Divider().clawsy()
 
             // Navigation
             HStack {
@@ -94,6 +94,7 @@ struct OnboardingView: View {
             .padding(.vertical, 14)
         }
         .frame(width: 460, height: 520)
+        .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
     }
 
     // MARK: - Page 0: Welcome
@@ -112,7 +113,7 @@ struct OnboardingView: View {
                     .multilineTextAlignment(.center)
 
                 Text(l10n: "ONBOARDING_WELCOME_DESC")
-                    .font(.system(size: 13))
+                    .font(ClawsyTheme.Font.menuItem)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 340)
@@ -121,15 +122,15 @@ struct OnboardingView: View {
             // Security note (like official app)
             HStack(spacing: 8) {
                 Image(systemName: "lock.shield")
-                    .font(.system(size: 14))
+                    .font(ClawsyTheme.Font.menuItem)
                     .foregroundColor(.green)
                 Text(l10n: "ONBOARDING_SECURITY_NOTE")
-                    .font(.system(size: 11))
+                    .font(ClawsyTheme.Font.bannerBody)
                     .foregroundColor(.secondary)
             }
             .padding(12)
             .background(Color.green.opacity(0.06))
-            .cornerRadius(8)
+            .cornerRadius(ClawsyTheme.Spacing.cornerRadius)
             .padding(.horizontal, 24)
 
             Spacer()
@@ -168,19 +169,19 @@ struct OnboardingView: View {
                 if connectionPhase == .testing {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
-                        Text(NSLocalizedString("ONBOARDING_CONNECTING", bundle: .clawsy, comment: "")).font(.system(size: 12)).foregroundColor(.secondary)
+                        Text(NSLocalizedString("ONBOARDING_CONNECTING", bundle: .clawsy, comment: "")).font(ClawsyTheme.Font.formLabel).foregroundColor(.secondary)
                     }
                 } else if connectionPhase == .success {
                     Label(NSLocalizedString("ONBOARDING_CONNECTED", bundle: .clawsy, comment: ""), systemImage: "checkmark.circle.fill")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(ClawsyTheme.Font.sectionHeader)
                         .foregroundColor(.green)
                 } else if connectionPhase == .failed, let error = connectionError {
                     VStack(alignment: .leading, spacing: 4) {
                         Label("Connection failed", systemImage: "xmark.circle.fill")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(ClawsyTheme.Font.sectionHeader)
                             .foregroundColor(.red)
                         Text(error)
-                            .font(.system(size: 11))
+                            .font(ClawsyTheme.Font.bannerBody)
                             .foregroundColor(.secondary)
                     }
                 }
@@ -192,16 +193,16 @@ struct OnboardingView: View {
     private var setupCodeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(l10n: "ONBOARDING_SETUP_CODE_HINT")
-                .font(.system(size: 12))
+                .font(ClawsyTheme.Font.formLabel)
                 .foregroundColor(.secondary)
 
             TextField("clawsy://pair?code=... or base64 code", text: $setupCode)
                 .textFieldStyle(.roundedBorder)
-                .font(.system(size: 12, design: .monospaced))
+                .font(ClawsyTheme.Font.code)
 
             if setupCodeError {
                 Text(l10n: "ONBOARDING_SETUP_CODE_ERROR")
-                    .font(.system(size: 11))
+                    .font(ClawsyTheme.Font.bannerBody)
                     .foregroundColor(.red)
             }
 
@@ -217,7 +218,7 @@ struct OnboardingView: View {
     private var tailscaleSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(l10n: "ONBOARDING_TAILSCALE_HINT")
-                .font(.system(size: 12))
+                .font(ClawsyTheme.Font.formLabel)
                 .foregroundColor(.secondary)
 
             TextField("Tailscale hostname", text: $manualHost)
@@ -238,7 +239,7 @@ struct OnboardingView: View {
     private var manualSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(l10n: "ONBOARDING_MANUAL_HINT")
-                .font(.system(size: 12))
+                .font(ClawsyTheme.Font.formLabel)
                 .foregroundColor(.secondary)
 
             TextField("Host", text: $manualHost)
@@ -252,12 +253,12 @@ struct OnboardingView: View {
             SecureField("Gateway Token", text: $manualToken)
                 .textFieldStyle(.roundedBorder)
 
-            Divider().opacity(0.3)
+            Divider().clawsy()
 
             TextField("SSH User (optional)", text: $manualSshUser)
                 .textFieldStyle(.roundedBorder)
             Toggle("SSH Fallback", isOn: $useSshFallback)
-                .font(.system(size: 12))
+                .font(ClawsyTheme.Font.formLabel)
 
             Button(NSLocalizedString("ONBOARDING_MANUAL_BUTTON", bundle: .clawsy, comment: "")) {
                 attemptManualConnect()
@@ -278,7 +279,7 @@ struct OnboardingView: View {
                 .padding(.top, 20)
 
             Text(l10n: "ONBOARDING_PERMISSIONS_DESC")
-                .font(.system(size: 12))
+                .font(ClawsyTheme.Font.formLabel)
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 24)
 
@@ -298,7 +299,7 @@ struct OnboardingView: View {
 
             if permissionMonitor.allRequiredGranted {
                 Label(NSLocalizedString("ONBOARDING_PERMISSIONS_ALL_GRANTED", bundle: .clawsy, comment: ""), systemImage: "checkmark.seal.fill")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(ClawsyTheme.Font.sectionHeader)
                     .foregroundColor(.green)
                     .padding(.horizontal, 24)
             }
@@ -337,11 +338,11 @@ struct OnboardingView: View {
     private func readyItem(icon: String, key: String) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 14))
+                .font(ClawsyTheme.Font.menuItem)
                 .foregroundColor(.accentColor)
                 .frame(width: 20)
             Text(l10n: key)
-                .font(.system(size: 12))
+                .font(ClawsyTheme.Font.formLabel)
                 .foregroundColor(.secondary)
         }
     }
@@ -461,17 +462,17 @@ struct PermissionRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: permission.icon)
-                .font(.system(size: 16))
+                .font(ClawsyTheme.Font.menuItem)
                 .foregroundColor(isGranted ? .green : .orange)
                 .frame(width: 24)
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
                     Text(permission.rawValue)
-                        .font(.system(size: 12, weight: .medium))
+                        .font(ClawsyTheme.Font.sectionHeader)
                     if permission.isRequired {
                         Text(l10n: "PERM_REQUIRED")
-                            .font(.system(size: 9, weight: .semibold))
+                            .font(ClawsyTheme.Font.caption)
                             .foregroundColor(.orange)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)
@@ -480,7 +481,7 @@ struct PermissionRow: View {
                     }
                 }
                 Text(permission.description)
-                    .font(.system(size: 10))
+                    .font(ClawsyTheme.Font.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(2)
             }
@@ -498,7 +499,7 @@ struct PermissionRow: View {
 
                 Button(action: onOpenSettings) {
                     Image(systemName: "gear")
-                        .font(.system(size: 11))
+                        .font(ClawsyTheme.Font.bannerBody)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
@@ -507,6 +508,6 @@ struct PermissionRow: View {
         }
         .padding(10)
         .background(Color.primary.opacity(isGranted ? 0.02 : 0.04))
-        .cornerRadius(8)
+        .cornerRadius(ClawsyTheme.Spacing.cornerRadius)
     }
 }
