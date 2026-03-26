@@ -51,7 +51,7 @@ public struct SharedConfig {
     
     /// The session key that events are routed to (persisted for Share Extension access).
     public static var targetSessionKey: String {
-        get { sharedDefaults.string(forKey: "targetSessionKey") ?? "clawsy-service" }
+        get { sharedDefaults.string(forKey: "targetSessionKey") ?? "main" }
         set { sharedDefaults.set(newValue, forKey: "targetSessionKey"); sharedDefaults.synchronize() }
     }
     

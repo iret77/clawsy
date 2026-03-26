@@ -7,18 +7,18 @@ struct AgentPickerView: View {
     @ObservedObject var hostManager: HostManager
 
     private var poller: GatewayPoller? { hostManager.activePoller }
-
     private var agents: [GatewayAgent] { poller?.agents ?? [] }
 
     private var targetSessionKey: Binding<String> {
         Binding<String>(
-            get: { poller?.targetSessionKey ?? "clawsy-service" },
+            get: { poller?.targetSessionKey ?? "main" },
             set: { newValue in
                 guard let poller = poller else { return }
-                if newValue == "clawsy-service" {
-                    poller.targetSessionKey = "clawsy-service"
+                if newValue == "main" {
+                    poller.targetSessionKey = "main"
                     return
                 }
+                // Find the actual session key for this agent
                 let agentId = String(newValue.dropFirst("agent:".count))
                 let matching = poller.sessions.first { session in
                     let parts = session.id.split(separator: ":")
@@ -31,7 +31,7 @@ struct AgentPickerView: View {
     }
 
     var body: some View {
-        if hostManager.isConnected && !agents.isEmpty {
+        if hostManager.isConnected && agents.count > 1 {
             HStack(spacing: 6) {
                 Image(systemName: "person.crop.circle")
                     .font(.system(size: 11))
@@ -42,7 +42,7 @@ struct AgentPickerView: View {
                 Spacer()
                 Picker("", selection: targetSessionKey) {
                     Text(NSLocalizedString("AGENT_PICKER_DEFAULT", bundle: .clawsy, comment: ""))
-                        .tag("clawsy-service")
+                        .tag("main")
                     ForEach(agents) { agent in
                         Text(agent.name).tag("agent:\(agent.id)")
                     }

@@ -127,8 +127,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             useSshFallback: false
         )
 
-        Self.bootstrapAgentKnowledge(gatewayURL: payload.url, token: payload.token)
-
         DispatchQueue.main.async { [weak self] in
             guard let self, let hm = self.hostManager else { return }
             if let first = hm.profiles.first(where: { $0.serverToken.isEmpty }) {
@@ -153,53 +151,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         return true
     }
 
-    static func bootstrapAgentKnowledge(gatewayURL: String, token: String) {
-        let httpBase: String
-        if let url = URL(string: gatewayURL) {
-            let scheme = (url.scheme == "wss") ? "https" : "http"
-            let host = url.host ?? "127.0.0.1"
-            let port = url.port.map { ":\($0)" } ?? ""
-            httpBase = "\(scheme)://\(host)\(port)"
-        } else {
-            httpBase = "http://127.0.0.1:18789"
-        }
-        guard let invokeURL = URL(string: "\(httpBase)/tools/invoke") else { return }
-        let log = OSLog(subsystem: "ai.clawsy", category: "Bootstrap")
-
-        func invoke(tool: String, args: [String: Any], label: String, completion: ((Bool) -> Void)? = nil) {
-            var req = URLRequest(url: invokeURL)
-            req.httpMethod = "POST"
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            req.timeoutInterval = 30
-            req.httpBody = try? JSONSerialization.data(withJSONObject: ["tool": tool, "args": args])
-            URLSession.shared.dataTask(with: req) { data, _, err in
-                if let err { os_log("Bootstrap %{public}@ error: %{public}@", log: log, type: .error, label, err.localizedDescription); return }
-                let ok = data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }?["ok"] as? Bool ?? false
-                os_log("Bootstrap %{public}@: %{public}@", log: log, type: .info, label, ok ? "OK" : "FAILED")
-                completion?(ok)
-            }.resume()
-        }
-
-        let serverSetupCommand = """
-set -e
-echo "[clawsy-bootstrap] Starting server setup..."
-curl -fsSL https://raw.githubusercontent.com/iret77/clawsy/main/server/install.sh | bash
-if command -v clawhub &>/dev/null; then
-  clawhub install clawsy --no-input 2>/dev/null || clawhub update clawsy --no-input 2>/dev/null || true
-fi
-echo "[clawsy-bootstrap] Done."
-"""
-        invoke(tool: "exec", args: ["command": serverSetupCommand], label: "server-setup") { ok in
-            guard ok else { return }
-            let msg = """
-[Clawsy Bootstrap] Die macOS Companion App wurde soeben installiert. \
-Clawsy-Bridge-Plugin, CLAWSY.md und clawsy-pair.sh wurden auf diesem Server eingerichtet. \
-Details in CLAWSY.md.
-"""
-            invoke(tool: "sessions_send", args: ["sessionKey": "main", "message": msg], label: "agent-notify")
-        }
-    }
+    // Server bootstrap removed — Clawsy 1.0 uses Protocol V3 natively,
+    // no server-side plugin installation needed.
 
     static func parseGatewayURL(_ urlString: String) -> (host: String, port: String) {
         if let url = URL(string: urlString), let host = url.host {
