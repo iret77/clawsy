@@ -45,8 +45,8 @@ public final class DeviceIdentity {
     public func sign(_ payload: String) -> String? {
         guard let key = privateKey else { return nil }
         guard let data = payload.data(using: .utf8) else { return nil }
-        guard let signature = try? key.signature(for: data) else { return nil }
-        return signature.rawRepresentation.base64URLEncoded()
+        guard let signatureData = try? key.signature(for: data) else { return nil }
+        return signatureData.base64URLEncoded()
     }
 
     /// Construct a V3 signature payload as per OpenClaw Protocol V3.

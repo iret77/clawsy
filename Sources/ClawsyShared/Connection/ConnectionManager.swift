@@ -50,8 +50,7 @@ public final class ConnectionManager: ObservableObject {
 
     // MARK: - Init
 
-    public override init() {
-        super.init()
+    public init() {
         wireTransport()
         #if os(macOS)
         wireSSHTunnel()
