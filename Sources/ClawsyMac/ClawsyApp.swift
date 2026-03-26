@@ -378,15 +378,8 @@ Details in CLAWSY.md.
                 window.hasShadow = true
 
                 let quickSendView = QuickSendView(onSend: { text in
-                    if let jsonString = ClawsyEnvelopeBuilder.build(type: "quick_send", content: text) {
-                        poller.sendEnvelope(jsonString, sessionKey: poller.targetSessionKey)
-                        // Also trigger the main session so the agent responds
-                        let trigger: [String: Any] = ["clawsy_envelope": ["type": "quick_send_trigger", "message": text]]
-                        if let triggerData = try? JSONSerialization.data(withJSONObject: trigger),
-                           let triggerString = String(data: triggerData, encoding: .utf8) {
-                            poller.sendEnvelope(triggerString, sessionKey: "main", deliver: true)
-                        }
-                    }
+                    // Send directly as chat.send — no envelope wrapping needed
+                    poller.sendMessage(text, sessionKey: poller.targetSessionKey)
                     self.hideQuickSend()
                 }, onCancel: {
                     self.hideQuickSend()

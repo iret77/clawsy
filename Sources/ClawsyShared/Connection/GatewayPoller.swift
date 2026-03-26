@@ -13,7 +13,7 @@ public final class GatewayPoller: ObservableObject {
     @Published public var sessions: [GatewaySession] = []
 
     /// Currently targeted session key for routing events
-    @Published public var targetSessionKey: String = "clawsy-service" {
+    @Published public var targetSessionKey: String = "main" {
         didSet {
             SharedConfig.sharedDefaults.set(targetSessionKey, forKey: "targetSessionKey")
             SharedConfig.sharedDefaults.synchronize()
@@ -28,7 +28,7 @@ public final class GatewayPoller: ObservableObject {
 
     public init(interval: TimeInterval = 30) {
         self.interval = interval
-        self.targetSessionKey = SharedConfig.sharedDefaults.string(forKey: "targetSessionKey") ?? "clawsy-service"
+        self.targetSessionKey = SharedConfig.sharedDefaults.string(forKey: "targetSessionKey") ?? "main"
     }
 
     /// Start polling against the given gateway base URL.
