@@ -17,7 +17,7 @@ struct ActionMenuView: View {
         VStack(spacing: 2) {
             // Quick Send
             Button(action: { appDelegate.showQuickSend() }) {
-                MenuItemRow(icon: "paperplane.fill", title: "QUICK_SEND",
+                MenuItemRow(icon: ClawsyTheme.Icons.quickSend, title: "QUICK_SEND",
                             isEnabled: isConnected,
                             shortcut: "⌘⇧\(SharedConfig.quickSendHotkey)")
             }
@@ -26,7 +26,7 @@ struct ActionMenuView: View {
 
             // Screenshot
             Button(action: { showingScreenshotMenu.toggle() }) {
-                MenuItemRow(icon: "camera", title: "SCREENSHOT", isEnabled: isConnected, hasChevron: true)
+                MenuItemRow(icon: ClawsyTheme.Icons.screenshot, title: "SCREENSHOT", isEnabled: isConnected, hasChevron: true)
             }
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
@@ -56,7 +56,7 @@ struct ActionMenuView: View {
 
             // Clipboard
             Button(action: handleClipboardSend) {
-                MenuItemRow(icon: "doc.on.clipboard", title: "PUSH_CLIPBOARD",
+                MenuItemRow(icon: ClawsyTheme.Icons.clipboard, title: "PUSH_CLIPBOARD",
                             isEnabled: isConnected,
                             shortcut: "⌘⇧\(SharedConfig.pushClipboardHotkey)")
             }
@@ -68,7 +68,7 @@ struct ActionMenuView: View {
                 ensureCameraSelected()
                 if !availableCameras.isEmpty { showingCameraMenu.toggle() }
             }) {
-                MenuItemRow(icon: "video.fill", title: "CAMERA",
+                MenuItemRow(icon: ClawsyTheme.Icons.camera, title: "CAMERA",
                             isEnabled: isConnected && !availableCameras.isEmpty, hasChevron: true)
             }
             .buttonStyle(.plain)

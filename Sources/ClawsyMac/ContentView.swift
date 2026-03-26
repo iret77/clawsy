@@ -21,120 +21,59 @@ struct ContentView: View {
                     hostManager.addHost(profile)
                     hostManager.connectHost(profile.id)
                 })
-                .padding(.horizontal, 12)
+                .padding(.horizontal, ClawsyTheme.Spacing.contentH)
                 .padding(.top, 10)
                 .padding(.bottom, 4)
+                Divider().clawsy()
             }
-            Divider().opacity(0.3)
 
             // Status Header
             StatusHeaderView(hostManager: hostManager)
 
-            // Pairing Banner
-            if case .awaitingPairing(let requestId) = hostManager.state {
-                PairingApprovalBanner(requestId: requestId, copied: .constant(false))
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-            }
+            // Banners (animated)
+            bannerSection
+                .animation(ClawsyTheme.Animation.bannerSlide, value: hostManager.state)
 
-            // Failure Banner
-            if case .failed(let failure) = hostManager.state {
-                ConnectionFailureBanner(failure: failure, onRetry: {
-                    if let id = hostManager.activeHostId { hostManager.connectHost(id) }
-                }, onRepair: {
-                    hostManager.repairActiveConnection()
-                })
-                .transition(.move(edge: .top).combined(with: .opacity))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-            }
-
-            Divider().opacity(0.5)
+            Divider().clawsy()
 
             // Empty state
             if hostManager.profiles.isEmpty {
                 NoHostEmptyStateView(onAddHost: { showingAddHost = true })
-                Divider().padding(.vertical, 4).opacity(0.5).padding(.horizontal, 6)
+                Divider().clawsy().padding(.horizontal, 6)
                 quitButton
             }
 
-            // Main content (when hosts configured)
+            // Main content
             if !hostManager.profiles.isEmpty {
-                // Agent Picker
                 AgentPickerView(hostManager: hostManager)
 
                 VStack(spacing: 2) {
-                    // Actions
                     ActionMenuView(hostManager: hostManager)
 
-                    Divider().padding(.vertical, 4).opacity(0.5)
+                    Divider().clawsy().padding(.vertical, 4)
 
-                    // Connect / Disconnect / Retry
-                    Button(action: toggleConnection) {
-                        MenuItemRow(
-                            icon: connectButtonIcon,
-                            title: connectButtonTitle,
-                            color: connectButtonColor
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .frame(maxWidth: .infinity)
+                    // Connect / Disconnect
+                    connectButton
 
-                    Divider().padding(.vertical, 4).opacity(0.5)
+                    Divider().clawsy().padding(.vertical, 4)
 
-                    // Mission Control
-                    Button(action: { showingMissionControl.toggle() }) {
-                        ZStack(alignment: .trailing) {
-                            MenuItemRow(icon: "list.bullet.clipboard", title: "MISSION_CONTROL_TITLE", isEnabled: true)
-                            if let poller = hostManager.activePoller,
-                               !poller.sessions.filter({ $0.status == "running" }).isEmpty {
-                                Circle().fill(Color.green).frame(width: 6, height: 6)
-                                    .padding(.trailing, 16)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .frame(maxWidth: .infinity)
-                    .popover(isPresented: $showingMissionControl, arrowEdge: .trailing) {
-                        MissionControlView(hostManager: hostManager)
-                    }
+                    // Task Overview
+                    taskOverviewButton
 
                     // Settings
-                    Button(action: { showingSettings.toggle() }) {
-                        MenuItemRow(icon: "gearshape.fill", title: "SETTINGS", isEnabled: true)
-                    }
-                    .buttonStyle(.plain)
-                    .frame(maxWidth: .infinity)
-                    .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
-                        SettingsView(hostManager: hostManager, isPresented: $showingSettings,
-                            onShowDebugLog: {
-                                showingSettings = false
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { showingLog = true }
-                            },
-                            onHostAdded: { profile in
-                                hostManager.addHost(profile)
-                                hostManager.connectHost(profile.id)
-                            }
-                        )
-                        .frame(width: 380)
-                    }
-                    // Debug Log popover
-                    .background(
-                        Color.clear.popover(isPresented: $showingLog, arrowEdge: .trailing) {
-                            DebugLogView(logText: hostManager.rawLog, isPresented: $showingLog)
-                                .frame(width: 400, height: 300)
-                        }
-                    )
+                    settingsButton
 
-                    Divider().padding(.vertical, 4).opacity(0.5)
+                    Divider().clawsy().padding(.vertical, 4)
 
                     quitButton
                 }
                 .padding(6)
             }
         }
-        .frame(width: 300)
+        .frame(width: ClawsyTheme.Spacing.popoverWidth)
+        .background(
+            VisualEffectView(material: .popover, blendingMode: .behindWindow)
+        )
         .onAppear {
             appDelegate.hostManager = hostManager
             registerCommandHandlers()
@@ -153,7 +92,6 @@ struct ContentView: View {
         .onChange(of: hostManager.activeHostId) { _ in
             appDelegate.updateMenuBarIcon()
             setupFileWatcher()
-            // Connection state change handled by HostManager
         }
         .onChange(of: hostManager.isConnected) { _ in
             appDelegate.updateMenuBarIcon()
@@ -166,27 +104,49 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Quit Button
+    // MARK: - Banner Section
 
-    private var quitButton: some View {
-        Button(action: { NSApplication.shared.terminate(nil) }) {
-            MenuItemRow(icon: "xmark.circle.fill", title: "QUIT", isEnabled: true)
+    @ViewBuilder
+    private var bannerSection: some View {
+        if case .awaitingPairing(let requestId) = hostManager.state {
+            PairingApprovalBanner(requestId: requestId, copied: .constant(false))
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+        }
+
+        if case .failed(let failure) = hostManager.state {
+            ConnectionFailureBanner(failure: failure, onRetry: {
+                if let id = hostManager.activeHostId { hostManager.connectHost(id) }
+            }, onRepair: {
+                hostManager.repairActiveConnection()
+            })
+            .transition(.move(edge: .top).combined(with: .opacity))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+        }
+    }
+
+    // MARK: - Connect Button
+
+    private var connectButton: some View {
+        Button(action: toggleConnection) {
+            MenuItemRow(
+                icon: connectButtonIcon,
+                title: connectButtonTitle,
+                color: connectButtonColor
+            )
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 6)
-        .padding(.bottom, 6)
     }
-
-    // MARK: - Connection Toggle
 
     private var connectButtonIcon: String {
         switch hostManager.state {
-        case .connected: return "power"
-        case .connecting, .sshTunneling, .handshaking, .reconnecting: return "arrow.triangle.2.circlepath"
-        case .awaitingPairing: return "arrow.clockwise"
-        case .failed: return "arrow.clockwise"
-        case .disconnected: return "bolt.slash.fill"
+        case .connected: return ClawsyTheme.Icons.disconnect
+        case .connecting, .sshTunneling, .handshaking, .reconnecting: return ClawsyTheme.Icons.reconnect
+        case .awaitingPairing, .failed: return ClawsyTheme.Icons.reconnect
+        case .disconnected: return ClawsyTheme.Icons.connect
         }
     }
 
@@ -200,11 +160,75 @@ struct ContentView: View {
 
     private var connectButtonColor: Color {
         switch hostManager.state {
-        case .connected: return .red
-        case .awaitingPairing, .failed: return .orange
-        default: return .blue
+        case .connected: return ClawsyTheme.Colors.failed
+        case .awaitingPairing, .failed: return ClawsyTheme.Colors.connecting
+        default: return .accentColor
         }
     }
+
+    // MARK: - Task Overview Button
+
+    private var taskOverviewButton: some View {
+        Button(action: { showingMissionControl.toggle() }) {
+            ZStack(alignment: .trailing) {
+                MenuItemRow(icon: ClawsyTheme.Icons.taskOverview, title: "MISSION_CONTROL_TITLE", isEnabled: true)
+                if let poller = hostManager.activePoller,
+                   !poller.sessions.filter({ $0.status == "running" }).isEmpty {
+                    Circle().fill(ClawsyTheme.Colors.connected)
+                        .frame(width: 6, height: 6)
+                        .padding(.trailing, ClawsyTheme.Spacing.contentH)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .popover(isPresented: $showingMissionControl, arrowEdge: .trailing) {
+            MissionControlView(hostManager: hostManager)
+        }
+    }
+
+    // MARK: - Settings Button
+
+    private var settingsButton: some View {
+        Button(action: { showingSettings.toggle() }) {
+            MenuItemRow(icon: ClawsyTheme.Icons.settings, title: "SETTINGS", isEnabled: true)
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
+            SettingsView(hostManager: hostManager, isPresented: $showingSettings,
+                onShowDebugLog: {
+                    showingSettings = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { showingLog = true }
+                },
+                onHostAdded: { profile in
+                    hostManager.addHost(profile)
+                    hostManager.connectHost(profile.id)
+                }
+            )
+            .frame(width: ClawsyTheme.Spacing.settingsWidth)
+        }
+        .background(
+            Color.clear.popover(isPresented: $showingLog, arrowEdge: .trailing) {
+                DebugLogView(logText: hostManager.rawLog, isPresented: $showingLog)
+                    .frame(width: 400, height: 300)
+            }
+        )
+    }
+
+    // MARK: - Quit Button
+
+    private var quitButton: some View {
+        Button(action: { NSApplication.shared.terminate(nil) }) {
+            MenuItemRow(icon: ClawsyTheme.Icons.quit, title: "QUIT", isEnabled: true)
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 6)
+        .padding(.bottom, 6)
+    }
+
+    // MARK: - Connection Toggle
 
     private func toggleConnection() {
         guard let id = hostManager.activeHostId else { return }
@@ -277,6 +301,30 @@ struct ContentView: View {
                 }
             }
 
+            // file.move
+            router.registerSync("file.move") { params in
+                guard let source = params["source"] as? String ?? params["from"] as? String,
+                      let dest = params["destination"] as? String ?? params["to"] as? String else {
+                    return .error(code: "missing_param", message: "source and destination required")
+                }
+                switch ClawsyFileManager.moveFile(baseDir: expandedBase, source: source, destination: dest) {
+                case .success: return .success(["ok": true])
+                case .failure(let err): return .error(code: "move_failed", message: err.description)
+                }
+            }
+
+            // file.copy
+            router.registerSync("file.copy") { params in
+                guard let source = params["source"] as? String ?? params["from"] as? String,
+                      let dest = params["destination"] as? String ?? params["to"] as? String else {
+                    return .error(code: "missing_param", message: "source and destination required")
+                }
+                switch ClawsyFileManager.copyFile(baseDir: expandedBase, source: source, destination: dest) {
+                case .success: return .success(["ok": true])
+                case .failure(let err): return .error(code: "copy_failed", message: err.description)
+                }
+            }
+
             // file.stat
             router.registerSync("file.stat") { params in
                 guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
@@ -341,6 +389,28 @@ struct ContentView: View {
                 ClipboardManager.setClipboardContent(text)
                 return .success(["ok": true])
             }
+
+            // camera.snap
+            router.register("camera.snap") { params, completion in
+                let camId = params["deviceId"] as? String
+                CameraManager.takePhoto(deviceId: camId) { b64 in
+                    if let b64 = b64 {
+                        completion(.success(["format": "jpeg", "base64": b64]))
+                    } else {
+                        completion(.error(code: "capture_failed", message: "Camera capture failed"))
+                    }
+                }
+            }
+
+            // camera.list
+            router.registerSync("camera.list") { _ in
+                let cameras = CameraManager.availableCameras()
+                let list = cameras.map { cam in
+                    ["id": cam["uniqueID"] as? String ?? "",
+                     "name": cam["localizedName"] as? String ?? "Camera"] as [String: Any]
+                }
+                return .success(["cameras": list])
+            }
         }
     }
 
@@ -359,7 +429,6 @@ struct ContentView: View {
             let relativePath = changedPath.replacingOccurrences(of: resolved, with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             let triggerName = eventType.rawValue
 
-            // .clawsy Rule Matching
             let changedURL = URL(fileURLWithPath: changedPath)
             let fileName = changedURL.lastPathComponent
             let parentFolder = changedURL.deletingLastPathComponent().path

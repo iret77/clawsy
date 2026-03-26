@@ -1,40 +1,78 @@
 import SwiftUI
 import ClawsyShared
 
-/// Status header showing app name, host name, connection state, and indicator dot.
+/// Status header showing app name, host name, connection state, and animated indicator.
 struct StatusHeaderView: View {
     @ObservedObject var hostManager: HostManager
+    @State private var isPulsing = false
 
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(l10n: "APP_NAME")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(ClawsyTheme.Font.headerTitle)
                     if let profile = hostManager.activeProfile {
                         Text(profile.name.isEmpty ? profile.gatewayHost : profile.name)
-                            .font(.system(size: 11, weight: .medium))
+                            .font(ClawsyTheme.Font.headerHostName)
                             .foregroundColor(Color(hex: profile.color) ?? .secondary)
                     }
                 }
 
                 Text(statusText)
-                    .font(.system(size: 11))
+                    .font(ClawsyTheme.Font.headerStatus)
                     .foregroundColor(.secondary)
+                    .animation(ClawsyTheme.Animation.stateChange, value: hostManager.state)
             }
 
             Spacer()
 
-            Circle()
-                .fill(statusColor)
-                .frame(width: 8, height: 8)
-                .shadow(color: statusColor.opacity(0.5), radius: 2)
+            // Animated status indicator
+            statusIndicator
                 .accessibilityLabel(statusAccessibilityLabel)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 14)
-        .padding(.bottom, 12)
+        .padding(.horizontal, ClawsyTheme.Spacing.contentH)
+        .padding(.top, ClawsyTheme.Spacing.headerTop)
+        .padding(.bottom, ClawsyTheme.Spacing.headerBottom)
     }
+
+    // MARK: - Status Indicator
+
+    @ViewBuilder
+    private var statusIndicator: some View {
+        switch hostManager.state {
+        case .connected:
+            Image(systemName: "circle.fill")
+                .font(.system(size: 8))
+                .foregroundColor(ClawsyTheme.Colors.connected)
+
+        case .connecting, .sshTunneling, .handshaking, .reconnecting:
+            Image(systemName: "circle.fill")
+                .font(.system(size: 8))
+                .foregroundColor(ClawsyTheme.Colors.connecting)
+                .opacity(isPulsing ? 0.3 : 1.0)
+                .onAppear { isPulsing = true }
+                .onDisappear { isPulsing = false }
+                .animation(ClawsyTheme.Animation.pulse, value: isPulsing)
+
+        case .awaitingPairing:
+            Image(systemName: "circle.fill")
+                .font(.system(size: 8))
+                .foregroundColor(ClawsyTheme.Colors.pairing)
+
+        case .disconnected:
+            Image(systemName: "circle")
+                .font(.system(size: 8))
+                .foregroundColor(ClawsyTheme.Colors.disconnected)
+
+        case .failed:
+            Image(systemName: "circle.fill")
+                .font(.system(size: 8))
+                .foregroundColor(ClawsyTheme.Colors.failed)
+        }
+    }
+
+    // MARK: - Status Text
 
     private var statusText: String {
         switch hostManager.state {
@@ -54,16 +92,6 @@ struct StatusHeaderView: View {
             return String(format: NSLocalizedString("STATUS_RECONNECT_COUNTDOWN %lld", bundle: .clawsy, comment: ""), seconds)
         case .failed(let failure):
             return failure.description
-        }
-    }
-
-    private var statusColor: Color {
-        switch hostManager.state {
-        case .connected: return Color(red: 0.2, green: 0.78, blue: 0.35)
-        case .connecting, .sshTunneling, .handshaking, .reconnecting: return Color(red: 0.95, green: 0.6, blue: 0.1)
-        case .awaitingPairing: return .blue
-        case .disconnected: return .gray
-        case .failed: return Color(red: 0.9, green: 0.25, blue: 0.2)
         }
     }
 
