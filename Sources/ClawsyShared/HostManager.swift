@@ -294,6 +294,9 @@ public class HostManager: ObservableObject {
                 self?.hostStates[id]?.connectionState = newState
             }
 
+        // Subscribe UI to this connection's state
+        subscribeToActiveConnection()
+
         // Connect
         conn.connect(config: connConfig)
     }
