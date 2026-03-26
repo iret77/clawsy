@@ -356,3 +356,60 @@
 "CLIPBOARD_NAMED_WANTS_READ" = "%@ möchte deine Zwischenablage lesen.";
 "ALERT_SCREENSHOT_NAMED_BODY" = "%@ möchte deinen Bildschirm sehen.";
 "REMOTE_NAMED_USER_ASKING" = "%@ bittet um eine Aufnahme.";
+
+// Onboarding v2
+"ONBOARDING_WELCOME_TITLE" = "Gib deinem KI-Agent\nAugen und Hände auf deinem Mac";
+"ONBOARDING_WELCOME_DESC" = "Clawsy verbindet deine OpenClaw-Agents mit deinem Mac — Screenshots, Zwischenablage, Dateien und Kamera — mit voller Kontrolle über geteilte Daten.";
+"ONBOARDING_SECURITY_NOTE" = "Deine Daten bleiben zwischen deinem Mac und deinem OpenClaw-Server. Keine Cloud, kein Tracking.";
+"ONBOARDING_CONNECT_TITLE" = "Mit deinem OpenClaw-Server verbinden";
+"ONBOARDING_SETUP_CODE_HINT" = "Setup-Code von deinem OpenClaw-Agent oder Admin einfügen:";
+"ONBOARDING_SETUP_CODE_PLACEHOLDER" = "clawsy://pair?code=... oder Base64-Code";
+"ONBOARDING_SETUP_CODE_ERROR" = "Ungültiger Setup-Code. Bitte überprüfen und erneut versuchen.";
+"ONBOARDING_SETUP_CODE_BUTTON" = "Mit Setup-Code verbinden";
+"ONBOARDING_TAILSCALE_HINT" = "Tailscale-Hostname eingeben (z.B. agenthost.tailnet-name.ts.net):";
+"ONBOARDING_TAILSCALE_BUTTON" = "Über Tailscale verbinden";
+"ONBOARDING_MANUAL_HINT" = "Verbindungsdaten eingeben:";
+"ONBOARDING_MANUAL_BUTTON" = "Verbindung testen";
+"ONBOARDING_CONNECTING" = "Verbinde...";
+"ONBOARDING_CONNECTED" = "Verbunden!";
+"ONBOARDING_CONNECTION_FAILED" = "Verbindung fehlgeschlagen";
+"ONBOARDING_PERMISSIONS_TITLE" = "Berechtigungen";
+"ONBOARDING_PERMISSIONS_DESC" = "Clawsy benötigt einige macOS-Berechtigungen. Erteile sie unten — du kannst sie jederzeit in den Systemeinstellungen ändern.";
+"ONBOARDING_PERMISSIONS_ALL_GRANTED" = "Alle erforderlichen Berechtigungen erteilt!";
+"ONBOARDING_READY_TITLE" = "Alles bereit!";
+"ONBOARDING_READY_MENUBAR" = "Clawsy lebt in deiner Menüleiste — klick auf das Symbol";
+"ONBOARDING_READY_QUICKSEND" = "⌘⇧K für Quick Send von überall";
+"ONBOARDING_READY_SCREENSHOT" = "⌘⇧S für sofortigen Screenshot an den Agent";
+"ONBOARDING_READY_FOLDER" = "Dateien über den Clawsy-Ordner im Finder teilen";
+"ONBOARDING_LETS_GO" = "Los geht's";
+"ONBOARDING_FINISH" = "Fertig";
+"ONBOARDING_NEXT" = "Weiter";
+"ONBOARDING_BACK" = "Zurück";
+
+// Permissions
+"PERM_SCREEN_RECORDING" = "Bildschirmaufnahme";
+"PERM_SCREEN_RECORDING_DESC" = "Erforderlich für Screenshots an deinen Agent.";
+"PERM_CAMERA" = "Kamera";
+"PERM_CAMERA_DESC" = "Erforderlich für Fotos mit deiner Mac- oder iPhone-Kamera.";
+"PERM_ACCESSIBILITY" = "Bedienungshilfen";
+"PERM_ACCESSIBILITY_DESC" = "Erforderlich für globale Tastenkürzel (⌘⇧K, etc.).";
+"PERM_NOTIFICATIONS" = "Mitteilungen";
+"PERM_NOTIFICATIONS_DESC" = "Ermöglicht Benachrichtigungen über Agent-Aktivitäten.";
+"PERM_REQUIRED" = "Erforderlich";
+"PERM_GRANT" = "Erlauben";
+
+// Connection Failure Banner
+"FAILURE_RETRY" = "Erneut versuchen";
+"FAILURE_REPAIR" = "Verbindung reparieren";
+"FAILURE_ORIGIN_NOT_ALLOWED" = "Herkunft nicht erlaubt";
+"FAILURE_INVALID_TOKEN" = "Ungültiger Token";
+"FAILURE_SSH_FAILED" = "SSH-Tunnel fehlgeschlagen";
+"FAILURE_HOST_UNREACHABLE" = "Host nicht erreichbar";
+"FAILURE_GATEWAY_NOT_RUNNING" = "Gateway nicht aktiv";
+"FAILURE_RECONNECT_EXHAUSTED" = "Reconnect erschöpft";
+"FAILURE_SKILL_MISSING" = "Clawsy-Skill fehlt";
+"FAILURE_UNKNOWN" = "Verbindung fehlgeschlagen";
+
+// Settings
+"SETTINGS_DELETE_HOST_CONFIRM" = "„%@" wird entfernt und die Verbindung getrennt.";
+"SETTINGS_HOTKEYS_HINT" = "Alle Tastenkürzel verwenden ⌘⇧ + Taste";

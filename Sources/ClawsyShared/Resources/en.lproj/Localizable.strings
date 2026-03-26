@@ -355,3 +355,60 @@
 "CLIPBOARD_NAMED_WANTS_READ" = "%@ wants to read your clipboard.";
 "ALERT_SCREENSHOT_NAMED_BODY" = "%@ wants to see your screen.";
 "REMOTE_NAMED_USER_ASKING" = "%@ is requesting a capture.";
+
+// Onboarding v2
+"ONBOARDING_WELCOME_TITLE" = "Give your AI agent\neyes and hands on your Mac";
+"ONBOARDING_WELCOME_DESC" = "Clawsy connects your OpenClaw agents to your Mac — screenshots, clipboard, files, and camera — with full control over what's shared.";
+"ONBOARDING_SECURITY_NOTE" = "Your data stays between your Mac and your OpenClaw server. No cloud, no tracking.";
+"ONBOARDING_CONNECT_TITLE" = "Connect to your OpenClaw server";
+"ONBOARDING_SETUP_CODE_HINT" = "Paste the setup code from your OpenClaw agent or admin:";
+"ONBOARDING_SETUP_CODE_PLACEHOLDER" = "clawsy://pair?code=... or base64 code";
+"ONBOARDING_SETUP_CODE_ERROR" = "Invalid setup code. Please check and try again.";
+"ONBOARDING_SETUP_CODE_BUTTON" = "Connect with Setup Code";
+"ONBOARDING_TAILSCALE_HINT" = "Enter your Tailscale hostname (e.g. agenthost.tailnet-name.ts.net):";
+"ONBOARDING_TAILSCALE_BUTTON" = "Connect via Tailscale";
+"ONBOARDING_MANUAL_HINT" = "Enter your gateway connection details:";
+"ONBOARDING_MANUAL_BUTTON" = "Test Connection";
+"ONBOARDING_CONNECTING" = "Connecting...";
+"ONBOARDING_CONNECTED" = "Connected!";
+"ONBOARDING_CONNECTION_FAILED" = "Connection failed";
+"ONBOARDING_PERMISSIONS_TITLE" = "Permissions";
+"ONBOARDING_PERMISSIONS_DESC" = "Clawsy needs a few macOS permissions to work. Grant them below — you can change these anytime in System Settings.";
+"ONBOARDING_PERMISSIONS_ALL_GRANTED" = "All required permissions granted!";
+"ONBOARDING_READY_TITLE" = "You're all set!";
+"ONBOARDING_READY_MENUBAR" = "Clawsy lives in your menu bar — click the icon anytime";
+"ONBOARDING_READY_QUICKSEND" = "Use ⌘⇧K for Quick Send from anywhere";
+"ONBOARDING_READY_SCREENSHOT" = "Use ⌘⇧S for instant screenshot to agent";
+"ONBOARDING_READY_FOLDER" = "Share files via the Clawsy folder in Finder";
+"ONBOARDING_LETS_GO" = "Let's go";
+"ONBOARDING_FINISH" = "Finish";
+"ONBOARDING_NEXT" = "Next";
+"ONBOARDING_BACK" = "Back";
+
+// Permissions
+"PERM_SCREEN_RECORDING" = "Screen Recording";
+"PERM_SCREEN_RECORDING_DESC" = "Required for capturing screenshots to share with your agent.";
+"PERM_CAMERA" = "Camera";
+"PERM_CAMERA_DESC" = "Required for taking photos with your Mac or iPhone camera.";
+"PERM_ACCESSIBILITY" = "Accessibility";
+"PERM_ACCESSIBILITY_DESC" = "Required for global keyboard shortcuts (⌘⇧K, etc.).";
+"PERM_NOTIFICATIONS" = "Notifications";
+"PERM_NOTIFICATIONS_DESC" = "Allows Clawsy to notify you about agent activity.";
+"PERM_REQUIRED" = "Required";
+"PERM_GRANT" = "Grant";
+
+// Connection Failure Banner
+"FAILURE_RETRY" = "Retry";
+"FAILURE_REPAIR" = "Repair Connection";
+"FAILURE_ORIGIN_NOT_ALLOWED" = "Origin Not Allowed";
+"FAILURE_INVALID_TOKEN" = "Invalid Token";
+"FAILURE_SSH_FAILED" = "SSH Tunnel Failed";
+"FAILURE_HOST_UNREACHABLE" = "Host Unreachable";
+"FAILURE_GATEWAY_NOT_RUNNING" = "Gateway Not Running";
+"FAILURE_RECONNECT_EXHAUSTED" = "Reconnect Exhausted";
+"FAILURE_SKILL_MISSING" = "Clawsy Skill Missing";
+"FAILURE_UNKNOWN" = "Connection Failed";
+
+// Settings
+"SETTINGS_DELETE_HOST_CONFIRM" = "This will remove \"%@\" and disconnect.";
+"SETTINGS_HOTKEYS_HINT" = "All hotkeys use ⌘⇧ + key";

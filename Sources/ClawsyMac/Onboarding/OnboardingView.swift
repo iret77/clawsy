@@ -76,7 +76,7 @@ struct OnboardingView: View {
                 Spacer()
 
                 if currentPage != .welcome {
-                    Button("Back") {
+                    Button(NSLocalizedString("ONBOARDING_BACK", bundle: .clawsy, comment: "")) {
                         withAnimation { goBack() }
                     }
                     .buttonStyle(.bordered)
@@ -107,11 +107,11 @@ struct OnboardingView: View {
                 .foregroundColor(.accentColor)
 
             VStack(spacing: 8) {
-                Text("Give your AI agent\neyes and hands on your Mac")
+                Text(l10n: "ONBOARDING_WELCOME_TITLE")
                     .font(.system(size: 20, weight: .bold))
                     .multilineTextAlignment(.center)
 
-                Text("Clawsy connects your OpenClaw agents to your Mac — screenshots, clipboard, files, and camera — with full control over what's shared.")
+                Text(l10n: "ONBOARDING_WELCOME_DESC")
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -123,7 +123,7 @@ struct OnboardingView: View {
                 Image(systemName: "lock.shield")
                     .font(.system(size: 14))
                     .foregroundColor(.green)
-                Text("Your data stays between your Mac and your OpenClaw server. No cloud, no tracking.")
+                Text(l10n: "ONBOARDING_SECURITY_NOTE")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
@@ -142,7 +142,7 @@ struct OnboardingView: View {
     private var connectPage: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Connect to your OpenClaw server")
+                Text(l10n: "ONBOARDING_CONNECT_TITLE")
                     .font(.system(size: 16, weight: .bold))
 
                 // Mode picker
@@ -168,7 +168,7 @@ struct OnboardingView: View {
                 if connectionPhase == .testing {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
-                        Text("Connecting...").font(.system(size: 12)).foregroundColor(.secondary)
+                        Text(l10n: "ONBOARDING_CONNECTING").font(.system(size: 12)).foregroundColor(.secondary)
                     }
                 } else if connectionPhase == .success {
                     Label("Connected!", systemImage: "checkmark.circle.fill")
@@ -191,7 +191,7 @@ struct OnboardingView: View {
 
     private var setupCodeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Paste the setup code from your OpenClaw agent or admin:")
+            Text(l10n: "ONBOARDING_SETUP_CODE_HINT")
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
 
@@ -200,12 +200,12 @@ struct OnboardingView: View {
                 .font(.system(size: 12, design: .monospaced))
 
             if setupCodeError {
-                Text("Invalid setup code. Please check and try again.")
+                Text(l10n: "ONBOARDING_SETUP_CODE_ERROR")
                     .font(.system(size: 11))
                     .foregroundColor(.red)
             }
 
-            Button("Connect with Setup Code") {
+            Button(NSLocalizedString("ONBOARDING_SETUP_CODE_BUTTON", bundle: .clawsy, comment: "")) {
                 attemptSetupCode()
             }
             .buttonStyle(.borderedProminent)
@@ -216,7 +216,7 @@ struct OnboardingView: View {
 
     private var tailscaleSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Enter your Tailscale hostname (e.g. agenthost.tailnet-name.ts.net):")
+            Text(l10n: "ONBOARDING_TAILSCALE_HINT")
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
 
@@ -226,7 +226,7 @@ struct OnboardingView: View {
             SecureField("Gateway Token", text: $manualToken)
                 .textFieldStyle(.roundedBorder)
 
-            Button("Connect via Tailscale") {
+            Button(NSLocalizedString("ONBOARDING_TAILSCALE_BUTTON", bundle: .clawsy, comment: "")) {
                 attemptManualConnect()
             }
             .buttonStyle(.borderedProminent)
@@ -237,7 +237,7 @@ struct OnboardingView: View {
 
     private var manualSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Enter your gateway connection details:")
+            Text(l10n: "ONBOARDING_MANUAL_HINT")
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
 
@@ -259,7 +259,7 @@ struct OnboardingView: View {
             Toggle("SSH Fallback", isOn: $useSshFallback)
                 .font(.system(size: 12))
 
-            Button("Test Connection") {
+            Button(NSLocalizedString("ONBOARDING_MANUAL_BUTTON", bundle: .clawsy, comment: "")) {
                 attemptManualConnect()
             }
             .buttonStyle(.borderedProminent)
@@ -272,12 +272,12 @@ struct OnboardingView: View {
 
     private var permissionsPage: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Permissions")
+            Text(l10n: "ONBOARDING_PERMISSIONS_TITLE")
                 .font(.system(size: 16, weight: .bold))
                 .padding(.horizontal, 24)
                 .padding(.top, 20)
 
-            Text("Clawsy needs a few macOS permissions to work. Grant them below — you can change these anytime in System Settings.")
+            Text(l10n: "ONBOARDING_PERMISSIONS_DESC")
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 24)
@@ -297,7 +297,7 @@ struct OnboardingView: View {
             }
 
             if permissionMonitor.allRequiredGranted {
-                Label("All required permissions granted!", systemImage: "checkmark.seal.fill")
+                Label(NSLocalizedString("ONBOARDING_PERMISSIONS_ALL_GRANTED", bundle: .clawsy, comment: ""), systemImage: "checkmark.seal.fill")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.green)
                     .padding(.horizontal, 24)
@@ -319,14 +319,14 @@ struct OnboardingView: View {
                 .font(.system(size: 56))
                 .foregroundColor(.green)
 
-            Text("You're all set!")
+            Text(l10n: "ONBOARDING_READY_TITLE")
                 .font(.system(size: 22, weight: .bold))
 
             VStack(alignment: .leading, spacing: 8) {
-                readyItem(icon: "menubar.rectangle", text: "Clawsy lives in your menu bar — click the icon anytime")
-                readyItem(icon: "keyboard", text: "Use ⌘⇧K for Quick Send from anywhere")
-                readyItem(icon: "camera.viewfinder", text: "Use ⌘⇧S for instant screenshot to agent")
-                readyItem(icon: "folder", text: "Share files via the Clawsy folder in Finder")
+                readyItem(icon: "menubar.rectangle", key: "ONBOARDING_READY_MENUBAR")
+                readyItem(icon: "keyboard", key: "ONBOARDING_READY_QUICKSEND")
+                readyItem(icon: "camera.viewfinder", key: "ONBOARDING_READY_SCREENSHOT")
+                readyItem(icon: "folder", key: "ONBOARDING_READY_FOLDER")
             }
             .padding(.horizontal, 24)
 
@@ -334,13 +334,13 @@ struct OnboardingView: View {
         }
     }
 
-    private func readyItem(icon: String, text: String) -> some View {
+    private func readyItem(icon: String, key: String) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.system(size: 14))
                 .foregroundColor(.accentColor)
                 .frame(width: 20)
-            Text(text)
+            Text(l10n: key)
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
         }
@@ -350,10 +350,9 @@ struct OnboardingView: View {
 
     private var nextButtonTitle: String {
         switch currentPage {
-        case .welcome: return "Let's go"
-        case .connect: return "Next"
-        case .permissions: return "Next"
-        case .ready: return "Finish"
+        case .welcome: return NSLocalizedString("ONBOARDING_LETS_GO", bundle: .clawsy, comment: "")
+        case .connect, .permissions: return NSLocalizedString("ONBOARDING_NEXT", bundle: .clawsy, comment: "")
+        case .ready: return NSLocalizedString("ONBOARDING_FINISH", bundle: .clawsy, comment: "")
         }
     }
 
@@ -471,7 +470,7 @@ struct PermissionRow: View {
                     Text(permission.rawValue)
                         .font(.system(size: 12, weight: .medium))
                     if permission.isRequired {
-                        Text("Required")
+                        Text(l10n: "PERM_REQUIRED")
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundColor(.orange)
                             .padding(.horizontal, 4)
@@ -493,7 +492,7 @@ struct PermissionRow: View {
                     .foregroundColor(.green)
                     .font(.system(size: 18))
             } else {
-                Button("Grant") { onRequest() }
+                Button(NSLocalizedString("PERM_GRANT", bundle: .clawsy, comment: "")) { onRequest() }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
 
