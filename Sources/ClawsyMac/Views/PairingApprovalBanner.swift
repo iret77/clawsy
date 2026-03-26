@@ -10,8 +10,12 @@ struct PairingApprovalBanner: View {
         String(DeviceIdentity.shared.deviceId.prefix(12))
     }
 
+    private var deviceId: String {
+        DeviceIdentity.shared.deviceId
+    }
+
     private var agentPrompt: String {
-        "Please approve my new Clawsy device (ID starts with \(deviceIdShort)…)"
+        "Please approve my new Clawsy device \(deviceId)"
     }
 
     private var shellCommand: String {
