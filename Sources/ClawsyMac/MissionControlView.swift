@@ -3,7 +3,7 @@ import ClawsyShared
 
 struct MissionControlView: View {
     @ObservedObject var taskStore: TaskStore
-    @ObservedObject var networkManager: NetworkManager
+    @ObservedObject var hostManager: HostManager
     @State private var hasWaited = false
 
     private var allPaused: Bool {
@@ -78,7 +78,7 @@ struct MissionControlView: View {
                 }
             }
             // Gateway Sessions Section
-            let runningSessions = networkManager.gatewaySessions.filter { session in
+            let runningSessions = (hostManager.activePoller?.sessions ?? []).filter { session in
                 session.status == "running" &&
                 !session.id.hasSuffix(":main") &&
                 !session.id.contains("clawsy-service") &&
