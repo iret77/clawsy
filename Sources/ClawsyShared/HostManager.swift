@@ -53,6 +53,7 @@ public class HostManager: ObservableObject {
     @Published public var hostStates: [UUID: HostConnectionState] = [:]
 
     private var activeCancellables = Set<AnyCancellable>()
+    private var perHostCancellables: [UUID: AnyCancellable] = [:]
 
     // MARK: - Callbacks (set by AppDelegate/ContentView)
 
@@ -192,6 +193,7 @@ public class HostManager: ObservableObject {
         handshakes.removeValue(forKey: id)
         commandRouters.removeValue(forKey: id)
         pollers.removeValue(forKey: id)
+        perHostCancellables.removeValue(forKey: id)
         hostStates.removeValue(forKey: id)
         profiles.removeAll(where: { $0.id == id })
 
@@ -277,6 +279,13 @@ public class HostManager: ObservableObject {
 
         // Initialize host state
         hostStates[id] = HostConnectionState()
+
+        // Forward per-host connection state for host switcher dots
+        perHostCancellables[id] = conn.$state
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] newState in
+                self?.hostStates[id]?.connectionState = newState
+            }
 
         // Connect
         conn.connect(config: connConfig)
