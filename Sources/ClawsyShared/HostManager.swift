@@ -46,6 +46,9 @@ public class HostManager: ObservableObject {
     /// Command routers, one per host profile
     public var commandRouters: [UUID: CommandRouter] = [:]
 
+    /// Gateway pollers (agents/sessions), one per host profile
+    private var pollers: [UUID: GatewayPoller] = [:]
+
     /// Per-host connection state (for multi-host status views)
     @Published public var hostStates: [UUID: HostConnectionState] = [:]
 
@@ -79,6 +82,11 @@ public class HostManager: ObservableObject {
     public var activeRouter: CommandRouter? {
         guard let id = activeHostId ?? profiles.first?.id else { return nil }
         return commandRouters[id]
+    }
+
+    public var activePoller: GatewayPoller? {
+        guard let id = activeHostId ?? profiles.first?.id else { return nil }
+        return pollers[id]
     }
 
     public var isConnected: Bool {
@@ -183,6 +191,7 @@ public class HostManager: ObservableObject {
         connections.removeValue(forKey: id)
         handshakes.removeValue(forKey: id)
         commandRouters.removeValue(forKey: id)
+        pollers.removeValue(forKey: id)
         hostStates.removeValue(forKey: id)
         profiles.removeAll(where: { $0.id == id })
 
@@ -243,8 +252,12 @@ public class HostManager: ObservableObject {
         let router = CommandRouter()
         commandRouters[id] = router
 
+        // Create GatewayPoller
+        let poller = GatewayPoller()
+        pollers[id] = poller
+
         // Wire HandshakeManager ↔ ConnectionManager
-        wireHandshake(hs, to: conn, profileId: id)
+        wireHandshake(hs, to: conn, profileId: id, poller: poller)
 
         // Wire CommandRouter ↔ ConnectionManager
         wireCommandRouter(router, to: conn, profileId: id)
@@ -272,6 +285,7 @@ public class HostManager: ObservableObject {
     /// Disconnect a single host
     public func disconnectHost(_ id: UUID) {
         connections[id]?.disconnect()
+        pollers[id]?.stop()
     }
 
     /// Disconnect all hosts
@@ -298,7 +312,7 @@ public class HostManager: ObservableObject {
 
     // MARK: - Wiring
 
-    private func wireHandshake(_ hs: HandshakeManager, to conn: ConnectionManager, profileId: UUID) {
+    private func wireHandshake(_ hs: HandshakeManager, to conn: ConnectionManager, profileId: UUID, poller: GatewayPoller) {
         // HandshakeManager sends messages via ConnectionManager
         hs.onSendMessage = { [weak conn] message in
             guard let data = try? JSONSerialization.data(withJSONObject: message),
@@ -307,7 +321,7 @@ public class HostManager: ObservableObject {
         }
 
         // HandshakeManager reports results to ConnectionManager
-        hs.onHandshakeComplete = { [weak self, weak conn] result in
+        hs.onHandshakeComplete = { [weak self, weak conn, weak poller] result in
             // Store device token
             if let token = result.deviceToken, let self = self {
                 if var profile = self.profiles.first(where: { $0.id == profileId }) {
@@ -321,6 +335,12 @@ public class HostManager: ObservableObject {
                 self?.hostStates[profileId]?.gatewayVersion = result.serverVersion
                 self?.hostStates[profileId]?.connId = result.connId
                 self?.hostStates[profileId]?.pairingRequestId = nil
+            }
+
+            // Start polling for agents/sessions now that we're connected
+            if let baseURL = conn?.gatewayBaseURL,
+               let profile = self?.profiles.first(where: { $0.id == profileId }) {
+                poller?.start(baseURL: baseURL, token: profile.serverToken)
             }
 
             conn?.handleHandshakeComplete(deviceToken: result.deviceToken)
