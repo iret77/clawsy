@@ -29,6 +29,7 @@ struct StatusHeaderView: View {
                 .fill(statusColor)
                 .frame(width: 8, height: 8)
                 .shadow(color: statusColor.opacity(0.5), radius: 2)
+                .accessibilityLabel(statusAccessibilityLabel)
         }
         .padding(.horizontal, 16)
         .padding(.top, 14)
@@ -58,11 +59,26 @@ struct StatusHeaderView: View {
 
     private var statusColor: Color {
         switch hostManager.state {
-        case .connected: return .green
-        case .connecting, .sshTunneling, .handshaking, .reconnecting: return .orange
+        case .connected: return Color(red: 0.2, green: 0.78, blue: 0.35)
+        case .connecting, .sshTunneling, .handshaking, .reconnecting: return Color(red: 0.95, green: 0.6, blue: 0.1)
         case .awaitingPairing: return .blue
         case .disconnected: return .gray
-        case .failed: return .red
+        case .failed: return Color(red: 0.9, green: 0.25, blue: 0.2)
+        }
+    }
+
+    private var statusAccessibilityLabel: String {
+        switch hostManager.state {
+        case .connected:
+            return NSLocalizedString("STATUS_CONNECTED", bundle: .clawsy, comment: "")
+        case .connecting, .sshTunneling, .handshaking, .reconnecting:
+            return NSLocalizedString("STATUS_CONNECTING_LABEL", bundle: .clawsy, comment: "")
+        case .awaitingPairing:
+            return NSLocalizedString("STATUS_AWAITING_PAIR_APPROVE", bundle: .clawsy, comment: "")
+        case .disconnected:
+            return NSLocalizedString("STATUS_DISCONNECTED", bundle: .clawsy, comment: "")
+        case .failed:
+            return NSLocalizedString("STATUS_FAILED_LABEL", bundle: .clawsy, comment: "")
         }
     }
 }

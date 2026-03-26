@@ -24,6 +24,7 @@ struct HostSwitcherView: View {
                             Circle()
                                 .fill(dotColor(for: hostState?.connectionState))
                                 .frame(width: 5, height: 5)
+                                .accessibilityLabel(dotAccessibilityLabel(for: hostState?.connectionState))
                             Text(profile.name.isEmpty ? profile.gatewayHost : profile.name)
                                 .font(.system(size: 11, weight: isActive ? .semibold : .regular))
                                 .foregroundColor(isActive ? .white : hostColor)
@@ -59,6 +60,15 @@ struct HostSwitcherView: View {
         case .connecting, .sshTunneling, .handshaking, .reconnecting: return .orange
         case .awaitingPairing: return .blue
         default: return .secondary.opacity(0.5)
+        }
+    }
+
+    private func dotAccessibilityLabel(for state: ConnectionState?) -> String {
+        switch state {
+        case .connected: return NSLocalizedString("STATUS_CONNECTED", bundle: .clawsy, comment: "")
+        case .connecting, .sshTunneling, .handshaking, .reconnecting: return NSLocalizedString("STATUS_CONNECTING_LABEL", bundle: .clawsy, comment: "")
+        case .awaitingPairing: return NSLocalizedString("STATUS_AWAITING_PAIR_APPROVE", bundle: .clawsy, comment: "")
+        default: return NSLocalizedString("STATUS_DISCONNECTED", bundle: .clawsy, comment: "")
         }
     }
 }

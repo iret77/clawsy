@@ -38,7 +38,7 @@ struct MissionControlView: View {
                     Image(systemName: "wifi.slash")
                         .font(.system(size: 28))
                         .foregroundColor(.secondary.opacity(0.5))
-                    Text("Connect to see agent activity")
+                    Text(NSLocalizedString("MISSION_CONTROL_CONNECT_HINT", bundle: .clawsy, comment: ""))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -70,7 +70,7 @@ struct MissionControlView: View {
                         if !recentSessions.isEmpty && !runningSessions.isEmpty {
                             Divider().padding(.vertical, 4)
                             HStack {
-                                Text("Recent")
+                                Text(NSLocalizedString("MISSION_CONTROL_RECENT", bundle: .clawsy, comment: ""))
                                     .font(.system(size: 10, weight: .semibold))
                                     .foregroundColor(.secondary)
                                 Spacer()
@@ -133,6 +133,7 @@ private struct SessionRowView: View {
                             .frame(width: 10, height: 10)
                         : nil
                 )
+                .accessibilityLabel(session.status ?? "unknown")
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {

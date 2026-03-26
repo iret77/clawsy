@@ -347,7 +347,41 @@
 
 // Agent Picker
 "AGENT_PICKER_LABEL" = "Active Agent";
-"AGENT_PICKER_DEFAULT" = "Default (clawsy-service)";
+"AGENT_PICKER_DEFAULT" = "Default (main session)";
+
+// Settings sections
+"SETTINGS_SECTION_CONNECTION" = "Connection";
+"SETTINGS_SECTION_SHARED_FOLDER" = "Shared Folder";
+"SETTINGS_SECTION_HOTKEYS" = "Hotkeys";
+"SETTINGS_SECTION_TOOLS" = "Tools";
+"SETTINGS_CHANGE_FOLDER" = "Change…";
+"SETTINGS_CHECK_UPDATES" = "Check for Updates";
+
+// Add Host
+"ADD_HOST_SECTION_IDENTITY" = "Identity";
+"ADD_HOST_SECTION_COLOR" = "Color";
+"ADD_HOST_SECTION_CONNECTION" = "Connection";
+"ADD_HOST_SECTION_SSH" = "SSH (optional)";
+
+// Pairing
+"PAIRING_SEND_HINT" = "Send this to your OpenClaw agent:";
+"PAIRING_TERMINAL_COMMAND" = "Terminal command";
+
+// MissionControl
+"MISSION_CONTROL_CONNECT_HINT" = "Connect to see agent activity";
+"MISSION_CONTROL_RECENT" = "Recent";
+
+// Onboarding connect modes
+"ONBOARDING_MODE_SETUP_CODE" = "Setup Code";
+"ONBOARDING_MODE_TAILSCALE" = "Tailscale";
+"ONBOARDING_MODE_MANUAL" = "Manual";
+
+// Rule Editor
+"RULE_FILTER" = "Filter";
+"RULE_FILTER_PLACEHOLDER" = "e.g. *.pdf";
+
+// QuickSend
+"QUICK_SEND_CLEAR" = "Clear";
 
 // Agent Identity (named agent dialogs)
 "GENERIC_AGENT" = "The agent";
@@ -414,3 +448,8 @@
 // Settings
 "SETTINGS_DELETE_HOST_CONFIRM" = "This will remove \"%@\" and disconnect.";
 "SETTINGS_HOTKEYS_HINT" = "All hotkeys use ⌘⇧ + key";
+
+// Accessibility labels
+"STATUS_CONNECTING_LABEL" = "Connecting";
+"STATUS_FAILED_LABEL" = "Connection failed";
+"CONNECTION_FAILURE_ICON" = "Connection error";

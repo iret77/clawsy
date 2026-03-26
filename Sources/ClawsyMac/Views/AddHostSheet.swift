@@ -44,7 +44,7 @@ struct AddHostSheet: View {
                 VStack(alignment: .leading, spacing: 16) {
                     // Identity
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("Identity", systemImage: "tag.fill")
+                        Label(NSLocalizedString("ADD_HOST_SECTION_IDENTITY", bundle: .clawsy, comment: ""), systemImage: "tag.fill")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.secondary)
 
@@ -52,7 +52,7 @@ struct AddHostSheet: View {
                             .textFieldStyle(.roundedBorder)
 
                         HStack(spacing: 6) {
-                            Text("Color").font(.system(size: 11)).foregroundColor(.secondary)
+                            Text(NSLocalizedString("ADD_HOST_SECTION_COLOR", bundle: .clawsy, comment: "")).font(.system(size: 11)).foregroundColor(.secondary)
                             Spacer()
                             ForEach(HostProfile.defaultColors, id: \.self) { hex in
                                 let c = Color(hex: hex) ?? .red
@@ -66,11 +66,11 @@ struct AddHostSheet: View {
                         }
                     }
 
-                    Divider().opacity(0.2)
+                    Divider().opacity(0.3)
 
                     // Connection
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("Connection", systemImage: "network")
+                        Label(NSLocalizedString("ADD_HOST_SECTION_CONNECTION", bundle: .clawsy, comment: ""), systemImage: "network")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.secondary)
 
@@ -86,11 +86,11 @@ struct AddHostSheet: View {
                             .textFieldStyle(.roundedBorder)
                     }
 
-                    Divider().opacity(0.2)
+                    Divider().opacity(0.3)
 
                     // SSH
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("SSH (optional)", systemImage: "terminal")
+                        Label(NSLocalizedString("ADD_HOST_SECTION_SSH", bundle: .clawsy, comment: ""), systemImage: "terminal")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.secondary)
 

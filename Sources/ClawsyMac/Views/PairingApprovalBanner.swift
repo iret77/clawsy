@@ -36,7 +36,7 @@ struct PairingApprovalBanner: View {
             }
 
             // Instruction
-            Text("Send this to your OpenClaw agent:")
+            Text(NSLocalizedString("PAIRING_SEND_HINT", bundle: .clawsy, comment: ""))
                 .font(.system(size: 10))
                 .foregroundColor(.white.opacity(0.85))
 
@@ -74,7 +74,7 @@ struct PairingApprovalBanner: View {
                 HStack(spacing: 4) {
                     Image(systemName: showShellCommand ? "chevron.down" : "chevron.right")
                         .font(.system(size: 8))
-                    Text("Terminal command")
+                    Text(NSLocalizedString("PAIRING_TERMINAL_COMMAND", bundle: .clawsy, comment: ""))
                         .font(.system(size: 9))
                 }
                 .foregroundColor(.white.opacity(0.5))

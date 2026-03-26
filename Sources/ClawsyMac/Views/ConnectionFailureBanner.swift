@@ -13,6 +13,7 @@ struct ConnectionFailureBanner: View {
                 Image(systemName: icon)
                     .font(.system(size: 14))
                     .foregroundColor(.red)
+                    .accessibilityLabel(NSLocalizedString("CONNECTION_FAILURE_ICON", bundle: .clawsy, comment: ""))
                 Text(title)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(.primary)

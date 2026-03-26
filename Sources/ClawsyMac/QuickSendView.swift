@@ -32,7 +32,7 @@ struct QuickSendView: View {
                             .foregroundColor(.secondary.opacity(0.5))
                     }
                     .buttonStyle(.plain)
-                    .help("Clear")
+                    .help(NSLocalizedString("QUICK_SEND_CLEAR", bundle: .clawsy, comment: ""))
                 }
             }
             .padding(.horizontal, 20)

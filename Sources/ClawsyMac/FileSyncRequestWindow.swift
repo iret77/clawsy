@@ -159,7 +159,7 @@ struct FileSyncRequestWindow: View {
                 }
                 .padding(.horizontal, 24)
 
-                Divider().opacity(0.2).padding(.horizontal, 16)
+                Divider().opacity(0.3).padding(.horizontal, 16)
 
                 // Action buttons
                 HStack(spacing: 12) {

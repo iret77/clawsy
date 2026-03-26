@@ -147,9 +147,9 @@ struct OnboardingView: View {
 
                 // Mode picker
                 Picker("", selection: $connectMode) {
-                    ForEach(ConnectMode.allCases, id: \.self) { mode in
-                        Text(mode.rawValue).tag(mode)
-                    }
+                    Text(NSLocalizedString("ONBOARDING_MODE_SETUP_CODE", bundle: .clawsy, comment: "")).tag(ConnectMode.setupCode)
+                    Text(NSLocalizedString("ONBOARDING_MODE_TAILSCALE", bundle: .clawsy, comment: "")).tag(ConnectMode.tailscale)
+                    Text(NSLocalizedString("ONBOARDING_MODE_MANUAL", bundle: .clawsy, comment: "")).tag(ConnectMode.manual)
                 }
                 .pickerStyle(.segmented)
 
@@ -168,10 +168,10 @@ struct OnboardingView: View {
                 if connectionPhase == .testing {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
-                        Text(l10n: "ONBOARDING_CONNECTING").font(.system(size: 12)).foregroundColor(.secondary)
+                        Text(NSLocalizedString("ONBOARDING_CONNECTING", bundle: .clawsy, comment: "")).font(.system(size: 12)).foregroundColor(.secondary)
                     }
                 } else if connectionPhase == .success {
-                    Label("Connected!", systemImage: "checkmark.circle.fill")
+                    Label(NSLocalizedString("ONBOARDING_CONNECTED", bundle: .clawsy, comment: ""), systemImage: "checkmark.circle.fill")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.green)
                 } else if connectionPhase == .failed, let error = connectionError {
@@ -252,7 +252,7 @@ struct OnboardingView: View {
             SecureField("Gateway Token", text: $manualToken)
                 .textFieldStyle(.roundedBorder)
 
-            Divider().opacity(0.2)
+            Divider().opacity(0.3)
 
             TextField("SSH User (optional)", text: $manualSshUser)
                 .textFieldStyle(.roundedBorder)

@@ -75,7 +75,7 @@ struct SettingsView: View {
                 hostToDelete = nil
             }
         } message: {
-            Text("This will remove \"\(hostToDelete?.name ?? "")\" and disconnect.")
+            Text(NSLocalizedString("SETTINGS_DELETE_HOST_CONFIRM", bundle: .clawsy, comment: ""))
         }
     }
 
@@ -83,7 +83,7 @@ struct SettingsView: View {
 
     private var connectionSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label("Connection", systemImage: "network")
+            Label(NSLocalizedString("SETTINGS_SECTION_CONNECTION", bundle: .clawsy, comment: ""), systemImage: "network")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(.secondary)
 
@@ -108,7 +108,7 @@ struct SettingsView: View {
                     .frame(maxWidth: 180)
             }
 
-            Divider().opacity(0.2)
+            Divider().opacity(0.3)
 
             LabeledContent("SSH User") {
                 TextField("", text: $editedProfile.sshUser)
@@ -138,7 +138,7 @@ struct SettingsView: View {
 
     private var sharedFolderSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label("Shared Folder", systemImage: "folder")
+            Label(NSLocalizedString("SETTINGS_SECTION_SHARED_FOLDER", bundle: .clawsy, comment: ""), systemImage: "folder")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(.secondary)
 
@@ -149,7 +149,7 @@ struct SettingsView: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Spacer()
-                Button("Change...") { selectFolder() }
+                Button(NSLocalizedString("SETTINGS_CHANGE_FOLDER", bundle: .clawsy, comment: "")) { selectFolder() }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
             }
@@ -160,11 +160,11 @@ struct SettingsView: View {
 
     private var hotkeysSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label("Hotkeys", systemImage: "keyboard")
+            Label(NSLocalizedString("SETTINGS_SECTION_HOTKEYS", bundle: .clawsy, comment: ""), systemImage: "keyboard")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(.secondary)
 
-            Text("All hotkeys use ⌘⇧ + key")
+            Text(NSLocalizedString("SETTINGS_HOTKEYS_HINT", bundle: .clawsy, comment: ""))
                 .font(.system(size: 10))
                 .foregroundColor(.secondary)
 
@@ -192,12 +192,12 @@ struct SettingsView: View {
 
     private var toolsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("Tools", systemImage: "wrench.and.screwdriver")
+            Label(NSLocalizedString("SETTINGS_SECTION_TOOLS", bundle: .clawsy, comment: ""), systemImage: "wrench.and.screwdriver")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(.secondary)
 
             Button(action: { onShowDebugLog?() }) {
-                Label("Debug Log", systemImage: "doc.text.magnifyingglass")
+                Label(NSLocalizedString("DEBUG_LOG", bundle: .clawsy, comment: ""), systemImage: "doc.text.magnifyingglass")
                     .font(.system(size: 11))
             }
             .buttonStyle(.bordered)
@@ -212,7 +212,7 @@ struct SettingsView: View {
                 .controlSize(.small)
             } else {
                 Button(action: { updateManager.checkForUpdates(silent: false) }) {
-                    Label("Check for Updates", systemImage: "arrow.clockwise")
+                    Label(NSLocalizedString("SETTINGS_CHECK_UPDATES", bundle: .clawsy, comment: ""), systemImage: "arrow.clockwise")
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.bordered)
