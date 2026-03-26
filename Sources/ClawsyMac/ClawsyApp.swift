@@ -174,7 +174,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 }
                 // ContentView sets up the actual callbacks via its own connectAll call
                 // We just trigger the connection; UI callbacks are handled by ContentView
-                hm.connectAll { _, _ in }
+                hm.connectAllLegacy { _, _ in }
                 self.networkManager = hm.activeNetworkManager
             }
             // Notify onboarding view that a setup code was imported
@@ -281,7 +281,7 @@ Details in CLAWSY.md.
         // Explicitly disconnect and kill SSH tunnel process for all hosts.
         // Without sandbox, child processes are no longer auto-killed on app exit.
         if let hm = hostManager {
-            hm.disconnectAll()
+            hm.disconnectAllLegacy()
         } else {
             networkManager?.disconnect()
         }
@@ -431,8 +431,7 @@ Details in CLAWSY.md.
         if let content = ClipboardManager.getClipboardContent(),
            let jsonString = ClawsyEnvelopeBuilder.build(
                 type: "clipboard",
-                content: content,
-                includeTelemetry: network.extendedContextEnabled) {
+                content: content) {
             network.sendEvent(kind: "agent.request", payload: [
                 "message": jsonString,
                 "sessionKey": network.targetSessionKey,
@@ -527,8 +526,7 @@ Details in CLAWSY.md.
                 let quickSendView = QuickSendView(onSend: { text in
                     if let jsonString = ClawsyEnvelopeBuilder.build(
                         type: "quick_send",
-                        content: text,
-                        includeTelemetry: network.extendedContextEnabled) {
+                        content: text) {
                         // Full envelope → target session (context storage)
                         network.sendDeeplink(message: jsonString, sessionKey: network.targetSessionKey)
                         // Trigger → main session (agent responds, quoting the message)
