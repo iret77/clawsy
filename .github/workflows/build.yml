@@ -18,7 +18,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up Xcode
       run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
@@ -52,7 +52,7 @@ jobs:
         zip -r ../../Clawsy.app.zip Clawsy.app CLAWSY.md
 
     - name: Upload Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: Clawsy-Ecosystem
         path: Clawsy.app.zip
