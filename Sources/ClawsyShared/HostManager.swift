@@ -245,7 +245,7 @@ public class HostManager: ObservableObject {
         let hsConfig = HandshakeManager.Config(
             gatewayToken: profile.serverToken,
             deviceToken: profile.deviceToken,
-            displayName: profile.name
+            displayName: "Clawsy (\(Host.current().localizedName ?? "Mac"))"
         )
         let hs = HandshakeManager(config: hsConfig)
         handshakes[id] = hs

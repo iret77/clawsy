@@ -15,7 +15,7 @@ struct PairingApprovalBanner: View {
     }
 
     private var agentPrompt: String {
-        "Please approve my new Clawsy device \(deviceId)"
+        "I have a pending Clawsy pairing request. Please run: openclaw devices list — then approve the pending request."
     }
 
     private var shellCommand: String {
