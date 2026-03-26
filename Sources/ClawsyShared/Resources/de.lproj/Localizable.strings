@@ -41,6 +41,7 @@
 "LIST_CAMERAS" = "Kameras auflisten";
 "CONNECT" = "Verbinden";
 "DISCONNECT" = "Trennen";
+"RECONNECT" = "Erneut verbinden";
 "SETTINGS" = "Einstellungen...";
 "DEBUG_LOG" = "Debug-Protokoll";
 "QUIT" = "Beenden";

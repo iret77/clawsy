@@ -48,6 +48,7 @@
 "LIST_CAMERAS" = "List Cameras";
 "CONNECT" = "Connect";
 "DISCONNECT" = "Disconnect";
+"RECONNECT" = "Reconnect";
 "SETTINGS" = "Settings...";
 "DEBUG_LOG" = "Debug Log";
 "QUIT" = "Quit";

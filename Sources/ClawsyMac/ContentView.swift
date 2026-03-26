@@ -193,7 +193,7 @@ struct ContentView: View {
     private var connectButtonTitle: String {
         switch hostManager.state {
         case .connected: return "DISCONNECT"
-        case .awaitingPairing, .failed: return "RETRY"
+        case .awaitingPairing, .failed: return "RECONNECT"
         default: return "CONNECT"
         }
     }
