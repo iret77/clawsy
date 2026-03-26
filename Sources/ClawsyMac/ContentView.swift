@@ -38,7 +38,7 @@ struct ContentView: View {
     @State private var agentModel: String? = nil
     @State private var agentName: String? = nil
 
-    /// Convenience: the active NetworkManager (legacy — will be replaced by ConnectionManager)
+    /// Convenience: the active NetworkManager from the host manager (nil when no host connected)
     private var network: NetworkManager? {
         hostManager.activeNetworkManager
     }
@@ -360,7 +360,7 @@ struct ContentView: View {
             
             // Connect all configured hosts
             if !hostManager.profiles.isEmpty {
-                hostManager.connectAllLegacy { nm, profile in
+                hostManager.connectAll { nm, profile in
                     setupCallbacksForHost(nm: nm, profile: profile)
                 }
             } else if !serverHost.isEmpty && !serverToken.isEmpty {
@@ -376,7 +376,7 @@ struct ContentView: View {
                 )
                 hostManager.profiles = [legacyProfile]
                 hostManager.activeHostId = legacyProfile.id
-                hostManager.connectAllLegacy { nm, profile in
+                hostManager.connectAll { nm, profile in
                     setupCallbacksForHost(nm: nm, profile: profile)
                 }
                 appDelegate.networkManager = hostManager.activeNetworkManager
@@ -455,7 +455,7 @@ struct ContentView: View {
             ruleEditorFolderPath = action.folderPath
         case "send_telemetry":
             if let nm = activeNM, nm.isConnected {
-                if let jsonString = ClawsyEnvelopeBuilder.build(type: "telemetry", content: "Telemetrie von \(action.folderPath)") {
+                if let jsonString = ClawsyEnvelopeBuilder.build(type: "telemetry", content: "📡 Telemetrie von \(action.folderPath)", includeTelemetry: true) {
                     nm.sendServiceEvent(message: jsonString)
                 }
             }
@@ -505,10 +505,10 @@ struct ContentView: View {
     
     func toggleConnection() {
         if hostManager.isConnected {
-            hostManager.disconnectAllLegacy()
+            hostManager.disconnectAll()
         } else {
             if !hostManager.profiles.isEmpty {
-                hostManager.connectAllLegacy { nm, profile in
+                hostManager.connectAll { nm, profile in
                     setupCallbacksForHost(nm: nm, profile: profile)
                 }
             } else {
@@ -631,10 +631,27 @@ struct ContentView: View {
 
         func handleManualClipboardSend() {
         guard let activeNM = hostManager.activeNetworkManager else { return }
-        if let content = ClipboardManager.getClipboardContent(),
-           let jsonString = ClawsyEnvelopeBuilder.build(type: "clipboard", content: content) {
-            activeNM.sendServiceEvent(message: jsonString)
-            appDelegate.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
+        if let content = ClipboardManager.getClipboardContent() {
+            var envelopeData: [String: Any] = [
+                "version": SharedConfig.versionDisplay,
+                "type": "clipboard",
+                "localTime": ISO8601DateFormatter().string(from: Date()),
+                "tz": TimeZone.current.identifier,
+                "content": content
+            ]
+            
+            if activeNM.extendedContextEnabled {
+                envelopeData["telemetry"] = NetworkManager.getTelemetry()
+            }
+
+            let envelope: [String: Any] = ["clawsy_envelope": envelopeData]
+            
+            if let jsonData = try? JSONSerialization.data(withJSONObject: envelope),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                // Clipboard → clawsy-service only (silent background context)
+                activeNM.sendServiceEvent(message: jsonString)
+                appDelegate.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
+            }
         }
     }
     
