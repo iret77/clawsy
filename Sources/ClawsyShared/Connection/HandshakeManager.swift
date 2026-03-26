@@ -88,7 +88,7 @@ public final class HandshakeManager {
 
     // MARK: - Constants
 
-    private static let clientId = "clawsy-macos"
+    private static let clientId = "openclaw-macos"
     private static let clientMode = "node"
     private static let platform = "macos"
     private static let protocolVersion = 3
