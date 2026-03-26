@@ -123,54 +123,30 @@ public final class GatewayPoller: ObservableObject {
 
     // MARK: - Send Events via REST
 
-    /// Send a clawsy_envelope to the gateway via Protocol V3 `node.event`.
-    /// This goes over the existing WebSocket connection, not REST.
+    /// Send messages to agent sessions via the WebSocket.
     public var onSendWebSocket: (([String: Any]) -> Void)?
 
-    /// Send a clawsy_envelope to the gateway.
-    /// Routes through the WebSocket as a `node.event` frame (Protocol V3).
-    public func sendEnvelope(_ jsonString: String, sessionKey: String, deliver: Bool = false) {
-        let payload: [String: Any] = [
-            "sessionKey": sessionKey,
-            "message": jsonString,
-            "deliver": deliver
-        ]
-
-        guard let payloadData = try? JSONSerialization.data(withJSONObject: payload),
-              let payloadJSON = String(data: payloadData, encoding: .utf8) else { return }
-
+    /// Send a message to an agent session via Protocol V3 `chat.send`.
+    /// This is the same method the official OpenClaw app uses.
+    public func sendMessage(_ message: String, sessionKey: String, deliver: Bool = false) {
         let frame: [String: Any] = [
             "type": "req",
             "id": UUID().uuidString,
-            "method": "node.event",
+            "method": "chat.send",
             "params": [
-                "event": "clawsy_envelope",
-                "payloadJSON": payloadJSON
+                "sessionKey": sessionKey,
+                "message": message,
+                "deliver": deliver,
+                "idempotencyKey": UUID().uuidString
             ]
         ]
 
         onSendWebSocket?(frame)
     }
 
-    /// Fallback: Send via REST API (for contexts without WS, e.g. Share Extension)
-    public func sendEnvelopeREST(_ jsonString: String, sessionKey: String, deliver: Bool = false) {
-        guard let baseURL = baseURL, let token = token else { return }
-
-        // Try the system-event endpoint (standard OpenClaw API)
-        guard let url = URL(string: "\(baseURL)/api/sessions/\(sessionKey)/events") else { return }
-
-        let body: [String: Any] = [
-            "message": jsonString,
-            "deliver": deliver
-        ]
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 10
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-
-        URLSession.shared.dataTask(with: request) { _, _, _ in }.resume()
+    /// Send a clawsy_envelope as a chat message to the target session.
+    /// Wraps the envelope JSON in a message that the agent can parse.
+    public func sendEnvelope(_ jsonString: String, sessionKey: String, deliver: Bool = false) {
+        sendMessage(jsonString, sessionKey: sessionKey, deliver: deliver)
     }
 }
