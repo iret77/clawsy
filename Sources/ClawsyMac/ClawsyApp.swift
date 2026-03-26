@@ -272,9 +272,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
     private func handleGlobalPushClipboard() {
         guard let hm = hostManager, hm.isConnected, let poller = hm.activePoller else { return }
-        if let content = ClipboardManager.getClipboardContent(),
-           let jsonString = ClawsyEnvelopeBuilder.build(type: "clipboard", content: content) {
-            poller.sendEnvelope(jsonString, sessionKey: poller.targetSessionKey)
+        if let content = ClipboardManager.getClipboardContent() {
+            poller.sendEnvelope(type: "clipboard", content: content)
             showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
         }
     }
@@ -288,9 +287,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 DispatchQueue.main.async { self.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "SCREENSHOT_FAILED") }
                 return
             }
-            if let jsonString = ClawsyEnvelopeBuilder.build(type: "screenshot", content: ["format": "jpeg", "base64": b64]) {
-                poller.sendEnvelope(jsonString, sessionKey: poller.targetSessionKey)
-            }
+            poller.sendEnvelope(type: "screenshot", content: ["format": "jpeg", "base64": b64])
             DispatchQueue.main.async { self.showStatusHUD(icon: "camera.viewfinder", title: "SCREENSHOT_SENT") }
         }
     }
@@ -304,9 +301,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 DispatchQueue.main.async { self.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "CAPTURE_FAILED") }
                 return
             }
-            if let jsonString = ClawsyEnvelopeBuilder.build(type: "camera", content: ["format": "jpeg", "base64": b64, "device": camName]) {
-                poller.sendEnvelope(jsonString, sessionKey: poller.targetSessionKey)
-            }
+            poller.sendEnvelope(type: "camera", content: ["format": "jpeg", "base64": b64, "device": camName])
             DispatchQueue.main.async { self.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT") }
         }
     }
@@ -331,8 +326,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 window.hasShadow = true
 
                 let quickSendView = QuickSendView(onSend: { text in
-                    // Send directly as chat.send — no envelope wrapping needed
-                    poller.sendMessage(text, sessionKey: poller.targetSessionKey)
+                    poller.sendChatMessage(text, sessionKey: poller.targetSessionKey)
                     self.hideQuickSend()
                 }, onCancel: {
                     self.hideQuickSend()

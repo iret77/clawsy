@@ -90,12 +90,7 @@ public class ShareHandler {
                 return
             }
 
-            guard let jsonString = ClawsyEnvelopeBuilder.build(type: "share", content: finalContent) else {
-                completion(.failure(ShareError.failedToSend))
-                return
-            }
-
-            poller.sendEnvelope(jsonString, sessionKey: poller.targetSessionKey)
+            poller.sendEnvelope(type: "share", content: finalContent)
             completion(.success(()))
         }
     }

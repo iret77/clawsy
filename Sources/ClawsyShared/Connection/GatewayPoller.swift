@@ -192,10 +192,11 @@ public final class GatewayPoller: ObservableObject {
         }
     }
 
-    // MARK: - Send Messages
+    // MARK: - Send: Chat Messages (QuickSend)
 
-    /// Send a message to an agent session via Protocol V3 `chat.send`.
-    public func sendMessage(_ message: String, sessionKey: String, deliver: Bool = false) {
+    /// Send a plain text message to an agent session via Protocol V3 `chat.send`.
+    /// Used ONLY for QuickSend — user-initiated chat messages.
+    public func sendChatMessage(_ message: String, sessionKey: String, deliver: Bool = false) {
         let frame: [String: Any] = [
             "type": "req",
             "id": UUID().uuidString,
@@ -209,17 +210,57 @@ public final class GatewayPoller: ObservableObject {
         ]
 
         log("chat.send → \(sessionKey) (\(message.prefix(60))…)")
+        send(frame)
+    }
 
+    // MARK: - Send: Node Events (Screenshot, Clipboard, Camera, Share)
+
+    /// Send a node event via Protocol V3 `node.event`.
+    /// Used for ambient context: screenshots, clipboard, camera, share, file rules.
+    /// This is the correct Protocol V3 mechanism for node-to-gateway events.
+    public func sendNodeEvent(event: String, payload: [String: Any]? = nil) {
+        var params: [String: Any] = ["event": event]
+        if let payload = payload {
+            if let jsonData = try? JSONSerialization.data(withJSONObject: payload),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                params["payloadJSON"] = jsonString
+            }
+        }
+
+        let frame: [String: Any] = [
+            "type": "req",
+            "id": UUID().uuidString,
+            "method": "node.event",
+            "params": params
+        ]
+
+        log("node.event → \(event)")
+        send(frame)
+    }
+
+    /// Send a clawsy_envelope as a node event.
+    /// Wraps the envelope type and content into a structured node event.
+    public func sendEnvelope(type: String, content: Any, metadata: [String: Any] = [:]) {
+        var payload: [String: Any] = [
+            "type": type,
+            "version": SharedConfig.shortVersion,
+            "localTime": ISO8601DateFormatter().string(from: Date()),
+            "tz": TimeZone.current.identifier,
+            "content": content
+        ]
+        metadata.forEach { payload[$0.key] = $0.value }
+
+        sendNodeEvent(event: "clawsy.\(type)", payload: payload)
+    }
+
+    // MARK: - Internal Send
+
+    private func send(_ frame: [String: Any]) {
         guard let sender = onSendWebSocket else {
-            log("ERROR: onSendWebSocket not wired — message dropped!")
+            log("ERROR: onSendWebSocket not wired — frame dropped!")
             return
         }
         sender(frame)
-    }
-
-    /// Send a clawsy_envelope as a chat message to the target session.
-    public func sendEnvelope(_ jsonString: String, sessionKey: String, deliver: Bool = false) {
-        sendMessage(jsonString, sessionKey: sessionKey, deliver: deliver)
     }
 
     // MARK: - Logging

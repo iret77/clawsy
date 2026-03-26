@@ -368,12 +368,10 @@ struct ContentView: View {
                 let matchedRules = ClawsyManifestManager.matchingRules(for: fileName, in: parentFolder, trigger: triggerName)
                 for rule in matchedRules {
                     if rule.action == "send_to_agent" {
-                        if let jsonString = ClawsyEnvelopeBuilder.build(type: "file.rule_triggered", content: [
+                        poller.sendEnvelope(type: "file.rule_triggered", content: [
                             "trigger": triggerName, "fileName": fileName,
                             "relativePath": relativePath, "ruleId": rule.id, "prompt": rule.prompt
-                        ] as [String: Any]) {
-                            poller.sendEnvelope(jsonString, sessionKey: poller.targetSessionKey)
-                        }
+                        ] as [String: Any])
                     } else if rule.action == "notify" {
                         DispatchQueue.main.async {
                             let content = UNMutableNotificationContent()
@@ -405,11 +403,9 @@ struct ContentView: View {
                 let fileName = fileURL.lastPathComponent
                 let rules = ClawsyManifestManager.matchingRules(for: fileName, in: action.folderPath, trigger: "manual")
                 for rule in rules where rule.action == "send_to_agent" {
-                    if let jsonString = ClawsyEnvelopeBuilder.build(type: "file.rule_triggered", content: [
+                    poller.sendEnvelope(type: "file.rule_triggered", content: [
                         "trigger": "manual", "fileName": fileName, "ruleId": rule.id, "prompt": rule.prompt
-                    ] as [String: Any]) {
-                        poller.sendEnvelope(jsonString, sessionKey: poller.targetSessionKey)
-                    }
+                    ] as [String: Any])
                 }
             }
         default:

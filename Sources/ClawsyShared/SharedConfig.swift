@@ -20,8 +20,6 @@ public struct SharedConfig {
             if let oldQuick = standard.string(forKey: "quickSendHotkey") { groupDefaults.set(oldQuick, forKey: "quickSendHotkey") }
             if let oldPush = standard.string(forKey: "pushClipboardHotkey") { groupDefaults.set(oldPush, forKey: "pushClipboardHotkey") }
             
-            groupDefaults.set("", forKey: "lastEnvelopeJSON")
-
             groupDefaults.set(true, forKey: "migrationV1Done")
             groupDefaults.synchronize()
         }
@@ -34,11 +32,6 @@ public struct SharedConfig {
     public static var sshUser: String { sharedDefaults.string(forKey: "sshUser") ?? "" }
     public static var useSshFallback: Bool { sharedDefaults.bool(forKey: "useSshFallback") }
     
-    public static var lastEnvelopeJSON: String {
-        get { sharedDefaults.string(forKey: "lastEnvelopeJSON") ?? "" }
-        set { sharedDefaults.set(newValue, forKey: "lastEnvelopeJSON") }
-    }
-
     public static var sharedFolderPath: String {
         get { sharedDefaults.string(forKey: "sharedFolderPath") ?? "" }
         set { sharedDefaults.set(newValue, forKey: "sharedFolderPath") }
