@@ -204,6 +204,16 @@ public final class HandshakeManager {
             let message = error["message"] as? String ?? "Unknown handshake error"
             let details = error["details"] as? [String: Any]
             let code = details?["code"] as? String ?? ""
+            let lower = message.lowercased()
+
+            // Pairing required — gateway rejects unknown devices with an error,
+            // not via a "pair-wait" payload. Detect and route to pairing flow.
+            if lower.contains("pair") || code.contains("PAIR") || code.contains("DEVICE_UNKNOWN") {
+                os_log("[Handshake] Pairing required: %{public}@", log: logger, message)
+                // Use the connect request ID as pairing request ID (gateway correlates by device)
+                onPairingRequired?(connectRequestId ?? "unknown")
+                return true
+            }
 
             os_log("[Handshake] Failed: %{public}@ (%{public}@)", log: logger, message, code)
             onHandshakeFailed?(message)

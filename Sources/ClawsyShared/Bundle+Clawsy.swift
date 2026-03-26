@@ -3,43 +3,59 @@ import Foundation
 public extension Bundle {
     /// Returns the bundle containing Clawsy's localized strings.
     ///
-    /// Search order:
-    /// 1. SPM resource bundle (Clawsy_ClawsyShared.bundle) — contains the lproj dirs
-    /// 2. Main bundle lproj (when build.sh copies strings into Contents/Resources/)
-    /// 3. Main bundle as last resort
+    /// SPM executables inside .app bundles have unreliable Bundle.main behavior.
+    /// We resolve the path explicitly from the executable location:
+    ///   Clawsy.app/Contents/MacOS/Clawsy → ../../Resources/Clawsy_ClawsyShared.bundle
     static var clawsy: Bundle {
-        // 1. SPM resource bundle (most reliable — SPM always generates this)
-        if let spmBundle = locateResourceBundle() {
+        // Cache to avoid repeated filesystem lookups
+        if let cached = _clawsyBundle { return cached }
+
+        let bundle = resolveClawsyBundle()
+        _clawsyBundle = bundle
+        return bundle
+    }
+
+    private static var _clawsyBundle: Bundle?
+
+    private static func resolveClawsyBundle() -> Bundle {
+        // Build the Resources path from the executable location.
+        // Executable: Clawsy.app/Contents/MacOS/Clawsy
+        // Resources:  Clawsy.app/Contents/Resources/
+        let execURL = Bundle.main.executableURL ?? Bundle.main.bundleURL
+        let contentsURL = execURL
+            .deletingLastPathComponent()  // → Contents/MacOS/
+            .deletingLastPathComponent()  // → Contents/
+        let resourcesURL = contentsURL.appendingPathComponent("Resources")
+
+        // 1. SPM resource bundle (contains lproj dirs — SwiftUI resolves locale)
+        let spmURL = resourcesURL.appendingPathComponent("Clawsy_ClawsyShared.bundle")
+        if let spmBundle = Bundle(url: spmURL),
+           spmBundle.localizedString(forKey: "APP_NAME", value: "??", table: nil) != "??" {
             return spmBundle
         }
 
-        // 2. Main bundle — build.sh copies lproj dirs into Contents/Resources/
-        // so Bundle.main itself can resolve them via SwiftUI's locale mechanism
-        if Bundle.main.localizedString(forKey: "APP_NAME", value: nil, table: nil) != "APP_NAME" {
+        // 2. Resources dir itself (build.sh copies lproj dirs there too)
+        if let resBundle = Bundle(url: resourcesURL),
+           resBundle.localizedString(forKey: "APP_NAME", value: "??", table: nil) != "??" {
+            return resBundle
+        }
+
+        // 3. Bundle.main (last resort)
+        if Bundle.main.localizedString(forKey: "APP_NAME", value: "??", table: nil) != "??" {
             return .main
         }
 
-        return .main
-    }
-
-    /// Locate the SPM-generated resource bundle for ClawsyShared.
-    /// Returns the bundle itself — NOT an lproj sub-bundle.
-    /// SwiftUI's LocalizedStringKey needs the parent bundle to resolve locales.
-    private static func locateResourceBundle() -> Bundle? {
-        let bundleName = "Clawsy_ClawsyShared"
-
-        let candidates = [
-            Bundle.main.resourceURL,
-            Bundle.main.bundleURL.appendingPathComponent("Contents/Resources"),
-        ].compactMap { $0 }
-
-        for base in candidates {
-            let url = base.appendingPathComponent("\(bundleName).bundle")
-            if let bundle = Bundle(url: url) {
-                return bundle
+        // 4. Absolute fallback: try to find any lproj with our strings
+        let fm = FileManager.default
+        for lang in ["en", "de"] {
+            let lprojURL = resourcesURL.appendingPathComponent("\(lang).lproj")
+            if fm.fileExists(atPath: lprojURL.path),
+               let lprojBundle = Bundle(url: lprojURL),
+               lprojBundle.localizedString(forKey: "APP_NAME", value: "??", table: nil) != "??" {
+                return lprojBundle
             }
         }
 
-        return nil
+        return .main
     }
 }
