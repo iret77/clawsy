@@ -4,7 +4,6 @@ import ClawsyShared
 
 struct ContentView: View {
     @StateObject private var hostManager = HostManager()
-    @StateObject private var taskStore = TaskStore()
     @EnvironmentObject var appDelegate: AppDelegate
 
     @State private var showingSettings = false
@@ -88,8 +87,9 @@ struct ContentView: View {
                     Button(action: { showingMissionControl.toggle() }) {
                         ZStack(alignment: .trailing) {
                             MenuItemRow(icon: "list.bullet.clipboard", title: "MISSION_CONTROL_TITLE", isEnabled: true)
-                            if !taskStore.tasks.isEmpty {
-                                Circle().fill(Color.accentColor).frame(width: 6, height: 6)
+                            if let poller = hostManager.activePoller,
+                               !poller.sessions.filter({ $0.status == "running" }).isEmpty {
+                                Circle().fill(Color.green).frame(width: 6, height: 6)
                                     .padding(.trailing, 16)
                             }
                         }
@@ -97,7 +97,7 @@ struct ContentView: View {
                     .buttonStyle(.plain)
                     .frame(maxWidth: .infinity)
                     .popover(isPresented: $showingMissionControl, arrowEdge: .trailing) {
-                        MissionControlView(taskStore: taskStore, hostManager: hostManager)
+                        MissionControlView(hostManager: hostManager)
                     }
 
                     // Settings
@@ -153,7 +153,7 @@ struct ContentView: View {
         .onChange(of: hostManager.activeHostId) { _ in
             appDelegate.updateMenuBarIcon()
             setupFileWatcher()
-            taskStore.clearAll()
+            // Connection state change handled by HostManager
         }
         .onChange(of: hostManager.isConnected) { _ in
             appDelegate.updateMenuBarIcon()
