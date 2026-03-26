@@ -88,7 +88,7 @@ if command -v actool &> /dev/null; then
     actool "Sources/ClawsyMac/Assets.xcassets" \
         --compile "$RESOURCES_DIR" \
         --platform macosx \
-        --minimum-deployment-target 13.0 \
+        --minimum-deployment-target 14.0 \
         --app-icon AppIcon \
         --output-partial-info-plist "$BUILD_DIR/partial.plist"
 fi
@@ -146,7 +146,7 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <key>CFBundleVersion</key>
     <string>$VERSION_BUILD</string>
     <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
+    <string>14.0</string>
     <key>LSUIElement</key>
     <true/>
     <key>NSHighResolutionCapable</key>
