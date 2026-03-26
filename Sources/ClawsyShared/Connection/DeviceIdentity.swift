@@ -29,8 +29,10 @@ public final class DeviceIdentity {
 
     // MARK: - Constants
 
-    private let keychainService = "ai.clawsy.device-identity"
-    private let keychainAccount = "signing-key"
+    /// Key is stored as a file in Application Support (no Keychain dialog).
+    /// Migrates to Keychain once the app is properly code-signed.
+    private let storageDir = "ai.clawsy"
+    private let storageFile = "device-identity.key"
 
     // MARK: - Init
 
@@ -117,26 +119,26 @@ public final class DeviceIdentity {
     // MARK: - Key Management
 
     private func loadOrCreateIdentity() {
-        if let keyData = loadFromKeychain() {
+        // 1. Try file-based storage (primary)
+        if let keyData = loadFromFile() {
             privateKey = try? Curve25519.Signing.PrivateKey(rawRepresentation: keyData)
         }
 
+        // 2. Try App Group migration (legacy Clawsy v0.x)
         if privateKey == nil {
-            // Try App Group migration (from legacy Clawsy)
             if let legacyKey = loadFromAppGroup() {
                 privateKey = try? Curve25519.Signing.PrivateKey(rawRepresentation: legacyKey)
                 if privateKey != nil {
-                    // Migrate to Keychain
-                    saveToKeychain(legacyKey)
+                    saveToFile(legacyKey)
                 }
             }
         }
 
+        // 3. Generate new key
         if privateKey == nil {
-            // Generate new key
             let newKey = Curve25519.Signing.PrivateKey()
             privateKey = newKey
-            saveToKeychain(newKey.rawRepresentation)
+            saveToFile(newKey.rawRepresentation)
         }
 
         // Derive public info
@@ -149,41 +151,35 @@ public final class DeviceIdentity {
         }
     }
 
-    // MARK: - Keychain Storage
+    // MARK: - File-Based Storage
 
-    private func loadFromKeychain() -> Data? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccount as String: keychainAccount,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        guard status == errSecSuccess else { return nil }
-        return result as? Data
+    /// Store key in ~/Library/Application Support/ai.clawsy/device-identity.key
+    /// No Keychain dialog, works with ad-hoc signing, simple and transparent.
+    private var keyFileURL: URL? {
+        guard let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory, in: .userDomainMask
+        ).first else { return nil }
+        return appSupport
+            .appendingPathComponent(storageDir)
+            .appendingPathComponent(storageFile)
     }
 
-    private func saveToKeychain(_ keyData: Data) {
-        // Delete existing
-        let deleteQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccount as String: keychainAccount
-        ]
-        SecItemDelete(deleteQuery as CFDictionary)
+    private func loadFromFile() -> Data? {
+        guard let url = keyFileURL else { return nil }
+        guard let b64 = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+        return Data(base64Encoded: b64.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
 
-        // Add new
-        let addQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccount as String: keychainAccount,
-            kSecValueData as String: keyData,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
-        ]
-        SecItemAdd(addQuery as CFDictionary, nil)
+    private func saveToFile(_ keyData: Data) {
+        guard let url = keyFileURL else { return }
+        let dir = url.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        // Store as base64, file-permissions restrict access to current user
+        try? keyData.base64EncodedString().write(to: url, atomically: true, encoding: .utf8)
+        // Restrict file permissions: owner read/write only (600)
+        try? FileManager.default.setAttributes(
+            [.posixPermissions: 0o600], ofItemAtPath: url.path
+        )
     }
 
     // MARK: - App Group Migration (Legacy)

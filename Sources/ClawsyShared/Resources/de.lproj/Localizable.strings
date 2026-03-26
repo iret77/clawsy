@@ -49,6 +49,7 @@
 "STATUS_CONNECTED" = "Verbunden";
 "STATUS_DISCONNECTED" = "Getrennt";
 "STATUS_CONNECTING %lld" = "Verbinde (Versuch %lld)…";
+"STATUS_HANDSHAKING" = "Authentifizierung…";
 "STATUS_OFFLINE_REFUSED" = "Offline (Server verweigert)";
 "STATUS_OFFLINE_TIMEOUT" = "Offline (Zeitüberschreitung)";
 "STATUS_ERROR" = "Fehler";
