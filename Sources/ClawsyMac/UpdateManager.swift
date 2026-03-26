@@ -61,7 +61,7 @@ class UpdateManager: ObservableObject {
     
     // MARK: - Notification Permission
     
-    /// Request notification permission independently (may run before NetworkManager).
+    /// Request notification permission independently (may run before connection).
     func ensureNotificationPermission() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
             if let error = error {

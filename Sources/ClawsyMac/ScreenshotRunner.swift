@@ -76,7 +76,7 @@ enum ScreenshotRunner {
                        model: "claude-sonnet-4-6",
                        startedAt: Date().addingTimeInterval(-60)),
         ]
-        let view = MissionControlView(taskStore: store, networkManager: NetworkManager())
+        let view = MissionControlView(taskStore: store, hostManager: HostManager())
         return sized(host(view), 320, 400)
     }
 

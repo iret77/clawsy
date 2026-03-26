@@ -4,7 +4,7 @@ import ClawsyShared
 
 class ShareViewController: NSViewController {
 
-    private let network = NetworkManager()
+    private let poller = GatewayPoller()
 
     override func loadView() {
         let view = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 200))
@@ -32,12 +32,9 @@ class ShareViewController: NSViewController {
     override func viewDidAppear() {
         super.viewDidAppear()
 
-        // Configure NetworkManager with credentials from shared App Group defaults
         let host = SharedConfig.serverHost
         let port = SharedConfig.serverPort
         let token = SharedConfig.serverToken
-        let sshUser = SharedConfig.sshUser
-        let useSsh = SharedConfig.useSshFallback
 
         guard !host.isEmpty, !token.isEmpty else {
             completeWithError(NSError(domain: "ai.clawsy", code: -1,
@@ -49,9 +46,12 @@ class ShareViewController: NSViewController {
             cancel(nil); return
         }
 
-        network.configure(host: host, port: port, token: token, sshUser: sshUser, fallback: useSsh)
+        // Configure poller with gateway credentials from shared defaults
+        let scheme = (host.contains("localhost") || host.contains("127.0.0.1")) ? "http" : "https"
+        let baseURL = "\(scheme)://\(host):\(port)"
+        poller.start(baseURL: baseURL, token: token)
 
-        ShareHandler.handleSharedItems(items, network: network) { result in
+        ShareHandler.handleSharedItems(items, poller: poller) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success:
