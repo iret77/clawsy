@@ -228,18 +228,18 @@ public class HostManager: ObservableObject {
         subscribeToActiveConnection()
     }
 
-    /// Connect a single host
+    /// Connect a single host. If already connected/connecting, disconnects first.
     public func connectHost(_ id: UUID) {
         guard let profile = profiles.first(where: { $0.id == id }) else { return }
 
-        // Create or reuse ConnectionManager
-        let conn: ConnectionManager
+        // Always start fresh — disconnect existing connection
         if let existing = connections[id] {
-            conn = existing
-        } else {
-            conn = ConnectionManager()
-            connections[id] = conn
+            existing.disconnect()
         }
+        pollers[id]?.stop()
+
+        let conn = ConnectionManager()
+        connections[id] = conn
 
         // Create HandshakeManager with profile config
         let hsConfig = HandshakeManager.Config(

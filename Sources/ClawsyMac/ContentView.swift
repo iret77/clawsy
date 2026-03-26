@@ -71,12 +71,12 @@ struct ContentView: View {
 
                     Divider().padding(.vertical, 4).opacity(0.5)
 
-                    // Connect / Disconnect
+                    // Connect / Disconnect / Retry
                     Button(action: toggleConnection) {
                         MenuItemRow(
-                            icon: hostManager.isConnected ? "power" : "bolt.slash.fill",
-                            title: hostManager.isConnected ? "DISCONNECT" : "CONNECT",
-                            color: hostManager.isConnected ? .red : .blue
+                            icon: connectButtonIcon,
+                            title: connectButtonTitle,
+                            color: connectButtonColor
                         )
                     }
                     .buttonStyle(.plain)
@@ -179,6 +179,32 @@ struct ContentView: View {
     }
 
     // MARK: - Connection Toggle
+
+    private var connectButtonIcon: String {
+        switch hostManager.state {
+        case .connected: return "power"
+        case .connecting, .sshTunneling, .handshaking, .reconnecting: return "arrow.triangle.2.circlepath"
+        case .awaitingPairing: return "arrow.clockwise"
+        case .failed: return "arrow.clockwise"
+        case .disconnected: return "bolt.slash.fill"
+        }
+    }
+
+    private var connectButtonTitle: String {
+        switch hostManager.state {
+        case .connected: return "DISCONNECT"
+        case .awaitingPairing, .failed: return "RETRY"
+        default: return "CONNECT"
+        }
+    }
+
+    private var connectButtonColor: Color {
+        switch hostManager.state {
+        case .connected: return .red
+        case .awaitingPairing, .failed: return .orange
+        default: return .blue
+        }
+    }
 
     private func toggleConnection() {
         guard let id = hostManager.activeHostId else { return }
