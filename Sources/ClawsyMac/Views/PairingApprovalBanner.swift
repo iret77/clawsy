@@ -4,21 +4,23 @@ import ClawsyShared
 struct PairingApprovalBanner: View {
     let requestId: String
     @Binding var copied: Bool
+    @State private var showShellCommand = false
 
-    /// Show the device ID (first 12 chars) — this is what `openclaw devices list` shows
     private var deviceIdShort: String {
         String(DeviceIdentity.shared.deviceId.prefix(12))
     }
 
-    private var command: String {
-        // Use `openclaw devices list` to find the pending request, then approve.
-        // We can't show the gateway's request UUID because it's sent to operator
-        // clients, not to the node. So we show the device-ID-based hint.
-        "openclaw devices approve \(deviceIdShort)..."
+    private var agentPrompt: String {
+        "Please approve my new Clawsy device (ID starts with \(deviceIdShort)…)"
+    }
+
+    private var shellCommand: String {
+        "openclaw devices list && openclaw devices approve <REQUEST_ID>"
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            // Title
             HStack {
                 Image(systemName: "link.badge.plus")
                     .font(.system(size: 12))
@@ -29,22 +31,22 @@ struct PairingApprovalBanner: View {
                 Spacer()
             }
 
-            Text(l10n: "PAIRING_REQUIRED_DESC")
+            // Instruction
+            Text("Send this to your OpenClaw agent:")
                 .font(.system(size: 10))
                 .foregroundColor(.white.opacity(0.85))
 
+            // Agent prompt (primary)
             HStack(spacing: 6) {
-                Text("openclaw devices list")
-                    .font(.system(size: 10, design: .monospaced))
+                Text(agentPrompt)
+                    .font(.system(size: 10))
                     .foregroundColor(.white)
                     .textSelection(.enabled)
-                    .lineLimit(1)
-                Spacer()
+                    .lineLimit(2)
+                Spacer(minLength: 4)
                 Button(action: {
-                    // Copy the full approve workflow hint
-                    let hint = "openclaw devices list  # Find the pending request, then:\nopenclaw devices approve <REQUEST_ID>"
                     NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(hint, forType: .string)
+                    NSPasteboard.general.setString(agentPrompt, forType: .string)
                     copied = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { copied = false }
                 }) {
@@ -63,9 +65,25 @@ struct PairingApprovalBanner: View {
                 .buttonStyle(.plain)
             }
 
-            Text(l10n: "PAIRING_REQUIRED_HINT")
-                .font(.system(size: 9))
-                .foregroundColor(.white.opacity(0.6))
+            // Shell command (secondary, expandable)
+            Button(action: { withAnimation(.easeInOut(duration: 0.2)) { showShellCommand.toggle() } }) {
+                HStack(spacing: 4) {
+                    Image(systemName: showShellCommand ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 8))
+                    Text("Terminal command")
+                        .font(.system(size: 9))
+                }
+                .foregroundColor(.white.opacity(0.5))
+            }
+            .buttonStyle(.plain)
+
+            if showShellCommand {
+                Text(shellCommand)
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.7))
+                    .textSelection(.enabled)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
         .padding(12)
         .background(
