@@ -47,6 +47,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     connectionSection
                     sharedFolderSection
+                    responseChannelSection
                     hotkeysSection
                     toolsSection
                 }
@@ -181,6 +182,65 @@ struct SettingsView: View {
                     .multilineTextAlignment(.center)
             }
         }
+    }
+
+    // MARK: - Response Channel
+
+    private var responseChannelSection: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(NSLocalizedString("SETTINGS_RESPONSE_CHANNEL_HINT", bundle: .clawsy, comment: ""))
+                    .font(ClawsyTheme.Font.caption)
+                    .foregroundColor(.secondary)
+
+                Picker("", selection: responseChannelBinding) {
+                    // Clawsy native (notification + panel)
+                    Label(
+                        NSLocalizedString("SETTINGS_RESPONSE_CLAWSY", bundle: .clawsy, comment: ""),
+                        systemImage: "bell.badge"
+                    ).tag("clawsy")
+
+                    // Connected external channels
+                    if let poller = hostManager.activePoller {
+                        ForEach(poller.channels) { channel in
+                            Label(channel.name, systemImage: channel.icon)
+                                .tag("channel:\(channel.id)")
+                        }
+                    }
+                }
+                .pickerStyle(.radioGroup)
+                .labelsHidden()
+            }
+            .padding(.vertical, 2)
+        } label: {
+            Label(NSLocalizedString("SETTINGS_SECTION_RESPONSE", bundle: .clawsy, comment: ""), systemImage: "arrowshape.turn.up.left.circle")
+                .font(ClawsyTheme.Font.sectionHeader)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    private var responseChannelBinding: Binding<String> {
+        Binding<String>(
+            get: {
+                guard let poller = hostManager.activePoller else { return "clawsy" }
+                if case .clawsy = poller.responseChannel { return "clawsy" }
+                if case .external(let channelId, _) = poller.responseChannel { return "channel:\(channelId)" }
+                return "clawsy"
+            },
+            set: { newValue in
+                guard let poller = hostManager.activePoller else { return }
+                if newValue == "clawsy" {
+                    poller.responseChannel = .clawsy
+                } else if newValue.hasPrefix("channel:") {
+                    let channelId = String(newValue.dropFirst("channel:".count))
+                    // Find a session bound to this channel for routing
+                    let sessionKey = poller.sessions.first { session in
+                        session.kind == channelId || session.id.contains(channelId)
+                    }?.id ?? "main"
+                    poller.responseChannel = .external(channelId: channelId, sessionKey: sessionKey)
+                }
+            }
+        )
     }
 
     // MARK: - Tools & About

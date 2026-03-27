@@ -388,6 +388,11 @@
 "RESPONSE_VIEW" = "Anzeigen";
 "RESPONSE_REPLY" = "Antworten";
 
+// Response Channel Settings
+"SETTINGS_SECTION_RESPONSE" = "Agent-Antworten";
+"SETTINGS_RESPONSE_CHANNEL_HINT" = "Wo sollen Agent-Antworten erscheinen?";
+"SETTINGS_RESPONSE_CLAWSY" = "Clawsy (Benachrichtigung + Panel)";
+
 // Agent Identity (named agent dialogs)
 "GENERIC_AGENT" = "Der Agent";
 "AGENT_NAMED_WANTS_TO" = "%@ möchte eine Datei %@.";

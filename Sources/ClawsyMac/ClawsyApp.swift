@@ -304,38 +304,71 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     // MARK: - Global Actions (via Hotkey)
 
     private func handleGlobalPushClipboard() {
-        guard let hm = hostManager, hm.isConnected, let poller = hm.activePoller else { return }
+        guard let hm = hostManager, hm.isConnected, let poller = hm.activePoller else {
+            logAction("Clipboard push skipped — not connected")
+            return
+        }
         if let content = ClipboardManager.getClipboardContent() {
             poller.sendEnvelope(type: "clipboard", content: content)
+            logAction("Clipboard pushed (\(content.count) chars)")
             showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
         }
     }
 
     private func handleGlobalScreenshot(interactive: Bool) {
-        guard let hm = hostManager, hm.isConnected, let poller = hm.activePoller else { return }
+        guard let hm = hostManager, hm.isConnected, let poller = hm.activePoller else {
+            logAction("Screenshot skipped — not connected")
+            return
+        }
         if popover.isShown { popover.performClose(nil) }
+        logAction("Screenshot capturing (interactive: \(interactive))")
         DispatchQueue.global(qos: .userInitiated).async {
             Thread.sleep(forTimeInterval: 0.25)
             guard let b64 = ScreenshotManager.takeScreenshot(interactive: interactive) else {
-                DispatchQueue.main.async { self.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "SCREENSHOT_FAILED") }
+                DispatchQueue.main.async {
+                    self.logAction("Screenshot capture failed")
+                    self.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "SCREENSHOT_FAILED")
+                }
                 return
             }
             poller.sendEnvelope(type: "screenshot", content: ["format": "jpeg", "base64": b64])
-            DispatchQueue.main.async { self.showStatusHUD(icon: "camera.viewfinder", title: "SCREENSHOT_SENT") }
+            DispatchQueue.main.async {
+                self.logAction("Screenshot sent (\(b64.count / 1024)KB)")
+                self.showStatusHUD(icon: "camera.viewfinder", title: "SCREENSHOT_SENT")
+            }
         }
     }
 
     private func handleGlobalCamera() {
-        guard let hm = hostManager, hm.isConnected, let poller = hm.activePoller else { return }
+        guard let hm = hostManager, hm.isConnected, let poller = hm.activePoller else {
+            logAction("Camera skipped — not connected")
+            return
+        }
         let camId   = SharedConfig.sharedDefaults.string(forKey: "activeCameraId") ?? ""
         let camName = SharedConfig.sharedDefaults.string(forKey: "activeCameraName") ?? "Camera"
+        logAction("Camera capturing (\(camName))")
         CameraManager.takePhoto(deviceId: camId.isEmpty ? nil : camId) { b64 in
             guard let b64 = b64 else {
-                DispatchQueue.main.async { self.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "CAPTURE_FAILED") }
+                DispatchQueue.main.async {
+                    self.logAction("Camera capture failed")
+                    self.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "CAPTURE_FAILED")
+                }
                 return
             }
             poller.sendEnvelope(type: "camera", content: ["format": "jpeg", "base64": b64, "device": camName])
-            DispatchQueue.main.async { self.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT") }
+            DispatchQueue.main.async {
+                self.logAction("Photo sent from \(camName) (\(b64.count / 1024)KB)")
+                self.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT")
+            }
+        }
+    }
+
+    // MARK: - Debug Action Logging
+
+    private func logAction(_ message: String) {
+        guard let conn = hostManager?.activeConnection else { return }
+        DispatchQueue.main.async {
+            conn.rawLog += "\n[ACTION] \(message)"
         }
     }
 
@@ -359,6 +392,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 window.hasShadow = true
 
                 let quickSendView = QuickSendView(onSend: { text in
+                    self.logAction("QuickSend → \(poller.targetSessionKey): \(text.prefix(60))")
                     poller.sendChatMessage(text, sessionKey: poller.targetSessionKey)
                     self.hideQuickSend()
                 }, onCancel: {

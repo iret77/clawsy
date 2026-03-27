@@ -10,6 +10,10 @@ public final class GatewayPoller: ObservableObject {
 
     @Published public var agents: [GatewayAgent] = []
     @Published public var sessions: [GatewaySession] = []
+    @Published public var channels: [GatewayChannel] = []
+
+    /// Where agent responses should go
+    @Published public var responseChannel: ResponseChannel = .clawsy
 
     /// Currently targeted session key for routing events
     @Published public var targetSessionKey: String = "main" {
@@ -172,6 +176,7 @@ public final class GatewayPoller: ObservableObject {
     private func poll() {
         fetchAgents()
         fetchSessions()
+        fetchChannels()
     }
 
     private func fetchAgents() {
@@ -257,6 +262,27 @@ public final class GatewayPoller: ObservableObject {
 
         DispatchQueue.main.async {
             self.sessions = parsed
+        }
+    }
+
+    private func fetchChannels() {
+        sendRequest(method: "channels.status") { [weak self] response in
+            guard let payload = response["payload"] as? [String: Any],
+                  let channelsList = payload["channels"] as? [[String: Any]] else {
+                // channels.status might not be available — not critical
+                return
+            }
+
+            let parsed: [GatewayChannel] = channelsList.compactMap { c in
+                guard let id = c["type"] as? String ?? c["id"] as? String else { return nil }
+                let name = c["name"] as? String ?? c["label"] as? String ?? id.capitalized
+                let connected = c["connected"] as? Bool ?? c["status"] as? String == "connected"
+                return GatewayChannel(id: id, name: name, isConnected: connected)
+            }
+
+            DispatchQueue.main.async {
+                self?.channels = parsed.filter { $0.isConnected }
+            }
         }
     }
 
