@@ -51,8 +51,9 @@ public final class GatewayPoller: ObservableObject {
                 handler(json)
                 return true
             }
-            // Check if this is a response to a chat.send — ignore (agent will stream separately)
-            if pendingChatRequests.removeValue(forKey: id) != nil {
+            // chat.send response — extract the agent's reply from the res frame
+            if let sessionKey = pendingChatRequests.removeValue(forKey: id) {
+                handleChatResponse(json, sessionKey: sessionKey)
                 return true
             }
         }
@@ -91,6 +92,48 @@ public final class GatewayPoller: ObservableObject {
 
         default:
             return false
+        }
+    }
+
+    // MARK: - Chat Response Handling
+
+    /// Extract the agent's reply from a chat.send res frame.
+    /// The gateway may return the response in several formats:
+    ///   1. payload.message (plain text response)
+    ///   2. payload.text (alternative text field)
+    ///   3. payload.content (structured response)
+    ///   4. payload.response (wrapped response)
+    ///   5. Direct result in payload as string
+    private func handleChatResponse(_ json: [String: Any], sessionKey: String) {
+        let payload = json["payload"] as? [String: Any]
+
+        // Try all known response formats
+        let responseText: String? =
+            payload?["message"] as? String ??
+            payload?["text"] as? String ??
+            payload?["response"] as? String ??
+            payload?["content"] as? String ??
+            (payload?["result"] as? [String: Any])?["message"] as? String ??
+            (payload?["result"] as? [String: Any])?["text"] as? String ??
+            json["message"] as? String ??
+            json["text"] as? String
+
+        if let text = responseText, !text.isEmpty {
+            let agentName = agents.first { agent in
+                sessionKey.contains(agent.id)
+            }?.name ?? "Agent"
+
+            log("chat.send response from \(agentName): \(text.prefix(80))…")
+
+            DispatchQueue.main.async { [weak self] in
+                self?.onAgentResponse?(agentName, text, sessionKey)
+            }
+        } else {
+            // Log the raw response for debugging
+            log("chat.send response (no text extracted): \(String(describing: payload?.keys.sorted()))")
+
+            // Even without text, check if there were accumulated streaming chunks
+            emitAccumulatedResponse(sessionKey: sessionKey)
         }
     }
 
