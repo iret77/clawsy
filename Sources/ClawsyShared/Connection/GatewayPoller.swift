@@ -273,10 +273,11 @@ public final class GatewayPoller: ObservableObject {
                 return
             }
 
-            let parsed: [GatewayChannel] = channelsList.compactMap { c in
-                guard let id = c["type"] as? String ?? c["id"] as? String else { return nil }
-                let name = c["name"] as? String ?? c["label"] as? String ?? id.capitalized
-                let connected = c["connected"] as? Bool ?? c["status"] as? String == "connected"
+            let parsed: [GatewayChannel] = channelsList.compactMap { c -> GatewayChannel? in
+                let id = (c["type"] as? String) ?? (c["id"] as? String)
+                guard let id else { return nil }
+                let name = (c["name"] as? String) ?? (c["label"] as? String) ?? id.capitalized
+                let connected = (c["connected"] as? Bool) ?? ((c["status"] as? String) == "connected")
                 return GatewayChannel(id: id, name: name, isConnected: connected)
             }
 
