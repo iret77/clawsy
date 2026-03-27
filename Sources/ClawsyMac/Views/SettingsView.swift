@@ -226,6 +226,7 @@ struct SettingsView: View {
                 .foregroundColor(.secondary.opacity(0.4))
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
+    }
 
     // MARK: - Helpers
 
