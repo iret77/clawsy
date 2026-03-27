@@ -384,6 +384,10 @@
 // QuickSend
 "QUICK_SEND_CLEAR" = "Löschen";
 
+// Agent Response
+"RESPONSE_VIEW" = "Anzeigen";
+"RESPONSE_REPLY" = "Antworten";
+
 // Agent Identity (named agent dialogs)
 "GENERIC_AGENT" = "Der Agent";
 "AGENT_NAMED_WANTS_TO" = "%@ möchte eine Datei %@.";

@@ -34,6 +34,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var popover: NSPopover!
     var alertWindow: NSWindow?
     var quickSendWindow: NSWindow?
+    var responseWindow: NSWindow?
     var hudWindow: NSWindow?
     var onboardingWindow: NSWindow?
     var hostManager: HostManager?
@@ -228,6 +229,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         UpdateManager.shared.startPeriodicChecks()
         UpdateManager.shared.ensureNotificationPermission()
 
+        // Notification categories for agent responses
+        setupNotificationCategories()
+
         // Redraw icon on appearance change
         DistributedNotificationCenter.default().addObserver(
             self, selector: #selector(appearanceChanged),
@@ -401,6 +405,88 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 }
             }
         }
+    }
+
+    // MARK: - Agent Response Panel
+
+    func showAgentResponse(_ response: AgentResponse) {
+        DispatchQueue.main.async {
+            // Show macOS notification first
+            self.showResponseNotification(response)
+
+            // Open the response panel window
+            self.openResponsePanel(response)
+        }
+    }
+
+    private func openResponsePanel(_ response: AgentResponse) {
+        responseWindow?.close()
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 320),
+            styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
+            backing: .buffered, defer: false)
+        window.center()
+        window.setFrameAutosaveName("ai.clawsy.ResponsePanel")
+        window.isReleasedWhenClosed = false
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.level = .floating
+        window.minSize = NSSize(width: 320, height: 200)
+        window.backgroundColor = .clear
+
+        let panelView = ResponsePanelView(
+            response: response,
+            onDismiss: { [weak self] in
+                self?.responseWindow?.close()
+                self?.responseWindow = nil
+            },
+            onReply: { [weak self] replyText in
+                guard let hm = self?.hostManager, let poller = hm.activePoller else { return }
+                poller.sendChatMessage(replyText, sessionKey: response.sessionKey)
+            }
+        )
+
+        window.contentView = NSHostingView(rootView: panelView)
+        self.responseWindow = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func showResponseNotification(_ response: AgentResponse) {
+        let content = UNMutableNotificationContent()
+        content.title = response.agentName
+        content.body = response.message.count > 200
+            ? String(response.message.prefix(197)) + "…"
+            : response.message
+        content.sound = .default
+        content.categoryIdentifier = "AGENT_RESPONSE"
+        content.userInfo = [
+            "agentName": response.agentName,
+            "message": response.message,
+            "sessionKey": response.sessionKey
+        ]
+
+        let request = UNNotificationRequest(
+            identifier: response.id.uuidString,
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    func setupNotificationCategories() {
+        let viewAction = UNNotificationAction(
+            identifier: "VIEW_RESPONSE",
+            title: NSLocalizedString("RESPONSE_VIEW", bundle: .clawsy, comment: ""),
+            options: [.foreground]
+        )
+        let category = UNNotificationCategory(
+            identifier: "AGENT_RESPONSE",
+            actions: [viewAction],
+            intentIdentifiers: []
+        )
+        UNUserNotificationCenter.current().setNotificationCategories([category])
     }
 
     // MARK: - Permission Dialog Windows

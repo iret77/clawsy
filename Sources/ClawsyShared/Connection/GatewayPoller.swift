@@ -37,13 +37,81 @@ public final class GatewayPoller: ObservableObject {
     public func processMessage(_ text: String) -> Bool {
         guard let data = text.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let type = json["type"] as? String, type == "res",
-              let id = json["id"] as? String,
-              let handler = responseHandlers.removeValue(forKey: id) else {
+              let type = json["type"] as? String else {
             return false
         }
-        handler(json)
-        return true
+
+        // Handle responses to our requests (agent, status, chat.send)
+        if type == "res", let id = json["id"] as? String {
+            if let handler = responseHandlers.removeValue(forKey: id) {
+                handler(json)
+                return true
+            }
+            // Check if this is a response to a chat.send — ignore (agent will stream separately)
+            if pendingChatRequests.removeValue(forKey: id) != nil {
+                return true
+            }
+        }
+
+        // Handle gateway events — agent responses come as streaming events
+        if type == "event", let event = json["event"] as? String {
+            return handleEvent(event, json: json)
+        }
+
+        return false
+    }
+
+    /// Handle gateway events — detect agent responses to our messages.
+    private func handleEvent(_ event: String, json: [String: Any]) -> Bool {
+        let payload = json["payload"] as? [String: Any]
+
+        switch event {
+        case "chat.chunk":
+            // Streaming response chunk — accumulate for final response
+            if let text = payload?["text"] as? String,
+               let sessionKey = payload?["sessionKey"] as? String {
+                accumulateResponseChunk(text, sessionKey: sessionKey)
+            }
+            return true
+
+        case "chat.done", "session.done":
+            // Agent finished responding — emit accumulated response
+            if let sessionKey = payload?["sessionKey"] as? String ?? payload?["key"] as? String {
+                emitAccumulatedResponse(sessionKey: sessionKey)
+            }
+            return true
+
+        case "tick":
+            // Gateway keepalive — ignore
+            return true
+
+        default:
+            return false
+        }
+    }
+
+    // MARK: - Response Accumulation
+
+    private var accumulatedResponses: [String: String] = [:]
+
+    private func accumulateResponseChunk(_ text: String, sessionKey: String) {
+        accumulatedResponses[sessionKey, default: ""] += text
+    }
+
+    private func emitAccumulatedResponse(sessionKey: String) {
+        guard let responseText = accumulatedResponses.removeValue(forKey: sessionKey),
+              !responseText.isEmpty else { return }
+
+        // Find the agent name for this session
+        let agentName = agents.first { agent in
+            sessionKey.contains(agent.id)
+        }?.name ?? "Agent"
+
+        log("Response from \(agentName): \(responseText.prefix(60))…")
+
+        DispatchQueue.main.async { [weak self] in
+            self?.onAgentResponse?(agentName, responseText, sessionKey)
+        }
     }
 
     public init(interval: TimeInterval = 30) {
@@ -196,22 +264,33 @@ public final class GatewayPoller: ObservableObject {
 
     /// Send a plain text message to an agent session via Protocol V3 `chat.send`.
     /// Used ONLY for QuickSend — user-initiated chat messages.
-    public func sendChatMessage(_ message: String, sessionKey: String, deliver: Bool = false) {
+    /// `deliver: true` triggers agent processing and response generation.
+    public func sendChatMessage(_ message: String, sessionKey: String) {
+        let requestId = UUID().uuidString
         let frame: [String: Any] = [
             "type": "req",
-            "id": UUID().uuidString,
+            "id": requestId,
             "method": "chat.send",
             "params": [
                 "sessionKey": sessionKey,
                 "message": message,
-                "deliver": deliver,
+                "deliver": true,
                 "idempotencyKey": UUID().uuidString
             ]
         ]
 
+        // Track this request so we can match the response
+        pendingChatRequests[requestId] = sessionKey
+
         log("chat.send → \(sessionKey) (\(message.prefix(60))…)")
         send(frame)
     }
+
+    /// Pending chat.send requests awaiting responses
+    private var pendingChatRequests: [String: String] = [:]
+
+    /// Callback when an agent response is received for a chat.send
+    public var onAgentResponse: ((_ agentName: String, _ message: String, _ sessionKey: String) -> Void)?
 
     // MARK: - Send: Node Events (Screenshot, Clipboard, Camera, Share)
 

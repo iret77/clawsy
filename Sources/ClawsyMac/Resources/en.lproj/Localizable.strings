@@ -383,6 +383,10 @@
 // QuickSend
 "QUICK_SEND_CLEAR" = "Clear";
 
+// Agent Response
+"RESPONSE_VIEW" = "View";
+"RESPONSE_REPLY" = "Reply";
+
 // Agent Identity (named agent dialogs)
 "GENERIC_AGENT" = "The agent";
 "AGENT_NAMED_WANTS_TO" = "%@ wants to %@ a file.";

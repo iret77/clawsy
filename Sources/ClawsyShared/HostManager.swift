@@ -65,6 +65,9 @@ public class HostManager: ObservableObject {
         _ completion: @escaping (Bool) -> Void
     ) -> Void)?
 
+    /// Called when an agent sends a response to a QuickSend message
+    public var onAgentResponse: ((_ agentName: String, _ message: String, _ sessionKey: String) -> Void)?
+
     /// Called when a command handler needs to execute a platform action
     public var onRegisterHandlers: ((_ router: CommandRouter, _ hostId: UUID) -> Void)?
 
@@ -266,6 +269,11 @@ public class HostManager: ObservableObject {
             guard let data = try? JSONSerialization.data(withJSONObject: frame),
                   let text = String(data: data, encoding: .utf8) else { return }
             conn?.send(text)
+        }
+
+        // Wire agent responses → HostManager callback
+        poller.onAgentResponse = { [weak self] agentName, message, sessionKey in
+            self?.onAgentResponse?(agentName, message, sessionKey)
         }
 
         // Wire HandshakeManager ↔ ConnectionManager
