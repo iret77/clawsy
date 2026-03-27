@@ -187,42 +187,67 @@ struct SettingsView: View {
 
     private var toolsSection: some View {
         GroupBox {
-            VStack(alignment: .leading, spacing: 8) {
-                Button(action: { onShowDebugLog?() }) {
-                    Label(NSLocalizedString("DEBUG_LOG", bundle: .clawsy, comment: ""), systemImage: ClawsyTheme.Icons.debug)
-                        .font(ClawsyTheme.Font.formLabel)
+            VStack(alignment: .leading, spacing: 0) {
+                // Debug Log
+                settingsRow(icon: ClawsyTheme.Icons.debug, label: NSLocalizedString("DEBUG_LOG", bundle: .clawsy, comment: "")) {
+                    onShowDebugLog?()
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
 
+                Divider().clawsy()
+
+                // Updates
                 if updateManager.updateAvailable {
-                    Button(action: { updateManager.downloadAndInstall() }) {
-                        Label("Update: \(updateManager.updateVersion)", systemImage: "arrow.down.circle.fill")
-                            .font(ClawsyTheme.Font.formLabel)
+                    settingsRow(icon: "arrow.down.circle.fill", label: "Update: \(updateManager.updateVersion)", tint: .accentColor) {
+                        updateManager.downloadAndInstall()
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
                 } else {
-                    Button(action: { updateManager.checkForUpdates(silent: false) }) {
-                        Label(NSLocalizedString("SETTINGS_CHECK_UPDATES", bundle: .clawsy, comment: ""), systemImage: ClawsyTheme.Icons.update)
-                            .font(ClawsyTheme.Font.formLabel)
+                    settingsRow(icon: ClawsyTheme.Icons.update, label: NSLocalizedString("SETTINGS_CHECK_UPDATES", bundle: .clawsy, comment: "")) {
+                        updateManager.checkForUpdates(silent: false)
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
                 }
 
-                Text(SharedConfig.versionDisplay)
-                    .font(ClawsyTheme.Font.footer)
-                    .foregroundColor(.secondary.opacity(0.5))
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .padding(.top, 4)
+                Divider().clawsy()
+
+                // Re-Pair
+                settingsRow(icon: ClawsyTheme.Icons.repair, label: NSLocalizedString("REPAIR_CONNECTION", bundle: .clawsy, comment: ""), tint: .orange) {
+                    hostManager.repairActiveConnection()
+                }
             }
-            .padding(.vertical, 2)
+
+            // Version
+            Text(SharedConfig.versionDisplay)
+                .font(ClawsyTheme.Font.footer)
+                .foregroundColor(.secondary.opacity(0.4))
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.top, 6)
         } label: {
             Label(NSLocalizedString("SETTINGS_SECTION_TOOLS", bundle: .clawsy, comment: ""), systemImage: ClawsyTheme.Icons.tools)
                 .font(ClawsyTheme.Font.sectionHeader)
                 .foregroundColor(.secondary)
         }
+    }
+
+    @ViewBuilder
+    private func settingsRow(icon: String, label: String, tint: Color = .primary, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 12))
+                    .foregroundColor(tint)
+                    .frame(width: 18, alignment: .center)
+                Text(label)
+                    .font(ClawsyTheme.Font.formLabel)
+                    .foregroundColor(.primary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.secondary.opacity(0.3))
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Helpers

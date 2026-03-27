@@ -43,7 +43,7 @@ public final class HandshakeManager {
                 "file.stat", "file.exists"
             ],
             permissions: [String: Bool] = [:],
-            role: String = "node",
+            role: String = "operator",
             scopes: [String] = ["operator.read", "operator.write", "operator.approvals", "operator.pairing"],
             displayName: String? = nil
         ) {
