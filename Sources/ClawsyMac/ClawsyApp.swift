@@ -234,10 +234,39 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             name: NSNotification.Name("AppleInterfaceThemeChangedNotification"),
             object: nil
         )
+
+        // Listen for Share Extension handoff
+        DistributedNotificationCenter.default().addObserver(
+            self, selector: #selector(handlePendingShare),
+            name: Notification.Name("ai.clawsy.pendingShare"),
+            object: nil
+        )
     }
 
     @objc private func appearanceChanged(_ notification: Notification) {
         DispatchQueue.main.async { [weak self] in self?.updateMenuBarIcon() }
+    }
+
+    @objc private func handlePendingShare(_ notification: Notification) {
+        guard let hm = hostManager, hm.isConnected, let poller = hm.activePoller else { return }
+        guard let container = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: SharedConfig.appGroup
+        ) else { return }
+
+        let fileURL = container.appendingPathComponent("pending_share.json")
+        guard let data = try? Data(contentsOf: fileURL),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let content = json["content"] as? [String: Any] else { return }
+
+        // Send via node.event
+        poller.sendEnvelope(type: "share", content: content)
+
+        // Clean up
+        try? FileManager.default.removeItem(at: fileURL)
+
+        DispatchQueue.main.async {
+            self.showStatusHUD(icon: "square.and.arrow.up", title: "SHARE_SUCCESS")
+        }
     }
 
     // MARK: - Hotkeys
