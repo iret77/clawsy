@@ -7,9 +7,7 @@ public extension Bundle {
     /// We resolve the path explicitly from the executable location:
     ///   Clawsy.app/Contents/MacOS/Clawsy → ../../Resources/Clawsy_ClawsyShared.bundle
     static var clawsy: Bundle {
-        // Cache to avoid repeated filesystem lookups
         if let cached = _clawsyBundle { return cached }
-
         let bundle = resolveClawsyBundle()
         _clawsyBundle = bundle
         return bundle
@@ -18,40 +16,57 @@ public extension Bundle {
     private static var _clawsyBundle: Bundle?
 
     private static func resolveClawsyBundle() -> Bundle {
-        // Try the ClawsyMac SPM resource bundle first — it has all lproj dirs
-        // and SPM's Bundle.module resolves locale correctly.
-        let candidates = [
-            "Clawsy_ClawsyMac",
-            "Clawsy_ClawsyShared"
-        ]
-
         // Build the Resources path from the executable location.
+        // Clawsy.app/Contents/MacOS/Clawsy → up 2 → Contents → Resources
         let execURL = Bundle.main.executableURL ?? Bundle.main.bundleURL
         let contentsURL = execURL
-            .deletingLastPathComponent()  // → Contents/MacOS/
-            .deletingLastPathComponent()  // → Contents/
+            .deletingLastPathComponent()   // MacOS/
+            .deletingLastPathComponent()   // Contents/
         let resourcesURL = contentsURL.appendingPathComponent("Resources")
 
-        // 1. Try SPM resource bundles
+        // Try SPM resource bundles. The correct test is whether the bundle
+        // has an lproj directory — NOT localizedString, which returns the
+        // key itself when the string is missing (making the test always pass).
+        let candidates = [
+            "Clawsy_ClawsyShared",
+            "Clawsy_ClawsyMac"
+        ]
+
         for name in candidates {
             let url = resourcesURL.appendingPathComponent("\(name).bundle")
-            if let bundle = Bundle(url: url),
-               bundle.localizedString(forKey: "APP_NAME", value: "??", table: nil) != "??" {
+            if let bundle = Bundle(url: url), bundleHasStrings(bundle) {
                 return bundle
             }
         }
 
-        // 2. Resources dir itself (build.sh copies lproj dirs there)
-        if let resBundle = Bundle(url: resourcesURL),
-           resBundle.localizedString(forKey: "APP_NAME", value: "??", table: nil) != "??" {
+        // Try the Resources directory itself (build.sh copies lproj dirs there)
+        if let resBundle = Bundle(url: resourcesURL), bundleHasStrings(resBundle) {
             return resBundle
         }
 
-        // 3. Bundle.main
-        if Bundle.main.localizedString(forKey: "APP_NAME", value: "??", table: nil) != "??" {
+        // Bundle.main as last resort
+        if bundleHasStrings(.main) {
             return .main
         }
 
         return .main
+    }
+
+    /// Check if a bundle actually contains Localizable.strings by looking
+    /// for the file on disk, not relying on localizedString() which
+    /// returns the key when the string is missing.
+    private static func bundleHasStrings(_ bundle: Bundle) -> Bool {
+        // Check for en.lproj/Localizable.strings or Base.lproj
+        if bundle.path(forResource: "Localizable", ofType: "strings", inDirectory: nil, forLocalization: "en") != nil {
+            return true
+        }
+        if bundle.path(forResource: "Localizable", ofType: "strings", inDirectory: nil, forLocalization: "Base") != nil {
+            return true
+        }
+        // Also check without localization (flat bundle)
+        if bundle.path(forResource: "Localizable", ofType: "strings") != nil {
+            return true
+        }
+        return false
     }
 }
