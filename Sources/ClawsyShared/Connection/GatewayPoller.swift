@@ -59,20 +59,83 @@ public final class GatewayPoller: ObservableObject {
         }
 
         // Handle gateway events — agent responses come as streaming events
-        if type == "event", let event = json["event"] as? String {
-            return handleEvent(event, json: json)
+        if type == "event" {
+            if let event = json["event"] as? String {
+                let handled = handleEvent(event, json: json)
+                if !handled {
+                    log("Unhandled event: \(event)")
+                }
+                return handled
+            }
+            // Event without event name — log the payload for debugging
+            let payload = json["payload"] as? [String: Any]
+            log("Event (no name): keys=\(payload?.keys.sorted() ?? [])")
+            return true
+        }
+
+        // Log any other message types we don't handle
+        if type != "res" {
+            log("WS frame type=\(type)")
         }
 
         return false
     }
 
     /// Handle gateway events — detect agent responses to our messages.
+    ///
+    /// The gateway broadcasts chat events as:
+    ///   { "type": "event", "event": "chat", "payload": { "state": "delta"|"final"|"aborted"|"error", "sessionKey": "...", "message": {...} } }
     private func handleEvent(_ event: String, json: [String: Any]) -> Bool {
         let payload = json["payload"] as? [String: Any]
 
         switch event {
+        case "chat":
+            // Primary chat event — streamed responses from the agent
+            guard let sessionKey = payload?["sessionKey"] as? String,
+                  let state = payload?["state"] as? String else {
+                log("chat event missing sessionKey or state")
+                return true
+            }
+
+            switch state {
+            case "delta":
+                // Streaming chunk — extract text from message content
+                if let text = extractTextFromMessage(payload?["message"]) {
+                    accumulateResponseChunk(text, sessionKey: sessionKey)
+                }
+
+            case "final":
+                // Final response — extract full text, or emit accumulated chunks
+                if let text = extractTextFromMessage(payload?["message"]), !text.isEmpty {
+                    // Final has the complete message — use it directly
+                    let agentName = agents.first { sessionKey.contains($0.id) }?.name ?? "Agent"
+                    log("Chat final from \(agentName): \(text.prefix(80))…")
+                    // Clear any accumulated chunks (final is authoritative)
+                    accumulatedResponses.removeValue(forKey: sessionKey)
+                    DispatchQueue.main.async { [weak self] in
+                        self?.onAgentResponse?(agentName, text, sessionKey)
+                    }
+                } else {
+                    // No text in final — emit whatever was accumulated from deltas
+                    emitAccumulatedResponse(sessionKey: sessionKey)
+                }
+
+            case "aborted":
+                // User interrupted — emit what we have so far
+                emitAccumulatedResponse(sessionKey: sessionKey)
+
+            case "error":
+                let errorMsg = payload?["errorMessage"] as? String ?? "Unknown error"
+                log("Chat error: \(errorMsg)")
+                accumulatedResponses.removeValue(forKey: sessionKey)
+
+            default:
+                log("Chat unknown state: \(state)")
+            }
+            return true
+
         case "chat.chunk":
-            // Streaming response chunk — accumulate for final response
+            // Legacy format — some gateways may still use this
             if let text = payload?["text"] as? String,
                let sessionKey = payload?["sessionKey"] as? String {
                 accumulateResponseChunk(text, sessionKey: sessionKey)
@@ -80,19 +143,48 @@ public final class GatewayPoller: ObservableObject {
             return true
 
         case "chat.done", "session.done":
-            // Agent finished responding — emit accumulated response
+            // Legacy format
             if let sessionKey = payload?["sessionKey"] as? String ?? payload?["key"] as? String {
                 emitAccumulatedResponse(sessionKey: sessionKey)
             }
             return true
 
         case "tick":
-            // Gateway keepalive — ignore
             return true
 
         default:
             return false
         }
+    }
+
+    /// Extract text content from a chat message payload.
+    /// Messages can be plain strings or structured content blocks.
+    private func extractTextFromMessage(_ message: Any?) -> String? {
+        // Direct string
+        if let text = message as? String, !text.isEmpty {
+            return text
+        }
+
+        // Message dict with "text" or "content" field
+        if let msgDict = message as? [String: Any] {
+            if let text = msgDict["text"] as? String, !text.isEmpty {
+                return text
+            }
+            // Content blocks: [{ "type": "text", "text": "..." }]
+            if let content = msgDict["content"] as? [[String: Any]] {
+                let texts = content.compactMap { block -> String? in
+                    guard block["type"] as? String == "text" else { return nil }
+                    return block["text"] as? String
+                }
+                let joined = texts.joined(separator: "\n")
+                return joined.isEmpty ? nil : joined
+            }
+            if let content = msgDict["content"] as? String, !content.isEmpty {
+                return content
+            }
+        }
+
+        return nil
     }
 
     // MARK: - Chat Response Handling
