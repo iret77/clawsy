@@ -456,7 +456,7 @@
 "FAILURE_UNKNOWN" = "Verbindung fehlgeschlagen";
 
 // Settings
-"SETTINGS_DELETE_HOST_CONFIRM" = "„%@" wird entfernt und die Verbindung getrennt.";
+"SETTINGS_DELETE_HOST_CONFIRM" = "\"%@\" wird entfernt und die Verbindung getrennt.";
 "SETTINGS_HOTKEYS_HINT" = "Alle Tastenkürzel verwenden ⌘⇧ + Taste";
 
 // Accessibility labels
