@@ -23,6 +23,16 @@ public struct SharedConfig {
             groupDefaults.set(true, forKey: "migrationV1Done")
             groupDefaults.synchronize()
         }
+
+        // --- V2 MIGRATION (v1.0): clawsy-service → main ---
+        if !groupDefaults.bool(forKey: "migrationV2Done") {
+            if groupDefaults.string(forKey: "targetSessionKey") == "clawsy-service" {
+                groupDefaults.removeObject(forKey: "targetSessionKey")
+            }
+            groupDefaults.set(true, forKey: "migrationV2Done")
+            groupDefaults.synchronize()
+        }
+
         return groupDefaults
     }
     

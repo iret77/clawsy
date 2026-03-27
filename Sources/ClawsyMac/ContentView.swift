@@ -134,11 +134,20 @@ struct ContentView: View {
             MenuItemRow(
                 icon: connectButtonIcon,
                 title: connectButtonTitle,
-                color: connectButtonColor
+                color: connectButtonColor,
+                isEnabled: connectButtonEnabled
             )
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
+        .disabled(!connectButtonEnabled)
+    }
+
+    private var connectButtonEnabled: Bool {
+        switch hostManager.state {
+        case .connecting, .sshTunneling, .handshaking, .reconnecting: return false
+        default: return true
+        }
     }
 
     private var connectButtonIcon: String {
@@ -153,6 +162,8 @@ struct ContentView: View {
     private var connectButtonTitle: String {
         switch hostManager.state {
         case .connected: return "DISCONNECT"
+        case .connecting, .sshTunneling, .handshaking: return "STATUS_CONNECTING_LABEL"
+        case .reconnecting: return "STATUS_RECONNECTING"
         case .awaitingPairing, .failed: return "RECONNECT"
         default: return "CONNECT"
         }

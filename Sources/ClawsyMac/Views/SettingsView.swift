@@ -183,72 +183,49 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Tools
+    // MARK: - Tools & About
 
     private var toolsSection: some View {
-        GroupBox {
-            VStack(alignment: .leading, spacing: 0) {
-                // Debug Log
-                settingsRow(icon: ClawsyTheme.Icons.debug, label: NSLocalizedString("DEBUG_LOG", bundle: .clawsy, comment: "")) {
-                    onShowDebugLog?()
+        VStack(alignment: .leading, spacing: 12) {
+            // Action links — plain text, no box, like Apple's "About" section
+            HStack(spacing: 16) {
+                Button(action: { onShowDebugLog?() }) {
+                    Text(NSLocalizedString("DEBUG_LOG", bundle: .clawsy, comment: ""))
+                        .font(ClawsyTheme.Font.formLabel)
+                        .foregroundColor(.accentColor)
                 }
+                .buttonStyle(.plain)
 
-                Divider().clawsy()
-
-                // Updates
                 if updateManager.updateAvailable {
-                    settingsRow(icon: "arrow.down.circle.fill", label: "Update: \(updateManager.updateVersion)", tint: .accentColor) {
-                        updateManager.downloadAndInstall()
+                    Button(action: { updateManager.downloadAndInstall() }) {
+                        Text("Update: \(updateManager.updateVersion)")
+                            .font(ClawsyTheme.Font.formLabel)
+                            .foregroundColor(.accentColor)
                     }
+                    .buttonStyle(.plain)
                 } else {
-                    settingsRow(icon: ClawsyTheme.Icons.update, label: NSLocalizedString("SETTINGS_CHECK_UPDATES", bundle: .clawsy, comment: "")) {
-                        updateManager.checkForUpdates(silent: false)
+                    Button(action: { updateManager.checkForUpdates(silent: false) }) {
+                        Text(NSLocalizedString("SETTINGS_CHECK_UPDATES", bundle: .clawsy, comment: ""))
+                            .font(ClawsyTheme.Font.formLabel)
+                            .foregroundColor(.accentColor)
                     }
+                    .buttonStyle(.plain)
                 }
 
-                Divider().clawsy()
-
-                // Re-Pair
-                settingsRow(icon: ClawsyTheme.Icons.repair, label: NSLocalizedString("REPAIR_CONNECTION", bundle: .clawsy, comment: ""), tint: .orange) {
-                    hostManager.repairActiveConnection()
+                Button(action: { hostManager.repairActiveConnection() }) {
+                    Text(NSLocalizedString("REPAIR_CONNECTION", bundle: .clawsy, comment: ""))
+                        .font(ClawsyTheme.Font.formLabel)
+                        .foregroundColor(.orange)
                 }
+                .buttonStyle(.plain)
             }
 
-            // Version
+            // Version — right-aligned, subtle
             Text(SharedConfig.versionDisplay)
                 .font(ClawsyTheme.Font.footer)
                 .foregroundColor(.secondary.opacity(0.4))
                 .frame(maxWidth: .infinity, alignment: .trailing)
-                .padding(.top, 6)
-        } label: {
-            Label(NSLocalizedString("SETTINGS_SECTION_TOOLS", bundle: .clawsy, comment: ""), systemImage: ClawsyTheme.Icons.tools)
-                .font(ClawsyTheme.Font.sectionHeader)
-                .foregroundColor(.secondary)
         }
-    }
-
-    @ViewBuilder
-    private func settingsRow(icon: String, label: String, tint: Color = .primary, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: icon)
-                    .font(.system(size: 12))
-                    .foregroundColor(tint)
-                    .frame(width: 18, alignment: .center)
-                Text(label)
-                    .font(ClawsyTheme.Font.formLabel)
-                    .foregroundColor(.primary)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(.secondary.opacity(0.3))
-            }
-            .padding(.vertical, 6)
-            .padding(.horizontal, 4)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
 
     // MARK: - Helpers
 

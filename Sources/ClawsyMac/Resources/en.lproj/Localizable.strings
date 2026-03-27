@@ -11,6 +11,9 @@
 "NOTIFICATION_TITLE" = "Clawsy File Sync";
 "NOTIFICATION_BODY_DOWNLOADING" = "Downloading: %@";
 "NOTIFICATION_BODY_UPLOADING" = "Uploading: %@";
+"NOTIFICATION_BODY_COPYING" = "Copying: %@";
+"NOTIFICATION_BODY_BATCH" = "Batch operation: %@ ops";
+"NOTIFICATION_BODY_CHECKSUM" = "Checksum: %@";
 "REVOKE_PERMISSION" = "Revoke Permissions";
 "CLIPBOARD_SYNC" = "Clipboard Sync";
 "CHAR_COUNT %lld" = "%lld characters";
@@ -45,6 +48,7 @@
 "LIST_CAMERAS" = "List Cameras";
 "CONNECT" = "Connect";
 "DISCONNECT" = "Disconnect";
+"RECONNECT" = "Reconnect";
 "SETTINGS" = "Settings...";
 "DEBUG_LOG" = "Debug Log";
 "QUIT" = "Quit";
@@ -53,6 +57,7 @@
 "STATUS_CONNECTED" = "Connected";
 "STATUS_DISCONNECTED" = "Disconnected";
 "STATUS_CONNECTING %lld" = "Connecting (Attempt %lld)...";
+"STATUS_HANDSHAKING" = "Authenticating...";
 "STATUS_OFFLINE_REFUSED" = "Offline (Server Refused)";
 "STATUS_OFFLINE_TIMEOUT" = "Offline (Timeout)";
 "STATUS_ERROR" = "Error";
@@ -198,6 +203,7 @@
 "ONBOARDING_OPEN_SETTINGS" = "Grant Access";
 "ONBOARDING_FINDERSYNC" = "Finder Extension";
 "ONBOARDING_FINDERSYNC_DESC" = "Adds 'Send to Agent' to Finder's right-click menu. Requires manual activation in System Settings.";
+"ONBOARDING_FINDERSYNC_OPEN_SETTINGS" = "Open Finder Settings";
 "ONBOARDING_ENABLE" = "Enable";
 "ONBOARDING_OPTIONAL" = "optional";
 "ONBOARDING_SKIP" = "Later";
@@ -275,6 +281,11 @@
 "SERVER_SETUP_COPY_PROMPT" = "Copy Install Prompt";
 "SERVER_SETUP_PROMPT_COPIED" = "Copied!";
 
+
+// SSH-Only Mode
+"SSH_ONLY_MODE" = "SSH Only";
+"SSH_ONLY_MODE_DESC" = "Skip direct connection, always use SSH tunnel";
+
 // Gateway Connection (Onboarding Step 0)
 "ONBOARDING_GATEWAY_TITLE" = "Connect to Gateway";
 "ONBOARDING_GATEWAY_DESC" = "Connect Clawsy to your OpenClaw instance. This is required for everything to work.";
@@ -336,8 +347,41 @@
 
 // Agent Picker
 "AGENT_PICKER_LABEL" = "Active Agent";
-"AGENT_PICKER_DEFAULT" = "Default (clawsy-service)";
-"NOTIFICATION_BODY_CHECKSUM" = "Checksum: %@";
+"AGENT_PICKER_DEFAULT" = "Default (main session)";
+
+// Settings sections
+"SETTINGS_SECTION_CONNECTION" = "Connection";
+"SETTINGS_SECTION_SHARED_FOLDER" = "Shared Folder";
+"SETTINGS_SECTION_HOTKEYS" = "Hotkeys";
+"SETTINGS_SECTION_TOOLS" = "Tools";
+"SETTINGS_CHANGE_FOLDER" = "Change…";
+"SETTINGS_CHECK_UPDATES" = "Check for Updates";
+
+// Add Host
+"ADD_HOST_SECTION_IDENTITY" = "Identity";
+"ADD_HOST_SECTION_COLOR" = "Color";
+"ADD_HOST_SECTION_CONNECTION" = "Connection";
+"ADD_HOST_SECTION_SSH" = "SSH (optional)";
+
+// Pairing
+"PAIRING_SEND_HINT" = "Send this to your OpenClaw agent:";
+"PAIRING_TERMINAL_COMMAND" = "Terminal command";
+
+// MissionControl
+"MISSION_CONTROL_CONNECT_HINT" = "Connect to see agent activity";
+"MISSION_CONTROL_RECENT" = "Recent";
+
+// Onboarding connect modes
+"ONBOARDING_MODE_SETUP_CODE" = "Setup Code";
+"ONBOARDING_MODE_TAILSCALE" = "Tailscale";
+"ONBOARDING_MODE_MANUAL" = "Manual";
+
+// Rule Editor
+"RULE_FILTER" = "Filter";
+"RULE_FILTER_PLACEHOLDER" = "e.g. *.pdf";
+
+// QuickSend
+"QUICK_SEND_CLEAR" = "Clear";
 
 // Agent Identity (named agent dialogs)
 "GENERIC_AGENT" = "The agent";
@@ -347,3 +391,65 @@
 "CLIPBOARD_NAMED_WANTS_READ" = "%@ wants to read your clipboard.";
 "ALERT_SCREENSHOT_NAMED_BODY" = "%@ wants to see your screen.";
 "REMOTE_NAMED_USER_ASKING" = "%@ is requesting a capture.";
+
+// Onboarding v2
+"ONBOARDING_WELCOME_TITLE" = "Give your AI agent\neyes and hands on your Mac";
+"ONBOARDING_WELCOME_DESC" = "Clawsy connects your OpenClaw agents to your Mac — screenshots, clipboard, files, and camera — with full control over what's shared.";
+"ONBOARDING_SECURITY_NOTE" = "Your data stays between your Mac and your OpenClaw server. No cloud, no tracking.";
+"ONBOARDING_CONNECT_TITLE" = "Connect to your OpenClaw server";
+"ONBOARDING_SETUP_CODE_HINT" = "Paste the setup code from your OpenClaw agent or admin:";
+"ONBOARDING_SETUP_CODE_PLACEHOLDER" = "clawsy://pair?code=... or base64 code";
+"ONBOARDING_SETUP_CODE_ERROR" = "Invalid setup code. Please check and try again.";
+"ONBOARDING_SETUP_CODE_BUTTON" = "Connect with Setup Code";
+"ONBOARDING_TAILSCALE_HINT" = "Enter your Tailscale hostname (e.g. agenthost.tailnet-name.ts.net):";
+"ONBOARDING_TAILSCALE_BUTTON" = "Connect via Tailscale";
+"ONBOARDING_MANUAL_HINT" = "Enter your gateway connection details:";
+"ONBOARDING_MANUAL_BUTTON" = "Test Connection";
+"ONBOARDING_CONNECTING" = "Connecting...";
+"ONBOARDING_CONNECTED" = "Connected!";
+"ONBOARDING_CONNECTION_FAILED" = "Connection failed";
+"ONBOARDING_PERMISSIONS_TITLE" = "Permissions";
+"ONBOARDING_PERMISSIONS_DESC" = "Clawsy needs a few macOS permissions to work. Grant them below — you can change these anytime in System Settings.";
+"ONBOARDING_PERMISSIONS_ALL_GRANTED" = "All required permissions granted!";
+"ONBOARDING_READY_TITLE" = "You're all set!";
+"ONBOARDING_READY_MENUBAR" = "Clawsy lives in your menu bar — click the icon anytime";
+"ONBOARDING_READY_QUICKSEND" = "Use ⌘⇧K for Quick Send from anywhere";
+"ONBOARDING_READY_SCREENSHOT" = "Use ⌘⇧S for instant screenshot to agent";
+"ONBOARDING_READY_FOLDER" = "Share files via the Clawsy folder in Finder";
+"ONBOARDING_LETS_GO" = "Let's go";
+"ONBOARDING_FINISH" = "Finish";
+"ONBOARDING_NEXT" = "Next";
+"ONBOARDING_BACK" = "Back";
+
+// Permissions
+"PERM_SCREEN_RECORDING" = "Screen Recording";
+"PERM_SCREEN_RECORDING_DESC" = "Required for capturing screenshots to share with your agent.";
+"PERM_CAMERA" = "Camera";
+"PERM_CAMERA_DESC" = "Required for taking photos with your Mac or iPhone camera.";
+"PERM_ACCESSIBILITY" = "Accessibility";
+"PERM_ACCESSIBILITY_DESC" = "Required for global keyboard shortcuts (⌘⇧K, etc.).";
+"PERM_NOTIFICATIONS" = "Notifications";
+"PERM_NOTIFICATIONS_DESC" = "Allows Clawsy to notify you about agent activity.";
+"PERM_REQUIRED" = "Required";
+"PERM_GRANT" = "Grant";
+
+// Connection Failure Banner
+"FAILURE_RETRY" = "Retry";
+"FAILURE_REPAIR" = "Repair Connection";
+"FAILURE_ORIGIN_NOT_ALLOWED" = "Origin Not Allowed";
+"FAILURE_INVALID_TOKEN" = "Invalid Token";
+"FAILURE_SSH_FAILED" = "SSH Tunnel Failed";
+"FAILURE_HOST_UNREACHABLE" = "Host Unreachable";
+"FAILURE_GATEWAY_NOT_RUNNING" = "Gateway Not Running";
+"FAILURE_RECONNECT_EXHAUSTED" = "Reconnect Exhausted";
+"FAILURE_SKILL_MISSING" = "Clawsy Skill Missing";
+"FAILURE_UNKNOWN" = "Connection Failed";
+
+// Settings
+"SETTINGS_DELETE_HOST_CONFIRM" = "This will remove \"%@\" and disconnect.";
+"SETTINGS_HOTKEYS_HINT" = "All hotkeys use ⌘⇧ + key";
+
+// Accessibility labels
+"STATUS_CONNECTING_LABEL" = "Connecting";
+"STATUS_FAILED_LABEL" = "Connection failed";
+"CONNECTION_FAILURE_ICON" = "Connection error";
