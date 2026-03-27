@@ -30,7 +30,7 @@ class HUDWindow: NSWindow {
     override var canBecomeMain: Bool { false }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
+class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate, ObservableObject {
     var statusBarItem: NSStatusItem!
     var popover: NSPopover!
     var alertWindow: NSWindow?
@@ -39,6 +39,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var hudWindow: NSWindow?
     var onboardingWindow: NSWindow?
     var hostManager: HostManager?
+
+    /// Pending responses keyed by notification identifier — opened on notification click
+    private var pendingResponses: [String: AgentResponse] = [:]
 
     // MARK: - Menu Bar Icon
 
@@ -230,7 +233,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         UpdateManager.shared.startPeriodicChecks()
         UpdateManager.shared.ensureNotificationPermission()
 
-        // Notification categories for agent responses
+        // Notification categories + delegate for agent responses
+        UNUserNotificationCenter.current().delegate = self
         setupNotificationCategories()
 
         // Redraw icon on appearance change
@@ -446,11 +450,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
     func showAgentResponse(_ response: AgentResponse) {
         DispatchQueue.main.async {
-            // Show macOS notification first
-            self.showResponseNotification(response)
+            // Store response for when user clicks the notification
+            self.pendingResponses[response.id.uuidString] = response
 
-            // Open the response panel window
-            self.openResponsePanel(response)
+            // Show macOS notification — panel opens on click
+            self.showResponseNotification(response)
+            self.logAction("Agent response notification: \(response.agentName) (\(response.message.count) chars)")
         }
     }
 
@@ -508,6 +513,40 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             trigger: nil
         )
         UNUserNotificationCenter.current().add(request)
+    }
+
+    // MARK: - UNUserNotificationCenterDelegate
+
+    /// Show notifications even when app is in foreground (banner style)
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound])
+    }
+
+    /// User clicked a notification — open the response panel
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        let notificationId = response.notification.request.identifier
+        let userInfo = response.notification.request.content.userInfo
+
+        // Try stored response first, fall back to userInfo
+        if let agentResponse = pendingResponses.removeValue(forKey: notificationId) {
+            openResponsePanel(agentResponse)
+        } else if let agentName = userInfo["agentName"] as? String,
+                  let message = userInfo["message"] as? String,
+                  let sessionKey = userInfo["sessionKey"] as? String {
+            let agentResponse = AgentResponse(
+                agentName: agentName,
+                message: message,
+                timestamp: Date(),
+                sessionKey: sessionKey
+            )
+            openResponsePanel(agentResponse)
+        }
+
+        completionHandler()
     }
 
     func setupNotificationCategories() {

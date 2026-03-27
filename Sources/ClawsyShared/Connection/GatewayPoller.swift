@@ -91,22 +91,27 @@ public final class GatewayPoller: ObservableObject {
         switch event {
         case "chat":
             // Primary chat event — streamed responses from the agent
-            guard let sessionKey = payload?["sessionKey"] as? String,
-                  let state = payload?["state"] as? String else {
-                log("chat event missing sessionKey or state")
+            let sessionKey = payload?["sessionKey"] as? String ?? targetSessionKey
+            guard let state = payload?["state"] as? String else {
+                // Log all keys so we can see the actual format
+                log("chat event keys: \(payload?.keys.sorted() ?? []) (no state)")
                 return true
             }
+
+            log("chat.\(state) sessionKey=\(sessionKey) payloadKeys=\(payload?.keys.sorted() ?? [])")
 
             switch state {
             case "delta":
                 // Streaming chunk — extract text from message content
-                if let text = extractTextFromMessage(payload?["message"]) {
+                let text = extractTextFromPayload(payload)
+                if let text, !text.isEmpty {
                     accumulateResponseChunk(text, sessionKey: sessionKey)
                 }
 
             case "final":
                 // Final response — extract full text, or emit accumulated chunks
-                if let text = extractTextFromMessage(payload?["message"]), !text.isEmpty {
+                let text = extractTextFromPayload(payload)
+                if let text, !text.isEmpty {
                     // Final has the complete message — use it directly
                     let agentName = agents.first { sessionKey.contains($0.id) }?.name ?? "Agent"
                     log("Chat final from \(agentName): \(text.prefix(80))…")
@@ -157,8 +162,37 @@ public final class GatewayPoller: ObservableObject {
         }
     }
 
-    /// Extract text content from a chat message payload.
-    /// Messages can be plain strings or structured content blocks.
+    /// Extract text from the ENTIRE payload dict — searches all known locations.
+    /// The gateway chat event payload may have text in various places:
+    ///   payload.message.content[].text (Anthropic content blocks)
+    ///   payload.message.text
+    ///   payload.message (direct string)
+    ///   payload.text
+    ///   payload.content
+    ///   payload.response
+    private func extractTextFromPayload(_ payload: [String: Any]?) -> String? {
+        guard let payload else { return nil }
+
+        // Try payload.message first (most common)
+        if let result = extractTextFromMessage(payload["message"]) {
+            return result
+        }
+        // Try direct payload fields
+        if let text = payload["text"] as? String, !text.isEmpty { return text }
+        if let text = payload["response"] as? String, !text.isEmpty { return text }
+        if let text = payload["content"] as? String, !text.isEmpty { return text }
+
+        // Try payload.result.message (nested)
+        if let result = payload["result"] as? [String: Any] {
+            if let text = extractTextFromMessage(result["message"]) { return text }
+            if let text = result["text"] as? String, !text.isEmpty { return text }
+        }
+
+        return nil
+    }
+
+    /// Extract text content from a message object.
+    /// Messages can be plain strings, dicts with text/content, or content blocks.
     private func extractTextFromMessage(_ message: Any?) -> String? {
         // Direct string
         if let text = message as? String, !text.isEmpty {
