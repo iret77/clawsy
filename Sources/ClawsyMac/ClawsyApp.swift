@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import os
+import UserNotifications
 import ClawsyShared
 
 @main

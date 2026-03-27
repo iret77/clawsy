@@ -128,7 +128,7 @@ struct ResponsePanelView: View {
                 .padding(.vertical, 10)
             }
         }
-        .frame(width: 420, minHeight: 200, maxHeight: 500)
+        .frame(minWidth: 420, maxWidth: 420, minHeight: 200, maxHeight: 500)
         .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
