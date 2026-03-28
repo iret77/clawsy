@@ -401,9 +401,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     // MARK: - Permission Check (nonisolated)
 
     /// Check Screen Recording without requiring @MainActor context.
-    /// Uses CGPreflightScreenCaptureAccess (macOS 10.15+) — same as official OpenClaw Mac app.
+    /// Dual check: modern API first, CGWindowList fallback for ad-hoc signed builds.
     private static func checkScreenRecordingPermission() -> Bool {
-        return CGPreflightScreenCaptureAccess()
+        if CGPreflightScreenCaptureAccess() { return true }
+        guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] else {
+            return false
+        }
+        let myPID = ProcessInfo.processInfo.processIdentifier
+        return windowList.contains { ($0[kCGWindowOwnerPID as String] as? Int32) != myPID }
     }
 
     // MARK: - Debug Action Logging

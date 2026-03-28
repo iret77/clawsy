@@ -23,7 +23,7 @@ public enum ClawsyPermission: String, CaseIterable, Identifiable {
 
     public var icon: String {
         switch self {
-        case .screenRecording: return "rectangle.dashed.and.arrow.up"
+        case .screenRecording: return "camera.viewfinder"
         case .camera: return "camera.fill"
         case .accessibility: return "accessibility"
         case .notifications: return "bell.badge.fill"
@@ -183,9 +183,16 @@ public final class PermissionMonitor: ObservableObject {
     }
 
     private func checkScreenRecording() -> Bool {
-        // Modern API (macOS 10.15+) — same approach as the official OpenClaw Mac app.
-        // CGPreflightScreenCaptureAccess checks without prompting the user.
-        return CGPreflightScreenCaptureAccess()
+        // Try modern API first (matches official OpenClaw app).
+        if CGPreflightScreenCaptureAccess() { return true }
+        // Fallback: CGPreflightScreenCaptureAccess can return false for ad-hoc signed
+        // builds even after permission is granted. The CGWindowList approach is more
+        // reliable in practice — if we can see other apps' windows, permission is granted.
+        guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] else {
+            return false
+        }
+        let myPID = ProcessInfo.processInfo.processIdentifier
+        return windowList.contains { ($0[kCGWindowOwnerPID as String] as? Int32) != myPID }
     }
 
     // MARK: - Request + Triple Delayed Re-check
