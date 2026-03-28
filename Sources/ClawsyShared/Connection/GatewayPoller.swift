@@ -357,49 +357,68 @@ public final class GatewayPoller: ObservableObject {
     }
 
     private func fetchAgents() {
+        // Try multiple methods — gateway API may vary
         sendRequest(method: "agent") { [weak self] response in
-            guard let payload = response["payload"] as? [String: Any] else {
-                // Try direct response format
-                if let ok = response["ok"] as? Bool, ok,
-                   let payload = response["payload"] as? [String: Any] {
-                    self?.parseAgents(payload)
-                }
-                return
+            let payload = response["payload"] as? [String: Any]
+            self?.log("agent response keys: \(payload?.keys.sorted() ?? []) (top-level: \(response.keys.sorted()))")
+            if let payload {
+                self?.parseAgents(payload)
             }
-            self?.parseAgents(payload)
+        }
+        // Also try "agent.list" which some gateway versions use
+        sendRequest(method: "agent.list") { [weak self] response in
+            let payload = response["payload"] as? [String: Any]
+            if let payload {
+                self?.log("agent.list response keys: \(payload.keys.sorted())")
+                self?.parseAgents(payload)
+            }
         }
     }
 
     private func parseAgents(_ payload: [String: Any]) {
-        // The "agent" method returns agent config — extract agents from it
         var parsed: [GatewayAgent] = []
 
-        // Try "agents" array format
+        // Format 1: { agents: [{ id, name }] }
         if let agentsList = payload["agents"] as? [[String: Any]] {
             for a in agentsList {
-                if let id = a["id"] as? String, let name = a["name"] as? String {
+                if let id = a["id"] as? String {
+                    let name = a["name"] as? String ?? a["label"] as? String ?? id
                     parsed.append(GatewayAgent(id: id, name: name))
                 }
             }
         }
-        // Try single agent format (the "agent" method might return current agent info)
-        else if let id = payload["id"] as? String, let name = payload["name"] as? String {
+        // Format 2: { id, name } — single agent
+        else if let id = payload["id"] as? String {
+            let name = payload["name"] as? String ?? id
             parsed.append(GatewayAgent(id: id, name: name))
         }
-        // Try "config" sub-object
+        // Format 3: { config: { agents: { "id": { name: "..." } } } }
         else if let config = payload["config"] as? [String: Any],
                 let agents = config["agents"] as? [String: [String: Any]] {
             for (id, info) in agents {
-                let name = info["name"] as? String ?? id
+                let name = info["name"] as? String ?? info["label"] as? String ?? id
                 parsed.append(GatewayAgent(id: id, name: name))
+            }
+        }
+        // Format 4: dict of agents keyed by ID at top level
+        // { "cyberclaw": { "name": "CyberClaw", ... }, "elliot": { ... } }
+        else {
+            for (key, value) in payload {
+                if let info = value as? [String: Any],
+                   info["name"] != nil || info["label"] != nil || info["model"] != nil {
+                    let name = info["name"] as? String ?? info["label"] as? String ?? key
+                    parsed.append(GatewayAgent(id: key, name: name))
+                }
             }
         }
 
         if !parsed.isEmpty {
             DispatchQueue.main.async {
                 self.agents = parsed.sorted { $0.name < $1.name }
-                self.log("Agents: \(parsed.map { $0.name }.joined(separator: ", "))")
+                self.log("Agents (\(parsed.count)): \(parsed.map { $0.name }.joined(separator: ", "))")
             }
+        } else {
+            log("parseAgents: no agents found in keys \(payload.keys.sorted())")
         }
     }
 
