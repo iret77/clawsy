@@ -183,16 +183,10 @@ public final class PermissionMonitor: ObservableObject {
     }
 
     private func checkScreenRecording() -> Bool {
-        // Try modern API first (matches official OpenClaw app).
-        if CGPreflightScreenCaptureAccess() { return true }
-        // Fallback: CGPreflightScreenCaptureAccess can return false for ad-hoc signed
-        // builds even after permission is granted. The CGWindowList approach is more
-        // reliable in practice — if we can see other apps' windows, permission is granted.
-        guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] else {
-            return false
-        }
-        let myPID = ProcessInfo.processInfo.processIdentifier
-        return windowList.contains { ($0[kCGWindowOwnerPID as String] as? Int32) != myPID }
+        // CGPreflightScreenCaptureAccess is the only reliable check (macOS 10.15+).
+        // The CGWindowList approach gives false positives on macOS 14+ (returns other
+        // apps' windows even without permission, just with empty names).
+        return CGPreflightScreenCaptureAccess()
     }
 
     // MARK: - Request + Triple Delayed Re-check
