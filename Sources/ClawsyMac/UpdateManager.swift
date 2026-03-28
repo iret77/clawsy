@@ -276,12 +276,15 @@ class UpdateManager: ObservableObject {
         // The child bash process is started before NSApp.terminate — when the
         // parent app exits its sandbox is torn down, allowing the orphaned bash
         // process to replace the app bundle and relaunch cleanly.
+        let bundleId = Bundle.main.bundleIdentifier ?? "ai.clawsy"
         let script = """
         #!/bin/sh
         sleep 2
         rm -rf "\(targetPath)"
         mv "\(newAppPath)" "\(targetPath)"
         xattr -cr "\(targetPath)"
+        tccutil reset Accessibility "\(bundleId)" 2>/dev/null || true
+        tccutil reset ScreenCapture "\(bundleId)" 2>/dev/null || true
         open "\(targetPath)"
         rm -f \(scriptPath)
         """
