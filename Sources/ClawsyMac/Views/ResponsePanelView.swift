@@ -20,9 +20,8 @@ struct AgentResponse: Identifiable {
 
 // MARK: - Last Response Card (Menu)
 
-/// Compact response preview card for the main menu. Shows agent name, time, and a
-/// 2-line message preview. Tap to re-open the full response toast.
-/// Styled as an inline card matching Clawsy's design language.
+/// Inline response preview for the main menu. Matches native macOS menu item styling:
+/// no custom backgrounds, no card chrome — just content with system colors and spacing.
 struct LastResponseCard: View {
     let response: AgentResponse
     var onTap: () -> Void
@@ -33,8 +32,8 @@ struct LastResponseCard: View {
         let cleaned = response.message
             .replacingOccurrences(of: "\n", with: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        if cleaned.count > 80 {
-            return String(cleaned.prefix(77)) + "…"
+        if cleaned.count > 90 {
+            return String(cleaned.prefix(87)) + "…"
         }
         return cleaned
     }
@@ -42,47 +41,43 @@ struct LastResponseCard: View {
     var body: some View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Image(systemName: "bubble.left.fill")
                         .font(.system(size: 10))
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(isHovering ? Color(nsColor: .selectedMenuItemTextColor) : .accentColor)
 
                     Text(response.agentName)
-                        .font(ClawsyTheme.Font.headerHostName)
-                        .foregroundColor(.primary)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(isHovering ? Color(nsColor: .selectedMenuItemTextColor) : Color(nsColor: .labelColor))
                         .lineLimit(1)
 
-                    Spacer()
+                    Spacer(minLength: 8)
 
                     Text(response.formattedTime)
-                        .font(ClawsyTheme.Font.caption)
-                        .foregroundColor(.secondary)
+                        .font(.caption.monospacedDigit())
+                        .foregroundColor(isHovering ? Color(nsColor: .selectedMenuItemTextColor).opacity(0.85) : Color(nsColor: .secondaryLabelColor))
                 }
 
                 Text(messagePreview)
-                    .font(ClawsyTheme.Font.bannerBody)
-                    .foregroundColor(.secondary)
+                    .font(.caption)
+                    .foregroundColor(isHovering ? Color(nsColor: .selectedMenuItemTextColor).opacity(0.85) : Color(nsColor: .secondaryLabelColor))
                     .lineLimit(2)
+                    .truncationMode(.tail)
                     .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
+            .padding(.horizontal, ClawsyTheme.Spacing.menuItemH)
+            .padding(.vertical, ClawsyTheme.Spacing.menuItemV)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
             .background(
-                RoundedRectangle(cornerRadius: ClawsyTheme.Spacing.cornerRadius)
-                    .fill(isHovering ? ClawsyTheme.Colors.hoverBackground : Color.primary.opacity(0.03))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: ClawsyTheme.Spacing.cornerRadius)
-                    .stroke(Color.primary.opacity(0.06), lineWidth: 0.5)
+                RoundedRectangle(cornerRadius: ClawsyTheme.Spacing.menuItemCornerRadius)
+                    .fill(isHovering ? Color(nsColor: .selectedContentBackgroundColor) : Color.clear)
             )
         }
         .buttonStyle(.plain)
-        .contentShape(Rectangle())
         .onHover { hover in
-            withAnimation(ClawsyTheme.Animation.hover) {
-                isHovering = hover
-            }
+            isHovering = hover
         }
     }
 }
