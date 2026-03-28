@@ -9,23 +9,27 @@ struct AgentPickerView: View {
     private var poller: GatewayPoller? { hostManager.activePoller }
     private var agents: [GatewayAgent] { poller?.agents ?? [] }
 
-    private var targetSessionKey: Binding<String> {
+    /// Selected agent ID binding (agent IDs like "main", "cyberclaw", etc.)
+    private var selectedAgentId: Binding<String> {
         Binding<String>(
-            get: { poller?.targetSessionKey ?? "main" },
-            set: { newValue in
+            get: {
+                // Extract agent ID from stored targetSessionKey
+                let key = poller?.targetSessionKey ?? "main"
+                if key == "main" { return "main" }
+                // "agent:cyberclaw:main" → "cyberclaw"
+                let parts = key.split(separator: ":")
+                if parts.count >= 2, parts[0] == "agent" {
+                    return String(parts[1])
+                }
+                return key
+            },
+            set: { agentId in
                 guard let poller = poller else { return }
-                if newValue == "main" {
+                if agentId == "main" {
                     poller.targetSessionKey = "main"
-                    return
+                } else {
+                    poller.targetSessionKey = "agent:\(agentId):main"
                 }
-                // Find the actual session key for this agent
-                let agentId = String(newValue.dropFirst("agent:".count))
-                let matching = poller.sessions.first { session in
-                    let parts = session.id.split(separator: ":")
-                    return parts.count >= 2 && parts[0] == "agent" && String(parts[1]) == agentId
-                        && !session.id.contains(":cron:") && !session.id.contains(":subagent:")
-                }
-                poller.targetSessionKey = matching?.id ?? "agent:\(agentId):main"
             }
         )
     }
@@ -40,11 +44,9 @@ struct AgentPickerView: View {
                     .font(ClawsyTheme.Font.headerHostName)
                     .foregroundColor(.secondary)
                 Spacer()
-                Picker("", selection: targetSessionKey) {
-                    Text(NSLocalizedString("AGENT_PICKER_DEFAULT", bundle: .clawsy, comment: ""))
-                        .tag("main")
+                Picker("", selection: selectedAgentId) {
                     ForEach(agents) { agent in
-                        Text(agent.name).tag("agent:\(agent.id)")
+                        Text(agent.name).tag(agent.id)
                     }
                 }
                 .pickerStyle(.menu)

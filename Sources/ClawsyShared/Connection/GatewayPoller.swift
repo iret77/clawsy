@@ -357,65 +357,44 @@ public final class GatewayPoller: ObservableObject {
     }
 
     private func fetchAgents() {
-        // Try multiple methods — gateway API may vary
-        sendRequest(method: "agent") { [weak self] response in
-            let payload = response["payload"] as? [String: Any]
-            self?.log("agent response keys: \(payload?.keys.sorted() ?? []) (top-level: \(response.keys.sorted()))")
-            if let payload {
-                self?.parseAgents(payload)
+        // Gateway Protocol V3: "agents.list" returns { defaultId, mainKey, scope, agents: [{ id, name?, identity? }] }
+        sendRequest(method: "agents.list") { [weak self] response in
+            guard let payload = response["payload"] as? [String: Any] else {
+                self?.log("agents.list: no payload (keys: \(response.keys.sorted()))")
+                return
             }
-        }
-        // Also try "agent.list" which some gateway versions use
-        sendRequest(method: "agent.list") { [weak self] response in
-            let payload = response["payload"] as? [String: Any]
-            if let payload {
-                self?.log("agent.list response keys: \(payload.keys.sorted())")
-                self?.parseAgents(payload)
-            }
+            self?.log("agents.list response keys: \(payload.keys.sorted())")
+            self?.parseAgents(payload)
         }
     }
 
     private func parseAgents(_ payload: [String: Any]) {
         var parsed: [GatewayAgent] = []
 
-        // Format 1: { agents: [{ id, name }] }
+        // Official format: { agents: [{ id, name?, identity?: { name?, emoji?, avatar?, avatarUrl? } }] }
         if let agentsList = payload["agents"] as? [[String: Any]] {
             for a in agentsList {
                 if let id = a["id"] as? String {
-                    let name = a["name"] as? String ?? a["label"] as? String ?? id
+                    // Prefer identity.name > name > id
+                    let identity = a["identity"] as? [String: Any]
+                    let name = identity?["name"] as? String
+                        ?? a["name"] as? String
+                        ?? id
                     parsed.append(GatewayAgent(id: id, name: name))
-                }
-            }
-        }
-        // Format 2: { id, name } — single agent
-        else if let id = payload["id"] as? String {
-            let name = payload["name"] as? String ?? id
-            parsed.append(GatewayAgent(id: id, name: name))
-        }
-        // Format 3: { config: { agents: { "id": { name: "..." } } } }
-        else if let config = payload["config"] as? [String: Any],
-                let agents = config["agents"] as? [String: [String: Any]] {
-            for (id, info) in agents {
-                let name = info["name"] as? String ?? info["label"] as? String ?? id
-                parsed.append(GatewayAgent(id: id, name: name))
-            }
-        }
-        // Format 4: dict of agents keyed by ID at top level
-        // { "cyberclaw": { "name": "CyberClaw", ... }, "elliot": { ... } }
-        else {
-            for (key, value) in payload {
-                if let info = value as? [String: Any],
-                   info["name"] != nil || info["label"] != nil || info["model"] != nil {
-                    let name = info["name"] as? String ?? info["label"] as? String ?? key
-                    parsed.append(GatewayAgent(id: key, name: name))
                 }
             }
         }
 
         if !parsed.isEmpty {
+            // Store defaultId for session routing
+            let defaultId = payload["defaultId"] as? String
             DispatchQueue.main.async {
-                self.agents = parsed.sorted { $0.name < $1.name }
+                self.agents = parsed.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
                 self.log("Agents (\(parsed.count)): \(parsed.map { $0.name }.joined(separator: ", "))")
+                // If no target session key is persisted, use the default agent
+                if let defaultId, self.targetSessionKey == "main" || self.targetSessionKey.isEmpty {
+                    self.targetSessionKey = defaultId
+                }
             }
         } else {
             log("parseAgents: no agents found in keys \(payload.keys.sorted())")
