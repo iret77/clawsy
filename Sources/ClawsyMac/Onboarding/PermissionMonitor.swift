@@ -23,10 +23,10 @@ public enum ClawsyPermission: String, CaseIterable, Identifiable {
 
     public var icon: String {
         switch self {
-        case .screenRecording: return "camera.viewfinder"
-        case .camera: return "camera.fill"
-        case .accessibility: return "accessibility"
-        case .notifications: return "bell.badge.fill"
+        case .screenRecording: return "display"
+        case .camera: return "camera"
+        case .accessibility: return "hand.raised"
+        case .notifications: return "bell"
         }
     }
 
