@@ -1,31 +1,31 @@
 import SwiftUI
 
-/// Compact permission banner for the main menu popover.
-/// Each row: icon + title + short description + action button.
-/// Camera/Notifications get "Grant" (native dialog), others get "Settings" (deep-link).
+/// Permission banner for the main menu popover.
+/// Icon + title/description stacked + action button per row.
+/// Camera/Notifications: "Grant" (native dialog). Others: "Settings" (deep-link).
 struct PermissionBannerView: View {
     @ObservedObject var permissionMonitor: PermissionMonitor
 
     var body: some View {
         let missing = permissionMonitor.missingRequired
 
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
             ForEach(missing) { perm in
                 HStack(spacing: 8) {
                     Image(systemName: perm.icon)
-                        .font(.system(size: 12))
+                        .font(.system(size: 13))
                         .foregroundColor(.orange)
-                        .frame(width: 18)
+                        .frame(width: 20)
 
-                    Text(perm.displayName)
-                        .font(ClawsyTheme.Font.bannerTitle)
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(perm.displayName)
+                            .font(ClawsyTheme.Font.bannerTitle)
+                            .foregroundColor(.primary)
 
-                    Text(perm.description)
-                        .font(ClawsyTheme.Font.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
+                        Text(perm.description)
+                            .font(ClawsyTheme.Font.caption)
+                            .foregroundColor(.secondary)
+                    }
 
                     Spacer(minLength: 4)
 
@@ -34,13 +34,13 @@ struct PermissionBannerView: View {
                             permissionMonitor.requestPermission(perm)
                         }
                         .buttonStyle(.borderedProminent)
-                        .controlSize(.mini)
+                        .controlSize(.small)
                     } else {
                         Button(NSLocalizedString("PERM_BANNER_OPEN_SETTINGS", bundle: .clawsy, comment: "")) {
                             permissionMonitor.openSettings(for: perm)
                         }
                         .buttonStyle(.bordered)
-                        .controlSize(.mini)
+                        .controlSize(.small)
                     }
                 }
             }
