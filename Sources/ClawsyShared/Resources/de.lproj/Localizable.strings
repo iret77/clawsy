@@ -443,9 +443,13 @@
 "PERM_REQUIRED" = "Erforderlich";
 "PERM_GRANT" = "Erlauben";
 "PERM_BANNER_SCREEN_RECORDING_TITLE" = "Bildschirmaufnahme";
-"PERM_BANNER_SCREEN_RECORDING_DESC" = "Wird benötigt, um Screenshots aufzunehmen und mit Agents zu teilen.";
+"PERM_BANNER_SCREEN_RECORDING_DESC" = "Screenshots aufnehmen und mit Agents teilen.";
+"PERM_BANNER_CAMERA_TITLE" = "Kamera";
+"PERM_BANNER_CAMERA_DESC" = "Fotos mit deiner Mac- oder iPhone-Kamera aufnehmen und senden.";
 "PERM_BANNER_ACCESSIBILITY_TITLE" = "Tastaturkurzbefehle";
-"PERM_BANNER_ACCESSIBILITY_DESC" = "Wird benötigt, damit globale Kurzbefehle wie ⌘⇧K (Quick Send) überall funktionieren.";
+"PERM_BANNER_ACCESSIBILITY_DESC" = "Globale Kurzbefehle wie ⌘⇧K (Quick Send) funktionieren überall.";
+"PERM_BANNER_NOTIFICATIONS_TITLE" = "Mitteilungen";
+"PERM_BANNER_NOTIFICATIONS_DESC" = "Benachrichtigungen erhalten, wenn Agents antworten.";
 "PERM_BANNER_OPEN_SETTINGS" = "Einstellungen";
 "PERM_MISSING_SCREENSHOT" = "Bildschirmaufnahme wird benötigt — öffne Einstellungen …";
 "PERM_MISSING_HOTKEY" = "Tastaturkurzbefehle werden benötigt — öffne Einstellungen …";

@@ -2,6 +2,7 @@ import Foundation
 import AVFoundation
 import UserNotifications
 import os.log
+import ClawsyShared
 
 #if canImport(AppKit)
 import AppKit
@@ -31,11 +32,16 @@ public enum ClawsyPermission: String, CaseIterable, Identifiable {
 
     public var description: String {
         switch self {
-        case .screenRecording: return "Required for capturing screenshots to share with your agent."
-        case .camera: return "Required for taking photos with your Mac or iPhone camera."
-        case .accessibility: return "Required for global keyboard shortcuts (⌘⇧K, etc.)."
-        case .notifications: return "Allows Clawsy to notify you about agent activity."
+        case .screenRecording: return NSLocalizedString("PERM_BANNER_SCREEN_RECORDING_DESC", bundle: .clawsy, comment: "")
+        case .camera: return NSLocalizedString("PERM_BANNER_CAMERA_DESC", bundle: .clawsy, comment: "")
+        case .accessibility: return NSLocalizedString("PERM_BANNER_ACCESSIBILITY_DESC", bundle: .clawsy, comment: "")
+        case .notifications: return NSLocalizedString("PERM_BANNER_NOTIFICATIONS_DESC", bundle: .clawsy, comment: "")
         }
+    }
+
+    /// User-facing display name — not the macOS technical label.
+    public var displayName: String {
+        return NSLocalizedString("PERM_BANNER_\(settingsKey)_TITLE", bundle: .clawsy, comment: "")
     }
 
     /// Stable key for building localization string IDs (e.g. "PERM_BANNER_SCREEN_RECORDING_TITLE").

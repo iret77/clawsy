@@ -461,25 +461,15 @@ struct PermissionRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: permission.icon)
-                .font(ClawsyTheme.Font.menuItem)
-                .foregroundColor(isGranted ? .green : .orange)
-                .frame(width: 24)
+            Image(systemName: isGranted ? "checkmark.circle.fill" : permission.icon)
+                .font(.system(size: 20))
+                .foregroundColor(isGranted ? .green : .secondary)
+                .frame(width: 28)
 
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
-                    Text(permission.rawValue)
-                        .font(ClawsyTheme.Font.sectionHeader)
-                    if permission.isRequired {
-                        Text(l10n: "PERM_REQUIRED")
-                            .font(ClawsyTheme.Font.caption)
-                            .foregroundColor(.orange)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(Color.orange.opacity(0.15))
-                            .cornerRadius(3)
-                    }
-                }
+                Text(permission.displayName)
+                    .font(ClawsyTheme.Font.sectionHeader)
+                    .foregroundColor(.primary)
                 Text(permission.description)
                     .font(ClawsyTheme.Font.caption)
                     .foregroundColor(.secondary)
@@ -488,26 +478,15 @@ struct PermissionRow: View {
 
             Spacer()
 
-            if isGranted {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
-                    .font(.system(size: 18))
-            } else {
-                Button(NSLocalizedString("PERM_GRANT", bundle: .clawsy, comment: "")) { onRequest() }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-
-                Button(action: onOpenSettings) {
-                    Image(systemName: "gear")
-                        .font(ClawsyTheme.Font.bannerBody)
+            if !isGranted {
+                Button(NSLocalizedString("PERM_BANNER_OPEN_SETTINGS", bundle: .clawsy, comment: "")) {
+                    onOpenSettings()
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
-                .help("Open System Settings")
             }
         }
-        .padding(10)
-        .background(Color.primary.opacity(isGranted ? 0.02 : 0.04))
-        .cornerRadius(ClawsyTheme.Spacing.cornerRadius)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
     }
 }
