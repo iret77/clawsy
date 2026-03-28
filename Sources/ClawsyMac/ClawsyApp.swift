@@ -473,18 +473,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private func openResponsePanel(_ response: AgentResponse) {
         responseWindow?.close()
 
-        let panel = NSPanel(
+        let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 420, height: 320),
-            styleMask: [.titled, .closable, .resizable, .utilityWindow, .nonactivatingPanel],
+            styleMask: [.titled, .closable, .resizable, .miniaturizable],
             backing: .buffered, defer: false)
-        panel.title = "\(response.agentName) — \(response.formattedTime)"
-        panel.center()
-        panel.setFrameAutosaveName("ai.clawsy.ResponsePanel")
-        panel.isReleasedWhenClosed = false
-        panel.level = .floating
-        panel.minSize = NSSize(width: 320, height: 180)
-        panel.isFloatingPanel = true
-        panel.becomesKeyOnlyIfNeeded = true
+        window.title = "\(response.agentName) — \(response.formattedTime)"
+        window.center()
+        window.setFrameAutosaveName("ai.clawsy.ResponsePanel")
+        window.isReleasedWhenClosed = false
+        window.level = .floating
+        window.minSize = NSSize(width: 320, height: 180)
 
         let panelView = ResponsePanelView(
             response: response,
@@ -498,9 +496,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             }
         )
 
-        panel.contentView = NSHostingView(rootView: panelView)
-        self.responseWindow = panel
-        panel.makeKeyAndOrderFront(nil)
+        window.contentView = NSHostingView(rootView: panelView)
+        self.responseWindow = window
+        window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
