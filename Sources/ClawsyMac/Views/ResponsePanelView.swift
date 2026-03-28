@@ -18,6 +18,75 @@ struct AgentResponse: Identifiable {
     }
 }
 
+// MARK: - Last Response Card (Menu)
+
+/// Compact response preview card for the main menu. Shows agent name, time, and a
+/// 2-line message preview. Tap to re-open the full response toast.
+/// Styled as an inline card matching Clawsy's design language.
+struct LastResponseCard: View {
+    let response: AgentResponse
+    var onTap: () -> Void
+
+    @State private var isHovering = false
+
+    private var messagePreview: String {
+        let cleaned = response.message
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleaned.count > 80 {
+            return String(cleaned.prefix(77)) + "…"
+        }
+        return cleaned
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Image(systemName: "bubble.left.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(.accentColor)
+
+                    Text(response.agentName)
+                        .font(ClawsyTheme.Font.headerHostName)
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+
+                    Spacer()
+
+                    Text(response.formattedTime)
+                        .font(ClawsyTheme.Font.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Text(messagePreview)
+                    .font(ClawsyTheme.Font.bannerBody)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: ClawsyTheme.Spacing.cornerRadius)
+                    .fill(isHovering ? ClawsyTheme.Colors.hoverBackground : Color.primary.opacity(0.03))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: ClawsyTheme.Spacing.cornerRadius)
+                    .stroke(Color.primary.opacity(0.06), lineWidth: 0.5)
+            )
+        }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+        .onHover { hover in
+            withAnimation(ClawsyTheme.Animation.hover) {
+                isHovering = hover
+            }
+        }
+    }
+}
+
 // MARK: - Response Toast View
 
 /// Clawsy-native agent response toast. Styled identically to the main popover —
