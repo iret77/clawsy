@@ -395,11 +395,12 @@ struct ContentView: View {
 
             // screen.capture
             router.register("screen.capture") { params, completion in
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     // Check Screen Recording permission before attempting capture
-                    PermissionMonitor.shared.refreshAll()
-                    if PermissionMonitor.shared.status[.screenRecording] != true {
-                        PermissionMonitor.shared.openSettings(for: .screenRecording)
+                    let monitor = PermissionMonitor.shared
+                    monitor.refreshAll()
+                    if monitor.status[.screenRecording] != true {
+                        monitor.openSettings(for: .screenRecording)
                         completion(.error(code: "permission_denied", message: "Screen Recording permission not granted"))
                         return
                     }

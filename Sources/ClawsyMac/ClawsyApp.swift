@@ -232,7 +232,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         registerGlobalHotkeyMonitor()
 
         // Initial permission check — refreshes shared monitor so banners show immediately
-        PermissionMonitor.shared.refreshAll()
+        Task { @MainActor in PermissionMonitor.shared.refreshAll() }
 
         // Auto-Check for Updates
         UpdateManager.shared.checkForUpdates(silent: true)
@@ -332,13 +332,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             return
         }
 
-        // Check Screen Recording permission (refresh first — popover may be closed, polling off)
-        let monitor = PermissionMonitor.shared
-        monitor.refreshAll()
-        if monitor.status[.screenRecording] != true {
+        // Check Screen Recording permission inline (no @MainActor dependency)
+        if !Self.checkScreenRecordingPermission() {
             logAction("Screenshot skipped — Screen Recording permission missing")
             showStatusHUD(icon: "lock.shield", title: "PERM_MISSING_SCREENSHOT")
-            monitor.openSettings(for: .screenRecording)
+            DispatchQueue.main.async {
+                PermissionMonitor.shared.openSettings(for: .screenRecording)
+            }
             return
         }
 
@@ -383,6 +383,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                 self.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT")
             }
         }
+    }
+
+    // MARK: - Permission Check (nonisolated)
+
+    /// Check Screen Recording without requiring @MainActor context.
+    /// Uses the same CGWindowList approach as PermissionMonitor.
+    private static func checkScreenRecordingPermission() -> Bool {
+        guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] else {
+            return false
+        }
+        let myPID = ProcessInfo.processInfo.processIdentifier
+        return windowList.contains { ($0[kCGWindowOwnerPID as String] as? Int32) != myPID }
     }
 
     // MARK: - Debug Action Logging
