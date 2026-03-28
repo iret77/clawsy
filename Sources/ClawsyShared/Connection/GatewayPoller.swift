@@ -98,7 +98,14 @@ public final class GatewayPoller: ObservableObject {
                 return true
             }
 
-            log("chat.\(state) sessionKey=\(sessionKey) payloadKeys=\(payload?.keys.sorted() ?? [])")
+            // Only show responses for our target session (QuickSend), not cron or other sessions
+            let isRelevant = sessionKey.contains("main") || sessionKey == targetSessionKey
+            if !isRelevant {
+                // Silently ignore responses from cron jobs, other channels, etc.
+                return true
+            }
+
+            log("chat.\(state) sessionKey=\(sessionKey)")
 
             switch state {
             case "delta":
@@ -154,7 +161,7 @@ public final class GatewayPoller: ObservableObject {
             }
             return true
 
-        case "tick", "agent", "health", "status", "presence":
+        case "tick", "agent", "health", "status", "presence", "cron":
             // Known gateway events — no action needed
             return true
 
