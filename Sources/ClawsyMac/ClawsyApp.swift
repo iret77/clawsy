@@ -548,7 +548,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         content.body = response.message.count > 200
             ? String(response.message.prefix(197)) + "…"
             : response.message
-        content.sound = .default
+        // No sound — toast is the primary feedback; notification is silent history in Notification Center
         content.categoryIdentifier = "AGENT_RESPONSE"
         content.userInfo = [
             "agentName": response.agentName,
@@ -566,11 +566,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     // MARK: - UNUserNotificationCenterDelegate
 
-    /// Show notifications even when app is in foreground (banner style)
+    /// Notification goes to Notification Center only — no banner (toast is the primary UI).
+    /// The entry stays in Notification Center so the user can find it later.
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        completionHandler([.banner, .sound])
+        completionHandler([.list])
     }
 
     /// User clicked a notification — open the response panel
