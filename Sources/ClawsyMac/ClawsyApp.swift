@@ -446,52 +446,96 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
     }
 
-    // MARK: - Agent Response Panel
+    // MARK: - Agent Response Toast
 
     func showAgentResponse(_ response: AgentResponse) {
         DispatchQueue.main.async {
             self.pendingResponses[response.id.uuidString] = response
-
-            // Always open the response panel (reliable, immediate)
-            self.openResponsePanel(response)
-
-            // Also attempt macOS notification (best-effort — may not show for ad-hoc signed apps)
+            self.showResponseToast(response)
             self.showResponseNotification(response)
-
             self.logAction("Agent response: \(response.agentName) (\(response.message.count) chars)")
         }
     }
 
-    private func openResponsePanel(_ response: AgentResponse) {
+    /// Shows a Clawsy-native response toast anchored to the menu bar status item.
+    /// Styled like the main popover — vibrancy, ClawsyTheme, non-intrusive.
+    private func showResponseToast(_ response: AgentResponse) {
         responseWindow?.close()
+        responseWindow = nil
 
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 320),
-            styleMask: [.titled, .closable, .resizable, .miniaturizable],
-            backing: .buffered, defer: false)
-        window.title = "\(response.agentName) — \(response.formattedTime)"
-        window.center()
-        window.setFrameAutosaveName("ai.clawsy.ResponsePanel")
-        window.isReleasedWhenClosed = false
-        window.level = .floating
-        window.minSize = NSSize(width: 320, height: 180)
+        guard let button = statusBarItem?.button else { return }
 
-        let panelView = ResponsePanelView(
+        let toastView = ResponseToastView(
             response: response,
             onDismiss: { [weak self] in
-                self?.responseWindow?.close()
-                self?.responseWindow = nil
+                self?.dismissResponseToast()
             },
             onReply: { [weak self] replyText in
                 guard let hm = self?.hostManager, let poller = hm.activePoller else { return }
                 poller.sendChatMessage(replyText, sessionKey: response.sessionKey)
+                self?.dismissResponseToast()
+            },
+            onCopy: {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(response.message, forType: .string)
             }
         )
 
-        window.contentView = NSHostingView(rootView: panelView)
+        let hostView = NSHostingView(rootView: toastView)
+        hostView.setFrameSize(hostView.fittingSize)
+
+        // Position below the status bar item (like the main popover)
+        let window = NSWindow(
+            contentRect: NSRect(origin: .zero, size: hostView.fittingSize),
+            styleMask: [.borderless, .fullSizeContentView],
+            backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.level = .statusBar
+        window.backgroundColor = .clear
+        window.isOpaque = false
+        window.hasShadow = false  // Toast view has its own shadow
+        window.contentView = hostView
+
+        // Anchor to status bar button
+        if let buttonWindow = button.window {
+            let buttonFrame = button.convert(button.bounds, to: nil)
+            let screenFrame = buttonWindow.convertToScreen(buttonFrame)
+            let x = screenFrame.midX - hostView.fittingSize.width / 2
+            let y = screenFrame.minY - hostView.fittingSize.height - 4
+            window.setFrameOrigin(NSPoint(x: x, y: y))
+        } else {
+            window.center()
+        }
+
+        // Fade in
+        window.alphaValue = 0
         self.responseWindow = window
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        window.orderFrontRegardless()
+
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.2
+            window.animator().alphaValue = 1
+        }
+
+        // Auto-dismiss after 12 seconds (enough time to read)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 12) { [weak self] in
+            // Only auto-dismiss if still showing the same response
+            guard self?.responseWindow === window else { return }
+            self?.dismissResponseToast()
+        }
+    }
+
+    private func dismissResponseToast() {
+        guard let window = responseWindow else { return }
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.3
+            window.animator().alphaValue = 0
+        } completionHandler: { [weak self] in
+            window.close()
+            if self?.responseWindow === window {
+                self?.responseWindow = nil
+            }
+        }
     }
 
     private func showResponseNotification(_ response: AgentResponse) {
@@ -534,7 +578,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
         // Try stored response first, fall back to userInfo
         if let agentResponse = pendingResponses.removeValue(forKey: notificationId) {
-            openResponsePanel(agentResponse)
+            showResponseToast(agentResponse)
         } else if let agentName = userInfo["agentName"] as? String,
                   let message = userInfo["message"] as? String,
                   let sessionKey = userInfo["sessionKey"] as? String {
@@ -544,7 +588,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                 timestamp: Date(),
                 sessionKey: sessionKey
             )
-            openResponsePanel(agentResponse)
+            showResponseToast(agentResponse)
         }
 
         completionHandler()

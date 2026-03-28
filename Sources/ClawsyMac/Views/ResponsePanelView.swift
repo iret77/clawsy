@@ -18,44 +18,87 @@ struct AgentResponse: Identifiable {
     }
 }
 
-// MARK: - Response Panel View
+// MARK: - Response Toast View
 
-/// Displays an agent response in a macOS utility panel.
-/// Text is fully selectable and copyable via NSTextView.
-struct ResponsePanelView: View {
+/// Clawsy-native agent response toast. Styled identically to the main popover —
+/// vibrancy material, ClawsyTheme fonts, compact and non-intrusive.
+/// Appears anchored to the menu bar item, not a random desktop window.
+struct ResponseToastView: View {
     let response: AgentResponse
     var onDismiss: () -> Void
     var onReply: ((String) -> Void)?
+    var onCopy: () -> Void
 
     @State private var replyText = ""
     @State private var isReplying = false
     @FocusState private var replyFocused: Bool
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Message body — selectable text
-            SelectableText(response.message)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(12)
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack(spacing: 8) {
+                Image(systemName: "bubble.left.fill")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.accentColor)
+
+                Text(response.agentName)
+                    .font(ClawsyTheme.Font.formLabel)
+                    .foregroundColor(.primary)
+
+                Text(response.formattedTime)
+                    .font(ClawsyTheme.Font.caption)
+                    .foregroundColor(.secondary)
+
+                Spacer()
+
+                Button(action: onCopy) {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary.opacity(0.5))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 10)
+            .padding(.bottom, 6)
+
+            // Message body
+            ScrollView {
+                Text(response.message)
+                    .font(.system(size: 12.5))
+                    .foregroundColor(.primary)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 4)
+            }
+            .frame(maxHeight: 220)
 
             // Reply bar
             if onReply != nil {
-                Divider()
+                Divider().opacity(0.2).padding(.horizontal, 8)
 
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     if isReplying {
                         TextField(
                             NSLocalizedString("QUICK_SEND_PLACEHOLDER", bundle: .clawsy, comment: ""),
                             text: $replyText
                         )
                         .textFieldStyle(.roundedBorder)
-                        .font(.system(size: 13))
+                        .font(.system(size: 12))
                         .focused($replyFocused)
                         .onSubmit(sendReply)
 
                         Button(action: { isReplying = false; replyText = "" }) {
-                            Text(NSLocalizedString("CANCEL", bundle: .clawsy, comment: ""))
-                                .font(.system(size: 11))
+                            Image(systemName: "xmark")
+                                .font(.system(size: 10))
                                 .foregroundColor(.secondary)
                         }
                         .buttonStyle(.plain)
@@ -64,34 +107,33 @@ struct ResponsePanelView: View {
                             isReplying = true
                             replyFocused = true
                         }) {
-                            HStack(spacing: 4) {
+                            HStack(spacing: 3) {
                                 Image(systemName: "arrowshape.turn.up.left")
-                                    .font(.system(size: 11))
+                                    .font(.system(size: 10))
                                 Text(NSLocalizedString("RESPONSE_REPLY", bundle: .clawsy, comment: ""))
-                                    .font(.system(size: 12))
+                                    .font(ClawsyTheme.Font.caption)
                             }
                             .foregroundColor(.accentColor)
                         }
                         .buttonStyle(.plain)
-
-                        Spacer()
-
-                        Button(action: copyToClipboard) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "doc.on.doc")
-                                    .font(.system(size: 11))
-                                Text(NSLocalizedString("COPY_ALL", bundle: .clawsy, comment: ""))
-                                    .font(.system(size: 12))
-                            }
-                            .foregroundColor(.secondary)
-                        }
-                        .buttonStyle(.plain)
                     }
+
+                    Spacer()
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
             }
         }
+        .frame(width: 300)
+        .background(
+            VisualEffectView(material: .popover, blendingMode: .behindWindow)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.2), radius: 8, y: 3)
     }
 
     private func sendReply() {
@@ -99,53 +141,5 @@ struct ResponsePanelView: View {
         onReply?(replyText)
         replyText = ""
         isReplying = false
-    }
-
-    private func copyToClipboard() {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(response.message, forType: .string)
-    }
-}
-
-// MARK: - Selectable Text (NSTextView wrapper)
-
-/// NSTextView-backed text that supports native text selection and ⌘C.
-struct SelectableText: NSViewRepresentable {
-    let text: String
-
-    init(_ text: String) {
-        self.text = text
-    }
-
-    func makeNSView(context: Context) -> NSScrollView {
-        let textView = NSTextView()
-        textView.isEditable = false
-        textView.isSelectable = true
-        textView.isRichText = false
-        textView.drawsBackground = false
-        textView.font = NSFont.systemFont(ofSize: 13, weight: .regular)
-        textView.textColor = NSColor.labelColor
-        textView.textContainerInset = NSSize(width: 0, height: 0)
-        textView.isVerticallyResizable = true
-        textView.isHorizontallyResizable = false
-        textView.textContainer?.widthTracksTextView = true
-        textView.textContainer?.lineFragmentPadding = 0
-        textView.allowsUndo = false
-
-        let scrollView = NSScrollView()
-        scrollView.hasVerticalScroller = true
-        scrollView.hasHorizontalScroller = false
-        scrollView.drawsBackground = false
-        scrollView.documentView = textView
-        scrollView.autohidesScrollers = true
-
-        return scrollView
-    }
-
-    func updateNSView(_ scrollView: NSScrollView, context: Context) {
-        guard let textView = scrollView.documentView as? NSTextView else { return }
-        if textView.string != text {
-            textView.string = text
-        }
     }
 }
