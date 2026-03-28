@@ -49,22 +49,56 @@ public enum ClawsyPermission: String, CaseIterable, Identifiable {
 
 // MARK: - Permission Monitor
 
-/// Polls macOS permission status every second (like the official OpenClaw app).
-/// Publishes a dictionary of capability → granted status.
+/// Reference-counted permission monitor. Polls macOS TCC status at 1 Hz only
+/// while at least one consumer is registered — saves energy when nobody is watching.
+///
+/// After a permission request, performs triple delayed re-checks at 0.3s, 0.9s, and
+/// 1.8s to catch TCC propagation delays — eliminates the need for app restart that
+/// macOS developers commonly encounter with ad-hoc signed builds.
+///
+/// Pattern adapted from the official OpenClaw Mac app's PermissionManager.
 @MainActor
 public final class PermissionMonitor: ObservableObject {
 
+    // MARK: - Shared Instance
+
+    static let shared = PermissionMonitor()
+
+    // MARK: - Published State
+
     @Published public var status: [ClawsyPermission: Bool] = [:]
 
+    // MARK: - Reference-counted Polling
+
+    private var consumerCount = 0
     private var timer: Timer?
     private let logger = OSLog(subsystem: "ai.clawsy", category: "Permissions")
 
-    public init() {
+    /// Delays for re-check after requesting a permission (catches TCC propagation).
+    private static let reCheckDelays: [TimeInterval] = [0.3, 0.9, 1.8]
+
+    private init() {
         refreshAll()
     }
 
-    /// Start live polling (call when permissions page is visible).
-    public func startPolling() {
+    /// Register a consumer that needs live status updates. Timer starts on first
+    /// consumer and stops when the last one unregisters.
+    public func register() {
+        consumerCount += 1
+        if consumerCount == 1 { startPolling() }
+    }
+
+    /// Unregister a consumer. Timer stops when no consumers remain.
+    public func unregister() {
+        if consumerCount <= 0 {
+            os_log("PermissionMonitor: unregister() called with no registered consumers", log: logger, type: .error)
+            return
+        }
+        consumerCount -= 1
+        if consumerCount == 0 { stopPolling() }
+    }
+
+    private func startPolling() {
         stopPolling()
         refreshAll()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
@@ -72,8 +106,7 @@ public final class PermissionMonitor: ObservableObject {
         }
     }
 
-    /// Stop live polling (call when leaving permissions page).
-    public func stopPolling() {
+    private func stopPolling() {
         timer?.invalidate()
         timer = nil
     }
@@ -93,6 +126,11 @@ public final class PermissionMonitor: ObservableObject {
     /// All permissions granted (including optional)?
     public var allGranted: Bool {
         ClawsyPermission.allCases.allSatisfy { status[$0] == true }
+    }
+
+    /// Missing required permissions.
+    public var missingRequired: [ClawsyPermission] {
+        ClawsyPermission.allCases.filter { $0.isRequired && status[$0] != true }
     }
 
     // MARK: - Check
@@ -129,9 +167,16 @@ public final class PermissionMonitor: ObservableObject {
         return windowList.contains { ($0[kCGWindowOwnerPID as String] as? Int32) != myPID }
     }
 
-    // MARK: - Request / Open Settings
+    // MARK: - Request + Triple Delayed Re-check
+
+    /// Request a permission and schedule triple delayed re-checks to detect
+    /// TCC propagation without requiring an app restart.
+    public func requestAndMonitor(_ perm: ClawsyPermission) {
+        requestPermission(perm)
+    }
 
     /// Trigger the system permission prompt or open Settings if already denied.
+    /// Automatically schedules triple delayed re-checks for TCC propagation.
     public func requestPermission(_ perm: ClawsyPermission) {
         switch perm {
         case .screenRecording:
@@ -149,6 +194,17 @@ public final class PermissionMonitor: ObservableObject {
         case .notifications:
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in
                 Task { @MainActor in self.refreshAll() }
+            }
+        }
+
+        scheduleDelayedReChecks()
+    }
+
+    /// Schedule re-checks at 0.3s, 0.9s, and 1.8s to catch TCC propagation delays.
+    private func scheduleDelayedReChecks() {
+        for delay in Self.reCheckDelays {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.refreshAll()
             }
         }
     }
@@ -169,5 +225,8 @@ public final class PermissionMonitor: ObservableObject {
         if let url = URL(string: urlString) {
             NSWorkspace.shared.open(url)
         }
+
+        // Re-check after user may have toggled permission in Settings
+        scheduleDelayedReChecks()
     }
 }

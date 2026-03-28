@@ -386,14 +386,14 @@ public final class GatewayPoller: ObservableObject {
         }
 
         if !parsed.isEmpty {
-            // Store defaultId for session routing
             let defaultId = payload["defaultId"] as? String
             DispatchQueue.main.async {
                 self.agents = parsed.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
                 self.log("Agents (\(parsed.count)): \(parsed.map { $0.name }.joined(separator: ", "))")
-                // If no target session key is persisted, use the default agent
+                // Auto-select default agent only on first launch (no user selection persisted yet)
                 if let defaultId, self.targetSessionKey == "main" || self.targetSessionKey.isEmpty {
-                    self.targetSessionKey = defaultId
+                    self.targetSessionKey = "agent:\(defaultId):main"
+                    self.log("Auto-selected default agent: \(defaultId)")
                 }
             }
         } else {

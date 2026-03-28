@@ -442,6 +442,11 @@
 "PERM_NOTIFICATIONS_DESC" = "Ermöglicht Benachrichtigungen über Agent-Aktivitäten.";
 "PERM_REQUIRED" = "Erforderlich";
 "PERM_GRANT" = "Erlauben";
+"PERM_BANNER_TITLE" = "Berechtigungen erforderlich";
+"PERM_BANNER_DESC_SINGLE" = "%@ wird benötigt, damit Clawsy richtig funktioniert. Tippe, um die Systemeinstellungen zu öffnen.";
+"PERM_BANNER_DESC_MULTI" = "%@ werden benötigt, damit Clawsy richtig funktioniert. Tippe, um die Systemeinstellungen zu öffnen.";
+"PERM_MISSING_SCREENSHOT" = "Bildschirmaufnahme-Berechtigung wird für Screenshots benötigt. Öffne die Systemeinstellungen, um den Zugriff zu erlauben.";
+"PERM_MISSING_HOTKEY" = "Bedienungshilfen-Berechtigung wird für globale Tastenkürzel benötigt. Öffne die Systemeinstellungen, um den Zugriff zu erlauben.";
 
 // Connection Failure Banner
 "FAILURE_RETRY" = "Erneut versuchen";

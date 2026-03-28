@@ -5,6 +5,7 @@ import ClawsyShared
 struct ContentView: View {
     @StateObject private var hostManager = HostManager()
     @EnvironmentObject var appDelegate: AppDelegate
+    @ObservedObject private var permissionMonitor = PermissionMonitor.shared
 
     @State private var showingSettings = false
     @State private var showingLog = false
@@ -33,6 +34,7 @@ struct ContentView: View {
             // Banners (animated)
             bannerSection
                 .animation(ClawsyTheme.Animation.bannerSlide, value: hostManager.state)
+                .animation(ClawsyTheme.Animation.bannerSlide, value: permissionMonitor.allRequiredGranted)
 
             Divider().clawsy()
 
@@ -92,12 +94,16 @@ struct ContentView: View {
             }
             setupFileWatcher()
             appDelegate.updateMenuBarIcon()
+            permissionMonitor.register()
 
             ActionBridge.observe {
                 if let action = ActionBridge.consumeAction() {
                     handleFinderSyncAction(action)
                 }
             }
+        }
+        .onDisappear {
+            permissionMonitor.unregister()
         }
         .onChange(of: hostManager.activeHostId) { _ in
             appDelegate.updateMenuBarIcon()
@@ -134,6 +140,14 @@ struct ContentView: View {
             .transition(.move(edge: .top).combined(with: .opacity))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
+        }
+
+        // Permission banner — shown when required permissions are missing
+        if !permissionMonitor.allRequiredGranted {
+            PermissionBannerView(permissionMonitor: permissionMonitor)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
         }
     }
 
@@ -382,6 +396,13 @@ struct ContentView: View {
             // screen.capture
             router.register("screen.capture") { params, completion in
                 DispatchQueue.main.async {
+                    // Check Screen Recording permission before attempting capture
+                    PermissionMonitor.shared.refreshAll()
+                    if PermissionMonitor.shared.status[.screenRecording] != true {
+                        PermissionMonitor.shared.openSettings(for: .screenRecording)
+                        completion(.error(code: "permission_denied", message: "Screen Recording permission not granted"))
+                        return
+                    }
                     let interactive = params["interactive"] as? Bool ?? false
                     self.appDelegate.showScreenshotRequest(
                         requestedInteractive: interactive,

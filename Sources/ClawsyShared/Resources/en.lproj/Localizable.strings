@@ -441,6 +441,11 @@
 "PERM_NOTIFICATIONS_DESC" = "Allows Clawsy to notify you about agent activity.";
 "PERM_REQUIRED" = "Required";
 "PERM_GRANT" = "Grant";
+"PERM_BANNER_TITLE" = "Permissions Required";
+"PERM_BANNER_DESC_SINGLE" = "%@ permission is needed for Clawsy to work properly. Tap to open System Settings.";
+"PERM_BANNER_DESC_MULTI" = "%@ permissions are needed for Clawsy to work properly. Tap to open System Settings.";
+"PERM_MISSING_SCREENSHOT" = "Screen Recording permission is required for screenshots. Open System Settings to grant access.";
+"PERM_MISSING_HOTKEY" = "Accessibility permission is required for global shortcuts. Open System Settings to grant access.";
 
 // Connection Failure Banner
 "FAILURE_RETRY" = "Retry";

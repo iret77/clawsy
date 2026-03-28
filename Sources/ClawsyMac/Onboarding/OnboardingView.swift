@@ -12,7 +12,7 @@ struct OnboardingView: View {
     var onImportSetupCode: (String) -> Bool
 
     @State private var currentPage: OnboardingPage = .welcome
-    @StateObject private var permissionMonitor = PermissionMonitor()
+    @ObservedObject private var permissionMonitor = PermissionMonitor.shared
     @StateObject private var hostManager = HostManager()
 
     // Connection fields
@@ -289,7 +289,7 @@ struct OnboardingView: View {
                         PermissionRow(
                             permission: perm,
                             isGranted: permissionMonitor.status[perm] ?? false,
-                            onRequest: { permissionMonitor.requestPermission(perm) },
+                            onRequest: { permissionMonitor.requestAndMonitor(perm) },
                             onOpenSettings: { permissionMonitor.openSettings(for: perm) }
                         )
                     }
@@ -306,8 +306,8 @@ struct OnboardingView: View {
 
             Spacer()
         }
-        .onAppear { permissionMonitor.startPolling() }
-        .onDisappear { permissionMonitor.stopPolling() }
+        .onAppear { permissionMonitor.register() }
+        .onDisappear { permissionMonitor.unregister() }
     }
 
     // MARK: - Page 3: Ready

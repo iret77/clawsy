@@ -231,6 +231,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
         registerGlobalHotkeyMonitor()
 
+        // Initial permission check — refreshes shared monitor so banners show immediately
+        PermissionMonitor.shared.refreshAll()
+
         // Auto-Check for Updates
         UpdateManager.shared.checkForUpdates(silent: true)
         UpdateManager.shared.startPeriodicChecks()
@@ -328,6 +331,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             logAction("Screenshot skipped — not connected")
             return
         }
+
+        // Check Screen Recording permission (refresh first — popover may be closed, polling off)
+        let monitor = PermissionMonitor.shared
+        monitor.refreshAll()
+        if monitor.status[.screenRecording] != true {
+            logAction("Screenshot skipped — Screen Recording permission missing")
+            showStatusHUD(icon: "lock.shield", title: "PERM_MISSING_SCREENSHOT")
+            monitor.openSettings(for: .screenRecording)
+            return
+        }
+
         if popover.isShown { popover.performClose(nil) }
         logAction("Screenshot capturing (interactive: \(interactive))")
         DispatchQueue.global(qos: .userInitiated).async {
