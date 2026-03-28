@@ -202,6 +202,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
         #endif
 
+        resetTCCIfSignatureChanged()
         installClawsyDocumentation()
         SharedConfig.resolveBookmark()
 
@@ -768,6 +769,34 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     func applicationWillResignActive(_ notification: Notification) {
         if popover.isShown { popover.performClose(nil) }
+    }
+
+    // MARK: - TCC Reset on Signature Change (ad-hoc builds)
+
+    /// Each ad-hoc build gets a new code signature. TCC binds permissions to
+    /// signature+bundleID, so old entries become stale and `AXIsProcessTrusted()`
+    /// returns false even though System Settings shows the toggle ON.
+    /// Detect binary change via modification date and reset stale TCC entries.
+    private func resetTCCIfSignatureChanged() {
+        guard let executableURL = Bundle.main.executableURL,
+              let attrs = try? FileManager.default.attributesOfItem(atPath: executableURL.path),
+              let modDate = attrs[.modificationDate] as? Date else { return }
+
+        let currentStamp = String(Int(modDate.timeIntervalSince1970))
+        let storedStamp = UserDefaults.standard.string(forKey: "lastBinaryStamp") ?? ""
+
+        if !storedStamp.isEmpty && storedStamp != currentStamp {
+            let bundleID = Bundle.main.bundleIdentifier ?? "ai.clawsy"
+            for service in ["Accessibility", "ScreenCapture"] {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+                process.arguments = ["reset", service, bundleID]
+                try? process.run()
+                process.waitUntilExit()
+            }
+        }
+
+        UserDefaults.standard.set(currentStamp, forKey: "lastBinaryStamp")
     }
 
     // MARK: - Documentation Install
