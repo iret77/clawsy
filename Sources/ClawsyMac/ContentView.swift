@@ -88,7 +88,6 @@ struct ContentView: View {
         .onAppear {
             appDelegate.hostManager = hostManager
             registerCommandHandlers()
-            registerResponseHandler()
             if !hostManager.profiles.isEmpty {
                 hostManager.connectAll()
             }
@@ -271,20 +270,6 @@ struct ContentView: View {
             hostManager.disconnectHost(id)
         } else {
             hostManager.connectHost(id)
-        }
-    }
-
-    // MARK: - Agent Response Handler
-
-    private func registerResponseHandler() {
-        hostManager.onAgentResponse = { [weak appDelegate] agentName, message, sessionKey in
-            let response = AgentResponse(
-                agentName: agentName,
-                message: message,
-                timestamp: Date(),
-                sessionKey: sessionKey
-            )
-            appDelegate?.showAgentResponse(response)
         }
     }
 

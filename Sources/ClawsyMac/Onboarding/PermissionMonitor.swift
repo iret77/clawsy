@@ -61,6 +61,16 @@ public enum ClawsyPermission: String, CaseIterable, Identifiable {
         case .camera, .notifications: return false
         }
     }
+
+    /// Whether macOS offers a native one-click grant dialog for this permission.
+    /// Camera and Notifications show Allow/Deny dialogs.
+    /// Accessibility and Screen Recording only offer "Open System Settings" — no direct grant.
+    public var hasNativeGrant: Bool {
+        switch self {
+        case .camera, .notifications: return true
+        case .screenRecording, .accessibility: return false
+        }
+    }
 }
 
 // MARK: - Permission Monitor

@@ -1,9 +1,10 @@
 import SwiftUI
 
 /// Inline banner for the main menu popover when required permissions are missing.
-/// Each missing permission gets its own row with a clear description and a single
-/// "Grant" button that triggers the native macOS permission dialog directly —
-/// no manual navigation to System Settings needed.
+/// Each permission row adapts its button to macOS capabilities:
+/// - Camera/Notifications: "Grant" triggers a native one-click Allow dialog
+/// - Accessibility/Screen Recording: "Open Settings" deep-links to the right pane
+///   (macOS does not offer one-click grant for these)
 struct PermissionBannerView: View {
     @ObservedObject var permissionMonitor: PermissionMonitor
 
@@ -31,11 +32,21 @@ struct PermissionBannerView: View {
 
                     Spacer()
 
-                    Button(NSLocalizedString("PERM_GRANT", bundle: .clawsy, comment: "")) {
-                        permissionMonitor.requestPermission(perm)
+                    if perm.hasNativeGrant {
+                        // Camera, Notifications — macOS shows a real Allow/Deny dialog
+                        Button(NSLocalizedString("PERM_GRANT", bundle: .clawsy, comment: "")) {
+                            permissionMonitor.requestPermission(perm)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                    } else {
+                        // Accessibility, Screen Recording — no native dialog, deep-link to Settings
+                        Button(NSLocalizedString("PERM_BANNER_OPEN_SETTINGS", bundle: .clawsy, comment: "")) {
+                            permissionMonitor.openSettings(for: perm)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
                 }
             }
         }

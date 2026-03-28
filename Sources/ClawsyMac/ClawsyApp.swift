@@ -38,7 +38,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     var responseWindow: NSWindow?
     var hudWindow: NSWindow?
     var onboardingWindow: NSWindow?
-    var hostManager: HostManager?
+    var hostManager: HostManager? {
+        didSet {
+            guard let hostManager else { return }
+            hostManager.onAgentResponse = { [weak self] agentName, message, sessionKey in
+                let response = AgentResponse(
+                    agentName: agentName,
+                    message: message,
+                    timestamp: Date(),
+                    sessionKey: sessionKey
+                )
+                self?.showAgentResponse(response)
+            }
+        }
+    }
 
     /// Pending responses keyed by notification identifier — opened on notification click
     private var pendingResponses: [String: AgentResponse] = [:]
@@ -526,8 +539,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         window.hasShadow = false  // Toast view has its own shadow
         window.contentView = hostView
 
-        // Anchor to status bar button
-        if let buttonWindow = button.window {
+        // Position in the notification area (top-right) so it doesn't overlap the main popover
+        if let screen = NSScreen.main {
+            let padding: CGFloat = 12
+            let menuBarHeight = NSStatusBar.system.thickness
+            let x = screen.frame.maxX - hostView.fittingSize.width - padding
+            let y = screen.frame.maxY - menuBarHeight - hostView.fittingSize.height - 4
+            window.setFrameOrigin(NSPoint(x: x, y: y))
+        } else if let buttonWindow = button.window {
             let buttonFrame = button.convert(button.bounds, to: nil)
             let screenFrame = buttonWindow.convertToScreen(buttonFrame)
             let x = screenFrame.midX - hostView.fittingSize.width / 2
