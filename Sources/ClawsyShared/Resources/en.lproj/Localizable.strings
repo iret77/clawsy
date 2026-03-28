@@ -441,11 +441,13 @@
 "PERM_NOTIFICATIONS_DESC" = "Allows Clawsy to notify you about agent activity.";
 "PERM_REQUIRED" = "Required";
 "PERM_GRANT" = "Grant";
-"PERM_BANNER_TITLE" = "Permissions Required";
-"PERM_BANNER_DESC_SINGLE" = "%@ permission is needed for Clawsy to work properly. Tap to open System Settings.";
-"PERM_BANNER_DESC_MULTI" = "%@ permissions are needed for Clawsy to work properly. Tap to open System Settings.";
-"PERM_MISSING_SCREENSHOT" = "Screen Recording permission is required for screenshots. Open System Settings to grant access.";
-"PERM_MISSING_HOTKEY" = "Accessibility permission is required for global shortcuts. Open System Settings to grant access.";
+"PERM_BANNER_SCREEN_RECORDING_TITLE" = "Screen Recording";
+"PERM_BANNER_SCREEN_RECORDING_DESC" = "Needed to capture screenshots and share your screen with agents.";
+"PERM_BANNER_ACCESSIBILITY_TITLE" = "Keyboard Shortcuts";
+"PERM_BANNER_ACCESSIBILITY_DESC" = "Needed for global shortcuts like ⌘⇧K (Quick Send) to work everywhere.";
+"PERM_BANNER_OPEN_SETTINGS" = "Open Settings";
+"PERM_MISSING_SCREENSHOT" = "Screen Recording access needed — opening Settings…";
+"PERM_MISSING_HOTKEY" = "Keyboard Shortcut access needed — opening Settings…";
 
 // Connection Failure Banner
 "FAILURE_RETRY" = "Retry";

@@ -38,6 +38,16 @@ public enum ClawsyPermission: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Stable key for building localization string IDs (e.g. "PERM_BANNER_SCREEN_RECORDING_TITLE").
+    public var settingsKey: String {
+        switch self {
+        case .screenRecording: return "SCREEN_RECORDING"
+        case .camera: return "CAMERA"
+        case .accessibility: return "ACCESSIBILITY"
+        case .notifications: return "NOTIFICATIONS"
+        }
+    }
+
     /// Whether this permission is essential (blocks core functionality) or optional.
     public var isRequired: Bool {
         switch self {

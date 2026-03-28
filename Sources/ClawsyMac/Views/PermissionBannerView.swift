@@ -1,36 +1,38 @@
 import SwiftUI
 
 /// Inline banner for the main menu popover when required permissions are missing.
-/// Matches the style of ConnectionFailureBanner — standard Clawsy banner pattern.
-/// Shows which permissions are missing and provides a direct "Fix" action.
+/// Each missing permission gets its own row with a clear user-facing description
+/// of what the permission enables and a direct button to open System Settings.
+/// Modeled after the OpenClaw Mac app's PermissionsSettings pattern.
 struct PermissionBannerView: View {
     @ObservedObject var permissionMonitor: PermissionMonitor
 
     var body: some View {
         let missing = permissionMonitor.missingRequired
 
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "exclamationmark.shield")
-                    .font(ClawsyTheme.Font.menuItem)
-                    .foregroundColor(.orange)
-                    .accessibilityLabel(NSLocalizedString("PERM_BANNER_TITLE", bundle: .clawsy, comment: ""))
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(missing) { perm in
+                HStack(spacing: 10) {
+                    Image(systemName: perm.icon)
+                        .font(.system(size: 14))
+                        .foregroundColor(.orange)
+                        .frame(width: 22)
 
-                Text(NSLocalizedString("PERM_BANNER_TITLE", bundle: .clawsy, comment: ""))
-                    .font(ClawsyTheme.Font.bannerTitle)
-                    .foregroundColor(.primary)
-            }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(NSLocalizedString("PERM_BANNER_\(perm.settingsKey)_TITLE", bundle: .clawsy, comment: ""))
+                            .font(ClawsyTheme.Font.bannerTitle)
+                            .foregroundColor(.primary)
 
-            Text(missingDescription(missing))
-                .font(ClawsyTheme.Font.bannerBody)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                        Text(NSLocalizedString("PERM_BANNER_\(perm.settingsKey)_DESC", bundle: .clawsy, comment: ""))
+                            .font(ClawsyTheme.Font.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
 
-            HStack(spacing: 8) {
-                ForEach(missing) { perm in
-                    Button(action: { permissionMonitor.openSettings(for: perm) }) {
-                        Label(perm.rawValue, systemImage: perm.icon)
-                            .font(ClawsyTheme.Font.bannerBody)
+                    Spacer()
+
+                    Button(NSLocalizedString("PERM_BANNER_OPEN_SETTINGS", bundle: .clawsy, comment: "")) {
+                        permissionMonitor.openSettings(for: perm)
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
@@ -41,13 +43,5 @@ struct PermissionBannerView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.orange.opacity(0.08))
         .cornerRadius(ClawsyTheme.Spacing.cornerRadius)
-    }
-
-    private func missingDescription(_ missing: [ClawsyPermission]) -> String {
-        let names = missing.map { $0.rawValue }
-        if names.count == 1 {
-            return String(format: NSLocalizedString("PERM_BANNER_DESC_SINGLE", bundle: .clawsy, comment: ""), names[0])
-        }
-        return String(format: NSLocalizedString("PERM_BANNER_DESC_MULTI", bundle: .clawsy, comment: ""), names.joined(separator: ", "))
     }
 }
