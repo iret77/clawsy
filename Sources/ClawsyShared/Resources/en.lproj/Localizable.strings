@@ -441,15 +441,18 @@
 "PERM_NOTIFICATIONS_DESC" = "Allows Clawsy to notify you about agent activity.";
 "PERM_REQUIRED" = "Required";
 "PERM_GRANT" = "Grant";
+"PERM_BANNER_INTRO" = "Clawsy needs a few permissions to work. Grant them below.";
 "PERM_BANNER_SCREEN_RECORDING_TITLE" = "Screen Recording";
-"PERM_BANNER_SCREEN_RECORDING_DESC" = "Required for screenshots.";
+"PERM_BANNER_SCREEN_RECORDING_DESC" = "Capture the screen for context or screenshots";
 "PERM_BANNER_CAMERA_TITLE" = "Camera";
-"PERM_BANNER_CAMERA_DESC" = "Required for photos.";
-"PERM_BANNER_ACCESSIBILITY_TITLE" = "Keyboard Shortcuts";
-"PERM_BANNER_ACCESSIBILITY_DESC" = "Required for ⌘⇧K and other shortcuts.";
+"PERM_BANNER_CAMERA_DESC" = "Capture photos and video from the camera";
+"PERM_BANNER_ACCESSIBILITY_TITLE" = "Accessibility";
+"PERM_BANNER_ACCESSIBILITY_DESC" = "Required for global shortcuts like ⌘⇧K";
 "PERM_BANNER_NOTIFICATIONS_TITLE" = "Notifications";
-"PERM_BANNER_NOTIFICATIONS_DESC" = "Required for agent response notifications.";
+"PERM_BANNER_NOTIFICATIONS_DESC" = "Show desktop alerts for agent activity";
 "PERM_BANNER_OPEN_SETTINGS" = "Open Settings";
+"PERM_GRANTED" = "Granted";
+"PERM_REQUEST_ACCESS" = "Request access";
 "PERM_MISSING_SCREENSHOT" = "Screen Recording access needed — opening Settings…";
 "PERM_MISSING_HOTKEY" = "Keyboard Shortcut access needed — opening Settings…";
 

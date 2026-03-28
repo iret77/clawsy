@@ -461,32 +461,61 @@ struct PermissionRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: isGranted ? "checkmark.circle.fill" : permission.icon)
-                .font(.system(size: 20))
-                .foregroundColor(isGranted ? .green : .secondary)
-                .frame(width: 28)
+            // Circular icon background — OpenClaw pattern
+            ZStack {
+                Circle()
+                    .fill(isGranted ? Color.green.opacity(0.2) : Color.gray.opacity(0.15))
+                    .frame(width: 32, height: 32)
+                Image(systemName: permission.icon)
+                    .font(.system(size: 14))
+                    .foregroundColor(isGranted ? .green : .secondary)
+            }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(permission.displayName)
-                    .font(ClawsyTheme.Font.sectionHeader)
+                    .font(.body.weight(.semibold))
                     .foregroundColor(.primary)
                 Text(permission.description)
-                    .font(ClawsyTheme.Font.caption)
+                    .font(.caption)
                     .foregroundColor(.secondary)
-                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .layoutPriority(1)
 
-            Spacer()
+            // Right side — status indicator or grant button
+            VStack(alignment: .trailing, spacing: 4) {
+                if isGranted {
+                    Label {
+                        Text(NSLocalizedString("PERM_GRANTED", bundle: .clawsy, comment: ""))
+                    } icon: {
+                        Image(systemName: "checkmark.circle.fill")
+                    }
+                    .labelStyle(.iconOnly)
+                    .foregroundColor(.green)
+                    .font(.title3)
 
-            if !isGranted {
-                Button(NSLocalizedString("PERM_BANNER_OPEN_SETTINGS", bundle: .clawsy, comment: "")) {
-                    onOpenSettings()
+                    Text(NSLocalizedString("PERM_GRANTED", bundle: .clawsy, comment: ""))
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(.green)
+                } else {
+                    Button(NSLocalizedString("PERM_GRANT", bundle: .clawsy, comment: "")) {
+                        onRequest()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
+                    .frame(minWidth: 78, alignment: .trailing)
+
+                    Text(NSLocalizedString("PERM_REQUEST_ACCESS", bundle: .clawsy, comment: ""))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
             }
+            .frame(minWidth: 104, alignment: .trailing)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
     }
 }

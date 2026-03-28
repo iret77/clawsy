@@ -442,15 +442,18 @@
 "PERM_NOTIFICATIONS_DESC" = "Ermöglicht Benachrichtigungen über Agent-Aktivitäten.";
 "PERM_REQUIRED" = "Erforderlich";
 "PERM_GRANT" = "Erlauben";
+"PERM_BANNER_INTRO" = "Clawsy benötigt einige Berechtigungen. Erteile sie hier.";
 "PERM_BANNER_SCREEN_RECORDING_TITLE" = "Bildschirmaufnahme";
-"PERM_BANNER_SCREEN_RECORDING_DESC" = "Für Screenshots erforderlich.";
+"PERM_BANNER_SCREEN_RECORDING_DESC" = "Bildschirminhalt für Screenshots aufnehmen";
 "PERM_BANNER_CAMERA_TITLE" = "Kamera";
-"PERM_BANNER_CAMERA_DESC" = "Für Fotos erforderlich.";
-"PERM_BANNER_ACCESSIBILITY_TITLE" = "Tastaturkurzbefehle";
-"PERM_BANNER_ACCESSIBILITY_DESC" = "Für ⌘⇧K und andere Kurzbefehle.";
+"PERM_BANNER_CAMERA_DESC" = "Fotos und Videos mit der Kamera aufnehmen";
+"PERM_BANNER_ACCESSIBILITY_TITLE" = "Bedienungshilfen";
+"PERM_BANNER_ACCESSIBILITY_DESC" = "Für globale Tastenkürzel wie ⌘⇧K";
 "PERM_BANNER_NOTIFICATIONS_TITLE" = "Mitteilungen";
-"PERM_BANNER_NOTIFICATIONS_DESC" = "Erforderlich für Benachrichtigungen bei Agent-Antworten.";
+"PERM_BANNER_NOTIFICATIONS_DESC" = "Hinweise bei Agent-Aktivitäten anzeigen";
 "PERM_BANNER_OPEN_SETTINGS" = "Einstellungen";
+"PERM_GRANTED" = "Erteilt";
+"PERM_REQUEST_ACCESS" = "Zugriff anfordern";
 "PERM_MISSING_SCREENSHOT" = "Bildschirmaufnahme wird benötigt — öffne Einstellungen …";
 "PERM_MISSING_HOTKEY" = "Tastaturkurzbefehle werden benötigt — öffne Einstellungen …";
 
