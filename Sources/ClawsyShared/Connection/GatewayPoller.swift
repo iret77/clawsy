@@ -154,7 +154,8 @@ public final class GatewayPoller: ObservableObject {
             }
             return true
 
-        case "tick":
+        case "tick", "agent", "health", "status", "presence":
+            // Known gateway events — no action needed
             return true
 
         default:

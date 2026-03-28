@@ -453,9 +453,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             // Store response for when user clicks the notification
             self.pendingResponses[response.id.uuidString] = response
 
-            // Show macOS notification — panel opens on click
-            self.showResponseNotification(response)
-            self.logAction("Agent response notification: \(response.agentName) (\(response.message.count) chars)")
+            // Check notification permission — if granted, show notification (panel on click).
+            // If not granted, open panel directly as fallback.
+            UNUserNotificationCenter.current().getNotificationSettings { settings in
+                DispatchQueue.main.async {
+                    if settings.authorizationStatus == .authorized {
+                        self.showResponseNotification(response)
+                        self.logAction("Agent response notification: \(response.agentName) (\(response.message.count) chars)")
+                    } else {
+                        // No notification permission — open panel directly
+                        self.logAction("Agent response (no notification permission, opening panel): \(response.agentName)")
+                        self.openResponsePanel(response)
+                    }
+                }
+            }
         }
     }
 
