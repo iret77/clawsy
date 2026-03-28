@@ -1,58 +1,54 @@
 import SwiftUI
 
-/// Inline banner for the main menu popover when required permissions are missing.
-/// Each permission row adapts its button to macOS capabilities:
-/// - Camera/Notifications: "Grant" triggers a native one-click Allow dialog
-/// - Accessibility/Screen Recording: "Open Settings" deep-links to the right pane
-///   (macOS does not offer one-click grant for these)
+/// Compact permission banner for the main menu popover.
+/// Each row: icon + title + short description + action button.
+/// Camera/Notifications get "Grant" (native dialog), others get "Settings" (deep-link).
 struct PermissionBannerView: View {
     @ObservedObject var permissionMonitor: PermissionMonitor
 
     var body: some View {
         let missing = permissionMonitor.missingRequired
 
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(spacing: 6) {
             ForEach(missing) { perm in
-                HStack(spacing: 10) {
+                HStack(spacing: 8) {
                     Image(systemName: perm.icon)
-                        .font(.system(size: 14))
+                        .font(.system(size: 12))
                         .foregroundColor(.orange)
-                        .frame(width: 22)
+                        .frame(width: 18)
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(perm.displayName)
-                            .font(ClawsyTheme.Font.bannerTitle)
-                            .foregroundColor(.primary)
+                    Text(perm.displayName)
+                        .font(ClawsyTheme.Font.bannerTitle)
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
 
-                        Text(perm.description)
-                            .font(ClawsyTheme.Font.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    Text(perm.description)
+                        .font(ClawsyTheme.Font.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
 
-                    Spacer()
+                    Spacer(minLength: 4)
 
                     if perm.hasNativeGrant {
-                        // Camera, Notifications — macOS shows a real Allow/Deny dialog
                         Button(NSLocalizedString("PERM_GRANT", bundle: .clawsy, comment: "")) {
                             permissionMonitor.requestPermission(perm)
                         }
                         .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
+                        .controlSize(.mini)
                     } else {
-                        // Accessibility, Screen Recording — no native dialog, deep-link to Settings
                         Button(NSLocalizedString("PERM_BANNER_OPEN_SETTINGS", bundle: .clawsy, comment: "")) {
                             permissionMonitor.openSettings(for: perm)
                         }
                         .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .controlSize(.mini)
                     }
                 }
             }
         }
-        .padding(12)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.orange.opacity(0.08))
+        .background(Color.orange.opacity(0.06))
         .cornerRadius(ClawsyTheme.Spacing.cornerRadius)
     }
 }

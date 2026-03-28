@@ -443,11 +443,11 @@
 "PERM_REQUIRED" = "Erforderlich";
 "PERM_GRANT" = "Erlauben";
 "PERM_BANNER_SCREEN_RECORDING_TITLE" = "Bildschirmaufnahme";
-"PERM_BANNER_SCREEN_RECORDING_DESC" = "Aktiviere Clawsy unter Datenschutz → Bildschirmaufnahme für Screenshots.";
+"PERM_BANNER_SCREEN_RECORDING_DESC" = "Für Screenshots erforderlich.";
 "PERM_BANNER_CAMERA_TITLE" = "Kamera";
-"PERM_BANNER_CAMERA_DESC" = "Erforderlich für Fotos mit deiner Kamera.";
+"PERM_BANNER_CAMERA_DESC" = "Für Fotos erforderlich.";
 "PERM_BANNER_ACCESSIBILITY_TITLE" = "Tastaturkurzbefehle";
-"PERM_BANNER_ACCESSIBILITY_DESC" = "Aktiviere Clawsy unter Datenschutz → Bedienungshilfen für ⌘⇧K und andere Kurzbefehle.";
+"PERM_BANNER_ACCESSIBILITY_DESC" = "Für ⌘⇧K und andere Kurzbefehle.";
 "PERM_BANNER_NOTIFICATIONS_TITLE" = "Mitteilungen";
 "PERM_BANNER_NOTIFICATIONS_DESC" = "Erforderlich für Benachrichtigungen bei Agent-Antworten.";
 "PERM_BANNER_OPEN_SETTINGS" = "Einstellungen";

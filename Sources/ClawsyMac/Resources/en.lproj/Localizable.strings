@@ -442,11 +442,11 @@
 "PERM_REQUIRED" = "Required";
 "PERM_GRANT" = "Grant";
 "PERM_BANNER_SCREEN_RECORDING_TITLE" = "Screen Recording";
-"PERM_BANNER_SCREEN_RECORDING_DESC" = "Enable Clawsy in Privacy → Screen Recording to capture screenshots.";
+"PERM_BANNER_SCREEN_RECORDING_DESC" = "Required for screenshots.";
 "PERM_BANNER_CAMERA_TITLE" = "Camera";
-"PERM_BANNER_CAMERA_DESC" = "Required for taking photos with your camera.";
+"PERM_BANNER_CAMERA_DESC" = "Required for photos.";
 "PERM_BANNER_ACCESSIBILITY_TITLE" = "Keyboard Shortcuts";
-"PERM_BANNER_ACCESSIBILITY_DESC" = "Enable Clawsy in Privacy → Accessibility for ⌘⇧K and other shortcuts.";
+"PERM_BANNER_ACCESSIBILITY_DESC" = "Required for ⌘⇧K and other shortcuts.";
 "PERM_BANNER_NOTIFICATIONS_TITLE" = "Notifications";
 "PERM_BANNER_NOTIFICATIONS_DESC" = "Required for agent response notifications.";
 "PERM_BANNER_OPEN_SETTINGS" = "Open Settings";
