@@ -502,7 +502,10 @@ public final class GatewayPoller: ObservableObject {
     /// Used for ambient context: screenshots, clipboard, camera, share, file rules.
     /// This is the correct Protocol V3 mechanism for node-to-gateway events.
     public func sendNodeEvent(event: String, payload: [String: Any]? = nil) {
-        var params: [String: Any] = ["event": event]
+        var params: [String: Any] = [
+            "event": event,
+            "sessionKey": targetSessionKey
+        ]
         if let payload = payload {
             if let jsonData = try? JSONSerialization.data(withJSONObject: payload),
                let jsonString = String(data: jsonData, encoding: .utf8) {
@@ -517,7 +520,7 @@ public final class GatewayPoller: ObservableObject {
             "params": params
         ]
 
-        log("node.event → \(event)")
+        log("node.event → \(event) → \(targetSessionKey)")
         send(frame)
     }
 
