@@ -1,9 +1,9 @@
 import SwiftUI
 
 /// Inline banner for the main menu popover when required permissions are missing.
-/// Each missing permission gets its own row with a clear user-facing description
-/// of what the permission enables and a direct button to open System Settings.
-/// Modeled after the OpenClaw Mac app's PermissionsSettings pattern.
+/// Each missing permission gets its own row with a clear description and a single
+/// "Grant" button that triggers the native macOS permission dialog directly —
+/// no manual navigation to System Settings needed.
 struct PermissionBannerView: View {
     @ObservedObject var permissionMonitor: PermissionMonitor
 
@@ -19,11 +19,11 @@ struct PermissionBannerView: View {
                         .frame(width: 22)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(NSLocalizedString("PERM_BANNER_\(perm.settingsKey)_TITLE", bundle: .clawsy, comment: ""))
+                        Text(perm.displayName)
                             .font(ClawsyTheme.Font.bannerTitle)
                             .foregroundColor(.primary)
 
-                        Text(NSLocalizedString("PERM_BANNER_\(perm.settingsKey)_DESC", bundle: .clawsy, comment: ""))
+                        Text(perm.description)
                             .font(ClawsyTheme.Font.caption)
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -31,10 +31,10 @@ struct PermissionBannerView: View {
 
                     Spacer()
 
-                    Button(NSLocalizedString("PERM_BANNER_OPEN_SETTINGS", bundle: .clawsy, comment: "")) {
-                        permissionMonitor.openSettings(for: perm)
+                    Button(NSLocalizedString("PERM_GRANT", bundle: .clawsy, comment: "")) {
+                        permissionMonitor.requestPermission(perm)
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.borderedProminent)
                     .controlSize(.small)
                 }
             }
