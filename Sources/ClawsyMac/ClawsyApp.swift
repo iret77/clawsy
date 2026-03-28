@@ -43,6 +43,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     /// Pending responses keyed by notification identifier — opened on notification click
     private var pendingResponses: [String: AgentResponse] = [:]
 
+    /// Last agent response — accessible from the main menu to re-show
+    @Published var lastResponse: AgentResponse?
+
     // MARK: - Menu Bar Icon
 
     func updateMenuBarIcon() {
@@ -451,6 +454,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     func showAgentResponse(_ response: AgentResponse) {
         DispatchQueue.main.async {
             self.pendingResponses[response.id.uuidString] = response
+            self.lastResponse = response
             self.showResponseToast(response)
             self.showResponseNotification(response)
             self.logAction("Agent response: \(response.agentName) (\(response.message.count) chars)")
@@ -459,7 +463,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     /// Shows a Clawsy-native response toast anchored to the menu bar status item.
     /// Styled like the main popover — vibrancy, ClawsyTheme, non-intrusive.
-    private func showResponseToast(_ response: AgentResponse) {
+    func showResponseToast(_ response: AgentResponse) {
         responseWindow?.close()
         responseWindow = nil
 

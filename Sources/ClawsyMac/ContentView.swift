@@ -50,6 +50,20 @@ struct ContentView: View {
                 VStack(spacing: 2) {
                     ActionMenuView(hostManager: hostManager)
 
+                    // Last agent response (re-show toast)
+                    if let lastResponse = appDelegate.lastResponse {
+                        Button(action: {
+                            appDelegate.showResponseToast(lastResponse)
+                        }) {
+                            MenuItemRow(
+                                icon: "bubble.left.fill",
+                                title: "\(lastResponse.agentName): \(String(lastResponse.message.prefix(30)))\(lastResponse.message.count > 30 ? "…" : "")",
+                                color: .accentColor
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+
                     Divider().clawsy().padding(.vertical, 4)
 
                     // Connect / Disconnect
