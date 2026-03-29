@@ -21,7 +21,11 @@ fi
 echo "🔧 Generating Xcode project..."
 xcodegen generate --spec project.yml
 
-# ── Step 2: Build with xcodebuild ───────────────────────────────────
+# ── Step 2: Generate icons from source assets ──────────────────────
+echo "🎨 Generating icons..."
+bash scripts/generate_icons.sh
+
+# ── Step 3: Build with xcodebuild ───────────────────────────────────
 echo "🦞 Building $APP_NAME (Release, Universal)..."
 xcodebuild \
     -project Clawsy.xcodeproj \
@@ -35,7 +39,7 @@ xcodebuild \
     ENABLE_HARDENED_RUNTIME=YES \
     build
 
-# ── Step 3: Copy built .app to output directory ─────────────────────
+# ── Step 4: Copy built .app to output directory ─────────────────────
 echo "📦 Packaging $APP_NAME.app..."
 BUILT_APP=$(find "$DERIVED_DATA" -name "$APP_NAME.app" -type d -path "*/Release/*" | head -n 1)
 
@@ -46,13 +50,13 @@ fi
 
 cp -R "$BUILT_APP" "$APP_BUNDLE"
 
-# ── Step 4: Bundle CLAWSY.md ────────────────────────────────────────
+# ── Step 5: Bundle CLAWSY.md ────────────────────────────────────────
 if [ -f "CLAWSY.md" ]; then
     cp "CLAWSY.md" "$APP_BUNDLE/Contents/Resources/CLAWSY.md"
     echo "✅ Bundled CLAWSY.md"
 fi
 
-# ── Step 5: Verify ──────────────────────────────────────────────────
+# ── Step 6: Verify ──────────────────────────────────────────────────
 echo "🔍 Verifying bundle structure..."
 
 # Check extensions are embedded
