@@ -31,10 +31,7 @@ targets:
         excludes:
           - "Resources/**"
     resources:
-      - path: Sources/ClawsyShared/Resources/en.lproj
-      - path: Sources/ClawsyShared/Resources/de.lproj
-      - path: Sources/ClawsyShared/Resources/es.lproj
-      - path: Sources/ClawsyShared/Resources/fr.lproj
+      - path: Sources/ClawsyShared/Resources
     dependencies:
       - package: Starscream
     settings:
@@ -55,10 +52,7 @@ targets:
           - "Resources/**"
     resources:
       - path: Sources/ClawsyMac/Assets.xcassets
-      - path: Sources/ClawsyMac/Resources/en.lproj
-        optional: true
-      - path: Sources/ClawsyMac/Resources/de.lproj
-        optional: true
+      - path: Sources/ClawsyMac/Resources
       - path: CLAWSY.md
     dependencies:
       - target: ClawsyShared
