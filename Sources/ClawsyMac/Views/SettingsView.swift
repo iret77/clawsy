@@ -10,7 +10,7 @@ struct SettingsView: View {
     @State private var editedProfile: HostProfile = HostProfile(
         name: "", gatewayHost: "", gatewayPort: "18789", serverToken: ""
     )
-    @State private var showingAddHost = false
+    @EnvironmentObject var appDelegate: AppDelegate
     @State private var hostToDelete: HostProfile? = nil
     @State private var showDeleteConfirm = false
 
@@ -59,9 +59,6 @@ struct SettingsView: View {
         .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
         .onAppear { loadActiveProfile() }
         .onChange(of: hostManager.activeHostId) { _ in loadActiveProfile() }
-        .sheet(isPresented: $showingAddHost) {
-            AddHostSheet(hostManager: hostManager, isPresented: $showingAddHost, onHostAdded: onHostAdded)
-        }
         .alert("Delete Host?", isPresented: $showDeleteConfirm) {
             Button("Cancel", role: .cancel) { hostToDelete = nil }
             Button("Delete", role: .destructive) {

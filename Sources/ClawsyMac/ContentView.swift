@@ -12,7 +12,6 @@ struct ContentView: View {
     @State private var showingSettings = false
     @State private var showingLog = false
     @State private var showingMissionControl = false
-    @State private var showingAddHost = false
     @State private var showingRuleEditor = false
     @State private var ruleEditorFolderPath: String = ""
 
@@ -44,7 +43,7 @@ struct ContentView: View {
 
             // Empty state
             if hostManager.profiles.isEmpty {
-                NoHostEmptyStateView(onAddHost: { showingAddHost = true })
+                NoHostEmptyStateView(onAddHost: { appDelegate.openAddHostWindow() })
                 Divider().clawsy().padding(.horizontal, 6)
                 quitButton
             }
@@ -114,12 +113,6 @@ struct ContentView: View {
         }
         .onChange(of: hostManager.isConnected) { _ in
             appDelegate.updateMenuBarIcon()
-        }
-        .sheet(isPresented: $showingAddHost) {
-            AddHostSheet(hostManager: hostManager, isPresented: $showingAddHost, onHostAdded: { profile in
-                hostManager.addHost(profile)
-                hostManager.connectHost(profile.id)
-            })
         }
         .sheet(isPresented: $showingRuleEditor) {
             RuleEditorView(folderPath: ruleEditorFolderPath, isPresented: $showingRuleEditor)
