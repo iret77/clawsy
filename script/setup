@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+echo "Configuring git hooks..."
+git config core.hooksPath .hooks
+
+echo "Verifying Xcode..."
+if ! xcode-select -p &>/dev/null; then
+  echo "  Xcode not found. Install via: xcode-select --install"
+  echo "  (Clawsy builds run on CI — local Xcode is optional for development)"
+fi
+
+echo "Done. Hooks active, direct pushes to main are blocked."

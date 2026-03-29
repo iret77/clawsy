@@ -2,10 +2,10 @@ name: Build Clawsy Ecosystem
 
 on:
   push:
-    branches: [ "main", "develop", "v1.0" ]
+    branches: [ "main" ]
     tags: [ "v*" ]
   pull_request:
-    branches: [ "main", "develop" ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 permissions:
