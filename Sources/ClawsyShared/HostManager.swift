@@ -372,7 +372,10 @@ public class HostManager: ObservableObject {
     private func startNodeConnection(for hostId: UUID) {
         guard let profile = profiles.first(where: { $0.id == hostId }),
               profile.enableNodeConnection else { return }
-        guard let conn = connections[hostId], conn.isConnected else { return }
+        // Use stateMachine.state (synchronous) instead of @Published state (async)
+        // to avoid race when called right after handleHandshakeComplete
+        guard let conn = connections[hostId],
+              conn.stateMachine.state.isConnected || conn.transport.isOpen else { return }
 
         // Build the WebSocket URL matching the operator connection
         let urlString: String
@@ -462,13 +465,14 @@ public class HostManager: ObservableObject {
                 self?.hostStates[profileId]?.pairingRequestId = nil
             }
 
+            // Transition to .connected FIRST — startNodeConnection checks isConnected
+            conn?.handleHandshakeComplete(deviceToken: result.deviceToken)
+
             // Start polling for agents/sessions now that we're connected
             poller?.start()
 
-            // Start node connection if enabled
+            // Start node connection if enabled (must be after handleHandshakeComplete)
             self?.startNodeConnection(for: profileId)
-
-            conn?.handleHandshakeComplete(deviceToken: result.deviceToken)
         }
 
         hs.onHandshakeFailed = { [weak conn] reason in
