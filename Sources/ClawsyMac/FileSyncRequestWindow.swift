@@ -62,9 +62,6 @@ struct FileSyncRequestWindow: View {
 
     // Hide internal system filenames from the user
     private var displayFilename: String {
-        if filename == ".agent_status.json" {
-            return NSLocalizedString("FILENAME_AGENT_STATUS", bundle: .clawsy, comment: "")
-        }
         return filename
     }
 
@@ -125,7 +122,7 @@ struct FileSyncRequestWindow: View {
                     .font(ClawsyTheme.Font.menuItem)
                     .multilineTextAlignment(.center)
 
-                Text("~/Documents/Clawsy/\(filename == ".agent_status.json" ? "…" : filename)")
+                Text("~/Documents/Clawsy/\(filename)")
                     .font(ClawsyTheme.Font.code)
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 10)

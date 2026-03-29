@@ -11,6 +11,8 @@ struct ContentView: View {
     @State private var showingLog = false
     @State private var showingMissionControl = false
     @State private var showingAddHost = false
+    @State private var showingRuleEditor = false
+    @State private var ruleEditorFolderPath: String = ""
 
     @State private var fileWatcher: FileWatcher?
 
@@ -116,6 +118,9 @@ struct ContentView: View {
                 hostManager.addHost(profile)
                 hostManager.connectHost(profile.id)
             })
+        }
+        .sheet(isPresented: $showingRuleEditor) {
+            RuleEditorView(folderPath: ruleEditorFolderPath, isPresented: $showingRuleEditor)
         }
     }
 
@@ -464,10 +469,13 @@ struct ContentView: View {
         let resolved = profile.sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
         guard ClawsyFileManager.folderExists(at: resolved) else { return }
 
+        // Ensure .clawsy manifests exist for root + all subfolders
+        ClawsyManifestManager.provisionAll(in: resolved)
+
         let watcher = FileWatcher(url: URL(fileURLWithPath: resolved))
         watcher.typedCallback = { [weak hostManager] changedPath, eventType in
             guard let poller = hostManager?.activePoller else { return }
-            if changedPath.hasSuffix(".agent_status.json") || changedPath.hasSuffix(".agent_info.json") { return }
+            if changedPath.hasSuffix(".agent_info.json") { return }
             let relativePath = changedPath.replacingOccurrences(of: resolved, with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             let triggerName = eventType.rawValue
 
@@ -506,7 +514,8 @@ struct ContentView: View {
         guard let poller = hostManager.activePoller else { return }
         switch action.kind {
         case "open_rule_editor":
-            break // TODO: RuleEditorView sheet
+            ruleEditorFolderPath = action.folderPath
+            showingRuleEditor = true
         case "run_actions":
             let folderURL = URL(fileURLWithPath: action.folderPath)
             let files = (try? FileManager.default.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: nil)) ?? []

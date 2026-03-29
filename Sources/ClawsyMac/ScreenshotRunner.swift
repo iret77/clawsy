@@ -59,20 +59,7 @@ enum ScreenshotRunner {
     }
 
     private static func makeMissionControlView() -> NSView {
-        let store = TaskStore()
-        store.tasks = [
-            ClawsyTask(agentName: "CyberClaw",
-                       title: "Clawsy bauen", progress: 0.72,
-                       statusText: "Kompiliert Sources…",
-                       model: "claude-sonnet-4-6",
-                       startedAt: Date().addingTimeInterval(-180)),
-            ClawsyTask(agentName: "CyberClaw",
-                       title: "README aktualisieren", progress: 1.0,
-                       statusText: "Fertig ✓",
-                       model: "claude-sonnet-4-6",
-                       startedAt: Date().addingTimeInterval(-60)),
-        ]
-        let view = MissionControlView(taskStore: store, hostManager: HostManager())
+        let view = MissionControlView(hostManager: HostManager())
         return sized(host(view), 320, 400)
     }
 

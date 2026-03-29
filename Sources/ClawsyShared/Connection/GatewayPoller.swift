@@ -20,8 +20,38 @@ public final class GatewayPoller: ObservableObject {
         didSet {
             SharedConfig.sharedDefaults.set(targetSessionKey, forKey: "targetSessionKey")
             SharedConfig.sharedDefaults.synchronize()
+            // Reset inbox state when agent changes so it re-provisions
+            clawsyInboxReady = false
+            memoryMdUpdated = false
         }
     }
+
+    // MARK: - Clawsy Inbox
+
+    /// Session key for the clawsy-inbox (derived from agent ID in targetSessionKey)
+    public var clawsyInboxSessionKey: String {
+        if let agentId = currentAgentId {
+            return "agent:\(agentId):clawsy-inbox"
+        }
+        return "clawsy-inbox"
+    }
+
+    /// Extract agent ID from targetSessionKey (format: "agent:<id>:main")
+    public var currentAgentId: String? {
+        let parts = targetSessionKey.split(separator: ":")
+        return parts.count >= 2 ? String(parts[1]) : nil
+    }
+
+    /// Agent display name for the currently targeted agent
+    public var currentAgentName: String {
+        if let agentId = currentAgentId {
+            return agents.first { $0.id == agentId }?.name ?? agentId
+        }
+        return "Agent"
+    }
+
+    private var clawsyInboxReady = false
+    private var memoryMdUpdated = false
 
     private var timer: Timer?
     private let interval: TimeInterval
@@ -314,6 +344,8 @@ public final class GatewayPoller: ObservableObject {
     public func stop() {
         timer?.invalidate()
         timer = nil
+        clawsyInboxReady = false
+        memoryMdUpdated = false
     }
 
     deinit { stop() }
@@ -465,20 +497,25 @@ public final class GatewayPoller: ObservableObject {
     // MARK: - Send: Chat Messages (QuickSend)
 
     /// Send a plain text message to an agent session via Protocol V3 `chat.send`.
-    /// Used ONLY for QuickSend — user-initiated chat messages.
+    /// Used for QuickSend — user-initiated chat messages.
     /// `deliver: true` triggers agent processing and response generation.
-    public func sendChatMessage(_ message: String, sessionKey: String) {
+    public func sendChatMessage(_ message: String, sessionKey: String, deliver: Bool = true, attachments: [[String: Any]]? = nil) {
         let requestId = UUID().uuidString
+        var params: [String: Any] = [
+            "sessionKey": sessionKey,
+            "message": message,
+            "deliver": deliver,
+            "idempotencyKey": UUID().uuidString
+        ]
+        if let attachments = attachments {
+            params["attachments"] = attachments
+        }
+
         let frame: [String: Any] = [
             "type": "req",
             "id": requestId,
             "method": "chat.send",
-            "params": [
-                "sessionKey": sessionKey,
-                "message": message,
-                "deliver": true,
-                "idempotencyKey": UUID().uuidString
-            ]
+            "params": params
         ]
 
         // Track this request so we can match the response
@@ -494,47 +531,172 @@ public final class GatewayPoller: ObservableObject {
     /// Callback when an agent response is received for a chat.send
     public var onAgentResponse: ((_ agentName: String, _ message: String, _ sessionKey: String) -> Void)?
 
-    // MARK: - Send: Node Events (Screenshot, Clipboard, Camera, Share)
+    // MARK: - Clawsy Inbox Setup
 
-    /// Send a node event via Protocol V3 `node.event`.
-    /// Used for ambient context: screenshots, clipboard, camera, share, file rules.
-    /// This is the correct Protocol V3 mechanism for node-to-gateway events.
-    public func sendNodeEvent(event: String, payload: [String: Any]? = nil) {
-        var params: [String: Any] = [
-            "event": event,
-            "sessionKey": targetSessionKey
-        ]
-        if let payload = payload {
-            if let jsonData = try? JSONSerialization.data(withJSONObject: payload),
-               let jsonString = String(data: jsonData, encoding: .utf8) {
-                params["payloadJSON"] = jsonString
-            }
+    /// Ensure the clawsy-inbox session exists for the target agent.
+    /// Creates it via `sessions.create` once per connection/agent-switch.
+    public func ensureClawsyInbox(completion: (() -> Void)? = nil) {
+        guard !clawsyInboxReady else { completion?(); return }
+        let sessionKey = clawsyInboxSessionKey
+        sendRequest(method: "sessions.create", params: [
+            "key": sessionKey,
+            "label": "Clawsy Inbox"
+        ]) { [weak self] response in
+            // Session may already exist — both cases are fine
+            self?.clawsyInboxReady = true
+            self?.log("clawsy-inbox ready: \(sessionKey)")
+            self?.ensureMemoryMdUpdated()
+            completion?()
         }
-
-        let frame: [String: Any] = [
-            "type": "req",
-            "id": UUID().uuidString,
-            "method": "node.event",
-            "params": params
-        ]
-
-        log("node.event → \(event) → \(targetSessionKey)")
-        send(frame)
     }
 
-    /// Send a clawsy_envelope as a node event.
-    /// Wraps the envelope type and content into a structured node event.
-    public func sendEnvelope(type: String, content: Any, metadata: [String: Any] = [:]) {
-        var payload: [String: Any] = [
-            "type": type,
-            "version": SharedConfig.shortVersion,
-            "localTime": ISO8601DateFormatter().string(from: Date()),
-            "tz": TimeZone.current.identifier,
-            "content": content
-        ]
-        metadata.forEach { payload[$0.key] = $0.value }
+    /// Ensure the agent's memory.md includes a Clawsy integration block.
+    /// Reads current content, appends block if missing, writes back.
+    private func ensureMemoryMdUpdated() {
+        guard !memoryMdUpdated, let agentId = currentAgentId else { return }
+        let inboxKey = clawsyInboxSessionKey
 
-        sendNodeEvent(event: "clawsy.\(type)", payload: payload)
+        sendRequest(method: "agents.files.get", params: [
+            "agentId": agentId,
+            "name": "memory.md"
+        ]) { [weak self] response in
+            guard let self else { return }
+
+            let existing: String
+            if let payload = response["payload"] as? [String: Any],
+               let content = payload["content"] as? String {
+                existing = content
+            } else {
+                // memory.md may not exist yet — start fresh
+                existing = ""
+            }
+
+            // Already has a clawsy block — check if inbox key matches
+            if existing.contains("<!-- clawsy:start -->") {
+                if existing.contains(inboxKey) {
+                    self.memoryMdUpdated = true
+                    self.log("memory.md: clawsy block already present")
+                    return
+                }
+                // Inbox key changed — replace block
+                if let startRange = existing.range(of: "<!-- clawsy:start -->"),
+                   let endRange = existing.range(of: "<!-- clawsy:end -->") {
+                    var updated = existing
+                    updated.replaceSubrange(startRange.lowerBound..<endRange.upperBound, with: self.clawsyMemoryBlock(inboxKey: inboxKey))
+                    self.writeMemoryMd(agentId: agentId, content: updated)
+                    return
+                }
+            }
+
+            // Append clawsy block
+            let updated = existing.trimmingCharacters(in: .whitespacesAndNewlines)
+                + "\n\n" + self.clawsyMemoryBlock(inboxKey: inboxKey) + "\n"
+            self.writeMemoryMd(agentId: agentId, content: updated)
+        }
+    }
+
+    private func clawsyMemoryBlock(inboxKey: String) -> String {
+        """
+        <!-- clawsy:start -->
+        ## Clawsy Integration
+        Clawsy is a macOS companion app that delivers screenshots, camera photos, clipboard content,
+        and file events to the session `\(inboxKey)`.
+        When a user references media sent via Clawsy (e.g. "check my screenshot", "I sent you a photo"),
+        use `sessions_history` on session `\(inboxKey)` to find it.
+        Each message is tagged with `[clawsy:<type>]` where type is screenshot, camera, clipboard,
+        file-rule, or share. Messages include device name, timestamp, and target agent.
+        <!-- clawsy:end -->
+        """
+    }
+
+    private func writeMemoryMd(agentId: String, content: String) {
+        sendRequest(method: "agents.files.set", params: [
+            "agentId": agentId,
+            "name": "memory.md",
+            "content": content
+        ]) { [weak self] _ in
+            self?.memoryMdUpdated = true
+            self?.log("memory.md: clawsy block written for agent \(agentId)")
+        }
+    }
+
+    // MARK: - Send: Media via clawsy-inbox
+
+    /// Build the structured message header for clawsy-inbox messages.
+    private func clawsyMessageHeader(type: String, extra: [String: String] = [:]) -> String {
+        let deviceName = Host.current().localizedName ?? "Mac"
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        let timestamp = formatter.string(from: Date())
+        var lines = ["[clawsy:\(type)]",
+                     "agent: \(currentAgentName)",
+                     "device: \(deviceName)",
+                     "time: \(timestamp)"]
+        for (key, value) in extra.sorted(by: { $0.key < $1.key }) {
+            lines.append("\(key): \(value)")
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    /// Send an image (screenshot, camera) to the clawsy-inbox session via `chat.send` with attachments.
+    public func sendImage(base64: String, mimeType: String = "image/jpeg", message: String, deliver: Bool = false) {
+        let attachment: [String: Any] = [
+            "type": "image",
+            "mimeType": mimeType,
+            "content": base64
+        ]
+        ensureClawsyInbox { [weak self] in
+            guard let self else { return }
+            self.sendChatMessage(message, sessionKey: self.clawsyInboxSessionKey, deliver: deliver, attachments: [attachment])
+        }
+    }
+
+    /// Send a clawsy envelope to the clawsy-inbox session.
+    /// For image-based envelopes (screenshot, camera), sends with attachments.
+    /// For text-based envelopes (clipboard, share, file-rule), sends as plain message.
+    public func sendEnvelope(type: String, content: Any, metadata: [String: Any] = [:]) {
+        if let dict = content as? [String: Any],
+           let base64 = dict["base64"] as? String {
+            // Image-based: send as chat.send with attachment
+            let mimeType: String
+            if let format = dict["format"] as? String, format == "png" {
+                mimeType = "image/png"
+            } else {
+                mimeType = "image/jpeg"
+            }
+            var extra: [String: String] = [:]
+            if let device = dict["device"] as? String { extra["camera"] = device }
+            let header = clawsyMessageHeader(type: type, extra: extra)
+            sendImage(base64: base64, mimeType: mimeType, message: header, deliver: false)
+        } else if let text = content as? String {
+            // Text content (clipboard, share text)
+            let header = clawsyMessageHeader(type: type)
+            ensureClawsyInbox { [weak self] in
+                guard let self else { return }
+                self.sendChatMessage("\(header)\n\n\(text)", sessionKey: self.clawsyInboxSessionKey, deliver: false)
+            }
+        } else if let dict = content as? [String: Any] {
+            // Structured content (file-rule, share dict)
+            var extra: [String: String] = [:]
+            if let ruleId = dict["ruleId"] as? String { extra["rule"] = ruleId }
+            if let fileName = dict["fileName"] as? String { extra["file"] = fileName }
+            if let trigger = dict["trigger"] as? String { extra["trigger"] = trigger }
+            let header = clawsyMessageHeader(type: type, extra: extra)
+
+            let body: String
+            if let prompt = dict["prompt"] as? String, !prompt.isEmpty {
+                body = prompt
+            } else if let jsonData = try? JSONSerialization.data(withJSONObject: dict),
+                      let jsonString = String(data: jsonData, encoding: .utf8) {
+                body = jsonString
+            } else {
+                body = ""
+            }
+            ensureClawsyInbox { [weak self] in
+                guard let self else { return }
+                self.sendChatMessage("\(header)\n\n\(body)", sessionKey: self.clawsyInboxSessionKey, deliver: false)
+            }
+        }
     }
 
     // MARK: - Internal Send

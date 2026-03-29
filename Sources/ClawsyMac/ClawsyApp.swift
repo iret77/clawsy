@@ -287,7 +287,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let content = json["content"] as? [String: Any] else { return }
 
-        // Send via node.event
+        // Send to clawsy-inbox via chat.send
         poller.sendEnvelope(type: "share", content: content)
 
         // Clean up

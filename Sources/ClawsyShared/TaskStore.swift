@@ -116,64 +116,6 @@ public class TaskStore: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: work)
     }
     
-    /// Load tasks from a `.agent_status.json` file in the shared folder.
-    /// If `updatedAt` is older than 60 seconds, clears tasks instead.
-    public func loadFromFile(_ url: URL) {
-        guard let data = try? Data(contentsOf: url) else { return }
-        
-        struct StatusFile: Decodable {
-            let updatedAt: String
-            let tasks: [TaskEntry]
-            
-            struct TaskEntry: Decodable {
-                let id: String
-                let agentName: String
-                let title: String
-                let progress: Double
-                let statusText: String
-                let model: String?
-                let startedAt: String?
-            }
-        }
-        
-        guard let status = try? JSONDecoder().decode(StatusFile.self, from: data) else { return }
-        
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let updatedDate = formatter.date(from: status.updatedAt) ?? ISO8601DateFormatter().date(from: status.updatedAt) else { return }
-        
-        DispatchQueue.main.async {
-            if Date().timeIntervalSince(updatedDate) > 60 {
-                self.tasks.removeAll()
-                self.saveToSharedContainer()
-                return
-            }
-            
-            // Preserve local isPaused state across reloads
-            let pausedIds = Set(self.tasks.filter { $0.isPaused }.map { $0.id })
-            
-            self.tasks = status.tasks.map { entry in
-                let taskId = UUID(uuidString: entry.id) ?? UUID()
-                var startDate: Date? = nil
-                if let s = entry.startedAt {
-                    startDate = formatter.date(from: s) ?? ISO8601DateFormatter().date(from: s)
-                }
-                return ClawsyTask(
-                    id: taskId,
-                    agentName: entry.agentName,
-                    title: entry.title,
-                    progress: entry.progress,
-                    statusText: entry.statusText,
-                    timestamp: updatedDate,
-                    model: entry.model,
-                    startedAt: startDate,
-                    isPaused: pausedIds.contains(taskId)
-                )
-            }
-            self.saveToSharedContainer()
-        }
-    }
-    
     private func saveToSharedContainer() {
         guard let url = sharedContainerURL?.appendingPathComponent("tasks.json") else { return }
         do {

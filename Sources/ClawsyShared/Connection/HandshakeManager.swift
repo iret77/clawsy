@@ -44,7 +44,7 @@ public final class HandshakeManager {
             ],
             permissions: [String: Bool] = [:],
             role: String = "operator",
-            scopes: [String] = ["operator.read", "operator.write", "operator.approvals", "operator.pairing"],
+            scopes: [String] = ["operator.admin", "operator.read", "operator.write", "operator.approvals", "operator.pairing"],
             displayName: String? = nil
         ) {
             self.gatewayToken = gatewayToken
