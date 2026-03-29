@@ -359,8 +359,8 @@ struct ContentView: View {
             router.registerSync("camera.list") { _ in
                 let cameras = CameraManager.listCameras()
                 let list = cameras.map { cam in
-                    ["id": cam["uniqueID"] as? String ?? "",
-                     "name": cam["localizedName"] as? String ?? "Camera"] as [String: Any]
+                    ["id": cam["id"] as? String ?? "",
+                     "name": cam["name"] as? String ?? "Camera"] as [String: Any]
                 }
                 return .success(["cameras": list])
             }

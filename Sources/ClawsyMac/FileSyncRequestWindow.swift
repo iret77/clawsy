@@ -122,7 +122,7 @@ struct FileSyncRequestWindow: View {
                     .font(ClawsyTheme.Font.menuItem)
                     .multilineTextAlignment(.center)
 
-                Text("~/Documents/Clawsy/\(filename)")
+                Text("\(SharedConfig.sharedFolderPath.isEmpty ? "~/Documents/Clawsy" : SharedConfig.sharedFolderPath)/\(filename)")
                     .font(ClawsyTheme.Font.code)
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 10)

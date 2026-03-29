@@ -419,7 +419,8 @@ public final class GatewayPoller: ObservableObject {
 
         if !parsed.isEmpty {
             let defaultId = payload["defaultId"] as? String
-            DispatchQueue.main.async {
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
                 self.agents = parsed.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
                 self.log("Agents (\(parsed.count)): \(parsed.map { $0.name }.joined(separator: ", "))")
                 // Auto-select default agent only on first launch (no user selection persisted yet)
@@ -467,8 +468,8 @@ public final class GatewayPoller: ObservableObject {
             )
         }
 
-        DispatchQueue.main.async {
-            self.sessions = parsed
+        DispatchQueue.main.async { [weak self] in
+            self?.sessions = parsed
         }
     }
 

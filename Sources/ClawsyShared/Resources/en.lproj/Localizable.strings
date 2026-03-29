@@ -481,3 +481,10 @@
 "STATUS_CONNECTING_LABEL" = "Connecting";
 "STATUS_FAILED_LABEL" = "Connection failed";
 "CONNECTION_FAILURE_ICON" = "Connection error";
+
+// Update notifications
+"UPDATE_AVAILABLE_TITLE" = "Clawsy Update Available";
+"UPDATE_AVAILABLE_BODY %@" = "Version %@ is ready. Open Settings to install.";
+
+// Onboarding
+"ONBOARDING_WINDOW_TITLE" = "Welcome to Clawsy";

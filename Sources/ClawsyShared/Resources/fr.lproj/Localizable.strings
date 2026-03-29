@@ -313,3 +313,10 @@
 "CLIPBOARD_NAMED_WANTS_READ" = "%@ veut lire votre presse-papiers.";
 "ALERT_SCREENSHOT_NAMED_BODY" = "%@ veut voir votre écran.";
 "REMOTE_NAMED_USER_ASKING" = "%@ demande une capture.";
+
+// Notifications de mise à jour
+"UPDATE_AVAILABLE_TITLE" = "Mise à jour Clawsy disponible";
+"UPDATE_AVAILABLE_BODY %@" = "Version %@ prête. Ouvrir les réglages pour installer.";
+
+// Onboarding
+"ONBOARDING_WINDOW_TITLE" = "Bienvenue dans Clawsy";

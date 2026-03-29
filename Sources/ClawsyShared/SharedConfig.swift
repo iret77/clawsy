@@ -3,9 +3,9 @@ import Foundation
 public struct SharedConfig {
     public static let appGroup = "group.ai.openclaw.clawsy"
     
-    public static var sharedDefaults: UserDefaults {
+    public static let sharedDefaults: UserDefaults = {
         let groupDefaults = UserDefaults(suiteName: appGroup) ?? .standard
-        
+
         // --- BUILT-IN MIGRATION LOGIC (v0.4.5) ---
         // If the new group defaults are empty but old data exists, migrate it once.
         if !groupDefaults.bool(forKey: "migrationV1Done") {
@@ -19,7 +19,7 @@ public struct SharedConfig {
             if let oldBookmark = standard.data(forKey: "sharedFolderBookmark") { groupDefaults.set(oldBookmark, forKey: "sharedFolderBookmark") }
             if let oldQuick = standard.string(forKey: "quickSendHotkey") { groupDefaults.set(oldQuick, forKey: "quickSendHotkey") }
             if let oldPush = standard.string(forKey: "pushClipboardHotkey") { groupDefaults.set(oldPush, forKey: "pushClipboardHotkey") }
-            
+
             groupDefaults.set(true, forKey: "migrationV1Done")
             groupDefaults.synchronize()
         }
@@ -34,7 +34,7 @@ public struct SharedConfig {
         }
 
         return groupDefaults
-    }
+    }()
     
     public static var serverHost: String { sharedDefaults.string(forKey: "serverHost") ?? "" }
     public static var serverPort: String { sharedDefaults.string(forKey: "serverPort") ?? "18789" }

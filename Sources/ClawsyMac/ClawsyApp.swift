@@ -79,7 +79,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         let isDark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
         let tintColor: NSColor = isDark ? .white : .black
 
-        let tintedLobster = lobster.copy() as! NSImage
+        guard let tintedLobster = lobster.copy() as? NSImage else { return }
         tintedLobster.isTemplate = false
         tintedLobster.lockFocus()
         tintColor.set()
@@ -307,7 +307,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     func requestAccessibilityPermission() {
-        let options = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as String: true] as CFDictionary
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         AXIsProcessTrustedWithOptions(options)
     }
 
@@ -733,7 +733,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 460, height: 540),
             styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        window.title = "Willkommen bei Clawsy"
+        window.title = NSLocalizedString("ONBOARDING_WINDOW_TITLE", bundle: .clawsy, comment: "")
         window.isReleasedWhenClosed = false
         window.center()
 

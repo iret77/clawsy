@@ -120,10 +120,14 @@ public final class WebSocketTransport: NSObject, WebSocketDelegate {
             }
 
         case .text(let text):
-            onMessage?(text)
+            DispatchQueue.main.async { [weak self] in
+                self?.onMessage?(text)
+            }
 
         case .binary(let data):
-            onBinaryMessage?(data)
+            DispatchQueue.main.async { [weak self] in
+                self?.onBinaryMessage?(data)
+            }
 
         case .cancelled:
             DispatchQueue.main.async { [weak self] in

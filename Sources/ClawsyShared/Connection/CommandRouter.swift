@@ -148,8 +148,17 @@ public final class CommandRouter {
             return
         }
 
+        // Guard against double-fire (timeout vs handler completion race)
+        let responseLock = NSLock()
+        var hasResponded = false
+
         // Set up timeout
         let timeoutWork = DispatchWorkItem { [weak self] in
+            responseLock.lock()
+            guard !hasResponded else { responseLock.unlock(); return }
+            hasResponded = true
+            responseLock.unlock()
+
             os_log("[Router] Timeout for %{public}@ (id: %{public}@)", log: self?.logger ?? .default, type: .error, command, invokeId.prefix(8) + "...")
             self?.sendInvokeResult(invokeId: invokeId, nodeId: nodeId,
                                   result: .error(code: "timeout", message: "Command timed out after \(timeoutMs)ms"))
@@ -162,20 +171,29 @@ public final class CommandRouter {
 
         let executeHandler = { [weak self] in
             handler(params) { [weak self] result in
-                guard !timeoutWork.isCancelled else { return }
+                responseLock.lock()
+                guard !hasResponded else { responseLock.unlock(); return }
+                hasResponded = true
+                responseLock.unlock()
+
                 timeoutWork.cancel()
                 self?.sendInvokeResult(invokeId: invokeId, nodeId: nodeId, result: result)
             }
         }
 
         if needsApproval, let approvalHandler = onApprovalRequired {
-            approvalHandler(command, params) { approved in
+            approvalHandler(command, params) { [weak self] approved in
                 if approved {
                     executeHandler()
                 } else {
+                    responseLock.lock()
+                    guard !hasResponded else { responseLock.unlock(); return }
+                    hasResponded = true
+                    responseLock.unlock()
+
                     timeoutWork.cancel()
-                    self.sendInvokeResult(invokeId: invokeId, nodeId: nodeId,
-                                         result: .error(code: "denied", message: "User denied '\(command)'"))
+                    self?.sendInvokeResult(invokeId: invokeId, nodeId: nodeId,
+                                           result: .error(code: "denied", message: "User denied '\(command)'"))
                 }
             }
         } else {

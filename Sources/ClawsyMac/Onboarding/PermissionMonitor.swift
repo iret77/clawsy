@@ -100,6 +100,11 @@ public final class PermissionMonitor: ObservableObject {
     private var timer: Timer?
     private let logger = OSLog(subsystem: "ai.clawsy", category: "Permissions")
 
+    /// Cached notification authorization status (updated asynchronously to avoid
+    /// blocking the main thread with a semaphore — UNUserNotificationCenter
+    /// may deliver its callback on the main queue, causing a deadlock).
+    private var cachedNotificationStatus: Bool = false
+
     /// Delays for re-check after requesting a permission (catches TCC propagation).
     private static let reCheckDelays: [TimeInterval] = [0.3, 0.9, 1.8]
 
@@ -142,6 +147,14 @@ public final class PermissionMonitor: ObservableObject {
         for perm in ClawsyPermission.allCases {
             status[perm] = checkPermission(perm)
         }
+        // Async update for notifications — avoids semaphore deadlock on main thread
+        UNUserNotificationCenter.current().getNotificationSettings { [weak self] settings in
+            let granted = settings.authorizationStatus == .authorized
+            Task { @MainActor [weak self] in
+                self?.cachedNotificationStatus = granted
+                self?.status[.notifications] = granted
+            }
+        }
     }
 
     /// All required permissions granted?
@@ -170,15 +183,8 @@ public final class PermissionMonitor: ObservableObject {
         case .accessibility:
             return AXIsProcessTrusted()
         case .notifications:
-            // Synchronous check via semaphore (OK on main thread for quick poll)
-            var granted = false
-            let sem = DispatchSemaphore(value: 0)
-            UNUserNotificationCenter.current().getNotificationSettings { settings in
-                granted = settings.authorizationStatus == .authorized
-                sem.signal()
-            }
-            sem.wait()
-            return granted
+            // Use cached value — updated asynchronously in refreshAll()
+            return cachedNotificationStatus
         }
     }
 
@@ -210,7 +216,7 @@ public final class PermissionMonitor: ObservableObject {
             }
 
         case .accessibility:
-            let options = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as String: true] as CFDictionary
+            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
             AXIsProcessTrustedWithOptions(options)
 
         case .notifications:

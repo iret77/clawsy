@@ -28,6 +28,7 @@ struct OnboardingView: View {
     // Connection test
     @State private var connectionPhase: ConnectionTestPhase = .idle
     @State private var connectionError: String? = nil
+    @State private var connectionTimer: Timer? = nil
 
     enum ConnectMode: String, CaseIterable {
         case setupCode = "Setup Code"
@@ -95,6 +96,10 @@ struct OnboardingView: View {
         }
         .frame(width: 460, height: 520)
         .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
+        .onDisappear {
+            connectionTimer?.invalidate()
+            connectionTimer = nil
+        }
     }
 
     // MARK: - Page 0: Welcome
@@ -432,8 +437,9 @@ struct OnboardingView: View {
         hostManager.connectHost(profile.id)
 
         // Poll for connection success (max 15 seconds)
+        connectionTimer?.invalidate()
         var attempts = 0
-        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
+        connectionTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
             attempts += 1
             if hostManager.isConnected {
                 timer.invalidate()
