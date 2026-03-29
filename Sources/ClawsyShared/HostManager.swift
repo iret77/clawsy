@@ -471,6 +471,9 @@ public class HostManager: ObservableObject {
             // Start polling for agents/sessions now that we're connected
             poller?.start()
 
+            // Send skill hint so the agent knows about Clawsy capabilities
+            poller?.sendConnectedHint()
+
             // Start node connection if enabled (must be after handleHandshakeComplete)
             self?.startNodeConnection(for: profileId)
         }
