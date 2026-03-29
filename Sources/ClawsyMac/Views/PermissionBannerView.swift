@@ -75,7 +75,7 @@ private struct PermissionBannerRow: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
-                .frame(minWidth: 72, alignment: .trailing)
+                .fixedSize()
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
