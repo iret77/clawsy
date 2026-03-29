@@ -26,11 +26,11 @@ struct PermissionBannerView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.primary.opacity(0.03))
+        .background(Color.accentColor.opacity(0.05))
         .cornerRadius(ClawsyTheme.Spacing.cornerRadius)
         .overlay(
             RoundedRectangle(cornerRadius: ClawsyTheme.Spacing.cornerRadius)
-                .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+                .stroke(Color.accentColor.opacity(0.12), lineWidth: 0.5)
         )
     }
 }
@@ -46,11 +46,11 @@ private struct PermissionBannerRow: View {
             // Status icon — green checkmark when granted, gray circle when not
             ZStack {
                 Circle()
-                    .fill(isGranted ? Color.green.opacity(0.15) : Color.secondary.opacity(0.08))
+                    .fill(isGranted ? Color.green.opacity(0.15) : Color.accentColor.opacity(0.1))
                     .frame(width: 26, height: 26)
                 Image(systemName: isGranted ? "checkmark" : permission.icon)
                     .font(.system(size: 11, weight: isGranted ? .bold : .regular))
-                    .foregroundColor(isGranted ? .green : .secondary)
+                    .foregroundColor(isGranted ? .green : .accentColor)
             }
 
             // Title + subtitle

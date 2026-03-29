@@ -451,7 +451,7 @@
 "PERM_BANNER_ACCESSIBILITY_DESC" = "Für globale Tastenkürzel wie ⌘⇧K";
 "PERM_BANNER_NOTIFICATIONS_TITLE" = "Mitteilungen";
 "PERM_BANNER_NOTIFICATIONS_DESC" = "Hinweise bei Agent-Aktivitäten anzeigen";
-"PERM_BANNER_OPEN_SETTINGS" = "Einstellungen";
+"PERM_BANNER_OPEN_SETTINGS" = "Öffnen …";
 "PERM_GRANTED" = "Erteilt";
 "PERM_REQUEST_ACCESS" = "Zugriff anfordern";
 "PERM_MISSING_SCREENSHOT" = "Bildschirmaufnahme wird benötigt — öffne Einstellungen …";
