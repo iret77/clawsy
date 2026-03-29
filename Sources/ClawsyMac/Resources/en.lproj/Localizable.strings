@@ -441,7 +441,7 @@
 "PERM_NOTIFICATIONS_DESC" = "Allows Clawsy to notify you about agent activity.";
 "PERM_REQUIRED" = "Required";
 "PERM_GRANT" = "Grant";
-"PERM_BANNER_INTRO" = "Clawsy needs a few permissions to work. Grant them below.";
+"PERM_BANNER_INTRO" = "Clawsy needs permissions for full functionality.";
 "PERM_BANNER_SCREEN_RECORDING_TITLE" = "Screen Recording";
 "PERM_BANNER_SCREEN_RECORDING_DESC" = "Capture the screen for context or screenshots";
 "PERM_BANNER_CAMERA_TITLE" = "Camera";

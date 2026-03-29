@@ -442,7 +442,7 @@
 "PERM_NOTIFICATIONS_DESC" = "Ermöglicht Benachrichtigungen über Agent-Aktivitäten.";
 "PERM_REQUIRED" = "Erforderlich";
 "PERM_GRANT" = "Erlauben";
-"PERM_BANNER_INTRO" = "Clawsy benötigt einige Berechtigungen. Erteile sie hier.";
+"PERM_BANNER_INTRO" = "Clawsy benötigt Berechtigungen für den vollen Funktionsumfang.";
 "PERM_BANNER_SCREEN_RECORDING_TITLE" = "Bildschirmaufnahme";
 "PERM_BANNER_SCREEN_RECORDING_DESC" = "Bildschirminhalt für Screenshots aufnehmen";
 "PERM_BANNER_CAMERA_TITLE" = "Kamera";

@@ -461,20 +461,31 @@ struct PermissionRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Circular icon background — OpenClaw pattern
+            // Status icon — checkmark when granted, permission icon when not
             ZStack {
                 Circle()
-                    .fill(isGranted ? Color.green.opacity(0.2) : Color.gray.opacity(0.15))
+                    .fill(isGranted ? Color.green.opacity(0.15) : Color.secondary.opacity(0.08))
                     .frame(width: 32, height: 32)
-                Image(systemName: permission.icon)
-                    .font(.system(size: 14))
+                Image(systemName: isGranted ? "checkmark" : permission.icon)
+                    .font(.system(size: 13, weight: isGranted ? .bold : .regular))
                     .foregroundColor(isGranted ? .green : .secondary)
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(permission.displayName)
-                    .font(.body.weight(.semibold))
-                    .foregroundColor(.primary)
+                HStack(spacing: 6) {
+                    Text(permission.displayName)
+                        .font(.body.weight(.medium))
+                        .foregroundColor(.primary)
+                    if permission.isRequired && !isGranted {
+                        Text(NSLocalizedString("PERM_REQUIRED", bundle: .clawsy, comment: ""))
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(.orange)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color.orange.opacity(0.1))
+                            .cornerRadius(3)
+                    }
+                }
                 Text(permission.description)
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -483,39 +494,28 @@ struct PermissionRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .layoutPriority(1)
 
-            // Right side — status indicator or grant button
-            VStack(alignment: .trailing, spacing: 4) {
-                if isGranted {
-                    Label {
-                        Text(NSLocalizedString("PERM_GRANTED", bundle: .clawsy, comment: ""))
-                    } icon: {
-                        Image(systemName: "checkmark.circle.fill")
-                    }
-                    .labelStyle(.iconOnly)
+            // Right side — checkmark label when granted, action button when not
+            if isGranted {
+                Text(NSLocalizedString("PERM_GRANTED", bundle: .clawsy, comment: ""))
+                    .font(.caption.weight(.medium))
                     .foregroundColor(.green)
-                    .font(.title3)
-
-                    Text(NSLocalizedString("PERM_GRANTED", bundle: .clawsy, comment: ""))
-                        .font(.caption.weight(.medium))
-                        .foregroundColor(.green)
-                } else {
-                    Button(NSLocalizedString("PERM_GRANT", bundle: .clawsy, comment: "")) {
-                        onRequest()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.regular)
-                    .frame(minWidth: 78, alignment: .trailing)
-
-                    Text(NSLocalizedString("PERM_REQUEST_ACCESS", bundle: .clawsy, comment: ""))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+            } else {
+                Button(permission.hasNativeGrant
+                    ? NSLocalizedString("PERM_GRANT", bundle: .clawsy, comment: "")
+                    : NSLocalizedString("PERM_BANNER_OPEN_SETTINGS", bundle: .clawsy, comment: "")
+                ) {
+                    onRequest()
                 }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+                .frame(minWidth: 90, alignment: .trailing)
             }
-            .frame(minWidth: 104, alignment: .trailing)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(.vertical, 8)
+        .background(isGranted ? Color.clear : Color.primary.opacity(0.02))
+        .cornerRadius(8)
     }
 }
