@@ -41,7 +41,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ai.clawsy.Shared
         PRODUCT_NAME: ClawsyShared
-        INFOPLIST_FILE: ""
+        GENERATE_INFOPLIST_FILE: true
         DEFINES_MODULE: true
         SKIP_INSTALL: true
 
