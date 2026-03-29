@@ -68,16 +68,11 @@ private struct PermissionBannerRow: View {
 
             if !isGranted {
                 Button(action: onGrant) {
-                    HStack(spacing: 3) {
-                        Image(systemName: permission.hasNativeGrant ? "checkmark.circle" : "gear")
-                            .font(.system(size: 10))
-                        Text(permission.hasNativeGrant ? "OK" : "Open")
-                            .font(.system(size: 10, weight: .medium))
-                    }
+                    Image(systemName: permission.hasNativeGrant ? "checkmark.circle" : "gear")
+                        .font(.system(size: 12))
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
-                .fixedSize()
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
