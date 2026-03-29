@@ -58,11 +58,12 @@ public final class CommandRouter {
     /// Commands that never require approval (within sandbox)
     public var autoApprovedCommands: Set<String> = [
         "file.list", "file.get", "file.set", "file.mkdir",
-        "file.delete", "file.move", "file.copy",
+        "file.delete", "file.move", "file.copy", "file.rename",
         "file.get.chunk", "file.set.chunk",
-        "file.stat", "file.exists", "file.rename",
-        "file.rmdir", "file.batch", "file.checksum",
-        "clipboard.write"
+        "file.stat", "file.exists", "file.rmdir",
+        "file.batch", "file.checksum",
+        "clipboard.write",
+        "location.get"
     ]
 
     // MARK: - Registration

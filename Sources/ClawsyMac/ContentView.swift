@@ -1,5 +1,7 @@
 import SwiftUI
 import UserNotifications
+import CryptoKit
+import CoreLocation
 import ClawsyShared
 
 struct ContentView: View {
@@ -364,6 +366,39 @@ struct ContentView: View {
                 }
                 return .success(["cameras": list])
             }
+
+            // location.get
+            router.register("location.get") { _, completion in
+                let locManager = LocationManager()
+                locManager.requestPermission()
+                locManager.startUpdating()
+
+                // If we already have a cached location, return immediately
+                if let loc = locManager.lastLocation {
+                    locManager.stopUpdating()
+                    completion(.success(Self.locationDict(from: loc)))
+                    return
+                }
+
+                // Wait for first location update (with 10s timeout)
+                var completed = false
+                locManager.onLocationUpdate = { loc in
+                    guard !completed else { return }
+                    completed = true
+                    locManager.stopUpdating()
+                    completion(.success(Self.locationDict(from: loc)))
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                    guard !completed else { return }
+                    completed = true
+                    locManager.stopUpdating()
+                    if let loc = locManager.lastLocation {
+                        completion(.success(Self.locationDict(from: loc)))
+                    } else {
+                        completion(.error(code: "location_unavailable", message: "Could not get location within timeout"))
+                    }
+                }
+            }
         }
 
         // Node connection: file handlers only
@@ -373,6 +408,22 @@ struct ContentView: View {
             let expandedBase = baseDir.replacingOccurrences(of: "~", with: NSHomeDirectory())
             Self.registerFileHandlers(on: router, expandedBase: expandedBase)
         }
+    }
+
+    private static func locationDict(from loc: ClawsyLocation) -> [String: Any] {
+        var dict: [String: Any] = [
+            "latitude": loc.latitude,
+            "longitude": loc.longitude,
+            "accuracy": loc.accuracy,
+            "timestamp": loc.timestamp
+        ]
+        if let alt = loc.altitude { dict["altitude"] = alt }
+        if let speed = loc.speed { dict["speed"] = speed }
+        if let name = loc.name { dict["name"] = name }
+        if let locality = loc.locality { dict["locality"] = locality }
+        if let country = loc.country { dict["country"] = country }
+        if let customName = loc.customName { dict["customName"] = customName }
+        return dict
     }
 
     // MARK: - File Handler Registration (shared between operator and node)
@@ -473,6 +524,235 @@ struct ContentView: View {
             }
             let result = ClawsyFileManager.existsFile(baseDir: expandedBase, relativePath: subPath)
             return .success(["exists": result.exists, "isDirectory": result.isDirectory])
+        }
+
+        // file.rename — rename a file (name only, same directory)
+        router.registerSync("file.rename") { params in
+            guard let path = params["path"] as? String ?? params["subPath"] as? String else {
+                return .error(code: "missing_param", message: "path required")
+            }
+            guard let newName = params["newName"] as? String else {
+                return .error(code: "missing_param", message: "newName required")
+            }
+            switch ClawsyFileManager.renameFile(baseDir: expandedBase, path: path, newName: newName) {
+            case .success: return .success(["ok": true])
+            case .failure(let err): return .error(code: "rename_failed", message: err.description)
+            }
+        }
+
+        // file.rmdir — remove a directory (delegates to deleteFile which handles both files and dirs)
+        router.registerSync("file.rmdir") { params in
+            guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
+                return .error(code: "missing_param", message: "subPath required")
+            }
+            switch ClawsyFileManager.deleteFile(baseDir: expandedBase, relativePath: subPath) {
+            case .success: return .success(["ok": true])
+            case .failure(let err): return .error(code: "rmdir_failed", message: err.description)
+            }
+        }
+
+        // file.checksum — SHA256 checksum of a file
+        router.registerSync("file.checksum") { params in
+            guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
+                return .error(code: "missing_param", message: "subPath required")
+            }
+            guard let fullPath = ClawsyFileManager.sandboxedPath(base: expandedBase, relativePath: subPath) else {
+                return .error(code: "sandbox_violation", message: "Path escapes shared folder")
+            }
+            guard let data = try? Data(contentsOf: URL(fileURLWithPath: fullPath)) else {
+                return .error(code: "read_failed", message: "Cannot read file")
+            }
+            let digest = SHA256.hash(data: data)
+            let hex = digest.map { String(format: "%02x", $0) }.joined()
+            return .success(["checksum": hex, "algorithm": "sha256", "size": data.count])
+        }
+
+        // file.batch — execute multiple file operations sequentially
+        router.registerSync("file.batch") { params in
+            guard let ops = params["ops"] as? [[String: Any]], !ops.isEmpty else {
+                return .error(code: "missing_param", message: "ops array required")
+            }
+
+            var results: [[String: Any]] = []
+            for (index, op) in ops.enumerated() {
+                guard let opType = op["op"] as? String else {
+                    results.append(["index": index, "ok": false, "error": "missing 'op' field"])
+                    continue
+                }
+
+                let result: CommandRouter.CommandResult
+                switch opType {
+                case "copy":
+                    guard let source = op["source"] as? String, let dest = op["destination"] as? String else {
+                        results.append(["index": index, "ok": false, "error": "copy requires source and destination"])
+                        continue
+                    }
+                    switch ClawsyFileManager.copyFile(baseDir: expandedBase, source: source, destination: dest) {
+                    case .success: result = .success(["ok": true])
+                    case .failure(let err): result = .error(code: "copy_failed", message: err.description)
+                    }
+                case "move":
+                    guard let source = op["source"] as? String, let dest = op["destination"] as? String else {
+                        results.append(["index": index, "ok": false, "error": "move requires source and destination"])
+                        continue
+                    }
+                    switch ClawsyFileManager.moveFile(baseDir: expandedBase, source: source, destination: dest) {
+                    case .success: result = .success(["ok": true])
+                    case .failure(let err): result = .error(code: "move_failed", message: err.description)
+                    }
+                case "delete":
+                    guard let path = op["path"] as? String else {
+                        results.append(["index": index, "ok": false, "error": "delete requires path"])
+                        continue
+                    }
+                    switch ClawsyFileManager.deleteFile(baseDir: expandedBase, relativePath: path) {
+                    case .success: result = .success(["ok": true])
+                    case .failure(let err): result = .error(code: "delete_failed", message: err.description)
+                    }
+                case "mkdir":
+                    guard let path = op["path"] as? String else {
+                        results.append(["index": index, "ok": false, "error": "mkdir requires path"])
+                        continue
+                    }
+                    switch ClawsyFileManager.createDirectory(baseDir: expandedBase, relativePath: path) {
+                    case .success: result = .success(["ok": true])
+                    case .failure(let err): result = .error(code: "mkdir_failed", message: err.description)
+                    }
+                case "rename":
+                    guard let path = op["path"] as? String, let newName = op["newName"] as? String else {
+                        results.append(["index": index, "ok": false, "error": "rename requires path and newName"])
+                        continue
+                    }
+                    switch ClawsyFileManager.renameFile(baseDir: expandedBase, path: path, newName: newName) {
+                    case .success: result = .success(["ok": true])
+                    case .failure(let err): result = .error(code: "rename_failed", message: err.description)
+                    }
+                default:
+                    results.append(["index": index, "ok": false, "error": "unknown op '\(opType)'"])
+                    continue
+                }
+
+                switch result {
+                case .success:
+                    results.append(["index": index, "ok": true])
+                case .error(_, let message):
+                    results.append(["index": index, "ok": false, "error": message])
+                }
+            }
+
+            let allOk = results.allSatisfy { $0["ok"] as? Bool == true }
+            return .success(["ok": allOk, "results": results])
+        }
+
+        // file.get.chunk — read a specific chunk of a file (for large file downloads)
+        router.registerSync("file.get.chunk") { params in
+            guard let subPath = params["subPath"] as? String ?? params["name"] as? String ?? params["path"] as? String else {
+                return .error(code: "missing_param", message: "subPath required")
+            }
+            guard let chunkIndex = params["chunkIndex"] as? Int else {
+                return .error(code: "missing_param", message: "chunkIndex required")
+            }
+            let chunkSize = params["chunkSizeBytes"] as? Int ?? 358400 // 350 KB default (safe under 512 KB WS limit)
+
+            guard let fullPath = ClawsyFileManager.sandboxedPath(base: expandedBase, relativePath: subPath) else {
+                return .error(code: "sandbox_violation", message: "Path escapes shared folder")
+            }
+
+            guard let data = try? Data(contentsOf: URL(fileURLWithPath: fullPath)) else {
+                return .error(code: "read_failed", message: "Cannot read file")
+            }
+
+            let totalBytes = data.count
+            let totalChunks = max(1, Int(ceil(Double(totalBytes) / Double(chunkSize))))
+
+            guard chunkIndex >= 0 && chunkIndex < totalChunks else {
+                return .error(code: "invalid_chunk", message: "chunkIndex \(chunkIndex) out of range (0..<\(totalChunks))")
+            }
+
+            let start = chunkIndex * chunkSize
+            let end = min(start + chunkSize, totalBytes)
+            let chunk = data[start..<end]
+
+            return .success([
+                "content": chunk.base64EncodedString(),
+                "chunkIndex": chunkIndex,
+                "totalChunks": totalChunks,
+                "totalBytes": totalBytes,
+                "name": subPath
+            ])
+        }
+
+        // file.set.chunk — write a chunk of a large file (assembled on last chunk)
+        router.registerSync("file.set.chunk") { params in
+            guard let subPath = params["subPath"] as? String ?? params["name"] as? String ?? params["path"] as? String else {
+                return .error(code: "missing_param", message: "subPath required")
+            }
+            guard let chunkB64 = params["chunk"] as? String ?? params["content"] as? String else {
+                return .error(code: "missing_param", message: "chunk (base64) required")
+            }
+            guard let chunkIndex = params["chunkIndex"] as? Int,
+                  let totalChunks = params["totalChunks"] as? Int else {
+                return .error(code: "missing_param", message: "chunkIndex and totalChunks required")
+            }
+            guard let chunkData = Data(base64Encoded: chunkB64) else {
+                return .error(code: "invalid_base64", message: "Chunk content is not valid base64")
+            }
+
+            guard let basePath = ClawsyFileManager.sandboxedPath(base: expandedBase, relativePath: subPath) else {
+                return .error(code: "sandbox_violation", message: "Path escapes shared folder")
+            }
+
+            // Write chunk to temp file
+            let chunkPath = basePath + ".clawsy_chunk_\(chunkIndex)"
+            do {
+                let parent = URL(fileURLWithPath: chunkPath).deletingLastPathComponent()
+                try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+                try chunkData.write(to: URL(fileURLWithPath: chunkPath))
+            } catch {
+                return .error(code: "write_failed", message: "Failed to write chunk: \(error.localizedDescription)")
+            }
+
+            // Not the last chunk yet — acknowledge and wait
+            if chunkIndex < totalChunks - 1 {
+                return .success(["status": "chunk_received", "chunkIndex": chunkIndex])
+            }
+
+            // Last chunk — assemble all chunks into final file
+            var assembled = Data()
+            for i in 0..<totalChunks {
+                let partPath = basePath + ".clawsy_chunk_\(i)"
+                guard let partData = try? Data(contentsOf: URL(fileURLWithPath: partPath)) else {
+                    // Clean up any written chunks
+                    for j in 0..<totalChunks {
+                        try? FileManager.default.removeItem(atPath: basePath + ".clawsy_chunk_\(j)")
+                    }
+                    return .error(code: "assembly_failed", message: "Missing chunk \(i) of \(totalChunks)")
+                }
+                assembled.append(partData)
+            }
+
+            // Write assembled file
+            do {
+                try assembled.write(to: URL(fileURLWithPath: basePath))
+            } catch {
+                // Clean up chunks
+                for i in 0..<totalChunks {
+                    try? FileManager.default.removeItem(atPath: basePath + ".clawsy_chunk_\(i)")
+                }
+                return .error(code: "write_failed", message: "Failed to write assembled file: \(error.localizedDescription)")
+            }
+
+            // Clean up chunk temp files
+            for i in 0..<totalChunks {
+                try? FileManager.default.removeItem(atPath: basePath + ".clawsy_chunk_\(i)")
+            }
+
+            return .success([
+                "status": "ok",
+                "name": subPath,
+                "assembled": true,
+                "size": assembled.count
+            ])
         }
     }
 
