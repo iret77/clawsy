@@ -12,6 +12,7 @@ public struct HostConnectionState: Equatable {
     public var gatewayVersion: String? = nil
     public var connId: String? = nil
     public var pairingRequestId: String? = nil
+    public var nodeConnected: Bool = false
 }
 
 // MARK: - Host Manager
@@ -46,6 +47,9 @@ public class HostManager: ObservableObject {
     /// Command routers, one per host profile
     public var commandRouters: [UUID: CommandRouter] = [:]
 
+    /// Node connection managers (second WS as role=node), one per host profile
+    private var nodeConnections: [UUID: NodeConnectionManager] = [:]
+
     /// Gateway pollers (agents/sessions), one per host profile
     private var pollers: [UUID: GatewayPoller] = [:]
 
@@ -53,6 +57,7 @@ public class HostManager: ObservableObject {
     @Published public var hostStates: [UUID: HostConnectionState] = [:]
 
     private var activeCancellables = Set<AnyCancellable>()
+    private var nodeCancellables = Set<AnyCancellable>()
     private var perHostCancellables: [UUID: AnyCancellable] = [:]
 
     // MARK: - Callbacks (set by AppDelegate/ContentView)
@@ -70,6 +75,9 @@ public class HostManager: ObservableObject {
 
     /// Called when a command handler needs to execute a platform action
     public var onRegisterHandlers: ((_ router: CommandRouter, _ hostId: UUID) -> Void)?
+
+    /// Called when file command handlers need to be registered on the node connection's router
+    public var onRegisterNodeHandlers: ((_ router: CommandRouter, _ hostId: UUID) -> Void)?
 
     // MARK: - Convenience
 
@@ -195,6 +203,8 @@ public class HostManager: ObservableObject {
         connections.removeValue(forKey: id)
         handshakes.removeValue(forKey: id)
         commandRouters.removeValue(forKey: id)
+        nodeConnections[id]?.disconnect()
+        nodeConnections.removeValue(forKey: id)
         pollers.removeValue(forKey: id)
         perHostCancellables.removeValue(forKey: id)
         hostStates.removeValue(forKey: id)
@@ -209,8 +219,22 @@ public class HostManager: ObservableObject {
 
     public func updateHost(_ profile: HostProfile) {
         guard let index = profiles.firstIndex(where: { $0.id == profile.id }) else { return }
+        let oldProfile = profiles[index]
         profiles[index] = profile
         saveProfiles()
+
+        // React to node connection toggle change while connected
+        if oldProfile.enableNodeConnection != profile.enableNodeConnection {
+            if profile.enableNodeConnection {
+                if connections[profile.id]?.isConnected == true {
+                    startNodeConnection(for: profile.id)
+                }
+            } else {
+                nodeConnections[profile.id]?.disconnect()
+                nodeConnections.removeValue(forKey: profile.id)
+                hostStates[profile.id]?.nodeConnected = false
+            }
+        }
     }
 
     public func switchActiveHost(to id: UUID) {
@@ -315,6 +339,7 @@ public class HostManager: ObservableObject {
     /// Disconnect a single host
     public func disconnectHost(_ id: UUID) {
         connections[id]?.disconnect()
+        nodeConnections[id]?.disconnect()
         pollers[id]?.stop()
     }
 
@@ -338,6 +363,76 @@ public class HostManager: ObservableObject {
                 self?.connectHost(id)
             }
         }
+    }
+
+    // MARK: - Node Connection
+
+    /// Start the node connection for a host (second WebSocket with role=node).
+    /// Must only be called when the operator connection is established.
+    private func startNodeConnection(for hostId: UUID) {
+        guard let profile = profiles.first(where: { $0.id == hostId }),
+              profile.enableNodeConnection else { return }
+        guard let conn = connections[hostId], conn.isConnected else { return }
+
+        // Build the WebSocket URL matching the operator connection
+        let urlString: String
+        #if os(macOS)
+        if conn.sshTunnel.isRunning {
+            urlString = "ws://127.0.0.1:\(conn.sshTunnel.localPort)"
+        } else {
+            let host = profile.gatewayHost
+            let port = profile.gatewayPort
+            let scheme = (host.contains("localhost") || host.contains("127.0.0.1")) ? "ws" : "wss"
+            urlString = "\(scheme)://\(host):\(port)"
+        }
+        #else
+        let host = profile.gatewayHost
+        let port = profile.gatewayPort
+        let scheme = (host.contains("localhost") || host.contains("127.0.0.1")) ? "ws" : "wss"
+        urlString = "\(scheme)://\(host):\(port)"
+        #endif
+
+        guard let url = URL(string: urlString) else {
+            os_log("[HostMgr] Invalid node WS URL: %{public}@", log: logger, type: .error, urlString)
+            return
+        }
+
+        // Disconnect existing node connection if any
+        nodeConnections[hostId]?.disconnect()
+
+        let nodeConn = NodeConnectionManager()
+        nodeConnections[hostId] = nodeConn
+
+        // Forward logs to operator's rawLog
+        nodeConn.onLog = { [weak conn] msg in
+            DispatchQueue.main.async { conn?.rawLog += "\n\(msg)" }
+        }
+
+        // Register file command handlers
+        nodeConn.onRegisterHandlers = { [weak self] router in
+            self?.onRegisterNodeHandlers?(router, hostId)
+        }
+
+        // Handle reconnect requests
+        nodeConn.onReconnectNeeded = { [weak self] in
+            self?.startNodeConnection(for: hostId)
+        }
+
+        // Track node connection state
+        nodeConn.$isConnected
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] connected in
+                self?.hostStates[hostId]?.nodeConnected = connected
+            }
+            .store(in: &nodeCancellables)
+
+        // Approval routing
+        nodeConn.commandRouter.onApprovalRequired = { [weak self] command, params, completion in
+            self?.onApprovalRequired?(hostId, command, params, completion)
+        }
+
+        nodeConn.connect(url: url, gatewayToken: profile.serverToken, deviceToken: profile.deviceToken)
+        os_log("[HostMgr] Started node connection for %{public}@", log: logger, type: .info, profile.name)
     }
 
     // MARK: - Wiring
@@ -369,6 +464,9 @@ public class HostManager: ObservableObject {
 
             // Start polling for agents/sessions now that we're connected
             poller?.start()
+
+            // Start node connection if enabled
+            self?.startNodeConnection(for: profileId)
 
             conn?.handleHandshakeComplete(deviceToken: result.deviceToken)
         }

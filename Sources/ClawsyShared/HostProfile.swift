@@ -19,6 +19,7 @@ public struct HostProfile: Codable, Identifiable, Equatable {
     public var sshUser: String
     public var useSshFallback: Bool
     public var sshOnly: Bool         // skip WSS, always use SSH tunnel
+    public var enableNodeConnection: Bool  // open second WS as node for Shared Folder
     public var color: String         // hex e.g. "#FF3B30"
     public var sharedFolderPath: String  // e.g. "~/Clawsy/CyberClaw/"
     public var deviceToken: String?
@@ -32,6 +33,7 @@ public struct HostProfile: Codable, Identifiable, Equatable {
         sshUser: String = "",
         useSshFallback: Bool = true,
         sshOnly: Bool = false,
+        enableNodeConnection: Bool = true,
         color: String = "#FF3B30",
         sharedFolderPath: String = "",
         deviceToken: String? = nil
@@ -44,6 +46,7 @@ public struct HostProfile: Codable, Identifiable, Equatable {
         self.sshUser = sshUser
         self.useSshFallback = useSshFallback
         self.sshOnly = sshOnly
+        self.enableNodeConnection = enableNodeConnection
         self.color = color
         self.sharedFolderPath = sharedFolderPath
         self.deviceToken = deviceToken
@@ -60,6 +63,7 @@ public struct HostProfile: Codable, Identifiable, Equatable {
         sshUser = try container.decode(String.self, forKey: .sshUser)
         useSshFallback = try container.decode(Bool.self, forKey: .useSshFallback)
         sshOnly = try container.decodeIfPresent(Bool.self, forKey: .sshOnly) ?? false
+        enableNodeConnection = try container.decodeIfPresent(Bool.self, forKey: .enableNodeConnection) ?? true
         color = try container.decode(String.self, forKey: .color)
         sharedFolderPath = try container.decode(String.self, forKey: .sharedFolderPath)
         deviceToken = try container.decodeIfPresent(String.self, forKey: .deviceToken)

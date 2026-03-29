@@ -434,15 +434,14 @@ public final class GatewayPoller: ObservableObject {
     }
 
     private func fetchSessions() {
-        sendRequest(method: "status") { [weak self] response in
-            guard let payload = response["payload"] as? [String: Any] else { return }
-
-            // "status" returns presence info with sessions
-            guard let sessions = payload["sessions"] as? [[String: Any]] else {
-                // Try "presence" sub-object
-                if let presence = payload["presence"] as? [[String: Any]] {
-                    self?.parseSessions(presence)
-                }
+        // Protocol V3: sessions.list returns { sessions: [{ key, displayName?, provider?, subject?, ... }] }
+        sendRequest(method: "sessions.list", params: [
+            "activeMinutes": 60,
+            "includeGlobal": true
+        ]) { [weak self] response in
+            guard let payload = response["payload"] as? [String: Any],
+                  let sessions = payload["sessions"] as? [[String: Any]] else {
+                self?.log("sessions.list: no sessions in payload")
                 return
             }
             self?.parseSessions(sessions)
@@ -455,15 +454,16 @@ public final class GatewayPoller: ObservableObject {
 
         let parsed: [GatewaySession] = sessionsList.compactMap { s in
             guard let key = s["key"] as? String ?? s["sessionKey"] as? String else { return nil }
-            let startedAt: Date? = (s["startedAt"] as? String).flatMap { isoFormatter.date(from: $0) }
+            let startedAt: Date? = (s["startedAt"] as? String ?? s["createdAt"] as? String)
+                .flatMap { isoFormatter.date(from: $0) }
             return GatewaySession(
                 id: key,
-                label: s["label"] as? String,
+                label: s["displayName"] as? String ?? s["label"] as? String,
                 kind: s["kind"] as? String ?? "unknown",
                 status: s["status"] as? String ?? "unknown",
-                model: s["model"] as? String,
+                model: s["model"] as? String ?? s["provider"] as? String,
                 startedAt: startedAt,
-                task: s["task"] as? String
+                task: s["subject"] as? String ?? s["task"] as? String
             )
         }
 
@@ -519,7 +519,8 @@ public final class GatewayPoller: ObservableObject {
         ]
 
         // Only track requests where we want to show the response as a toast.
-        // Inbox messages are context-only — no toast needed, no agent reaction expected.
+        // Inbox messages are context-only — the agent's memory.md instructs it to reply
+        // with just "ok", so token waste is minimal. No toast needed for inbox responses.
         if !sessionKey.contains("clawsy-inbox") {
             pendingChatRequests[requestId] = sessionKey
         }
@@ -555,7 +556,7 @@ public final class GatewayPoller: ObservableObject {
 
     /// Block version — bump this when the clawsy memory block content changes.
     /// Clawsy will auto-replace outdated blocks in agents' memory.md files.
-    private static let clawsyBlockVersion = 1
+    private static let clawsyBlockVersion = 2
 
     /// Ensure the agent's memory.md includes a current Clawsy integration block.
     /// Reads current content, replaces outdated block or appends if missing.
@@ -608,7 +609,13 @@ public final class GatewayPoller: ObservableObject {
         ## Clawsy Integration
         Clawsy is a macOS companion app that delivers screenshots, camera photos, clipboard content,
         and file events to the session `\(inboxKey)`.
-        When a user references media sent via Clawsy (e.g. "check my screenshot", "I sent you a photo"),
+
+        **Inbox behavior:** Messages in `\(inboxKey)` are context drops from the user's Mac.
+        Do NOT analyze, describe, or respond to the content unprompted.
+        If you must respond, keep it to a single short acknowledgment (e.g. "Received.") and
+        wait — the user will follow up with context and instructions in their main conversation.
+
+        When a user references media sent via Clawsy (e.g. "check my screenshot", "look at what I sent"),
         use `sessions_history` on session `\(inboxKey)` to find it.
         Each message is tagged with `[clawsy:<type>]` where type is screenshot, camera, clipboard,
         file-rule, or share. Messages include device name, timestamp, and target agent.
@@ -630,12 +637,13 @@ public final class GatewayPoller: ObservableObject {
     // MARK: - Send: Media via clawsy-inbox
 
     /// Build the structured message header for clawsy-inbox messages.
+    /// Includes a no-reply directive so the agent responds minimally.
     private func clawsyMessageHeader(type: String, extra: [String: String] = [:]) -> String {
         let deviceName = Host.current().localizedName ?? "Mac"
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
         let timestamp = formatter.string(from: Date())
-        var lines = ["[clawsy:\(type)]",
+        var lines = ["[clawsy:\(type)] [no response needed — user will follow up separately]",
                      "agent: \(currentAgentName)",
                      "device: \(deviceName)",
                      "time: \(timestamp)"]

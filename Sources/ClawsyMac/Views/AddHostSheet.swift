@@ -13,6 +13,7 @@ struct AddHostSheet: View {
     @State private var sshUser = ""
     @State private var useSshFallback = true
     @State private var sshOnly = false
+    @State private var enableNodeConnection = true
     @State private var selectedColor = HostProfile.defaultColors[1]
 
     private var canSave: Bool {
@@ -98,8 +99,27 @@ struct AddHostSheet: View {
                             .textFieldStyle(.roundedBorder)
                         Toggle("SSH Fallback", isOn: $useSshFallback)
                             .font(ClawsyTheme.Font.formLabel)
+                            .onChange(of: useSshFallback) { enabled in
+                                if !enabled { sshOnly = false }
+                            }
                         Toggle("SSH Only", isOn: $sshOnly)
                             .font(ClawsyTheme.Font.formLabel)
+                            .disabled(!useSshFallback || sshUser.isEmpty)
+                    }
+
+                    Divider().clawsy()
+
+                    // Node Mode
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label(NSLocalizedString("NODE_MODE_SECTION", bundle: .clawsy, comment: ""), systemImage: "point.3.connected.trianglepath.dotted")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.secondary)
+
+                        Toggle(NSLocalizedString("NODE_MODE_LABEL", bundle: .clawsy, comment: ""), isOn: $enableNodeConnection)
+                            .font(ClawsyTheme.Font.formLabel)
+                        Text(NSLocalizedString("NODE_MODE_DESC", bundle: .clawsy, comment: ""))
+                            .font(ClawsyTheme.Font.caption)
+                            .foregroundColor(.secondary)
                     }
                 }
                 .padding(20)
@@ -137,6 +157,7 @@ struct AddHostSheet: View {
             sshUser: sshUser.trimmingCharacters(in: .whitespaces),
             useSshFallback: useSshFallback,
             sshOnly: sshOnly,
+            enableNodeConnection: enableNodeConnection,
             color: selectedColor
         )
         onHostAdded?(profile)

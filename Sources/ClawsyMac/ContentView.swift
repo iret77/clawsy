@@ -286,102 +286,8 @@ struct ContentView: View {
             let baseDir = profile?.sharedFolderPath ?? "~/Documents/Clawsy"
             let expandedBase = baseDir.replacingOccurrences(of: "~", with: NSHomeDirectory())
 
-            // file.list
-            router.registerSync("file.list") { params in
-                let subPath = params["subPath"] as? String ?? ""
-                let recursive = params["recursive"] as? Bool ?? false
-                let entries = ClawsyFileManager.listFiles(at: expandedBase, subPath: subPath, recursive: recursive)
-                let list = entries.map { ["name": $0.name, "isDirectory": $0.isDirectory, "size": $0.size] as [String: Any] }
-                return .success(["files": list])
-            }
-
-            // file.get
-            router.registerSync("file.get") { params in
-                guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
-                    return .error(code: "missing_param", message: "subPath required")
-                }
-                switch ClawsyFileManager.readFile(baseDir: expandedBase, relativePath: subPath) {
-                case .success(let b64): return .success(["base64": b64])
-                case .failure(let err): return .error(code: "read_failed", message: err.description)
-                }
-            }
-
-            // file.set
-            router.registerSync("file.set") { params in
-                guard let subPath = params["subPath"] as? String ?? params["path"] as? String,
-                      let content = params["content"] as? String ?? params["base64"] as? String else {
-                    return .error(code: "missing_param", message: "subPath and content required")
-                }
-                switch ClawsyFileManager.writeFile(baseDir: expandedBase, relativePath: subPath, base64Content: content) {
-                case .success: return .success(["ok": true])
-                case .failure(let err): return .error(code: "write_failed", message: err.description)
-                }
-            }
-
-            // file.mkdir
-            router.registerSync("file.mkdir") { params in
-                guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
-                    return .error(code: "missing_param", message: "subPath required")
-                }
-                switch ClawsyFileManager.createDirectory(baseDir: expandedBase, relativePath: subPath) {
-                case .success: return .success(["ok": true])
-                case .failure(let err): return .error(code: "mkdir_failed", message: err.description)
-                }
-            }
-
-            // file.delete
-            router.registerSync("file.delete") { params in
-                guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
-                    return .error(code: "missing_param", message: "subPath required")
-                }
-                switch ClawsyFileManager.deleteFile(baseDir: expandedBase, relativePath: subPath) {
-                case .success: return .success(["ok": true])
-                case .failure(let err): return .error(code: "delete_failed", message: err.description)
-                }
-            }
-
-            // file.move
-            router.registerSync("file.move") { params in
-                guard let source = params["source"] as? String ?? params["from"] as? String,
-                      let dest = params["destination"] as? String ?? params["to"] as? String else {
-                    return .error(code: "missing_param", message: "source and destination required")
-                }
-                switch ClawsyFileManager.moveFile(baseDir: expandedBase, source: source, destination: dest) {
-                case .success: return .success(["ok": true])
-                case .failure(let err): return .error(code: "move_failed", message: err.description)
-                }
-            }
-
-            // file.copy
-            router.registerSync("file.copy") { params in
-                guard let source = params["source"] as? String ?? params["from"] as? String,
-                      let dest = params["destination"] as? String ?? params["to"] as? String else {
-                    return .error(code: "missing_param", message: "source and destination required")
-                }
-                switch ClawsyFileManager.copyFile(baseDir: expandedBase, source: source, destination: dest) {
-                case .success: return .success(["ok": true])
-                case .failure(let err): return .error(code: "copy_failed", message: err.description)
-                }
-            }
-
-            // file.stat
-            router.registerSync("file.stat") { params in
-                guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
-                    return .error(code: "missing_param", message: "subPath required")
-                }
-                let stat = ClawsyFileManager.statFile(baseDir: expandedBase, relativePath: subPath)
-                return .success(["exists": stat.exists, "isDirectory": stat.isDirectory,
-                                 "size": stat.size as Any, "modified": stat.modified as Any])
-            }
-
-            // file.exists
-            router.registerSync("file.exists") { params in
-                guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
-                    return .error(code: "missing_param", message: "subPath required")
-                }
-                let result = ClawsyFileManager.existsFile(baseDir: expandedBase, relativePath: subPath)
-                return .success(["exists": result.exists, "isDirectory": result.isDirectory])
-            }
+            // File commands (shared with node connection)
+            Self.registerFileHandlers(on: router, expandedBase: expandedBase)
 
             // screen.capture
             router.register("screen.capture") { params, completion in
@@ -458,6 +364,115 @@ struct ContentView: View {
                 }
                 return .success(["cameras": list])
             }
+        }
+
+        // Node connection: file handlers only
+        hostManager.onRegisterNodeHandlers = { router, hostId in
+            let profile = self.hostManager.profiles.first(where: { $0.id == hostId })
+            let baseDir = profile?.sharedFolderPath ?? "~/Documents/Clawsy"
+            let expandedBase = baseDir.replacingOccurrences(of: "~", with: NSHomeDirectory())
+            Self.registerFileHandlers(on: router, expandedBase: expandedBase)
+        }
+    }
+
+    // MARK: - File Handler Registration (shared between operator and node)
+
+    private static func registerFileHandlers(on router: CommandRouter, expandedBase: String) {
+        // file.list
+        router.registerSync("file.list") { params in
+            let subPath = params["subPath"] as? String ?? ""
+            let recursive = params["recursive"] as? Bool ?? false
+            let entries = ClawsyFileManager.listFiles(at: expandedBase, subPath: subPath, recursive: recursive)
+            let list = entries.map { ["name": $0.name, "isDirectory": $0.isDirectory, "size": $0.size] as [String: Any] }
+            return .success(["files": list])
+        }
+
+        // file.get
+        router.registerSync("file.get") { params in
+            guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
+                return .error(code: "missing_param", message: "subPath required")
+            }
+            switch ClawsyFileManager.readFile(baseDir: expandedBase, relativePath: subPath) {
+            case .success(let b64): return .success(["base64": b64])
+            case .failure(let err): return .error(code: "read_failed", message: err.description)
+            }
+        }
+
+        // file.set
+        router.registerSync("file.set") { params in
+            guard let subPath = params["subPath"] as? String ?? params["path"] as? String,
+                  let content = params["content"] as? String ?? params["base64"] as? String else {
+                return .error(code: "missing_param", message: "subPath and content required")
+            }
+            switch ClawsyFileManager.writeFile(baseDir: expandedBase, relativePath: subPath, base64Content: content) {
+            case .success: return .success(["ok": true])
+            case .failure(let err): return .error(code: "write_failed", message: err.description)
+            }
+        }
+
+        // file.mkdir
+        router.registerSync("file.mkdir") { params in
+            guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
+                return .error(code: "missing_param", message: "subPath required")
+            }
+            switch ClawsyFileManager.createDirectory(baseDir: expandedBase, relativePath: subPath) {
+            case .success: return .success(["ok": true])
+            case .failure(let err): return .error(code: "mkdir_failed", message: err.description)
+            }
+        }
+
+        // file.delete
+        router.registerSync("file.delete") { params in
+            guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
+                return .error(code: "missing_param", message: "subPath required")
+            }
+            switch ClawsyFileManager.deleteFile(baseDir: expandedBase, relativePath: subPath) {
+            case .success: return .success(["ok": true])
+            case .failure(let err): return .error(code: "delete_failed", message: err.description)
+            }
+        }
+
+        // file.move
+        router.registerSync("file.move") { params in
+            guard let source = params["source"] as? String ?? params["from"] as? String,
+                  let dest = params["destination"] as? String ?? params["to"] as? String else {
+                return .error(code: "missing_param", message: "source and destination required")
+            }
+            switch ClawsyFileManager.moveFile(baseDir: expandedBase, source: source, destination: dest) {
+            case .success: return .success(["ok": true])
+            case .failure(let err): return .error(code: "move_failed", message: err.description)
+            }
+        }
+
+        // file.copy
+        router.registerSync("file.copy") { params in
+            guard let source = params["source"] as? String ?? params["from"] as? String,
+                  let dest = params["destination"] as? String ?? params["to"] as? String else {
+                return .error(code: "missing_param", message: "source and destination required")
+            }
+            switch ClawsyFileManager.copyFile(baseDir: expandedBase, source: source, destination: dest) {
+            case .success: return .success(["ok": true])
+            case .failure(let err): return .error(code: "copy_failed", message: err.description)
+            }
+        }
+
+        // file.stat
+        router.registerSync("file.stat") { params in
+            guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
+                return .error(code: "missing_param", message: "subPath required")
+            }
+            let stat = ClawsyFileManager.statFile(baseDir: expandedBase, relativePath: subPath)
+            return .success(["exists": stat.exists, "isDirectory": stat.isDirectory,
+                             "size": stat.size as Any, "modified": stat.modified as Any])
+        }
+
+        // file.exists
+        router.registerSync("file.exists") { params in
+            guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
+                return .error(code: "missing_param", message: "subPath required")
+            }
+            let result = ClawsyFileManager.existsFile(baseDir: expandedBase, relativePath: subPath)
+            return .success(["exists": result.exists, "isDirectory": result.isDirectory])
         }
     }
 
