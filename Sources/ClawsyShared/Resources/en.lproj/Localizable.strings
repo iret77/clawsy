@@ -455,7 +455,7 @@
 "PERM_BANNER_ACCESSIBILITY_DESC" = "Required for global shortcuts like ⌘⇧K";
 "PERM_BANNER_NOTIFICATIONS_TITLE" = "Notifications";
 "PERM_BANNER_NOTIFICATIONS_DESC" = "Show desktop alerts for agent activity";
-"PERM_BANNER_OPEN_SETTINGS" = "Open Settings";
+"PERM_BANNER_OPEN_SETTINGS" = "Open";
 "PERM_GRANTED" = "Granted";
 "PERM_REQUEST_ACCESS" = "Request access";
 "PERM_MISSING_SCREENSHOT" = "Screen Recording access needed — opening Settings…";
