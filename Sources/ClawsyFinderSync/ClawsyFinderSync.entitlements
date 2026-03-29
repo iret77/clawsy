@@ -9,6 +9,6 @@
 		<string>group.ai.openclaw.clawsy</string>
 	</array>
 	<key>com.apple.FinderSync.HostBundleIdentifier</key>
-	<string>ai.clawsy.ClawsyMac</string>
+	<string>ai.clawsy</string>
 </dict>
 </plist>
