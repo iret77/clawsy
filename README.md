@@ -35,66 +35,47 @@ Nothing happens behind your back. Every screenshot, clipboard read, or file writ
 
 ## Getting Started
 
-The easiest way to set up Clawsy:
+### Recommended: Let Your Agent Handle It
 
-1. **Download & install** Clawsy on your Mac ([latest release](https://github.com/iret77/clawsy/releases/latest))
-2. **Remove quarantine** — run `xattr -cr /Applications/Clawsy.app` in Terminal
-3. **Tell your OpenClaw agent:**
+Send this to your OpenClaw agent:
 
-   > "Install the Clawsy skill from clawhub"
+> **Install the Clawsy macOS companion: `clawhub install clawsy`**
 
-3. Your agent will install everything automatically and send you a pairing link — just click it.
-
-**That's it.** Clawsy connects, your agent gets access to screenshots, clipboard, camera, and files.
+That's it. Your agent installs the Clawsy skill, knows every capability, and walks you through download, setup, and pairing step by step.
 
 ---
 
-## Manual Setup (Advanced)
+### Already Have Clawsy Installed?
 
-If you prefer to configure everything yourself, follow the steps below.
+If you downloaded Clawsy separately:
 
-### 1. Prepare your OpenClaw Gateway
+1. Launch Clawsy and click **Add Host**
+2. A setup prompt is copied to your clipboard automatically
+3. Send the prompt to your agent via any channel (chat, Telegram, Slack, ...)
+4. Your agent responds with a setup code — paste it back into Clawsy
 
-Make sure your OpenClaw instance is running and you have the **Gateway Host**, **Port** (default: `18789`), and **Token** ready.
+Done. Clawsy connects, and the agent receives the full skill reference automatically.
 
-> 💡 For detailed server-side configuration, see [docs/SERVER_SETUP.md](docs/SERVER_SETUP.md).
+---
 
-### 2. Install Clawsy on your Mac
+### Manual Setup (Advanced)
+
+For full manual control over every setting:
 
 1. Download **Clawsy.app.zip** from the [latest release](https://github.com/iret77/clawsy/releases/latest)
-2. Unzip → drag `Clawsy.app` to `/Applications`
-3. **Remove the quarantine flag** (required for apps distributed outside the App Store):
+2. Unzip, drag to `/Applications`, remove quarantine:
    ```bash
    xattr -cr /Applications/Clawsy.app
    ```
-   Without this, macOS Gatekeeper will block the app from launching.
-4. Launch Clawsy — the onboarding assistant walks you through permissions
-
-### 3. Connect
-
-5. Open **Settings** → enter your OpenClaw **Gateway Host**, **Port**, and **Token**
-6. Clawsy connects and sends a pairing request. **Approve it on your server:**
+3. Launch Clawsy — the onboarding assistant walks you through permissions
+4. Open **Settings** → enter **Gateway Host**, **Port** (`18789`), and **Token**
+5. Approve the pairing request on your server:
    ```bash
-   # List pending pairing requests
    openclaw devices list
-
-   # Approve (use the request ID shown)
    openclaw devices approve <requestId>
    ```
 
-### 4. Tell your agent
-
-7. Copy-paste this into your chat or add it to your `AGENTS.md`:
-   ```
-   Clawsy (macOS companion app) is installed and connected.
-   Read the Clawsy skill file for full integration details.
-   Add to HEARTBEAT.md:
-   - Send agent.info to clawsy-service every heartbeat
-   - Send agent.status for active tasks
-   See: https://github.com/iret77/clawsy/blob/main/for-agents.md
-   ```
-
-8. **Done.** Your agent can now take screenshots, read your clipboard, access files, and show live task progress.
+The agent receives the full skill reference automatically after connection.
 
 ---
 
