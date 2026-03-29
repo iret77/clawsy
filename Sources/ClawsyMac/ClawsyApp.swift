@@ -535,12 +535,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         window.hasShadow = false  // Toast view has its own shadow
         window.contentView = hostView
 
-        // Position in the notification area (top-right) so it doesn't overlap the main popover
+        // Position in the notification area (top-right), below the menu bar
         if let screen = NSScreen.main {
             let padding: CGFloat = 12
-            let menuBarHeight = NSStatusBar.system.thickness
+            // visibleFrame excludes menu bar and dock — its maxY is the bottom of the menu bar
             let x = screen.frame.maxX - hostView.fittingSize.width - padding
-            let y = screen.frame.maxY - menuBarHeight - hostView.fittingSize.height - 4
+            let y = screen.visibleFrame.maxY - hostView.fittingSize.height - padding
             window.setFrameOrigin(NSPoint(x: x, y: y))
         } else if let buttonWindow = button.window {
             let buttonFrame = button.convert(button.bounds, to: nil)

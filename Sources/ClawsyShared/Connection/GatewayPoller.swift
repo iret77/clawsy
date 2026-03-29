@@ -518,8 +518,11 @@ public final class GatewayPoller: ObservableObject {
             "params": params
         ]
 
-        // Track this request so we can match the response
-        pendingChatRequests[requestId] = sessionKey
+        // Only track requests where we want to show the response as a toast.
+        // Inbox messages are context-only — no toast needed, no agent reaction expected.
+        if !sessionKey.contains("clawsy-inbox") {
+            pendingChatRequests[requestId] = sessionKey
+        }
 
         log("chat.send → \(sessionKey) (\(message.prefix(60))…)")
         send(frame)
