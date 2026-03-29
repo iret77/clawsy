@@ -486,5 +486,9 @@
 "UPDATE_AVAILABLE_TITLE" = "Clawsy Update Available";
 "UPDATE_AVAILABLE_BODY %@" = "Version %@ is ready. Open Settings to install.";
 
+// Permission-aware action hints
+"ACTION_NEEDS_SCREEN_RECORDING" = "Grant Screen Recording to use";
+"ACTION_NEEDS_CAMERA" = "Grant Camera access to use";
+
 // Onboarding
 "ONBOARDING_WINDOW_TITLE" = "Welcome to Clawsy";
