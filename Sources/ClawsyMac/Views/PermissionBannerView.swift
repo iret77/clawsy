@@ -67,14 +67,17 @@ private struct PermissionBannerRow: View {
             .layoutPriority(1)
 
             if !isGranted {
-                Button(permission.hasNativeGrant
-                    ? NSLocalizedString("PERM_GRANT", bundle: .clawsy, comment: "")
-                    : NSLocalizedString("PERM_BANNER_OPEN_SETTINGS", bundle: .clawsy, comment: "")
-                ) {
-                    onGrant()
+                Button(action: onGrant) {
+                    HStack(spacing: 3) {
+                        Image(systemName: permission.hasNativeGrant ? "checkmark.circle" : "gear")
+                            .font(.system(size: 10))
+                        Text(permission.hasNativeGrant ? "OK" : "Open")
+                            .font(.system(size: 10, weight: .medium))
+                    }
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
+                .fixedSize()
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
