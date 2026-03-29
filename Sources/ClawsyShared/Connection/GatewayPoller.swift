@@ -550,11 +550,16 @@ public final class GatewayPoller: ObservableObject {
         }
     }
 
-    /// Ensure the agent's memory.md includes a Clawsy integration block.
-    /// Reads current content, appends block if missing, writes back.
+    /// Block version — bump this when the clawsy memory block content changes.
+    /// Clawsy will auto-replace outdated blocks in agents' memory.md files.
+    private static let clawsyBlockVersion = 1
+
+    /// Ensure the agent's memory.md includes a current Clawsy integration block.
+    /// Reads current content, replaces outdated block or appends if missing.
     private func ensureMemoryMdUpdated() {
         guard !memoryMdUpdated, let agentId = currentAgentId else { return }
         let inboxKey = clawsyInboxSessionKey
+        let versionTag = "clawsy:v\(Self.clawsyBlockVersion)"
 
         sendRequest(method: "agents.files.get", params: [
             "agentId": agentId,
@@ -567,18 +572,17 @@ public final class GatewayPoller: ObservableObject {
                let content = payload["content"] as? String {
                 existing = content
             } else {
-                // memory.md may not exist yet — start fresh
                 existing = ""
             }
 
-            // Already has a clawsy block — check if inbox key matches
+            // Block exists — check if version + inbox key are current
             if existing.contains("<!-- clawsy:start -->") {
-                if existing.contains(inboxKey) {
+                if existing.contains(versionTag) && existing.contains(inboxKey) {
                     self.memoryMdUpdated = true
-                    self.log("memory.md: clawsy block already present")
+                    self.log("memory.md: clawsy block v\(Self.clawsyBlockVersion) up to date")
                     return
                 }
-                // Inbox key changed — replace block
+                // Outdated version or wrong inbox key — replace
                 if let startRange = existing.range(of: "<!-- clawsy:start -->"),
                    let endRange = existing.range(of: "<!-- clawsy:end -->") {
                     var updated = existing
@@ -588,7 +592,7 @@ public final class GatewayPoller: ObservableObject {
                 }
             }
 
-            // Append clawsy block
+            // No block yet — append
             let updated = existing.trimmingCharacters(in: .whitespacesAndNewlines)
                 + "\n\n" + self.clawsyMemoryBlock(inboxKey: inboxKey) + "\n"
             self.writeMemoryMd(agentId: agentId, content: updated)
@@ -597,7 +601,7 @@ public final class GatewayPoller: ObservableObject {
 
     private func clawsyMemoryBlock(inboxKey: String) -> String {
         """
-        <!-- clawsy:start -->
+        <!-- clawsy:start clawsy:v\(Self.clawsyBlockVersion) -->
         ## Clawsy Integration
         Clawsy is a macOS companion app that delivers screenshots, camera photos, clipboard content,
         and file events to the session `\(inboxKey)`.
