@@ -136,6 +136,11 @@
 // Mode SSH uniquement
 "SSH_ONLY_MODE" = "SSH uniquement";
 "SSH_ONLY_MODE_DESC" = "Ignorer la connexion directe, toujours utiliser le tunnel SSH";
+
+// Mode Node (Dossier partagé)
+"NODE_MODE_SECTION" = "Dossier partagé";
+"NODE_MODE_LABEL" = "Mode Node (Dossier partagé)";
+"NODE_MODE_DESC" = "Ouvre une deuxième connexion pour que les agents accèdent au dossier partagé.";
 "STATUS_RECONNECT_COUNTDOWN %lld" = "Reconnexion dans %lld s…";
 
 // Onboarding UX — Skill missing after SSH (v0.9.4)

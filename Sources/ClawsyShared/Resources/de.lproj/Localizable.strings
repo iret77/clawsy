@@ -287,6 +287,11 @@
 "SSH_ONLY_MODE" = "Nur SSH";
 "SSH_ONLY_MODE_DESC" = "Direktverbindung überspringen, immer SSH-Tunnel verwenden";
 
+// Node-Modus (Shared Folder)
+"NODE_MODE_SECTION" = "Shared Folder";
+"NODE_MODE_LABEL" = "Node-Modus (Shared Folder)";
+"NODE_MODE_DESC" = "Zweite Verbindung, damit Agenten per Datei-Kommandos auf den Shared Folder zugreifen.";
+
 // Gateway Connection (Onboarding Step 0)
 "ONBOARDING_GATEWAY_TITLE" = "Mit Gateway verbinden";
 "ONBOARDING_GATEWAY_DESC" = "Verbinde Clawsy mit deiner OpenClaw-Instanz. Das ist die Voraussetzung für alles andere.";
