@@ -318,5 +318,9 @@
 "UPDATE_AVAILABLE_TITLE" = "Actualización de Clawsy disponible";
 "UPDATE_AVAILABLE_BODY %@" = "Versión %@ lista. Abre Ajustes para instalar.";
 
+// Indicaciones de permisos para acciones
+"ACTION_NEEDS_SCREEN_RECORDING" = "Conceder grabación de pantalla";
+"ACTION_NEEDS_CAMERA" = "Conceder acceso a la cámara";
+
 // Onboarding
 "ONBOARDING_WINDOW_TITLE" = "Bienvenido a Clawsy";

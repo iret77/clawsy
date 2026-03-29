@@ -4,6 +4,7 @@ import ClawsyShared
 /// Main action buttons: QuickSend, Screenshot, Clipboard, Camera.
 struct ActionMenuView: View {
     @ObservedObject var hostManager: HostManager
+    @ObservedObject private var permissionMonitor = PermissionMonitor.shared
     @EnvironmentObject var appDelegate: AppDelegate
 
     @State private var showingScreenshotMenu = false
@@ -12,6 +13,8 @@ struct ActionMenuView: View {
     @AppStorage("activeCameraId", store: SharedConfig.sharedDefaults) private var activeCameraId = ""
 
     private var isConnected: Bool { hostManager.isConnected }
+    private var hasScreenRecording: Bool { permissionMonitor.status[.screenRecording] == true }
+    private var hasCamera: Bool { permissionMonitor.status[.camera] == true }
 
     var body: some View {
         VStack(spacing: 2) {
@@ -25,8 +28,16 @@ struct ActionMenuView: View {
             .frame(maxWidth: .infinity)
 
             // Screenshot
-            Button(action: { showingScreenshotMenu.toggle() }) {
-                MenuItemRow(icon: ClawsyTheme.Icons.screenshot, title: "SCREENSHOT", isEnabled: isConnected, hasChevron: true)
+            Button(action: {
+                if !hasScreenRecording {
+                    permissionMonitor.openSettings(for: .screenRecording)
+                } else {
+                    showingScreenshotMenu.toggle()
+                }
+            }) {
+                MenuItemRow(icon: ClawsyTheme.Icons.screenshot, title: "SCREENSHOT",
+                            subtitle: !hasScreenRecording ? "ACTION_NEEDS_SCREEN_RECORDING" : nil,
+                            isEnabled: isConnected && hasScreenRecording, hasChevron: hasScreenRecording)
             }
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
@@ -65,11 +76,17 @@ struct ActionMenuView: View {
 
             // Camera
             Button(action: {
-                ensureCameraSelected()
-                if !availableCameras.isEmpty { showingCameraMenu.toggle() }
+                if !hasCamera {
+                    permissionMonitor.openSettings(for: .camera)
+                } else {
+                    ensureCameraSelected()
+                    if !availableCameras.isEmpty { showingCameraMenu.toggle() }
+                }
             }) {
                 MenuItemRow(icon: ClawsyTheme.Icons.camera, title: "CAMERA",
-                            isEnabled: isConnected && !availableCameras.isEmpty, hasChevron: true)
+                            subtitle: !hasCamera ? "ACTION_NEEDS_CAMERA" : nil,
+                            isEnabled: isConnected && hasCamera && !availableCameras.isEmpty,
+                            hasChevron: hasCamera && !availableCameras.isEmpty)
             }
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
