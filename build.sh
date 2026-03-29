@@ -56,7 +56,14 @@ if [ -f "CLAWSY.md" ]; then
     echo "✅ Bundled CLAWSY.md"
 fi
 
-# ── Step 6: Verify ──────────────────────────────────────────────────
+# ── Step 6: Re-sign entire bundle ──────────────────────────────────
+# xcodebuild signs each target independently with ad-hoc identity,
+# which can produce different Team IDs. Re-sign the whole bundle
+# so dyld sees consistent signatures across app + framework + extensions.
+echo "🔏 Re-signing app bundle..."
+codesign --force --deep --sign - "$APP_BUNDLE"
+
+# ── Step 7: Verify ──────────────────────────────────────────────────
 echo "🔍 Verifying bundle structure..."
 
 # Check extensions are embedded
@@ -73,7 +80,7 @@ else
 fi
 
 # Verify code signature
-codesign -vvv --deep --strict "$APP_BUNDLE" 2>&1 || true
+codesign -vvv --deep --strict "$APP_BUNDLE"
 
 echo ""
 echo "✅ Build successful!"
