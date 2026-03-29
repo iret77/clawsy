@@ -486,5 +486,17 @@
 "UPDATE_AVAILABLE_TITLE" = "Clawsy Update Available";
 "UPDATE_AVAILABLE_BODY %@" = "Version %@ is ready. Open Settings to install.";
 
+// Agent Setup Flow
+"AGENT_SETUP_STEP1_TITLE" = "Copy the prompt";
+"AGENT_SETUP_STEP1_DESC" = "The prompt has been copied to your clipboard. Send it to your agent via Telegram, Slack, or any other channel.";
+"AGENT_SETUP_STEP2_TITLE" = "Paste the response";
+"AGENT_SETUP_STEP2_DESC" = "Your agent will reply with a setup code. Paste the complete response here:";
+"AGENT_SETUP_COPY_PROMPT" = "Copy prompt again";
+"AGENT_SETUP_COPIED" = "Copied!";
+"AGENT_SETUP_CONNECT" = "Connect";
+"AGENT_SETUP_MANUAL" = "Configure manually";
+"AGENT_SETUP_SUCCESS" = "Connected! Host added.";
+"AGENT_SETUP_ERROR" = "Could not find host and token in the response. Make sure the agent replied in the correct format.";
+
 // Onboarding
 "ONBOARDING_WINDOW_TITLE" = "Welcome to Clawsy";

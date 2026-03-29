@@ -764,7 +764,33 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             return
         }
         guard let hm = hostManager else { return }
+        showAgentSetup(hostManager: hm)
+    }
 
+    private func showAgentSetup(hostManager hm: HostManager) {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 440),
+            styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        window.title = NSLocalizedString("ADD_HOST_TITLE", bundle: .clawsy, comment: "")
+        window.isReleasedWhenClosed = false
+        window.center()
+
+        let isPresented = Binding<Bool>(
+            get: { window.isVisible },
+            set: { if !$0 { window.close(); self.addHostWindow = nil } })
+
+        let view = AgentSetupView(hostManager: hm, isPresented: isPresented, onShowManual: { [weak self] in
+            window.close()
+            self?.addHostWindow = nil
+            self?.showManualAddHost(hostManager: hm)
+        })
+        window.contentView = NSHostingView(rootView: view)
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        addHostWindow = window
+    }
+
+    private func showManualAddHost(hostManager hm: HostManager) {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 380, height: 640),
             styleMask: [.titled, .closable], backing: .buffered, defer: false)
