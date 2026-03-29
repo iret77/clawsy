@@ -1,5 +1,9 @@
 import Foundation
 
+/// Anchor class for `Bundle(for:)` — resolves to ClawsyShared.framework bundle
+/// when built via Xcode, or to the SPM module when built via swift build.
+private class BundleToken {}
+
 public extension Bundle {
     /// Returns the bundle containing Clawsy's localized strings.
     ///
@@ -16,17 +20,20 @@ public extension Bundle {
     private static var _clawsyBundle: Bundle?
 
     private static func resolveClawsyBundle() -> Bundle {
-        // Build the Resources path from the executable location.
-        // Clawsy.app/Contents/MacOS/Clawsy → up 2 → Contents → Resources
+        // 1. Xcode Framework bundle: ClawsyShared.framework contains the strings
+        //    directly (when built via xcodebuild with project.yml)
+        let frameworkBundle = Bundle(for: BundleToken.self)
+        if frameworkBundle != Bundle.main && bundleHasStrings(frameworkBundle) {
+            return frameworkBundle
+        }
+
+        // 2. SPM resource bundles (when built via swift build)
         let execURL = Bundle.main.executableURL ?? Bundle.main.bundleURL
         let contentsURL = execURL
             .deletingLastPathComponent()   // MacOS/
             .deletingLastPathComponent()   // Contents/
         let resourcesURL = contentsURL.appendingPathComponent("Resources")
 
-        // Try SPM resource bundles. The correct test is whether the bundle
-        // has an lproj directory — NOT localizedString, which returns the
-        // key itself when the string is missing (making the test always pass).
         let candidates = [
             "Clawsy_ClawsyShared",
             "Clawsy_ClawsyMac"
@@ -39,12 +46,12 @@ public extension Bundle {
             }
         }
 
-        // Try the Resources directory itself (build.sh copies lproj dirs there)
+        // 3. Resources directory itself (build.sh copies lproj dirs there)
         if let resBundle = Bundle(url: resourcesURL), bundleHasStrings(resBundle) {
             return resBundle
         }
 
-        // Bundle.main as last resort
+        // 4. Bundle.main as last resort
         if bundleHasStrings(.main) {
             return .main
         }

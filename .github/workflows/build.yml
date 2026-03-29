@@ -1,4 +1,4 @@
-name: Build Clawsy Ecosystem
+name: Build Clawsy
 
 on:
   push:
@@ -16,7 +16,7 @@ env:
 
 jobs:
   build:
-    name: Build macOS Ecosystem
+    name: Build macOS App
     runs-on: macos-latest
 
     steps:
@@ -26,22 +26,27 @@ jobs:
     - name: Set up Xcode
       run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
+    - name: Install XcodeGen
+      run: brew install xcodegen
+
     # Inject Version if Tagged
     - name: Set Version from Tag
       if: startsWith(github.ref, 'refs/tags/v')
       run: |
         TAG_NAME=${GITHUB_REF#refs/tags/v}
         echo "Setting version to $TAG_NAME"
-        
-        # Update Info.plist for ClawsyMac (Repo Root)
+
+        # Update Info.plist for ClawsyMac
         /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $TAG_NAME" Info.plist
         /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" Info.plist
-        
-        # Update Info.plist for ClawsyMacShare (if needed)
-        if [ -f Sources/ClawsyMacShare/Info.plist ]; then
-           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $TAG_NAME" Sources/ClawsyMacShare/Info.plist
-           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" Sources/ClawsyMacShare/Info.plist
-        fi
+
+        # Update Info.plist for extensions
+        for plist in Sources/ClawsyMacShare/Info.plist Sources/ClawsyFinderSync/Info.plist; do
+          if [ -f "$plist" ]; then
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $TAG_NAME" "$plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" "$plist"
+          fi
+        done
 
     - name: Build and Package
       run: |
@@ -57,7 +62,7 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v5
       with:
-        name: Clawsy-Ecosystem
+        name: Clawsy
         path: Clawsy.app.zip
 
     - name: Create Release

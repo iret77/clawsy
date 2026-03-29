@@ -18,6 +18,10 @@
     <string>????</string>
     <key>CFBundleExecutable</key>
     <string>Clawsy</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>CFBundleURLTypes</key>

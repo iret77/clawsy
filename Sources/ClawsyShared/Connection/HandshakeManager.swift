@@ -38,9 +38,11 @@ public final class HandshakeManager {
                 "screen.capture",
                 "clipboard.read", "clipboard.write",
                 "file.list", "file.get", "file.set", "file.mkdir",
-                "file.delete", "file.move", "file.copy",
+                "file.delete", "file.move", "file.copy", "file.rename",
                 "file.get.chunk", "file.set.chunk",
-                "file.stat", "file.exists"
+                "file.stat", "file.exists", "file.rmdir",
+                "file.batch", "file.checksum",
+                "location.get"
             ],
             permissions: [String: Bool] = [:],
             role: String = "operator",

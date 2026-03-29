@@ -141,7 +141,7 @@ struct AddHostSheet: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
         }
-        .frame(width: 380, height: 520)
+        .frame(width: 380, height: 640)
     }
 
     private func addHost() {

@@ -30,7 +30,7 @@
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.share-services</string>
 		<key>NSExtensionPrincipalClass</key>
-		<string>ClawsyMacShare.ShareViewController</string>
+		<string>ClawsyShare.ShareViewController</string>
 	</dict>
 </dict>
 </plist>

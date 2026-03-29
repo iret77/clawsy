@@ -4,8 +4,8 @@ import ClawsyShared
 /// Horizontal pill row for switching between hosts. Shows per-host connection status dots.
 struct HostSwitcherView: View {
     @ObservedObject var hostManager: HostManager
+    @EnvironmentObject var appDelegate: AppDelegate
     var onHostAdded: ((HostProfile) -> Void)? = nil
-    @State private var showingAddHost = false
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -38,7 +38,7 @@ struct HostSwitcherView: View {
                     .buttonStyle(.plain)
                 }
 
-                Button(action: { showingAddHost = true }) {
+                Button(action: { appDelegate.openAddHostWindow() }) {
                     Image(systemName: "plus")
                         .font(ClawsyTheme.Font.caption)
                         .foregroundColor(.secondary)
@@ -48,9 +48,6 @@ struct HostSwitcherView: View {
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 2)
-        }
-        .sheet(isPresented: $showingAddHost) {
-            AddHostSheet(hostManager: hostManager, isPresented: $showingAddHost, onHostAdded: onHostAdded)
         }
     }
 

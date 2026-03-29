@@ -38,6 +38,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     var responseWindow: NSWindow?
     var hudWindow: NSWindow?
     var onboardingWindow: NSWindow?
+    var addHostWindow: NSWindow?
     var hostManager: HostManager? {
         didSet {
             guard let hostManager else { return }
@@ -752,6 +753,63 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         onboardingWindow = window
+    }
+
+    // MARK: - Add Host Window
+
+    func openAddHostWindow() {
+        if let existing = addHostWindow, existing.isVisible {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        guard let hm = hostManager else { return }
+        showAgentSetup(hostManager: hm)
+    }
+
+    private func showAgentSetup(hostManager hm: HostManager) {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 440),
+            styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        window.title = NSLocalizedString("ADD_HOST_TITLE", bundle: .clawsy, comment: "")
+        window.isReleasedWhenClosed = false
+        window.center()
+
+        let isPresented = Binding<Bool>(
+            get: { window.isVisible },
+            set: { if !$0 { window.close(); self.addHostWindow = nil } })
+
+        let view = AgentSetupView(hostManager: hm, isPresented: isPresented, onShowManual: { [weak self] in
+            window.close()
+            self?.addHostWindow = nil
+            self?.showManualAddHost(hostManager: hm)
+        })
+        window.contentView = NSHostingView(rootView: view)
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        addHostWindow = window
+    }
+
+    private func showManualAddHost(hostManager hm: HostManager) {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 640),
+            styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        window.title = NSLocalizedString("ADD_HOST_TITLE", bundle: .clawsy, comment: "")
+        window.isReleasedWhenClosed = false
+        window.center()
+
+        let isPresented = Binding<Bool>(
+            get: { window.isVisible },
+            set: { if !$0 { window.close(); self.addHostWindow = nil } })
+
+        let view = AddHostSheet(hostManager: hm, isPresented: isPresented, onHostAdded: { profile in
+            hm.addHost(profile)
+            hm.connectHost(profile.id)
+        })
+        window.contentView = NSHostingView(rootView: view)
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        addHostWindow = window
     }
 
     // MARK: - Popover Toggle

@@ -1,0 +1,140 @@
+name: Clawsy
+options:
+  bundleIdPrefix: ai.clawsy
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "16.0"
+  generateEmptyDirectories: false
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    ENABLE_HARDENED_RUNTIME: true
+
+packages:
+  Starscream:
+    url: https://github.com/daltoniam/Starscream.git
+    from: "4.0.0"
+
+targets:
+
+  # ── Shared Framework ──────────────────────────────────────────────
+  ClawsyShared:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Sources/ClawsyShared
+    dependencies:
+      - package: Starscream
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ai.clawsy.Shared
+        PRODUCT_NAME: ClawsyShared
+        GENERATE_INFOPLIST_FILE: true
+        DEFINES_MODULE: true
+        SKIP_INSTALL: true
+
+  # ── Main App ──────────────────────────────────────────────────────
+  ClawsyMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/ClawsyMac
+    resources:
+      - path: CLAWSY.md
+    dependencies:
+      - target: ClawsyShared
+        embed: true
+        codeSign: true
+      - target: ClawsyShare
+        embed: true
+        codeSign: true
+        copy:
+          destination: plugins
+      - target: ClawsyFinderSync
+        embed: true
+        codeSign: true
+        copy:
+          destination: plugins
+      - package: Starscream
+    entitlements:
+      path: ClawsyMac.entitlements
+    info:
+      path: Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ai.clawsy
+        PRODUCT_NAME: Clawsy
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        LD_RUNPATH_SEARCH_PATHS:
+          - "@executable_path/../Frameworks"
+        COMBINE_HIDPI_IMAGES: true
+
+  # ── Share Extension ───────────────────────────────────────────────
+  ClawsyShare:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: Sources/ClawsyMacShare
+        excludes:
+          - "Info.plist"
+          - "*.entitlements"
+    dependencies:
+      - target: ClawsyShared
+        embed: false
+    entitlements:
+      path: Sources/ClawsyMacShare/ClawsyMacShare.entitlements
+    info:
+      path: Sources/ClawsyMacShare/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSExtension:
+          NSExtensionAttributes:
+            NSExtensionActivationRule: TRUEPREDICATE
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: ClawsyShare.ShareViewController
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ai.clawsy.ShareExtension
+        PRODUCT_NAME: ClawsyShare
+        SKIP_INSTALL: true
+        LD_RUNPATH_SEARCH_PATHS:
+          - "@executable_path/../Frameworks"
+          - "@executable_path/../../../../Frameworks"
+
+  # ── FinderSync Extension ──────────────────────────────────────────
+  ClawsyFinderSync:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: Sources/ClawsyFinderSync
+        excludes:
+          - "Info.plist"
+          - "*.entitlements"
+    dependencies:
+      - target: ClawsyShared
+        embed: false
+      - sdk: FinderSync.framework
+    entitlements:
+      path: Sources/ClawsyFinderSync/ClawsyFinderSync.entitlements
+    info:
+      path: Sources/ClawsyFinderSync/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.FinderSync
+          NSExtensionPrincipalClass: ClawsyFinderSync.FinderSyncExtension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ai.clawsy.FinderSync
+        PRODUCT_NAME: ClawsyFinderSync
+        SKIP_INSTALL: true
+        LD_RUNPATH_SEARCH_PATHS:
+          - "@executable_path/../Frameworks"
+          - "@executable_path/../../../../Frameworks"

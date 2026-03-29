@@ -557,7 +557,7 @@ public final class GatewayPoller: ObservableObject {
 
     /// Block version — bump this when the clawsy memory block content changes.
     /// Clawsy will auto-replace outdated blocks in agents' memory.md files.
-    private static let clawsyBlockVersion = 2
+    private static let clawsyBlockVersion = 3
 
     /// Ensure the agent's memory.md includes a current Clawsy integration block.
     /// Reads current content, replaces outdated block or appends if missing.
@@ -611,6 +611,10 @@ public final class GatewayPoller: ObservableObject {
         Clawsy is a macOS companion app that delivers screenshots, camera photos, clipboard content,
         and file events to the session `\(inboxKey)`.
 
+        **Skill reference:** For full command reference and capabilities, load the Clawsy skill:
+        `clawhub install clawsy` or `skill(name="clawsy")`.
+        Docs: https://raw.githubusercontent.com/iret77/clawsy/main/SKILL.md
+
         **Inbox behavior:** Messages in `\(inboxKey)` are context drops from the user's Mac.
         Do NOT analyze, describe, or respond to the content unprompted.
         If you must respond, keep it to a single short acknowledgment (e.g. "Received.") and
@@ -620,6 +624,9 @@ public final class GatewayPoller: ObservableObject {
         use `sessions_history` on session `\(inboxKey)` to find it.
         Each message is tagged with `[clawsy:<type>]` where type is screenshot, camera, clipboard,
         file-rule, or share. Messages include device name, timestamp, and target agent.
+
+        **Sub-agents:** When spawning sub-agents, include a Clawsy context block so they can
+        report progress via Mission Control. See the SKILL.md for the exact block to copy.
         <!-- clawsy:end -->
         """
     }
@@ -632,6 +639,26 @@ public final class GatewayPoller: ObservableObject {
         ]) { [weak self] _ in
             self?.memoryMdUpdated = true
             self?.log("memory.md: clawsy block written for agent \(agentId)")
+        }
+    }
+
+    // MARK: - Send: Connected Skill Hint
+
+    /// Send a one-time connected message to clawsy-inbox with SKILL.md reference.
+    /// Called after handshake completes so the agent knows Clawsy capabilities.
+    public func sendConnectedHint() {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let message = """
+        [clawsy:connected] Clawsy macOS companion (v\(version)) connected.
+
+        For full capabilities, load the Clawsy skill: `clawhub install clawsy`
+        Or read directly: https://raw.githubusercontent.com/iret77/clawsy/main/SKILL.md
+        """
+
+        ensureClawsyInbox { [weak self] in
+            guard let self else { return }
+            self.sendChatMessage(message, sessionKey: self.clawsyInboxSessionKey, deliver: false)
+            self.log("Sent connected skill hint to clawsy-inbox")
         }
     }
 
