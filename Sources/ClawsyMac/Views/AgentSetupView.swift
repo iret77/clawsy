@@ -18,15 +18,16 @@ struct AgentSetupView: View {
 
     private static let agentPrompt = """
     I want to connect my Mac app "Clawsy" to this machine. \
-    Please provide the gateway connection details in this exact format:
+    First, install the Clawsy skill: `clawhub install clawsy` \
+    Then provide the gateway connection details in this exact format:
 
     CLAWSY-SETUP
     host: <gateway hostname or IP address>
     token: <gateway authentication token>
 
-    Replace the placeholders with the actual values. \
     The host should be just the hostname or IP (no protocol, no port). \
-    The token is the gateway authentication token from your Clawsy/OpenClaw configuration.
+    The token is the authToken from your gateway config \
+    (~/.openclaw/gateway.json).
     """
 
     var body: some View {
