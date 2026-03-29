@@ -766,7 +766,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         guard let hm = hostManager else { return }
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 520),
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 640),
             styleMask: [.titled, .closable], backing: .buffered, defer: false)
         window.title = NSLocalizedString("ADD_HOST_TITLE", bundle: .clawsy, comment: "")
         window.isReleasedWhenClosed = false
