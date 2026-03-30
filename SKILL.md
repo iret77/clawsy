@@ -1,6 +1,6 @@
 ---
 name: clawsy
-version: 1.1.0
+version: 1.0.3
 description: >
   Clawsy is a native macOS companion app that gives your OpenClaw agent eyes and
   hands on the user's Mac — screenshots, clipboard, camera, files, location, and
