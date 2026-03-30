@@ -7,6 +7,9 @@ SCHEME="ClawsyMac"
 BUILD_DIR=".build"
 DERIVED_DATA="$BUILD_DIR/DerivedData"
 APP_BUNDLE="$BUILD_DIR/app/$APP_NAME.app"
+SIGN_ID="${CODESIGN_IDENTITY:--}"
+
+echo "🔑 Signing identity: $SIGN_ID"
 
 echo "🧹 Cleaning up..."
 rm -rf "$BUILD_DIR/app"
@@ -34,7 +37,7 @@ xcodebuild \
     -derivedDataPath "$DERIVED_DATA" \
     -arch arm64 -arch x86_64 \
     ONLY_ACTIVE_ARCH=NO \
-    CODE_SIGN_IDENTITY="-" \
+    CODE_SIGN_IDENTITY="$SIGN_ID" \
     CODE_SIGN_STYLE=Manual \
     ENABLE_HARDENED_RUNTIME=YES \
     build
@@ -64,19 +67,19 @@ fi
 echo "🔏 Re-signing app bundle (component-level)..."
 
 # 6a: Framework
-codesign --force --sign - "$APP_BUNDLE/Contents/Frameworks/ClawsyShared.framework"
+codesign --force --sign "$SIGN_ID" "$APP_BUNDLE/Contents/Frameworks/ClawsyShared.framework"
 
 # 6b: Extensions — each with its own entitlements
-codesign --force --sign - \
+codesign --force --sign "$SIGN_ID" \
     --entitlements "Sources/ClawsyMacShare/ClawsyMacShare.entitlements" \
     "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex"
 
-codesign --force --sign - \
+codesign --force --sign "$SIGN_ID" \
     --entitlements "Sources/ClawsyFinderSync/ClawsyFinderSync.entitlements" \
     "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex"
 
 # 6c: Main app — signed last (outermost)
-codesign --force --sign - \
+codesign --force --sign "$SIGN_ID" \
     --entitlements "ClawsyMac.entitlements" \
     "$APP_BUNDLE"
 
