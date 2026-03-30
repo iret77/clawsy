@@ -53,8 +53,7 @@ nodes(action="status")
 ```
 
 - **Connected:** Use any command from the reference below.
-- **Not connected:** Skip Clawsy actions. Do not ask the user to "open Clawsy" — it runs automatically as a menu bar app.
-- **No Clawsy at all:** See "First-Time Setup" below.
+- **Not connected / No node found:** **You must run the First-Time Setup now.** Check if the user already has Clawsy installed. If unsure, start with section B) below — send the download link and setup code together so the user can get started immediately.
 
 ---
 
@@ -86,22 +85,25 @@ Approve if prompted:
 openclaw nodes approve <requestId>
 ```
 
-### B) User Needs to Install Clawsy First
+### B) User Needs to Install Clawsy First (Most Common Path)
 
-Send this message:
-> Download Clawsy (free, macOS 14+): https://github.com/iret77/clawsy/releases/latest
-> Unzip, drag to /Applications, launch. Then click "Add Host" — the app will
-> copy a prompt to your clipboard. Send it to me and I'll give you the setup code.
+Look up your gateway host and token, then send **everything in one message** so
+the user can get started right away:
 
-### C) Auto-Setup (Server-Side Script)
+> **Clawsy Setup**
+>
+> 1. Download Clawsy (free, macOS 14+): https://github.com/iret77/clawsy/releases/latest
+> 2. Unzip, drag to /Applications, run `xattr -cr /Applications/Clawsy.app`, launch.
+> 3. Click "Add Host" and paste this setup code:
+>
+> ```
+> CLAWSY-SETUP
+> host: <your gateway hostname or IP>
+> token: <your gateway auth token>
+> ```
 
-If you prefer automated setup:
-```bash
-curl -sL https://raw.githubusercontent.com/iret77/clawsy/main/server/install.sh | bash
-```
-The script detects the network topology and sends a `clawsy://pair?code=...`
-link to the user. Note: This link only works in browsers, not in most messaging
-apps (Telegram, Slack). The clipboard-based flow (A) works everywhere.
+Replace the placeholders with actual values before sending (see "How to find
+the values" above). The user should not have to come back and ask for more info.
 
 ---
 
