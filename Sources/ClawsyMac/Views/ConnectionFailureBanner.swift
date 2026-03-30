@@ -78,19 +78,19 @@ struct ConnectionFailureBanner: View {
     private var detail: String {
         switch failure {
         case .originNotAllowed:
-            return "The gateway rejected this connection. Check that Clawsy's origin is allowed in the gateway configuration."
+            return NSLocalizedString("FAILURE_ORIGIN_DETAIL", bundle: .clawsy, comment: "")
         case .invalidToken:
-            return "The authentication token was rejected. Try repairing the connection or entering a new token in settings."
+            return NSLocalizedString("FAILURE_TOKEN_DETAIL", bundle: .clawsy, comment: "")
         case .sshTunnelFailed(let reason):
-            return "SSH tunnel could not be established: \(reason)"
+            return String(format: NSLocalizedString("FAILURE_SSH_DETAIL %@", bundle: .clawsy, comment: ""), reason)
         case .hostUnreachable:
-            return "Cannot reach the gateway host. Check your network connection and firewall settings."
+            return NSLocalizedString("FAILURE_UNREACHABLE_DETAIL", bundle: .clawsy, comment: "")
         case .gatewayNotRunning:
-            return "The gateway is not responding. Make sure OpenClaw is running on the server."
+            return NSLocalizedString("FAILURE_GATEWAY_DETAIL", bundle: .clawsy, comment: "")
         case .reconnectExhausted:
-            return "Tried reconnecting for 30 minutes without success. Check that the server is online and try again."
+            return NSLocalizedString("FAILURE_RECONNECT_DETAIL", bundle: .clawsy, comment: "")
         case .skillMissing:
-            return "The Clawsy skill is not installed on the gateway."
+            return NSLocalizedString("FAILURE_SKILL_DETAIL", bundle: .clawsy, comment: "")
         case .unknown(let detail):
             return detail
         }

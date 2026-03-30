@@ -473,6 +473,15 @@
 "FAILURE_SKILL_MISSING" = "Clawsy Skill Missing";
 "FAILURE_UNKNOWN" = "Connection Failed";
 
+// Failure detail texts
+"FAILURE_ORIGIN_DETAIL" = "The gateway rejected this device. Click \"Re-Pair Device\" to register again.";
+"FAILURE_TOKEN_DETAIL" = "The authentication token was rejected. Check the token in Settings or re-pair the device.";
+"FAILURE_SSH_DETAIL %@" = "SSH tunnel could not be established: %@";
+"FAILURE_UNREACHABLE_DETAIL" = "Cannot reach the gateway host. Check your network connection and firewall settings. If direct access isn't possible, try configuring an SSH tunnel in Settings.";
+"FAILURE_GATEWAY_DETAIL" = "The gateway is not responding. Make sure OpenClaw is running on the server.";
+"FAILURE_RECONNECT_DETAIL" = "Tried reconnecting for 30 minutes without success. Check that the server is online and try again.";
+"FAILURE_SKILL_DETAIL" = "The Clawsy skill is not installed on the gateway.";
+
 // Settings
 "SETTINGS_DELETE_HOST_CONFIRM" = "This will remove \"%@\" and disconnect.";
 "SETTINGS_HOTKEYS_HINT" = "All hotkeys use ⌘⇧ + key";

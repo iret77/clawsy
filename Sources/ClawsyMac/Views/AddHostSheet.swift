@@ -11,7 +11,7 @@ struct AddHostSheet: View {
     @State private var port = "18789"
     @State private var token = ""
     @State private var sshUser = ""
-    @State private var useSshFallback = true
+    @State private var useSshFallback = false
     @State private var sshOnly = false
     @State private var enableNodeConnection = true
     @State private var selectedColor = HostProfile.defaultColors[1]

@@ -31,7 +31,7 @@ public struct HostProfile: Codable, Identifiable, Equatable {
         gatewayPort: String = "18789",
         serverToken: String,
         sshUser: String = "",
-        useSshFallback: Bool = true,
+        useSshFallback: Bool = false,
         sshOnly: Bool = false,
         enableNodeConnection: Bool = true,
         color: String = "#FF3B30",

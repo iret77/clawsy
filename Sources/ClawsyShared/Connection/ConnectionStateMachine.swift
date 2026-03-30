@@ -88,6 +88,19 @@ public enum ConnectionFailure: Equatable, CustomStringConvertible {
         case .unknown(let d): return d
         }
     }
+
+    public var localizedTitle: String {
+        switch self {
+        case .originNotAllowed: return NSLocalizedString("FAILURE_ORIGIN_NOT_ALLOWED", bundle: .clawsy, comment: "")
+        case .invalidToken: return NSLocalizedString("FAILURE_INVALID_TOKEN", bundle: .clawsy, comment: "")
+        case .sshTunnelFailed: return NSLocalizedString("FAILURE_SSH_FAILED", bundle: .clawsy, comment: "")
+        case .hostUnreachable: return NSLocalizedString("FAILURE_HOST_UNREACHABLE", bundle: .clawsy, comment: "")
+        case .gatewayNotRunning: return NSLocalizedString("FAILURE_GATEWAY_NOT_RUNNING", bundle: .clawsy, comment: "")
+        case .reconnectExhausted: return NSLocalizedString("FAILURE_RECONNECT_EXHAUSTED", bundle: .clawsy, comment: "")
+        case .skillMissing: return NSLocalizedString("FAILURE_SKILL_MISSING", bundle: .clawsy, comment: "")
+        case .unknown: return NSLocalizedString("FAILURE_UNKNOWN", bundle: .clawsy, comment: "")
+        }
+    }
 }
 
 // MARK: - Connection Event
@@ -166,7 +179,7 @@ public struct ConnectionConfig: Equatable {
         gatewayPort: String = "18789",
         serverToken: String,
         sshUser: String = "",
-        useSshFallback: Bool = true,
+        useSshFallback: Bool = false,
         sshOnly: Bool = false,
         retryDelays: [TimeInterval] = [0, 5, 15, 30],
         sustainedRetryInterval: TimeInterval = 60,

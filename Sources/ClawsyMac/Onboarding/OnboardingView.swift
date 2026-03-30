@@ -23,7 +23,7 @@ struct OnboardingView: View {
     @State private var manualPort = "18789"
     @State private var manualToken = ""
     @State private var manualSshUser = ""
-    @State private var useSshFallback = true
+    @State private var useSshFallback = false
 
     // Connection test
     @State private var connectionPhase: ConnectionTestPhase = .idle
