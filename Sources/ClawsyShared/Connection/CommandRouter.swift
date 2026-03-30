@@ -48,12 +48,10 @@ public final class CommandRouter {
         _ completion: @escaping (Bool) -> Void
     ) -> Void)?
 
-    /// Commands that always require user approval
-    public var approvalRequiredCommands: Set<String> = [
-        "clipboard.read",
-        "screen.capture",
-        "camera.snap"
-    ]
+    /// Commands that always require user approval via the onApprovalRequired callback.
+    /// Note: screen.capture and clipboard.read have their own dialogs in their handlers,
+    /// so they don't need this layer. camera.snap requires macOS Camera permission.
+    public var approvalRequiredCommands: Set<String> = []
 
     /// Commands that never require approval (within sandbox)
     public var autoApprovedCommands: Set<String> = [
