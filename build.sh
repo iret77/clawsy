@@ -62,29 +62,27 @@ else
     echo "⚠️  CLAWSY.md missing from bundle resources"
 fi
 
-# ── Step 6: Re-sign if needed ──────────────────────────────────────
-# When xcodebuild uses a named identity (e.g. "Clawsy Development"),
-# it already signs each component with its entitlements correctly.
-# Re-signing would strip entitlements. Only re-sign for ad-hoc (-).
-if [ "$SIGN_ID" = "-" ]; then
-    echo "🔏 Ad-hoc identity — re-signing bundle components..."
+# ── Step 6: Re-sign bundle for consistent Team ID ─────────────────
+# Re-sign all components with the same identity (inside-out) to
+# guarantee matching Team IDs. Without this, dyld may refuse to load
+# the framework ("mapping process and mapped file have different
+# Team IDs"). --preserve-metadata keeps entitlements from xcodebuild.
+echo "🔏 Re-signing app bundle (component-level)..."
 
-    codesign --force --sign - "$APP_BUNDLE/Contents/Frameworks/ClawsyShared.framework"
+PRESERVE="--preserve-metadata=entitlements,identifier,flags"
 
-    codesign --force --sign - \
-        --entitlements "Sources/ClawsyMacShare/ClawsyMacShare.entitlements" \
-        "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex"
+# 6a: Frameworks
+for fw in "$APP_BUNDLE"/Contents/Frameworks/*.framework; do
+    [ -d "$fw" ] && codesign --force --sign "$SIGN_ID" $PRESERVE "$fw"
+done
 
-    codesign --force --sign - \
-        --entitlements "Sources/ClawsyFinderSync/ClawsyFinderSync.entitlements" \
-        "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex"
+# 6b: Extensions
+for ext in "$APP_BUNDLE"/Contents/PlugIns/*.appex; do
+    [ -d "$ext" ] && codesign --force --sign "$SIGN_ID" $PRESERVE "$ext"
+done
 
-    codesign --force --sign - \
-        --entitlements "ClawsyMac.entitlements" \
-        "$APP_BUNDLE"
-else
-    echo "🔏 Named identity '$SIGN_ID' — xcodebuild signatures preserved"
-fi
+# 6c: Main app (outermost, signed last)
+codesign --force --sign "$SIGN_ID" $PRESERVE "$APP_BUNDLE"
 
 # ── Step 7: Verify ──────────────────────────────────────────────────
 echo "🔍 Verifying bundle structure..."
