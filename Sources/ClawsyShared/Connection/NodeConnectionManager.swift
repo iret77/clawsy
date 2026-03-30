@@ -53,7 +53,7 @@ public final class NodeConnectionManager: ObservableObject {
 
     /// Start the node connection to the given WebSocket URL.
     /// Uses its own HandshakeManager with `role: "node"`.
-    public func connect(url: URL, gatewayToken: String, deviceToken: String?) {
+    public func connect(url: URL, gatewayToken: String, deviceToken: String?, origin: String? = nil) {
         shouldBeConnected = true
         reconnectAttempt = 0
 
@@ -91,7 +91,7 @@ public final class NodeConnectionManager: ObservableObject {
         onRegisterHandlers?(commandRouter)
 
         // Open WebSocket
-        transport.connect(to: url, timeout: 12.0)
+        transport.connect(to: url, timeout: 12.0, origin: origin)
     }
 
     /// Disconnect the node connection. Stops reconnect attempts.
