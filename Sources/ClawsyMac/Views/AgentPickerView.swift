@@ -1,9 +1,8 @@
 import SwiftUI
 import ClawsyShared
 
-/// Agent picker — compact Apple-style row integrated into the popover header area.
-/// Shows current agent name with a menu picker for switching.
-/// Hidden when not connected or only one agent exists.
+/// Agent picker — Apple-style disclosure list (like WLAN network selection).
+/// Shows active agent with checkmark, tap to switch.
 struct AgentPickerView: View {
     @ObservedObject var hostManager: HostManager
 
@@ -16,6 +15,7 @@ struct AgentPickerView: View {
 
 private struct AgentPickerContent: View {
     @ObservedObject var poller: GatewayPoller
+    @State private var isExpanded = false
 
     private var selectedAgentId: String {
         let key = poller.targetSessionKey
@@ -33,46 +33,95 @@ private struct AgentPickerContent: View {
     }
 
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "person.crop.circle")
-                .font(.system(size: 11))
-                .foregroundColor(.secondary)
-
-            if poller.agents.count > 1 {
-                // Multiple agents: show picker
-                Picker("", selection: Binding(
-                    get: { selectedAgentId },
-                    set: { agentId in
-                        poller.targetSessionKey = "agent:\(agentId):main"
-                    }
-                )) {
-                    ForEach(poller.agents) { agent in
-                        Text(agent.name).tag(agent.id)
-                    }
+        VStack(spacing: 0) {
+            if poller.agents.count <= 1 {
+                // Single agent — simple row, no disclosure
+                HStack(spacing: 8) {
+                    Image(systemName: "person.crop.circle")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                    Text(selectedAgentName)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.primary)
+                    Spacer()
                 }
-                .pickerStyle(.menu)
-                .labelsHidden()
-                .controlSize(.small)
+                .padding(.horizontal, ClawsyTheme.Spacing.contentH)
+                .padding(.vertical, 6)
             } else {
-                // Single agent: just show name
-                Text(selectedAgentName)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.secondary)
-            }
+                // Multiple agents — disclosure group like Apple WLAN
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isExpanded.toggle()
+                    }
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "person.crop.circle")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Text(NSLocalizedString("AGENT_PICKER_LABEL", bundle: .clawsy, comment: ""))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text(selectedAgentName)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(.secondary.opacity(0.5))
+                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    }
+                    .padding(.horizontal, ClawsyTheme.Spacing.contentH)
+                    .padding(.vertical, 6)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
 
-            Spacer()
+                if isExpanded {
+                    VStack(spacing: 0) {
+                        ForEach(poller.agents) { agent in
+                            Button(action: {
+                                poller.targetSessionKey = "agent:\(agent.id):main"
+                            }) {
+                                HStack(spacing: 8) {
+                                    // Checkmark for active agent
+                                    Image(systemName: agent.id == selectedAgentId ? "checkmark" : "")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundColor(.accentColor)
+                                        .frame(width: 14)
 
-            // Agent count badge
-            if poller.agents.count > 1 {
-                Text("\(poller.agents.count)")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundColor(.secondary.opacity(0.6))
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background(Capsule().fill(Color.secondary.opacity(0.1)))
+                                    Text(agent.name)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.primary)
+
+                                    Spacer()
+                                }
+                                .padding(.horizontal, ClawsyTheme.Spacing.contentH + 6)
+                                .padding(.vertical, 4)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(AgentRowButtonStyle())
+                        }
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
             }
         }
-        .padding(.horizontal, ClawsyTheme.Spacing.contentH)
-        .padding(.vertical, 5)
+    }
+}
+
+/// Hover-highlighting button style for agent rows
+private struct AgentRowButtonStyle: ButtonStyle {
+    @State private var isHovering = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(isHovering ? ClawsyTheme.Colors.hoverBackground : Color.clear)
+                    .padding(.horizontal, 4)
+            )
+            .onHover { hovering in
+                withAnimation(ClawsyTheme.Animation.hover) { isHovering = hovering }
+            }
     }
 }
