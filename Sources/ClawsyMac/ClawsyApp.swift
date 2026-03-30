@@ -196,6 +196,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Menu bar app — no Dock icon
+        NSApp.setActivationPolicy(.accessory)
+
         #if SCREENSHOT_MODE
         if CommandLine.arguments.contains("--screenshot") {
             ScreenshotRunner.run()
