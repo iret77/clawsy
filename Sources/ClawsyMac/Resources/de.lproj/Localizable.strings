@@ -461,6 +461,10 @@
 "PERM_REQUEST_ACCESS" = "Zugriff anfordern";
 "PERM_MISSING_SCREENSHOT" = "Bildschirmaufnahme wird benötigt — öffne Einstellungen …";
 "PERM_MISSING_HOTKEY" = "Tastaturkurzbefehle werden benötigt — öffne Einstellungen …";
+"PERM_ALERT_SCREEN_TITLE" = "Bildschirmaufnahme erforderlich";
+"PERM_ALERT_SCREEN_MESSAGE" = "Clawsy benötigt Zugriff auf die Bildschirmaufnahme für Screenshots.\n\nKlicke in den Systemeinstellungen auf \"+\" am unteren Rand der Liste und füge Clawsy hinzu.";
+"PERM_ALERT_OPEN_SETTINGS" = "Einstellungen öffnen";
+"CANCEL" = "Abbrechen";
 
 // Connection Failure Banner
 "FAILURE_RETRY" = "Erneut versuchen";

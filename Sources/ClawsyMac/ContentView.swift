@@ -291,7 +291,12 @@ struct ContentView: View {
                     let monitor = PermissionMonitor.shared
                     monitor.refreshAll()
                     if monitor.status[.screenRecording] != true {
-                        monitor.openSettings(for: .screenRecording)
+                        Self.showPermissionAlert(
+                            title: NSLocalizedString("PERM_ALERT_SCREEN_TITLE", bundle: .clawsy, comment: ""),
+                            message: NSLocalizedString("PERM_ALERT_SCREEN_MESSAGE", bundle: .clawsy, comment: "")
+                        ) {
+                            monitor.openSettings(for: .screenRecording)
+                        }
                         completion(.error(code: "permission_denied", message: "Screen Recording permission not granted"))
                         return
                     }
@@ -412,6 +417,21 @@ struct ContentView: View {
         if let country = loc.country { dict["country"] = country }
         if let customName = loc.customName { dict["customName"] = customName }
         return dict
+    }
+
+    // MARK: - Permission Alert
+
+    /// Show a macOS alert explaining how to grant a permission, then open Settings.
+    private static func showPermissionAlert(title: String, message: String, onOpen: @escaping () -> Void) {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = message
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: NSLocalizedString("PERM_ALERT_OPEN_SETTINGS", bundle: .clawsy, comment: ""))
+        alert.addButton(withTitle: NSLocalizedString("CANCEL", bundle: .clawsy, comment: ""))
+        if alert.runModal() == .alertFirstButtonReturn {
+            onOpen()
+        }
     }
 
     // MARK: - File Handler Registration (shared between operator and node)
