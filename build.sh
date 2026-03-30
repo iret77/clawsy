@@ -53,10 +53,13 @@ fi
 
 cp -R "$BUILT_APP" "$APP_BUNDLE"
 
-# ── Step 5: Bundle CLAWSY.md ────────────────────────────────────────
-if [ -f "CLAWSY.md" ]; then
-    cp "CLAWSY.md" "$APP_BUNDLE/Contents/Resources/CLAWSY.md"
-    echo "✅ Bundled CLAWSY.md"
+# ── Step 5: Verify CLAWSY.md ───────────────────────────────────────
+# CLAWSY.md is included via project.yml resources — no manual copy
+# needed. Copying after xcodebuild would break the code signature seal.
+if [ -f "$APP_BUNDLE/Contents/Resources/CLAWSY.md" ]; then
+    echo "✅ CLAWSY.md bundled by xcodebuild"
+else
+    echo "⚠️  CLAWSY.md missing from bundle resources"
 fi
 
 # ── Step 6: Re-sign if needed ──────────────────────────────────────
