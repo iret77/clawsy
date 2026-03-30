@@ -1,18 +1,18 @@
 import SwiftUI
 import ClawsyShared
 
-struct SettingsView: View {
+// MARK: - Settings Tab View (macOS Preferences Window)
+
+struct SettingsTabView: View {
     @ObservedObject var hostManager: HostManager
     @Binding var isPresented: Bool
-    var onShowDebugLog: (() -> Void)? = nil
-    var onHostAdded: ((HostProfile) -> Void)? = nil
 
     @State private var editedProfile: HostProfile = HostProfile(
         name: "", gatewayHost: "", gatewayPort: "18789", serverToken: ""
     )
-    @EnvironmentObject var appDelegate: AppDelegate
     @State private var hostToDelete: HostProfile? = nil
     @State private var showDeleteConfirm = false
+    @State private var selectedTab: SettingsTab = .general
 
     @AppStorage("quickSendHotkey", store: SharedConfig.sharedDefaults) private var quickSendHotkey = "K"
     @AppStorage("pushClipboardHotkey", store: SharedConfig.sharedDefaults) private var pushClipboardHotkey = "V"
@@ -22,46 +22,31 @@ struct SettingsView: View {
 
     @ObservedObject var updateManager = UpdateManager.shared
 
-    private let labelWidth: CGFloat = 80
+    enum SettingsTab: Hashable {
+        case general, connection, shortcuts
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Header
-            HStack {
-                Text(l10n: "SETTINGS_TITLE")
-                    .font(.system(size: 15, weight: .semibold))
-                Spacer()
-                Button(action: saveAndDismiss) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(.secondary.opacity(0.6))
-                }
-                .buttonStyle(.plain)
-                .keyboardShortcut(.escape, modifiers: [])
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
-            .padding(.bottom, 10)
+        TabView(selection: $selectedTab) {
+            generalTab
+                .tabItem { Label("Allgemein", systemImage: "gearshape") }
+                .tag(SettingsTab.general)
 
-            Divider().clawsy()
+            connectionTab
+                .tabItem { Label("Verbindung", systemImage: "globe") }
+                .tag(SettingsTab.connection)
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    connectionSection
-                    sharedFolderSection
-                    responseChannelSection
-                    hotkeysSection
-                    toolsSection
-                }
-                .padding(20)
-            }
+            shortcutsTab
+                .tabItem { Label("Kürzel", systemImage: "keyboard") }
+                .tag(SettingsTab.shortcuts)
         }
-        .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
+        .frame(width: 460, height: 340)
         .onAppear { loadActiveProfile() }
         .onChange(of: hostManager.activeHostId) { _ in loadActiveProfile() }
+        .onDisappear { saveProfile() }
         .alert("Delete Host?", isPresented: $showDeleteConfirm) {
-            Button("Cancel", role: .cancel) { hostToDelete = nil }
-            Button("Delete", role: .destructive) {
+            Button(NSLocalizedString("CANCEL", bundle: .clawsy, comment: ""), role: .cancel) { hostToDelete = nil }
+            Button(NSLocalizedString("DELETE_HOST_CONFIRM", bundle: .clawsy, comment: ""), role: .destructive) {
                 if let host = hostToDelete { hostManager.removeHost(id: host.id) }
                 hostToDelete = nil
             }
@@ -70,64 +55,159 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Connection
+    // MARK: - Tab: General
 
-    private var connectionSection: some View {
-        GroupBox {
-            VStack(alignment: .leading, spacing: 8) {
-                formRow("Name", text: $editedProfile.name)
-                formRow("Host", text: $editedProfile.gatewayHost)
-                HStack(spacing: 0) {
-                    formRow("Port", text: $editedProfile.gatewayPort)
-                        .frame(maxWidth: labelWidth + 80)
-                    Spacer()
+    private var generalTab: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Host Identity
+            GroupBox {
+                VStack(alignment: .leading, spacing: 8) {
+                    formRow("Name", text: $editedProfile.name)
+
+                    HStack(spacing: 8) {
+                        Text(NSLocalizedString("SETTINGS_SECTION_SHARED_FOLDER", bundle: .clawsy, comment: ""))
+                            .font(ClawsyTheme.Font.formLabel)
+                            .frame(width: labelWidth, alignment: .trailing)
+                        Image(systemName: "folder.fill")
+                            .foregroundColor(.secondary.opacity(0.5))
+                            .font(.system(size: 12))
+                        Text(editedProfile.sharedFolderPath.isEmpty ? "~/Documents/Clawsy" : editedProfile.sharedFolderPath)
+                            .font(ClawsyTheme.Font.code)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Spacer()
+                        Button(NSLocalizedString("SETTINGS_CHANGE_FOLDER", bundle: .clawsy, comment: "")) {
+                            selectFolder()
+                        }
+                        .controlSize(.small)
+                    }
                 }
-                HStack {
-                    Text("Token")
-                        .font(ClawsyTheme.Font.formLabel)
-                        .frame(width: labelWidth, alignment: .trailing)
-                    SecureField("", text: $editedProfile.serverToken)
-                        .textFieldStyle(.roundedBorder)
-                        .font(ClawsyTheme.Font.formValue)
-                }
+                .padding(.vertical, 2)
+            } label: {
+                sectionLabel("Host", icon: "person.crop.circle")
+            }
 
-                Divider().clawsy().padding(.vertical, 2)
-
-                // SSH section — options are subordinate to SSH User
-                formRow("SSH User", text: $editedProfile.sshUser)
-
+            // Notifications
+            GroupBox {
                 VStack(alignment: .leading, spacing: 4) {
-                    Toggle(isOn: $editedProfile.useSshFallback) {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("SSH Fallback")
-                                .font(ClawsyTheme.Font.formLabel)
-                            Text(NSLocalizedString("SSH_FALLBACK_DESC", bundle: .clawsy, comment: ""))
-                                .font(ClawsyTheme.Font.caption)
-                                .foregroundColor(.secondary)
-                        }
+                    HStack(spacing: 8) {
+                        Image(systemName: "bell.badge")
+                            .foregroundColor(.accentColor)
+                            .font(.system(size: 12))
+                        Text(NSLocalizedString("SETTINGS_RESPONSE_CLAWSY", bundle: .clawsy, comment: ""))
+                            .font(ClawsyTheme.Font.formLabel)
                     }
-                    .toggleStyle(.checkbox)
-                    .disabled(editedProfile.sshUser.isEmpty)
-                    .onChange(of: editedProfile.useSshFallback) { enabled in
-                        if !enabled { editedProfile.sshOnly = false }
-                    }
-
-                    Toggle(isOn: $editedProfile.sshOnly) {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(NSLocalizedString("SSH_ONLY_MODE", bundle: .clawsy, comment: ""))
-                                .font(ClawsyTheme.Font.formLabel)
-                            Text(NSLocalizedString("SSH_ONLY_MODE_DESC", bundle: .clawsy, comment: ""))
-                                .font(ClawsyTheme.Font.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .toggleStyle(.checkbox)
-                    .disabled(!editedProfile.useSshFallback || editedProfile.sshUser.isEmpty)
+                    Text(NSLocalizedString("SETTINGS_RESPONSE_CHANNEL_HINT", bundle: .clawsy, comment: ""))
+                        .font(ClawsyTheme.Font.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.leading, labelWidth + 8)
+                .padding(.vertical, 2)
+            } label: {
+                sectionLabel(NSLocalizedString("SETTINGS_SECTION_RESPONSE", bundle: .clawsy, comment: ""),
+                             icon: "arrowshape.turn.up.left.circle")
+            }
 
-                Divider().clawsy().padding(.vertical, 2)
+            Spacer()
 
+            // Footer: Version + Tools
+            HStack(spacing: 16) {
+                toolLink(icon: ClawsyTheme.Icons.debug, label: NSLocalizedString("DEBUG_LOG", bundle: .clawsy, comment: ""), color: .accentColor) {
+                    openDebugLog()
+                }
+                toolLink(icon: ClawsyTheme.Icons.update,
+                         label: updateManager.updateAvailable
+                            ? "Update: \(updateManager.updateVersion)"
+                            : NSLocalizedString("SETTINGS_CHECK_UPDATES", bundle: .clawsy, comment: ""),
+                         color: .accentColor) {
+                    if updateManager.updateAvailable {
+                        updateManager.downloadAndInstall()
+                    } else {
+                        updateManager.checkForUpdates(silent: false)
+                    }
+                }
+                toolLink(icon: ClawsyTheme.Icons.repair, label: NSLocalizedString("REPAIR_CONNECTION", bundle: .clawsy, comment: ""), color: .orange) {
+                    hostManager.repairActiveConnection()
+                }
+                Spacer()
+                Text(SharedConfig.versionDisplay)
+                    .font(ClawsyTheme.Font.footer)
+                    .foregroundColor(.secondary.opacity(0.4))
+            }
+        }
+        .padding(20)
+    }
+
+    // MARK: - Tab: Connection
+
+    private var connectionTab: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Server
+            GroupBox {
+                VStack(alignment: .leading, spacing: 8) {
+                    formRow("Host", text: $editedProfile.gatewayHost)
+                    HStack(spacing: 0) {
+                        formRow("Port", text: $editedProfile.gatewayPort)
+                            .frame(maxWidth: labelWidth + 80)
+                        Spacer()
+                    }
+                    HStack {
+                        Text("Token")
+                            .font(ClawsyTheme.Font.formLabel)
+                            .frame(width: labelWidth, alignment: .trailing)
+                        SecureField("", text: $editedProfile.serverToken)
+                            .textFieldStyle(.roundedBorder)
+                            .font(ClawsyTheme.Font.formValue)
+                    }
+                }
+                .padding(.vertical, 2)
+            } label: {
+                sectionLabel("Server", icon: "server.rack")
+            }
+
+            // SSH
+            GroupBox {
+                VStack(alignment: .leading, spacing: 8) {
+                    formRow("SSH User", text: $editedProfile.sshUser)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Toggle(isOn: $editedProfile.useSshFallback) {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("SSH Fallback")
+                                    .font(ClawsyTheme.Font.formLabel)
+                                Text(NSLocalizedString("SSH_FALLBACK_DESC", bundle: .clawsy, comment: ""))
+                                    .font(ClawsyTheme.Font.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .toggleStyle(.checkbox)
+                        .disabled(editedProfile.sshUser.isEmpty)
+                        .onChange(of: editedProfile.useSshFallback) { enabled in
+                            if !enabled { editedProfile.sshOnly = false }
+                        }
+
+                        Toggle(isOn: $editedProfile.sshOnly) {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(NSLocalizedString("SSH_ONLY_MODE", bundle: .clawsy, comment: ""))
+                                    .font(ClawsyTheme.Font.formLabel)
+                                Text(NSLocalizedString("SSH_ONLY_MODE_DESC", bundle: .clawsy, comment: ""))
+                                    .font(ClawsyTheme.Font.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .toggleStyle(.checkbox)
+                        .disabled(!editedProfile.useSshFallback || editedProfile.sshUser.isEmpty)
+                    }
+                    .padding(.leading, labelWidth + 8)
+                }
+                .padding(.vertical, 2)
+            } label: {
+                sectionLabel("SSH", icon: "terminal")
+            }
+
+            // Node Mode
+            GroupBox {
                 Toggle(isOn: $editedProfile.enableNodeConnection) {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(NSLocalizedString("NODE_MODE_LABEL", bundle: .clawsy, comment: ""))
@@ -138,113 +218,66 @@ struct SettingsView: View {
                     }
                 }
                 .toggleStyle(.checkbox)
-
-                Divider().clawsy().padding(.vertical, 2)
-                HStack {
-                    Button {
-                        appDelegate.openAddHostWindow()
-                    } label: {
-                        Label(NSLocalizedString("ADD_HOST", bundle: .clawsy, comment: ""), systemImage: "plus.circle")
-                            .font(ClawsyTheme.Font.formLabel)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-
-                    Spacer()
-
-                    if hostManager.profiles.count > 1 {
-                        Button(role: .destructive) {
-                            hostToDelete = editedProfile
-                            showDeleteConfirm = true
-                        } label: {
-                            Label(NSLocalizedString("DELETE_HOST_CONFIRM", bundle: .clawsy, comment: ""), systemImage: "trash")
-                                .font(ClawsyTheme.Font.formLabel)
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                    }
-                }
+                .padding(.vertical, 2)
+            } label: {
+                sectionLabel("Node", icon: "point.3.connected.trianglepath.dotted")
             }
-            .padding(.vertical, 4)
-        } label: {
-            Label(NSLocalizedString("SETTINGS_SECTION_CONNECTION", bundle: .clawsy, comment: ""), systemImage: ClawsyTheme.Icons.connection)
-                .font(ClawsyTheme.Font.sectionHeader)
-                .foregroundColor(.secondary)
+
+            Spacer()
         }
+        .padding(20)
     }
 
-    // MARK: - Shared Folder
+    // MARK: - Tab: Shortcuts
 
-    private var sharedFolderSection: some View {
-        GroupBox {
-            HStack(spacing: 8) {
-                Image(systemName: "folder.fill")
-                    .foregroundColor(.secondary.opacity(0.5))
-                    .font(.system(size: 13))
-                Text(editedProfile.sharedFolderPath.isEmpty ? "~/Documents/Clawsy" : editedProfile.sharedFolderPath)
-                    .font(ClawsyTheme.Font.code)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                Spacer()
-                Button(NSLocalizedString("SETTINGS_CHANGE_FOLDER", bundle: .clawsy, comment: "")) {
-                    selectFolder()
+    private var shortcutsTab: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            GroupBox {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(NSLocalizedString("SETTINGS_HOTKEYS_HINT", bundle: .clawsy, comment: ""))
+                        .font(ClawsyTheme.Font.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.bottom, 2)
+
+                    hotkeyRow("Quick Send", key: $quickSendHotkey)
+                    Divider().clawsy()
+                    hotkeyRow("Clipboard", key: $pushClipboardHotkey)
+                    Divider().clawsy()
+                    hotkeyRow("Camera", key: $cameraHotkey)
+                    Divider().clawsy()
+                    hotkeyRow("Full Screenshot", key: $screenshotFullHotkey)
+                    Divider().clawsy()
+                    hotkeyRow("Area Screenshot", key: $screenshotAreaHotkey)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+                .padding(.vertical, 4)
+            } label: {
+                sectionLabel(NSLocalizedString("SETTINGS_SECTION_HOTKEYS", bundle: .clawsy, comment: ""),
+                             icon: ClawsyTheme.Icons.hotkey)
             }
-            .padding(.vertical, 2)
-        } label: {
-            Label(NSLocalizedString("SETTINGS_SECTION_SHARED_FOLDER", bundle: .clawsy, comment: ""), systemImage: ClawsyTheme.Icons.folder)
-                .font(ClawsyTheme.Font.sectionHeader)
-                .foregroundColor(.secondary)
+
+            Spacer()
         }
+        .padding(20)
     }
 
-    // MARK: - Response Channel
+    // MARK: - Shared Components
 
-    private var responseChannelSection: some View {
-        GroupBox {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Image(systemName: "bell.badge")
-                        .foregroundColor(.accentColor)
-                    Text(NSLocalizedString("SETTINGS_RESPONSE_CLAWSY", bundle: .clawsy, comment: ""))
-                        .font(ClawsyTheme.Font.formLabel)
-                }
-                Text(NSLocalizedString("SETTINGS_RESPONSE_CHANNEL_HINT", bundle: .clawsy, comment: ""))
-                    .font(ClawsyTheme.Font.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.vertical, 2)
-        } label: {
-            Label(NSLocalizedString("SETTINGS_SECTION_RESPONSE", bundle: .clawsy, comment: ""), systemImage: "arrowshape.turn.up.left.circle")
-                .font(ClawsyTheme.Font.sectionHeader)
-                .foregroundColor(.secondary)
-        }
+    private let labelWidth: CGFloat = 70
+
+    private func sectionLabel(_ text: String, icon: String) -> some View {
+        Label(text, systemImage: icon)
+            .font(ClawsyTheme.Font.sectionHeader)
+            .foregroundColor(.secondary)
     }
 
-    // MARK: - Hotkeys
-
-    private var hotkeysSection: some View {
-        GroupBox {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(NSLocalizedString("SETTINGS_HOTKEYS_HINT", bundle: .clawsy, comment: ""))
-                    .font(ClawsyTheme.Font.caption)
-                    .foregroundColor(.secondary)
-
-                hotkeyRow("Quick Send", key: $quickSendHotkey)
-                hotkeyRow("Clipboard", key: $pushClipboardHotkey)
-                hotkeyRow("Camera", key: $cameraHotkey)
-                hotkeyRow("Full Screenshot", key: $screenshotFullHotkey)
-                hotkeyRow("Area Screenshot", key: $screenshotAreaHotkey)
-            }
-            .padding(.vertical, 2)
-        } label: {
-            Label(NSLocalizedString("SETTINGS_SECTION_HOTKEYS", bundle: .clawsy, comment: ""), systemImage: ClawsyTheme.Icons.hotkey)
-                .font(ClawsyTheme.Font.sectionHeader)
-                .foregroundColor(.secondary)
+    private func formRow(_ label: String, text: Binding<String>) -> some View {
+        HStack {
+            Text(label)
+                .font(ClawsyTheme.Font.formLabel)
+                .frame(width: labelWidth, alignment: .trailing)
+            TextField("", text: text)
+                .textFieldStyle(.roundedBorder)
+                .font(ClawsyTheme.Font.formValue)
         }
     }
 
@@ -265,80 +298,20 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Tools & About
-
-    private var toolsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // Action rows — vertical, each on its own line
-            HStack(spacing: 6) {
-                Image(systemName: ClawsyTheme.Icons.debug)
-                    .font(.system(size: 11))
-                    .foregroundColor(.accentColor)
-                    .frame(width: 16)
-                Button(action: { onShowDebugLog?() }) {
-                    Text(NSLocalizedString("DEBUG_LOG", bundle: .clawsy, comment: ""))
-                        .font(ClawsyTheme.Font.formLabel)
-                        .foregroundColor(.accentColor)
-                }
-                .buttonStyle(.plain)
+    private func toolLink(icon: String, label: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 10))
+                Text(label)
+                    .font(ClawsyTheme.Font.caption)
             }
-
-            HStack(spacing: 6) {
-                Image(systemName: ClawsyTheme.Icons.update)
-                    .font(.system(size: 11))
-                    .foregroundColor(.accentColor)
-                    .frame(width: 16)
-                if updateManager.updateAvailable {
-                    Button(action: { updateManager.downloadAndInstall() }) {
-                        Text("Update: \(updateManager.updateVersion)")
-                            .font(ClawsyTheme.Font.formLabel)
-                            .foregroundColor(.accentColor)
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    Button(action: { updateManager.checkForUpdates(silent: false) }) {
-                        Text(NSLocalizedString("SETTINGS_CHECK_UPDATES", bundle: .clawsy, comment: ""))
-                            .font(ClawsyTheme.Font.formLabel)
-                            .foregroundColor(.accentColor)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            HStack(spacing: 6) {
-                Image(systemName: ClawsyTheme.Icons.repair)
-                    .font(.system(size: 11))
-                    .foregroundColor(.orange)
-                    .frame(width: 16)
-                Button(action: { hostManager.repairActiveConnection() }) {
-                    Text(NSLocalizedString("REPAIR_CONNECTION", bundle: .clawsy, comment: ""))
-                        .font(ClawsyTheme.Font.formLabel)
-                        .foregroundColor(.orange)
-                }
-                .buttonStyle(.plain)
-            }
-
-            // Version — right-aligned, subtle
-            Text(SharedConfig.versionDisplay)
-                .font(ClawsyTheme.Font.footer)
-                .foregroundColor(.secondary.opacity(0.4))
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .padding(.top, 2)
+            .foregroundColor(color)
         }
+        .buttonStyle(.plain)
     }
 
-    // MARK: - Helpers
-
-    private func formRow(_ label: String, text: Binding<String>) -> some View {
-        HStack {
-            Text(label)
-                .font(ClawsyTheme.Font.formLabel)
-                .frame(width: labelWidth, alignment: .trailing)
-            TextField("", text: text)
-                .textFieldStyle(.roundedBorder)
-                .font(ClawsyTheme.Font.formValue)
-        }
-    }
+    // MARK: - Logic
 
     private func loadActiveProfile() {
         if let active = hostManager.activeProfile {
@@ -346,11 +319,10 @@ struct SettingsView: View {
         }
     }
 
-    private func saveAndDismiss() {
+    private func saveProfile() {
         if editedProfile.name.trimmingCharacters(in: .whitespaces).isEmpty {
             editedProfile.name = editedProfile.gatewayHost
         }
-        // Enforce SSH logic on save
         if editedProfile.sshUser.isEmpty {
             editedProfile.useSshFallback = false
             editedProfile.sshOnly = false
@@ -359,7 +331,6 @@ struct SettingsView: View {
             editedProfile.sshOnly = false
         }
         hostManager.updateHost(editedProfile)
-        isPresented = false
     }
 
     private func selectFolder() {
@@ -391,5 +362,10 @@ struct SettingsView: View {
             }
             editedProfile.sharedFolderPath = path
         }
+    }
+
+    private func openDebugLog() {
+        // Post notification for AppDelegate to handle
+        NotificationCenter.default.post(name: .init("ai.clawsy.openDebugLog"), object: nil)
     }
 }

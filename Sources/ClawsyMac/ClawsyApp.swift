@@ -39,6 +39,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     var hudWindow: NSWindow?
     var onboardingWindow: NSWindow?
     var addHostWindow: NSWindow?
+    var settingsWindow: NSWindow?
+    var debugLogWindow: NSWindow?
     var hostManager: HostManager? {
         didSet {
             guard let hostManager else { return }
@@ -209,6 +211,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         resetTCCIfSignatureChanged()
         installClawsyDocumentation()
         SharedConfig.resolveBookmark()
+
+        // Listen for debug log open requests from settings
+        NotificationCenter.default.addObserver(forName: .init("ai.clawsy.openDebugLog"), object: nil, queue: .main) { [weak self] _ in
+            self?.openDebugLogWindow()
+        }
 
         // Single Instance Check
         let bundleID = Bundle.main.bundleIdentifier ?? "ai.clawsy"
@@ -758,6 +765,66 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         onboardingWindow = window
     }
 
+    // MARK: - Settings Window
+
+    func openSettingsWindow() {
+        if let existing = settingsWindow, existing.isVisible {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        guard let hm = hostManager else { return }
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 460, height: 380),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered, defer: false)
+        window.titlebarAppearsTransparent = true
+        window.title = NSLocalizedString("SETTINGS_TITLE", bundle: .clawsy, comment: "")
+        window.isReleasedWhenClosed = false
+        window.center()
+        window.setFrameAutosaveName("ai.clawsy.SettingsWindow")
+
+        let isPresented = Binding<Bool>(
+            get: { window.isVisible },
+            set: { if !$0 { window.close(); self.settingsWindow = nil } })
+
+        let view = SettingsTabView(hostManager: hm, isPresented: isPresented)
+        window.contentView = NSHostingView(rootView: view)
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        settingsWindow = window
+    }
+
+    func openDebugLogWindow() {
+        if let existing = debugLogWindow, existing.isVisible {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        guard let hm = hostManager else { return }
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 500, height: 360),
+            styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
+            backing: .buffered, defer: false)
+        window.titlebarAppearsTransparent = true
+        window.title = NSLocalizedString("DEBUG_LOG", bundle: .clawsy, comment: "")
+        window.isReleasedWhenClosed = false
+        window.center()
+        window.setFrameAutosaveName("ai.clawsy.DebugLogWindow")
+
+        let isPresented = Binding<Bool>(
+            get: { window.isVisible },
+            set: { if !$0 { window.close(); self.debugLogWindow = nil } })
+
+        let view = DebugLogView(logText: hm.rawLog, isPresented: isPresented)
+        window.contentView = NSHostingView(rootView: view)
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        debugLogWindow = window
+    }
+
     // MARK: - Add Host Window
 
     func openAddHostWindow() {
@@ -773,7 +840,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private func showAgentSetup(hostManager hm: HostManager) {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 420, height: 440),
-            styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
+        window.titlebarAppearsTransparent = true
         window.title = NSLocalizedString("ADD_HOST_TITLE", bundle: .clawsy, comment: "")
         window.isReleasedWhenClosed = false
         window.center()
@@ -796,7 +864,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private func showManualAddHost(hostManager hm: HostManager) {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 380, height: 640),
-            styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
+        window.titlebarAppearsTransparent = true
         window.title = NSLocalizedString("ADD_HOST_TITLE", bundle: .clawsy, comment: "")
         window.isReleasedWhenClosed = false
         window.center()

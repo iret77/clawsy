@@ -136,6 +136,7 @@ struct AgentSetupView: View {
             .padding(.vertical, 14)
         }
         .frame(width: 420, height: 440)
+        .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
     }
 
     private var borderColor: Color {

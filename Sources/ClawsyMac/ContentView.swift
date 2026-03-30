@@ -9,8 +9,6 @@ struct ContentView: View {
     @EnvironmentObject var appDelegate: AppDelegate
     @ObservedObject private var permissionMonitor = PermissionMonitor.shared
 
-    @State private var showingSettings = false
-    @State private var showingLog = false
     @State private var showingMissionControl = false
     @State private var showingRuleEditor = false
     @State private var ruleEditorFolderPath: String = ""
@@ -19,8 +17,8 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Host Switcher (always visible — plus button lets user add hosts)
-            if !hostManager.profiles.isEmpty {
+            // Host Switcher — only visible with multiple hosts
+            if hostManager.profiles.count > 1 {
                 HostSwitcherView(hostManager: hostManager, onHostAdded: { profile in
                     hostManager.addHost(profile)
                     hostManager.connectHost(profile.id)
@@ -224,30 +222,11 @@ struct ContentView: View {
     // MARK: - Settings Button
 
     private var settingsButton: some View {
-        Button(action: { showingSettings.toggle() }) {
+        Button(action: { appDelegate.openSettingsWindow() }) {
             MenuItemRow(icon: ClawsyTheme.Icons.settings, title: "SETTINGS", isEnabled: true)
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
-        .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
-            SettingsView(hostManager: hostManager, isPresented: $showingSettings,
-                onShowDebugLog: {
-                    showingSettings = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { showingLog = true }
-                },
-                onHostAdded: { profile in
-                    hostManager.addHost(profile)
-                    hostManager.connectHost(profile.id)
-                }
-            )
-            .frame(width: ClawsyTheme.Spacing.settingsWidth)
-        }
-        .background(
-            Color.clear.popover(isPresented: $showingLog, arrowEdge: .trailing) {
-                DebugLogView(logText: hostManager.rawLog, isPresented: $showingLog)
-                    .frame(width: 400, height: 300)
-            }
-        )
     }
 
     // MARK: - Quit Button

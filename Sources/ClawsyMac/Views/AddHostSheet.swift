@@ -142,6 +142,7 @@ struct AddHostSheet: View {
             .padding(.vertical, 14)
         }
         .frame(width: 380, height: 640)
+        .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
     }
 
     private func addHost() {
