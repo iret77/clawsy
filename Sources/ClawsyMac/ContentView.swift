@@ -394,13 +394,8 @@ struct ContentView: View {
             }
         }
 
-        // Node connection: file handlers only
-        hostManager.onRegisterNodeHandlers = { router, hostId in
-            let profile = self.hostManager.profiles.first(where: { $0.id == hostId })
-            let baseDir = profile?.sharedFolderPath ?? "~/Documents/Clawsy"
-            let expandedBase = baseDir.replacingOccurrences(of: "~", with: NSHomeDirectory())
-            Self.registerFileHandlers(on: router, expandedBase: expandedBase)
-        }
+        // Node connection: all handlers (gateway routes all node.invoke.request to node role)
+        hostManager.onRegisterNodeHandlers = hostManager.onRegisterHandlers
     }
 
     private static func locationDict(from loc: ClawsyLocation) -> [String: Any] {
