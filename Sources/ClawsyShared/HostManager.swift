@@ -434,7 +434,20 @@ public class HostManager: ObservableObject {
             self?.onApprovalRequired?(hostId, command, params, completion)
         }
 
-        nodeConn.connect(url: url, gatewayToken: profile.serverToken, deviceToken: profile.deviceToken)
+        // When using SSH tunnel, set Origin to match gateway's allowedOrigins
+        let origin: String?
+        #if os(macOS)
+        if conn.sshTunnel.isRunning {
+            let port = profile.gatewayPort.isEmpty ? "18789" : profile.gatewayPort
+            origin = "http://localhost:\(port)"
+        } else {
+            origin = nil
+        }
+        #else
+        origin = nil
+        #endif
+
+        nodeConn.connect(url: url, gatewayToken: profile.serverToken, deviceToken: profile.deviceToken, origin: origin)
         os_log("[HostMgr] Started node connection for %{public}@", log: logger, type: .info, profile.name)
     }
 
