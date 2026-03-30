@@ -236,9 +236,11 @@ public final class ConnectionManager: ObservableObject {
             return
         }
 
-        // When tunneling, the URL is localhost but the gateway checks the Origin header
-        // against the real hostname. Set it explicitly so the origin check passes.
-        let origin: String? = useTunnel ? "http://\(config.gatewayHost)" : nil
+        // When tunneling, the connection arrives at the gateway from localhost.
+        // The gateway checks the Origin header against controlUi.allowedOrigins,
+        // which always includes http://localhost:{port}. Set it explicitly because
+        // Starscream would derive the Origin from the tunnel's random local port.
+        let origin: String? = useTunnel ? "http://localhost:\(config.gatewayPort.isEmpty ? "18789" : config.gatewayPort)" : nil
 
         let timeout: TimeInterval = useTunnel ? 12.0 : 8.0
         log("Opening WebSocket to \(urlString) (timeout: \(Int(timeout))s)")
