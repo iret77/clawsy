@@ -16,6 +16,32 @@ description: >
 
 ---
 
+## IMMEDIATE ACTION AFTER INSTALL
+
+If you just installed this skill, do this **right now** — do not just reply
+"installed" or "done":
+
+1. Read your gateway config to get host and token:
+   ```bash
+   cat ~/.openclaw/gateway.json | python3 -c "import json,sys;c=json.load(sys.stdin);print('host:', c.get('host','localhost'));print('token:', c.get('authToken',''))"
+   ```
+2. Send the user the download link **and** setup code in one message:
+   > **Clawsy Setup**
+   >
+   > 1. Download Clawsy (free, macOS 14+): https://github.com/iret77/clawsy/releases/latest
+   > 2. Unzip, drag to /Applications, run `xattr -cr /Applications/Clawsy.app`, launch.
+   > 3. Click "Add Host" and paste this setup code:
+   >
+   > ```
+   > CLAWSY-SETUP
+   > host: <actual hostname>
+   > token: <actual token>
+   > ```
+
+Do not send placeholders. Fill in the real values from step 1.
+
+---
+
 ## Sub-Agent Propagation (MANDATORY)
 
 When spawning sub-agents, you **must** include a Clawsy context block so they
