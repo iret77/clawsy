@@ -1,9 +1,11 @@
 import SwiftUI
+import AVFoundation
 import ClawsyShared
 
 /// Main action buttons: QuickSend, Screenshot, Clipboard, Camera.
 struct ActionMenuView: View {
     @ObservedObject var hostManager: HostManager
+    @ObservedObject var permissionMonitor = PermissionMonitor.shared
     @EnvironmentObject var appDelegate: AppDelegate
 
     @State private var showingScreenshotMenu = false
@@ -12,6 +14,8 @@ struct ActionMenuView: View {
     @AppStorage("activeCameraId", store: SharedConfig.sharedDefaults) private var activeCameraId = ""
 
     private var isConnected: Bool { hostManager.isConnected }
+    private var hasScreenRecording: Bool { permissionMonitor.status[.screenRecording] == true }
+    private var hasCamera: Bool { permissionMonitor.status[.camera] == true }
 
     var body: some View {
         VStack(spacing: 2) {
@@ -26,7 +30,7 @@ struct ActionMenuView: View {
 
             // Screenshot
             Button(action: { showingScreenshotMenu.toggle() }) {
-                MenuItemRow(icon: ClawsyTheme.Icons.screenshot, title: "SCREENSHOT", isEnabled: isConnected, hasChevron: true)
+                MenuItemRow(icon: ClawsyTheme.Icons.screenshot, title: "SCREENSHOT", isEnabled: isConnected && hasScreenRecording, hasChevron: true)
             }
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
@@ -36,7 +40,7 @@ struct ActionMenuView: View {
                         showingScreenshotMenu = false
                         takeScreenshot(interactive: false)
                     }) {
-                        MenuItemRow(icon: "rectangle.dashed", title: "FULL_SCREEN", isEnabled: isConnected,
+                        MenuItemRow(icon: "rectangle.dashed", title: "FULL_SCREEN", isEnabled: isConnected && hasScreenRecording,
                                     shortcut: "⌘⇧\(SharedConfig.screenshotFullHotkey)")
                     }
                     .buttonStyle(.plain)
@@ -45,7 +49,7 @@ struct ActionMenuView: View {
                         showingScreenshotMenu = false
                         takeScreenshot(interactive: true)
                     }) {
-                        MenuItemRow(icon: "plus.viewfinder", title: "INTERACTIVE_AREA", isEnabled: isConnected,
+                        MenuItemRow(icon: "plus.viewfinder", title: "INTERACTIVE_AREA", isEnabled: isConnected && hasScreenRecording,
                                     shortcut: "⌘⇧\(SharedConfig.screenshotAreaHotkey)")
                     }
                     .buttonStyle(.plain)
@@ -69,7 +73,7 @@ struct ActionMenuView: View {
                 if !availableCameras.isEmpty { showingCameraMenu.toggle() }
             }) {
                 MenuItemRow(icon: ClawsyTheme.Icons.camera, title: "CAMERA",
-                            isEnabled: isConnected && !availableCameras.isEmpty, hasChevron: true)
+                            isEnabled: isConnected && hasCamera && !availableCameras.isEmpty, hasChevron: true)
             }
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
@@ -112,6 +116,15 @@ struct ActionMenuView: View {
 
     private func takePhoto(camId: String, camName: String) {
         guard let poller = hostManager.activePoller else { return }
+
+        // Check camera permission before attempting capture
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        if status == .denied || status == .restricted {
+            appDelegate.showStatusHUD(icon: "lock.shield", title: "PERM_MISSING_CAMERA")
+            PermissionMonitor.shared.openSettings(for: .camera)
+            return
+        }
+
         CameraManager.takePhoto(deviceId: camId.isEmpty ? nil : camId) { b64 in
             guard let b64 = b64 else {
                 DispatchQueue.main.async { appDelegate.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "CAPTURE_FAILED") }

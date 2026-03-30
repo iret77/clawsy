@@ -460,6 +460,10 @@
 "PERM_REQUEST_ACCESS" = "Request access";
 "PERM_MISSING_SCREENSHOT" = "Screen Recording access needed — opening Settings…";
 "PERM_MISSING_HOTKEY" = "Keyboard Shortcut access needed — opening Settings…";
+"PERM_ALERT_SCREEN_TITLE" = "Screen Recording Permission Required";
+"PERM_ALERT_SCREEN_MESSAGE" = "Clawsy needs Screen Recording access for screenshots.\n\nIn System Settings, click the \"+\" button at the bottom of the list, then find and add Clawsy.";
+"PERM_ALERT_OPEN_SETTINGS" = "Open Settings";
+"CANCEL" = "Cancel";
 
 // Connection Failure Banner
 "FAILURE_RETRY" = "Retry";
