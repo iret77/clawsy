@@ -181,7 +181,13 @@ public class HostManager: ObservableObject {
         var newProfile = profile
 
         if newProfile.sharedFolderPath.isEmpty {
-            newProfile.sharedFolderPath = "~/Documents/Clawsy"
+            let safeName = newProfile.name
+                .replacingOccurrences(of: "/", with: "-")
+                .replacingOccurrences(of: ":", with: "-")
+                .trimmingCharacters(in: .whitespaces)
+            newProfile.sharedFolderPath = safeName.isEmpty
+                ? "~/Documents/Clawsy"
+                : "~/Documents/Clawsy/\(safeName)"
         }
 
         let resolved = newProfile.sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
