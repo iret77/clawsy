@@ -92,6 +92,7 @@
 "NO_DATA" = "Noch keine Daten empfangen.";
 "SELECT_TEXT_COPY" = "Text zum Kopieren auswählen.";
 "COPY_ALL" = "Alles kopieren";
+"COPIED" = "Kopiert";
 
 /* Shared Folder */
 "FOLDER_MISSING_TITLE" = "Ordner nicht gefunden";
@@ -252,7 +253,9 @@
 "REPAIR_CONNECTION_HELP" = "Verwende dies, wenn die Verbindung nach einem Gateway-Neustart abgelehnt wird. Löscht den gespeicherten Geräte-Token und startet eine neue Kopplung.";
 
 // Settings tabs
+"SETTINGS_TAB_GENERAL" = "Allgemein";
 "SETTINGS_TAB_CONNECTION" = "Verbindung";
+"SETTINGS_TAB_SHORTCUTS" = "Kurzbefehle";
 "SETTINGS_TAB_FEATURES" = "Funktionen";
 "SETTINGS_TAB_UPDATES" = "Updates";
 

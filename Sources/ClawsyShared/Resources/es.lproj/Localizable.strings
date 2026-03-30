@@ -93,6 +93,7 @@
 "NO_DATA" = "No hay datos recibidos.";
 "SELECT_TEXT_COPY" = "Selecciona el texto para copiar.";
 "COPY_ALL" = "Copiar todo";
+"COPIED" = "Copiado";
 
 /* Node Pairing */
 "STATUS_PAIRING" = "Emparejando…";
@@ -283,7 +284,9 @@
 "SEND" = "Enviar";
 "SEND_AND_FORGET" = "Enviar texto al agente";
 "SENDING_TO_OPENCLAW" = "Enviando a OpenClaw...";
+"SETTINGS_TAB_GENERAL" = "General";
 "SETTINGS_TAB_CONNECTION" = "Conexión";
+"SETTINGS_TAB_SHORTCUTS" = "Atajos";
 "SETTINGS_TAB_FEATURES" = "Funciones";
 "SETTINGS_TAB_UPDATES" = "Actualizaciones";
 "SHARE_ERROR_NO_DATA" = "Sin contenido para compartir.";
