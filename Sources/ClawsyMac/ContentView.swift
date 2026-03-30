@@ -17,43 +17,83 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Host Switcher — only visible with multiple hosts
+            // ── Header: Title + Status + Connect Toggle ──
+            // Matches Apple pattern: Bluetooth/WLAN title row
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(l10n: "APP_NAME")
+                            .font(.system(size: 13, weight: .semibold))
+                        if let profile = hostManager.activeProfile {
+                            Text(profile.name.isEmpty ? profile.gatewayHost : profile.name)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(Color(hex: profile.color) ?? .secondary)
+                        }
+                    }
+                    Text(statusText)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .animation(ClawsyTheme.Animation.stateChange, value: hostManager.state)
+                }
+                Spacer()
+                if !hostManager.profiles.isEmpty {
+                    Toggle("", isOn: Binding(
+                        get: { hostManager.isConnected },
+                        set: { newValue in
+                            guard let id = hostManager.activeHostId else { return }
+                            if newValue { hostManager.connectHost(id) }
+                            else { hostManager.disconnectHost(id) }
+                        }
+                    ))
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+                    .labelsHidden()
+                    .disabled(isConnecting)
+                }
+            }
+            .padding(.horizontal, ClawsyTheme.Spacing.contentH)
+            .padding(.top, ClawsyTheme.Spacing.headerTop)
+            .padding(.bottom, ClawsyTheme.Spacing.headerBottom)
+
+            // ── Host Switcher — only with multiple hosts ──
             if hostManager.profiles.count > 1 {
+                Divider().clawsy()
                 HostSwitcherView(hostManager: hostManager, onHostAdded: { profile in
                     hostManager.addHost(profile)
                     hostManager.connectHost(profile.id)
                 })
                 .padding(.horizontal, ClawsyTheme.Spacing.contentH)
-                .padding(.top, 10)
-                .padding(.bottom, 4)
-                Divider().clawsy()
+                .padding(.vertical, 6)
             }
 
-            // Status Header
-            StatusHeaderView(hostManager: hostManager)
+            // ── Agent Picker — integrated, always accessible when connected ──
+            if hostManager.isConnected {
+                AgentPickerView(hostManager: hostManager)
+            }
 
-            // Banners (animated)
-            bannerSection
-                .animation(ClawsyTheme.Animation.bannerSlide, value: hostManager.state)
-                .animation(ClawsyTheme.Animation.bannerSlide, value: permissionMonitor.allRequiredGranted)
+            // ── Pairing / Failure banners (critical only) ──
+            if case .awaitingPairing = hostManager.state {
+                bannerSection
+                    .animation(ClawsyTheme.Animation.bannerSlide, value: hostManager.state)
+            }
+            if case .failed = hostManager.state {
+                bannerSection
+                    .animation(ClawsyTheme.Animation.bannerSlide, value: hostManager.state)
+            }
 
             Divider().clawsy()
 
-            // Empty state
+            // ── Empty state ──
             if hostManager.profiles.isEmpty {
                 NoHostEmptyStateView(onAddHost: { appDelegate.openAddHostWindow() })
-                Divider().clawsy().padding(.horizontal, 6)
-                quitButton
             }
 
-            // Main content
+            // ── Actions ──
             if !hostManager.profiles.isEmpty {
-                AgentPickerView(hostManager: hostManager)
-
                 VStack(spacing: 2) {
                     ActionMenuView(hostManager: hostManager)
 
-                    // Last agent response card
+                    // Last agent response
                     if let lastResponse = appDelegate.lastResponse {
                         LastResponseCard(response: lastResponse) {
                             appDelegate.showResponseToast(lastResponse)
@@ -61,25 +101,24 @@ struct ContentView: View {
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                     }
-
-                    Divider().clawsy().padding(.vertical, 4)
-
-                    // Connect / Disconnect
-                    connectButton
-
-                    Divider().clawsy().padding(.vertical, 4)
-
-                    // Task Overview
-                    taskOverviewButton
-
-                    // Settings
-                    settingsButton
-
-                    Divider().clawsy().padding(.vertical, 4)
-
-                    quitButton
                 }
-                .padding(6)
+                .padding(.horizontal, 6)
+                .padding(.top, 6)
+
+                Divider().clawsy().padding(.vertical, 4).padding(.horizontal, 6)
+
+                // ── Secondary actions ──
+                VStack(spacing: 2) {
+                    taskOverviewButton
+                    settingsButton
+                }
+                .padding(.horizontal, 6)
+
+                Divider().clawsy().padding(.vertical, 4).padding(.horizontal, 6)
+
+                quitButton
+                    .padding(.horizontal, 6)
+                    .padding(.bottom, 6)
             }
         }
         .frame(width: ClawsyTheme.Spacing.popoverWidth)
@@ -117,7 +156,7 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Banner Section
+    // MARK: - Banner Section (critical states only — no permission nag)
 
     @ViewBuilder
     private var bannerSection: some View {
@@ -138,63 +177,37 @@ struct ContentView: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
         }
-
-        // Permission banner — shown when required permissions are missing
-        if !permissionMonitor.allRequiredGranted {
-            PermissionBannerView(permissionMonitor: permissionMonitor)
-                .transition(.move(edge: .top).combined(with: .opacity))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-        }
     }
 
-    // MARK: - Connect Button
+    // MARK: - Connecting state helper (disables toggle during transitions)
 
-    private var connectButton: some View {
-        Button(action: toggleConnection) {
-            MenuItemRow(
-                icon: connectButtonIcon,
-                title: connectButtonTitle,
-                color: connectButtonColor,
-                isEnabled: connectButtonEnabled
-            )
-        }
-        .buttonStyle(.plain)
-        .frame(maxWidth: .infinity)
-        .disabled(!connectButtonEnabled)
-    }
-
-    private var connectButtonEnabled: Bool {
+    private var isConnecting: Bool {
         switch hostManager.state {
-        case .connecting, .sshTunneling, .handshaking, .reconnecting: return false
-        default: return true
+        case .connecting, .sshTunneling, .handshaking, .reconnecting: return true
+        default: return false
         }
     }
 
-    private var connectButtonIcon: String {
-        switch hostManager.state {
-        case .connected: return ClawsyTheme.Icons.disconnect
-        case .connecting, .sshTunneling, .handshaking, .reconnecting: return ClawsyTheme.Icons.reconnect
-        case .awaitingPairing, .failed: return ClawsyTheme.Icons.reconnect
-        case .disconnected: return ClawsyTheme.Icons.connect
-        }
-    }
+    // MARK: - Status Text
 
-    private var connectButtonTitle: String {
+    private var statusText: String {
         switch hostManager.state {
-        case .connected: return "DISCONNECT"
-        case .connecting, .sshTunneling, .handshaking: return "STATUS_CONNECTING_LABEL"
-        case .reconnecting: return "STATUS_RECONNECTING"
-        case .awaitingPairing, .failed: return "RECONNECT"
-        default: return "CONNECT"
-        }
-    }
-
-    private var connectButtonColor: Color {
-        switch hostManager.state {
-        case .connected: return ClawsyTheme.Colors.failed
-        case .awaitingPairing, .failed: return ClawsyTheme.Colors.connecting
-        default: return .accentColor
+        case .disconnected:
+            return NSLocalizedString("STATUS_DISCONNECTED", bundle: .clawsy, comment: "")
+        case .connecting(let attempt):
+            return String(format: NSLocalizedString("STATUS_CONNECTING %lld", bundle: .clawsy, comment: ""), attempt)
+        case .sshTunneling:
+            return NSLocalizedString("STATUS_STARTING_SSH", bundle: .clawsy, comment: "")
+        case .handshaking:
+            return NSLocalizedString("STATUS_HANDSHAKING", bundle: .clawsy, comment: "")
+        case .awaitingPairing:
+            return NSLocalizedString("STATUS_AWAITING_PAIR_APPROVE", bundle: .clawsy, comment: "")
+        case .connected:
+            return NSLocalizedString("STATUS_CONNECTED", bundle: .clawsy, comment: "")
+        case .reconnecting(_, let seconds):
+            return String(format: NSLocalizedString("STATUS_RECONNECT_COUNTDOWN %lld", bundle: .clawsy, comment: ""), seconds)
+        case .failed(let failure):
+            return failure.localizedTitle
         }
     }
 
@@ -237,19 +250,6 @@ struct ContentView: View {
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 6)
-        .padding(.bottom, 6)
-    }
-
-    // MARK: - Connection Toggle
-
-    private func toggleConnection() {
-        guard let id = hostManager.activeHostId else { return }
-        if hostManager.isConnected {
-            hostManager.disconnectHost(id)
-        } else {
-            hostManager.connectHost(id)
-        }
     }
 
     // MARK: - Command Handler Registration
