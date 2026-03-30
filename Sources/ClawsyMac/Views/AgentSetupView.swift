@@ -24,9 +24,9 @@ struct AgentSetupView: View {
     host: <gateway hostname or IP address>
     token: <gateway authentication token>
 
-    Replace the placeholders with the actual values. \
     The host should be just the hostname or IP (no protocol, no port). \
-    The token is the gateway authentication token from your Clawsy/OpenClaw configuration.
+    The token is the authToken from your gateway config \
+    (~/.openclaw/gateway.json).
     """
 
     var body: some View {
