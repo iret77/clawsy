@@ -95,7 +95,11 @@ targets:
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         NSExtension:
           NSExtensionAttributes:
-            NSExtensionActivationRule: TRUEPREDICATE
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsFileWithMaxCount: 10
+              NSExtensionActivationSupportsText: true
+              NSExtensionActivationSupportsWebURLWithMaxCount: 10
+              NSExtensionActivationSupportsImageWithMaxCount: 10
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: ClawsyShare.ShareViewController
     settings:

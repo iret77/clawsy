@@ -56,12 +56,29 @@ if [ -f "CLAWSY.md" ]; then
     echo "✅ Bundled CLAWSY.md"
 fi
 
-# ── Step 6: Re-sign entire bundle ──────────────────────────────────
-# xcodebuild signs each target independently with ad-hoc identity,
-# which can produce different Team IDs. Re-sign the whole bundle
-# so dyld sees consistent signatures across app + framework + extensions.
-echo "🔏 Re-signing app bundle..."
-codesign --force --deep --sign - "$APP_BUNDLE"
+# ── Step 6: Re-sign bundle components with entitlements ────────────
+# Sign each component individually (inside-out) so entitlements are
+# preserved. --deep strips entitlements from nested bundles which
+# breaks FinderSync (needs HostBundleIdentifier) and Share Extension
+# (needs app-group).
+echo "🔏 Re-signing app bundle (component-level)..."
+
+# 6a: Framework
+codesign --force --sign - "$APP_BUNDLE/Contents/Frameworks/ClawsyShared.framework"
+
+# 6b: Extensions — each with its own entitlements
+codesign --force --sign - \
+    --entitlements "Sources/ClawsyMacShare/ClawsyMacShare.entitlements" \
+    "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex"
+
+codesign --force --sign - \
+    --entitlements "Sources/ClawsyFinderSync/ClawsyFinderSync.entitlements" \
+    "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex"
+
+# 6c: Main app — signed last (outermost)
+codesign --force --sign - \
+    --entitlements "ClawsyMac.entitlements" \
+    "$APP_BUNDLE"
 
 # ── Step 7: Verify ──────────────────────────────────────────────────
 echo "🔍 Verifying bundle structure..."
@@ -81,6 +98,19 @@ fi
 
 # Verify code signature
 codesign -vvv --deep --strict "$APP_BUNDLE"
+
+# Verify extension entitlements are preserved
+echo "🔐 Verifying extension entitlements..."
+if codesign -d --entitlements - "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex" 2>/dev/null | grep -q "FinderSync.HostBundleIdentifier"; then
+    echo "✅ FinderSync entitlements OK"
+else
+    echo "⚠️  FinderSync missing HostBundleIdentifier entitlement!"
+fi
+if codesign -d --entitlements - "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex" 2>/dev/null | grep -q "application-groups"; then
+    echo "✅ Share Extension entitlements OK"
+else
+    echo "⚠️  Share Extension missing app-group entitlement!"
+fi
 
 echo ""
 echo "✅ Build successful!"
