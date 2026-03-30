@@ -136,7 +136,6 @@ struct AgentSetupView: View {
             .padding(.vertical, 14)
         }
         .frame(width: 420, height: 440)
-        .onAppear { copyPrompt() }
     }
 
     private var borderColor: Color {
