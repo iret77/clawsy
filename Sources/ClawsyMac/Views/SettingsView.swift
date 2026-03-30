@@ -249,7 +249,7 @@ struct SettingsView: View {
                 TextField("", text: key)
                     .textFieldStyle(.roundedBorder)
                     .font(ClawsyTheme.Font.formValue)
-                    .frame(width: 28)
+                    .frame(width: 36)
                     .multilineTextAlignment(.center)
             }
         }
