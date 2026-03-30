@@ -1,5 +1,4 @@
 import Cocoa
-import Social
 import ClawsyShared
 
 /// Share Extension — receives shared items and passes them to the main app

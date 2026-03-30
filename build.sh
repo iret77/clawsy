@@ -136,9 +136,13 @@ else
     echo "⚠️  Share Extension missing app-group entitlement!"
 fi
 
-# Show signing identity
+# Show signing identity & Team ID for all components
 echo "🔑 Signing details:"
-codesign -dvv "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex" 2>&1 | grep -E "^(Authority|TeamIdentifier|Signature)" || true
+for component in "$APP_BUNDLE" "$APP_BUNDLE"/Contents/Frameworks/*.framework "$APP_BUNDLE"/Contents/PlugIns/*.appex; do
+    [ -e "$component" ] || continue
+    echo "  $(basename "$component"):"
+    codesign -dvv "$component" 2>&1 | grep -E "^(Authority|TeamIdentifier|Identifier)" | sed 's/^/    /' || true
+done
 
 echo ""
 echo "✅ Build successful!"
