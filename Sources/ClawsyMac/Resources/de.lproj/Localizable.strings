@@ -475,7 +475,7 @@
 "FAILURE_UNKNOWN" = "Verbindung fehlgeschlagen";
 
 // Fehlermeldung-Details
-"FAILURE_ORIGIN_DETAIL" = "Dieses Gerät ist noch nicht beim Gateway registriert. Klicke auf \"Gerät neu verbinden\", um die Kopplung zu starten.";
+"FAILURE_ORIGIN_DETAIL" = "Dieses Gerät wurde vom Gateway noch nicht freigegeben. Kopiere das Prompt und schicke es deinem Agenten, um die Kopplung zu genehmigen.";
 "FAILURE_TOKEN_DETAIL" = "Der Authentifizierungs-Token wurde abgelehnt. Prüfe den Token in den Einstellungen oder verbinde das Gerät neu.";
 "FAILURE_SSH_DETAIL %@" = "SSH-Tunnel konnte nicht aufgebaut werden: %@";
 "FAILURE_UNREACHABLE_DETAIL" = "Der Gateway-Host ist nicht erreichbar. Prüfe Netzwerkverbindung und Firewall. Falls kein direkter Zugang möglich ist, kannst Du in den Einstellungen einen SSH-Tunnel konfigurieren.";
@@ -491,3 +491,7 @@
 "STATUS_CONNECTING_LABEL" = "Verbindung wird hergestellt";
 "STATUS_FAILED_LABEL" = "Verbindung fehlgeschlagen";
 "CONNECTION_FAILURE_ICON" = "Verbindungsfehler";
+
+// Pairing-Prompt
+"PAIRING_COPY_PROMPT" = "Prompt für Agent kopieren";
+"PAIRING_AGENT_PROMPT" = "Mein Clawsy Mac-Companion muss mit dem Gateway gekoppelt werden. Bitte genehmige die ausstehende Pairing-Anfrage:\n\nopenclaw devices list\nopenclaw devices approve <requestId>\n\nSag mir Bescheid, wenn es erledigt ist.";
