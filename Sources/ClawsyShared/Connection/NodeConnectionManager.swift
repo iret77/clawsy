@@ -66,15 +66,23 @@ public final class NodeConnectionManager: ObservableObject {
         let hsConfig = HandshakeManager.Config(
             gatewayToken: gatewayToken,
             deviceToken: deviceToken,
-            capabilities: [],
+            capabilities: ["camera", "screen"],
             commands: [
+                "camera.snap", "camera.list",
+                "screen.capture",
+                "clipboard.read", "clipboard.write",
                 "file.list", "file.get", "file.set", "file.mkdir",
                 "file.delete", "file.move", "file.copy", "file.rename",
                 "file.get.chunk", "file.set.chunk",
                 "file.stat", "file.exists", "file.rmdir",
-                "file.batch", "file.checksum"
+                "file.batch", "file.checksum",
+                "location.get"
             ],
             permissions: [
+                "screen.capture": true,
+                "camera.snap": true,
+                "clipboard.read": true,
+                "clipboard.write": true,
                 "file.read": true,
                 "file.write": true
             ],
