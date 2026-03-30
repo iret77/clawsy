@@ -225,7 +225,7 @@ struct AgentSetupView: View {
             gatewayHost: host,
             gatewayPort: "18789",
             serverToken: token,
-            useSshFallback: true
+            useSshFallback: false
         )
 
         hostManager.addHost(profile)

@@ -164,7 +164,7 @@ public class HostManager: ObservableObject {
             gatewayPort: defaults.string(forKey: "serverPort") ?? "18789",
             serverToken: defaults.string(forKey: "serverToken") ?? "",
             sshUser: defaults.string(forKey: "sshUser") ?? "",
-            useSshFallback: defaults.object(forKey: "useSshFallback") == nil ? true : defaults.bool(forKey: "useSshFallback"),
+            useSshFallback: defaults.bool(forKey: "useSshFallback"),
             color: HostProfile.defaultColors[0],
             sharedFolderPath: defaults.string(forKey: "sharedFolderPath") ?? "~/Documents/Clawsy"
         )

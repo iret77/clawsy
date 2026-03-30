@@ -474,6 +474,15 @@
 "FAILURE_SKILL_MISSING" = "Clawsy-Skill fehlt";
 "FAILURE_UNKNOWN" = "Verbindung fehlgeschlagen";
 
+// Fehlermeldung-Details
+"FAILURE_ORIGIN_DETAIL" = "Das Gateway hat dieses Gerät abgelehnt. Klicke auf \"Gerät neu verbinden\", um es erneut zu registrieren.";
+"FAILURE_TOKEN_DETAIL" = "Der Authentifizierungs-Token wurde abgelehnt. Prüfe den Token in den Einstellungen oder verbinde das Gerät neu.";
+"FAILURE_SSH_DETAIL %@" = "SSH-Tunnel konnte nicht aufgebaut werden: %@";
+"FAILURE_UNREACHABLE_DETAIL" = "Der Gateway-Host ist nicht erreichbar. Prüfe Netzwerkverbindung und Firewall. Falls kein direkter Zugang möglich ist, kannst Du in den Einstellungen einen SSH-Tunnel konfigurieren.";
+"FAILURE_GATEWAY_DETAIL" = "Das Gateway antwortet nicht. Stelle sicher, dass OpenClaw auf dem Server läuft.";
+"FAILURE_RECONNECT_DETAIL" = "30 Minuten lang versucht, die Verbindung wiederherzustellen. Prüfe, ob der Server erreichbar ist.";
+"FAILURE_SKILL_DETAIL" = "Der Clawsy-Skill ist nicht auf dem Gateway installiert.";
+
 // Settings
 "SETTINGS_DELETE_HOST_CONFIRM" = "\"%@\" wird entfernt und die Verbindung getrennt.";
 "SETTINGS_HOTKEYS_HINT" = "Alle Tastenkürzel verwenden ⌘⇧ + Taste";

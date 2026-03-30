@@ -91,7 +91,7 @@ struct StatusHeaderView: View {
         case .reconnecting(_, let seconds):
             return String(format: NSLocalizedString("STATUS_RECONNECT_COUNTDOWN %lld", bundle: .clawsy, comment: ""), seconds)
         case .failed(let failure):
-            return failure.description
+            return failure.localizedTitle
         }
     }
 

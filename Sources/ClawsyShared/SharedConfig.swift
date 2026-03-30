@@ -66,7 +66,7 @@ public struct SharedConfig {
     
     public static var shortVersion: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.6.0" }
     public static var buildNumber: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1" }
-    public static var versionDisplay: String { "v\(shortVersion) #\(buildNumber)" }
+    public static var versionDisplay: String { "v\(shortVersion)" }
     
     public static func save(host: String, port: String, token: String) {
         let defaults = sharedDefaults
