@@ -63,6 +63,7 @@ jobs:
         [req_dn]
         CN = Clawsy Development
         O = Clawsy
+        OU = CLAWSY0001
         [v3_code]
         keyUsage = digitalSignature
         extendedKeyUsage = codeSigning
