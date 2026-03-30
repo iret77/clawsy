@@ -139,10 +139,20 @@ struct SettingsView: View {
                 }
                 .toggleStyle(.checkbox)
 
-                if hostManager.profiles.count > 1 {
-                    Divider().clawsy().padding(.vertical, 2)
-                    HStack {
-                        Spacer()
+                Divider().clawsy().padding(.vertical, 2)
+                HStack {
+                    Button {
+                        appDelegate.openAddHostWindow()
+                    } label: {
+                        Label(NSLocalizedString("ADD_HOST", bundle: .clawsy, comment: ""), systemImage: "plus.circle")
+                            .font(ClawsyTheme.Font.formLabel)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+
+                    Spacer()
+
+                    if hostManager.profiles.count > 1 {
                         Button(role: .destructive) {
                             hostToDelete = editedProfile
                             showDeleteConfirm = true

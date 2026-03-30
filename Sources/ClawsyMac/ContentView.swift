@@ -19,8 +19,8 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Host Switcher (only when multiple hosts)
-            if hostManager.profiles.count > 1 {
+            // Host Switcher (always visible — plus button lets user add hosts)
+            if !hostManager.profiles.isEmpty {
                 HostSwitcherView(hostManager: hostManager, onHostAdded: { profile in
                     hostManager.addHost(profile)
                     hostManager.connectHost(profile.id)
