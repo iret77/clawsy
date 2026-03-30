@@ -79,68 +79,6 @@ The agent receives the full skill reference automatically after connection.
 
 ---
 
-## Server Setup (OpenClaw Side)
-
-Clawsy is a client — it connects to your OpenClaw Gateway. Your agent needs to know Clawsy exists and how to use it.
-
-### Event Cache (clawsy-monitor)
-
-Clawsy pushes events (clipboard, screenshots, shares) to a `clawsy-service` session. The **clawsy-monitor** watches this session and caches events into a structured `clawsy-context.json` in your workspace so agents can read them efficiently.
-
-#### Automatic Setup
-
-```bash
-cd server
-./setup.sh
-```
-
-This installs `clawsy-monitor` as a systemd service that watches for Clawsy events and caches them in `clawsy-context.json` in your workspace. The setup is fully portable — all paths are auto-detected.
-
-#### Manual Setup
-
-If you don't have systemd, run the monitor directly:
-
-```bash
-node server/monitor.mjs
-```
-
-#### Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `OPENCLAW_HOME` | `~/.openclaw` | OpenClaw home directory |
-| `OPENCLAW_AGENT` | `main` | Agent ID |
-| `OPENCLAW_WORKSPACE` | `$OPENCLAW_HOME/workspace` | Workspace directory |
-
-### What the Agent Needs
-
-After Clawsy connects, your agent should:
-
-1. **Send `agent.info`** on every heartbeat (shows model name in Clawsy header)
-2. **Send `agent.status`** during active work (shows live progress in Mission Control)
-3. **Read from `clawsy-service`** session to receive screenshots, clipboard, and camera events
-
-### HEARTBEAT.md Snippet
-
-Add this to your agent's `HEARTBEAT.md`:
-
-```markdown
-## Clawsy (every heartbeat)
-Send agent.info + agent.status to clawsy-service:
-sessions_send(sessionKey="clawsy-service", timeoutSeconds=3,
-  message='{"kind":"agent.info","payload":{"agentName":"<NAME>","model":"<MODEL>","updatedAt":"<ISO-UTC>"}}')
-sessions_send(sessionKey="clawsy-service", timeoutSeconds=3,
-  message='{"kind":"agent.status","payload":{"agentName":"<NAME>","title":"Idle","progress":0.0,"statusText":"Waiting"}}')
-```
-
-### For Agents Reading This
-
-If you are an OpenClaw agent, read [for-agents.md](for-agents.md) — it has everything you need: exact code, data formats, and integration patterns.
-
-> Full server setup guide: [docs/SERVER_SETUP.md](docs/SERVER_SETUP.md)
-
----
-
 ## Multi-Host Support
 
 Clawsy can connect to **multiple OpenClaw gateways simultaneously**. Each host gets:
@@ -288,7 +226,7 @@ nodes(action="invoke", invokeCommand="file.batch",
 
 Available commands: `screen.capture`, `clipboard.read`, `clipboard.write`, `camera.list`, `camera.snap`, `file.list`, `file.get`, `file.set`, `file.get.chunk`, `file.set.chunk`, `file.move`, `file.copy`, `file.rename`, `file.stat`, `file.exists`, `file.batch`, `file.delete`, `file.rmdir`, `file.mkdir`, `location.get`
 
-> For complete agent integration docs, see [for-agents.md](for-agents.md) and [CLAWSY.md](CLAWSY.md).
+> Full command reference and agent integration: [SKILL.md](SKILL.md)
 
 ---
 
