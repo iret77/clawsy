@@ -776,7 +776,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         guard let hm = hostManager else { return }
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 460, height: 380),
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 400),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered, defer: false)
         window.titlebarAppearsTransparent = true
@@ -805,7 +805,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         guard let hm = hostManager else { return }
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 360),
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 400),
             styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
             backing: .buffered, defer: false)
         window.titlebarAppearsTransparent = true
@@ -813,12 +813,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         window.isReleasedWhenClosed = false
         window.center()
         window.setFrameAutosaveName("ai.clawsy.DebugLogWindow")
+        window.minSize = NSSize(width: 400, height: 250)
 
-        let isPresented = Binding<Bool>(
-            get: { window.isVisible },
-            set: { if !$0 { window.close(); self.debugLogWindow = nil } })
-
-        let view = DebugLogView(logText: hm.rawLog, isPresented: isPresented)
+        let view = DebugLogView(logText: hm.rawLog)
         window.contentView = NSHostingView(rootView: view)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

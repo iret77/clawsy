@@ -99,6 +99,7 @@
 "NO_DATA" = "No data received yet.";
 "SELECT_TEXT_COPY" = "Select text to copy.";
 "COPY_ALL" = "Copy All";
+"COPIED" = "Copied";
 
 /* Shared Folder */
 "FOLDER_MISSING_TITLE" = "Folder Not Found";
@@ -251,7 +252,9 @@
 "REPAIR_CONNECTION_HELP" = "Use if the connection is rejected after a gateway restart. Clears the stored device token and initiates fresh pairing.";
 
 // Settings tabs
+"SETTINGS_TAB_GENERAL" = "General";
 "SETTINGS_TAB_CONNECTION" = "Connection";
+"SETTINGS_TAB_SHORTCUTS" = "Shortcuts";
 "SETTINGS_TAB_FEATURES" = "Features";
 "SETTINGS_TAB_UPDATES" = "Updates";
 

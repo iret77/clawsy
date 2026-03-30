@@ -29,18 +29,27 @@ struct SettingsTabView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             generalTab
-                .tabItem { Label("Allgemein", systemImage: "gearshape") }
+                .tabItem {
+                    Label(NSLocalizedString("SETTINGS_TAB_GENERAL", bundle: .clawsy, comment: ""),
+                          systemImage: "gearshape")
+                }
                 .tag(SettingsTab.general)
 
             connectionTab
-                .tabItem { Label("Verbindung", systemImage: "globe") }
+                .tabItem {
+                    Label(NSLocalizedString("SETTINGS_TAB_CONNECTION", bundle: .clawsy, comment: ""),
+                          systemImage: "network")
+                }
                 .tag(SettingsTab.connection)
 
             shortcutsTab
-                .tabItem { Label("Kürzel", systemImage: "keyboard") }
+                .tabItem {
+                    Label(NSLocalizedString("SETTINGS_TAB_SHORTCUTS", bundle: .clawsy, comment: ""),
+                          systemImage: "keyboard")
+                }
                 .tag(SettingsTab.shortcuts)
         }
-        .frame(width: 460, height: 340)
+        .frame(width: 480, height: 370)
         .onAppear { loadActiveProfile() }
         .onChange(of: hostManager.activeHostId) { _ in loadActiveProfile() }
         .onDisappear { saveProfile() }

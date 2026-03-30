@@ -3,35 +3,12 @@ import ClawsyShared
 
 struct DebugLogView: View {
     var logText: String
-    @Binding var isPresented: Bool
+
+    @State private var copied = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Header
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(l10n: "DEBUG_LOG_TITLE")
-                        .font(.system(size: 15, weight: .semibold))
-                    Text(SharedConfig.versionDisplay)
-                        .font(ClawsyTheme.Font.footer)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-                Button(action: { isPresented = false }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(.secondary.opacity(0.6))
-                }
-                .buttonStyle(.plain)
-                .keyboardShortcut(.escape, modifiers: [])
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
-            .padding(.bottom, 10)
-
-            Divider().clawsy()
-
-            // Log Content
+        VStack(spacing: 0) {
+            // Log Content — fills the window, title bar is handled by NSWindow
             ScrollViewReader { proxy in
                 ScrollView {
                     if logText.isEmpty {
@@ -50,7 +27,7 @@ struct DebugLogView: View {
                     }
                 }
                 .scrollIndicators(.visible)
-                .background(Color.black.opacity(0.03))
+                .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
                 .onChange(of: logText) { _ in
                     withAnimation { proxy.scrollTo("logEnd", anchor: .bottom) }
                 }
@@ -58,24 +35,35 @@ struct DebugLogView: View {
 
             Divider().clawsy()
 
-            // Footer
+            // Footer — minimal, just copy action
             HStack {
-                Text(l10n: "SELECT_TEXT_COPY")
-                    .font(ClawsyTheme.Font.bannerBody)
-                    .foregroundColor(.secondary)
+                Text(SharedConfig.versionDisplay)
+                    .font(ClawsyTheme.Font.footer)
+                    .foregroundColor(.secondary.opacity(0.4))
                 Spacer()
-                Button(action: {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(logText, forType: .string)
-                }) {
-                    Text(l10n: "COPY_ALL")
+                Button(action: copyLog) {
+                    HStack(spacing: 4) {
+                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                            .font(.system(size: 10))
+                        Text(copied
+                             ? NSLocalizedString("COPIED", bundle: .clawsy, comment: "")
+                             : NSLocalizedString("COPY_ALL", bundle: .clawsy, comment: ""))
+                    }
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
+                .disabled(logText.isEmpty)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
         }
         .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
+    }
+
+    private func copyLog() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(logText, forType: .string)
+        copied = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copied = false }
     }
 }
