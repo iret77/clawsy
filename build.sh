@@ -53,35 +53,38 @@ fi
 
 cp -R "$BUILT_APP" "$APP_BUNDLE"
 
-# ── Step 5: Bundle CLAWSY.md ────────────────────────────────────────
-if [ -f "CLAWSY.md" ]; then
-    cp "CLAWSY.md" "$APP_BUNDLE/Contents/Resources/CLAWSY.md"
-    echo "✅ Bundled CLAWSY.md"
+# ── Step 5: Verify CLAWSY.md ───────────────────────────────────────
+# CLAWSY.md is included via project.yml resources — no manual copy
+# needed. Copying after xcodebuild would break the code signature seal.
+if [ -f "$APP_BUNDLE/Contents/Resources/CLAWSY.md" ]; then
+    echo "✅ CLAWSY.md bundled by xcodebuild"
+else
+    echo "⚠️  CLAWSY.md missing from bundle resources"
 fi
 
-# ── Step 6: Re-sign bundle components with entitlements ────────────
-# Sign each component individually (inside-out) so entitlements are
-# preserved. --deep strips entitlements from nested bundles which
-# breaks FinderSync (needs HostBundleIdentifier) and Share Extension
-# (needs app-group).
-echo "🔏 Re-signing app bundle (component-level)..."
+# ── Step 6: Re-sign if needed ──────────────────────────────────────
+# When xcodebuild uses a named identity (e.g. "Clawsy Development"),
+# it already signs each component with its entitlements correctly.
+# Re-signing would strip entitlements. Only re-sign for ad-hoc (-).
+if [ "$SIGN_ID" = "-" ]; then
+    echo "🔏 Ad-hoc identity — re-signing bundle components..."
 
-# 6a: Framework
-codesign --force --sign "$SIGN_ID" "$APP_BUNDLE/Contents/Frameworks/ClawsyShared.framework"
+    codesign --force --sign - "$APP_BUNDLE/Contents/Frameworks/ClawsyShared.framework"
 
-# 6b: Extensions — each with its own entitlements
-codesign --force --sign "$SIGN_ID" \
-    --entitlements "Sources/ClawsyMacShare/ClawsyMacShare.entitlements" \
-    "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex"
+    codesign --force --sign - \
+        --entitlements "Sources/ClawsyMacShare/ClawsyMacShare.entitlements" \
+        "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex"
 
-codesign --force --sign "$SIGN_ID" \
-    --entitlements "Sources/ClawsyFinderSync/ClawsyFinderSync.entitlements" \
-    "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex"
+    codesign --force --sign - \
+        --entitlements "Sources/ClawsyFinderSync/ClawsyFinderSync.entitlements" \
+        "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex"
 
-# 6c: Main app — signed last (outermost)
-codesign --force --sign "$SIGN_ID" \
-    --entitlements "ClawsyMac.entitlements" \
-    "$APP_BUNDLE"
+    codesign --force --sign - \
+        --entitlements "ClawsyMac.entitlements" \
+        "$APP_BUNDLE"
+else
+    echo "🔏 Named identity '$SIGN_ID' — xcodebuild signatures preserved"
+fi
 
 # ── Step 7: Verify ──────────────────────────────────────────────────
 echo "🔍 Verifying bundle structure..."
@@ -104,16 +107,20 @@ codesign -vvv --deep --strict "$APP_BUNDLE"
 
 # Verify extension entitlements are preserved
 echo "🔐 Verifying extension entitlements..."
-if codesign -d --entitlements - "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex" 2>/dev/null | grep -q "FinderSync.HostBundleIdentifier"; then
+if codesign -d --entitlements :- "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex" 2>/dev/null | grep -q "FinderSync.HostBundleIdentifier"; then
     echo "✅ FinderSync entitlements OK"
 else
     echo "⚠️  FinderSync missing HostBundleIdentifier entitlement!"
 fi
-if codesign -d --entitlements - "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex" 2>/dev/null | grep -q "application-groups"; then
+if codesign -d --entitlements :- "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex" 2>/dev/null | grep -q "application-groups"; then
     echo "✅ Share Extension entitlements OK"
 else
     echo "⚠️  Share Extension missing app-group entitlement!"
 fi
+
+# Show signing identity
+echo "🔑 Signing details:"
+codesign -dvv "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex" 2>&1 | grep -E "^(Authority|TeamIdentifier|Signature)" || true
 
 echo ""
 echo "✅ Build successful!"
