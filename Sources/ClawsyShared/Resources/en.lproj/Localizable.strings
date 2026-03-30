@@ -474,7 +474,7 @@
 "FAILURE_UNKNOWN" = "Connection Failed";
 
 // Failure detail texts
-"FAILURE_ORIGIN_DETAIL" = "This device is not yet registered with the gateway. Click \"Re-Pair Device\" to start pairing.";
+"FAILURE_ORIGIN_DETAIL" = "This device is not yet approved by the gateway. Copy the prompt below and send it to your agent to approve the pairing.";
 "FAILURE_TOKEN_DETAIL" = "The authentication token was rejected. Check the token in Settings or re-pair the device.";
 "FAILURE_SSH_DETAIL %@" = "SSH tunnel could not be established: %@";
 "FAILURE_UNREACHABLE_DETAIL" = "Cannot reach the gateway host. Check your network connection and firewall settings. If direct access isn't possible, try configuring an SSH tunnel in Settings.";
@@ -509,3 +509,7 @@
 
 // Onboarding
 "ONBOARDING_WINDOW_TITLE" = "Welcome to Clawsy";
+
+// Pairing prompt
+"PAIRING_COPY_PROMPT" = "Copy Prompt for Agent";
+"PAIRING_AGENT_PROMPT" = "My Clawsy Mac companion needs to be paired with the gateway. Please approve the pending pairing request:\n\nopenclaw devices list\nopenclaw devices approve <requestId>\n\nThen let me know when it's done.";

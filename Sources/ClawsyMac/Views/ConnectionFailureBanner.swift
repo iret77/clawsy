@@ -7,12 +7,14 @@ struct ConnectionFailureBanner: View {
     var onRetry: () -> Void
     var onRepair: () -> Void
 
+    @State private var copied = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(ClawsyTheme.Font.menuItem)
-                    .foregroundColor(ClawsyTheme.Colors.failed)
+                    .foregroundColor(iconColor)
                     .accessibilityLabel(NSLocalizedString("CONNECTION_FAILURE_ICON", bundle: .clawsy, comment: ""))
                 Text(title)
                     .font(ClawsyTheme.Font.bannerTitle)
@@ -25,33 +27,45 @@ struct ConnectionFailureBanner: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 8) {
-                if isRetryable {
-                    Button(action: onRetry) {
-                        Label(NSLocalizedString("FAILURE_RETRY", bundle: .clawsy, comment: ""), systemImage: ClawsyTheme.Icons.retry)
+                if case .originNotAllowed = failure {
+                    Button(action: copyPairingPrompt) {
+                        Label(copied
+                              ? NSLocalizedString("PAIRING_COPIED", bundle: .clawsy, comment: "")
+                              : NSLocalizedString("PAIRING_COPY_PROMPT", bundle: .clawsy, comment: ""),
+                              systemImage: copied ? "checkmark" : "doc.on.doc")
                             .font(ClawsyTheme.Font.bannerBody)
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.borderedProminent)
                     .controlSize(.small)
-                }
-                if needsRepair {
-                    Button(action: onRepair) {
-                        Label(NSLocalizedString("REPAIR_CONNECTION", bundle: .clawsy, comment: ""), systemImage: ClawsyTheme.Icons.repair)
-                            .font(ClawsyTheme.Font.bannerBody)
+                } else {
+                    if isRetryable {
+                        Button(action: onRetry) {
+                            Label(NSLocalizedString("FAILURE_RETRY", bundle: .clawsy, comment: ""), systemImage: ClawsyTheme.Icons.retry)
+                                .font(ClawsyTheme.Font.bannerBody)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    if needsRepair {
+                        Button(action: onRepair) {
+                            Label(NSLocalizedString("REPAIR_CONNECTION", bundle: .clawsy, comment: ""), systemImage: ClawsyTheme.Icons.repair)
+                                .font(ClawsyTheme.Font.bannerBody)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
                 }
             }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(ClawsyTheme.Colors.errorBannerBackground)
+        .background(bannerBackground)
         .cornerRadius(ClawsyTheme.Spacing.cornerRadius)
     }
 
     private var icon: String {
         switch failure {
-        case .originNotAllowed: return "lock.shield"
+        case .originNotAllowed: return "person.badge.plus"
         case .invalidToken: return "key.slash"
         case .sshTunnelFailed: return "terminal"
         case .hostUnreachable: return "wifi.slash"
@@ -59,6 +73,20 @@ struct ConnectionFailureBanner: View {
         case .reconnectExhausted: return "clock.badge.exclamationmark"
         case .skillMissing: return "puzzlepiece.extension"
         case .unknown: return ClawsyTheme.Icons.warning
+        }
+    }
+
+    private var iconColor: Color {
+        switch failure {
+        case .originNotAllowed: return .orange
+        default: return ClawsyTheme.Colors.failed
+        }
+    }
+
+    private var bannerBackground: Color {
+        switch failure {
+        case .originNotAllowed: return .orange.opacity(0.08)
+        default: return ClawsyTheme.Colors.errorBannerBackground
         }
     }
 
@@ -105,8 +133,16 @@ struct ConnectionFailureBanner: View {
 
     private var needsRepair: Bool {
         switch failure {
-        case .invalidToken, .originNotAllowed: return true
+        case .invalidToken: return true
         default: return false
         }
+    }
+
+    private func copyPairingPrompt() {
+        let prompt = NSLocalizedString("PAIRING_AGENT_PROMPT", bundle: .clawsy, comment: "")
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(prompt, forType: .string)
+        copied = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { copied = false }
     }
 }
