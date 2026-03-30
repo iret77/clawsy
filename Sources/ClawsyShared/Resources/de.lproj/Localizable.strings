@@ -513,4 +513,3 @@
 
 // Pairing-Prompt
 "PAIRING_COPY_PROMPT" = "Prompt für Agent kopieren";
-"PAIRING_AGENT_PROMPT" = "Mein Clawsy Mac-Companion muss mit dem Gateway gekoppelt werden. Bitte genehmige die ausstehende Pairing-Anfrage:\n\nopenclaw devices list\nopenclaw devices approve <requestId>\n\nSag mir Bescheid, wenn es erledigt ist.";

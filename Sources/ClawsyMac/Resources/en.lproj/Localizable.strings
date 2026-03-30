@@ -493,4 +493,4 @@
 
 // Pairing prompt
 "PAIRING_COPY_PROMPT" = "Copy Prompt for Agent";
-"PAIRING_AGENT_PROMPT" = "My Clawsy Mac companion needs to be paired with the gateway. Please approve the pending pairing request:\n\nopenclaw devices list\nopenclaw devices approve <requestId>\n\nThen let me know when it's done.";
+"PAIRING_AGENT_PROMPT" = "My Clawsy Mac companion app has a pending pairing request on the gateway. Please find and approve it, then let me know when done.";
