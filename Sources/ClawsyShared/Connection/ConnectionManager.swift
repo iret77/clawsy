@@ -236,9 +236,13 @@ public final class ConnectionManager: ObservableObject {
             return
         }
 
+        // When tunneling, the URL is localhost but the gateway checks the Origin header
+        // against the real hostname. Set it explicitly so the origin check passes.
+        let origin: String? = useTunnel ? "http://\(config.gatewayHost)" : nil
+
         let timeout: TimeInterval = useTunnel ? 12.0 : 8.0
         log("Opening WebSocket to \(urlString) (timeout: \(Int(timeout))s)")
-        transport.connect(to: url, timeout: timeout)
+        transport.connect(to: url, timeout: timeout, origin: origin)
     }
 
     // MARK: - Retry Timer

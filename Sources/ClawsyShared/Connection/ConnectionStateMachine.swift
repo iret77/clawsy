@@ -78,7 +78,7 @@ public enum ConnectionFailure: Equatable, CustomStringConvertible {
 
     public var description: String {
         switch self {
-        case .originNotAllowed: return "Origin not allowed"
+        case .originNotAllowed: return "Connection rejected (origin)"
         case .invalidToken: return "Invalid token"
         case .sshTunnelFailed(let d): return "SSH failed: \(d)"
         case .hostUnreachable: return "Host unreachable"

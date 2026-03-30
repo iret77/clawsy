@@ -7,8 +7,6 @@ struct ConnectionFailureBanner: View {
     var onRetry: () -> Void
     var onRepair: () -> Void
 
-    @State private var copied = false
-
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
@@ -27,33 +25,21 @@ struct ConnectionFailureBanner: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 8) {
-                if case .originNotAllowed = failure {
-                    Button(action: copyPairingPrompt) {
-                        Label(copied
-                              ? NSLocalizedString("PAIRING_COPIED", bundle: .clawsy, comment: "")
-                              : NSLocalizedString("PAIRING_COPY_PROMPT", bundle: .clawsy, comment: ""),
-                              systemImage: copied ? "checkmark" : "doc.on.doc")
+                if isRetryable {
+                    Button(action: onRetry) {
+                        Label(NSLocalizedString("FAILURE_RETRY", bundle: .clawsy, comment: ""), systemImage: ClawsyTheme.Icons.retry)
                             .font(ClawsyTheme.Font.bannerBody)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
                     .controlSize(.small)
-                } else {
-                    if isRetryable {
-                        Button(action: onRetry) {
-                            Label(NSLocalizedString("FAILURE_RETRY", bundle: .clawsy, comment: ""), systemImage: ClawsyTheme.Icons.retry)
-                                .font(ClawsyTheme.Font.bannerBody)
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                }
+                if needsRepair {
+                    Button(action: onRepair) {
+                        Label(NSLocalizedString("REPAIR_CONNECTION", bundle: .clawsy, comment: ""), systemImage: ClawsyTheme.Icons.repair)
+                            .font(ClawsyTheme.Font.bannerBody)
                     }
-                    if needsRepair {
-                        Button(action: onRepair) {
-                            Label(NSLocalizedString("REPAIR_CONNECTION", bundle: .clawsy, comment: ""), systemImage: ClawsyTheme.Icons.repair)
-                                .font(ClawsyTheme.Font.bannerBody)
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
                 }
             }
         }
@@ -65,7 +51,7 @@ struct ConnectionFailureBanner: View {
 
     private var icon: String {
         switch failure {
-        case .originNotAllowed: return "person.badge.plus"
+        case .originNotAllowed: return "xmark.shield"
         case .invalidToken: return "key.slash"
         case .sshTunnelFailed: return "terminal"
         case .hostUnreachable: return "wifi.slash"
@@ -77,17 +63,11 @@ struct ConnectionFailureBanner: View {
     }
 
     private var iconColor: Color {
-        switch failure {
-        case .originNotAllowed: return .orange
-        default: return ClawsyTheme.Colors.failed
-        }
+        ClawsyTheme.Colors.failed
     }
 
     private var bannerBackground: Color {
-        switch failure {
-        case .originNotAllowed: return .orange.opacity(0.08)
-        default: return ClawsyTheme.Colors.errorBannerBackground
-        }
+        ClawsyTheme.Colors.errorBannerBackground
     }
 
     private var title: String {
@@ -126,7 +106,7 @@ struct ConnectionFailureBanner: View {
 
     private var isRetryable: Bool {
         switch failure {
-        case .hostUnreachable, .gatewayNotRunning, .reconnectExhausted, .sshTunnelFailed, .unknown: return true
+        case .originNotAllowed, .hostUnreachable, .gatewayNotRunning, .reconnectExhausted, .sshTunnelFailed, .unknown: return true
         default: return false
         }
     }
@@ -138,11 +118,4 @@ struct ConnectionFailureBanner: View {
         }
     }
 
-    private func copyPairingPrompt() {
-        let prompt = NSLocalizedString("PAIRING_AGENT_PROMPT", bundle: .clawsy, comment: "")
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(prompt, forType: .string)
-        copied = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { copied = false }
-    }
 }
