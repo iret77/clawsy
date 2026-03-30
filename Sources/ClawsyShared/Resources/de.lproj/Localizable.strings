@@ -465,7 +465,7 @@
 // Connection Failure Banner
 "FAILURE_RETRY" = "Erneut versuchen";
 "FAILURE_REPAIR" = "Verbindung reparieren";
-"FAILURE_ORIGIN_NOT_ALLOWED" = "Kopplung erforderlich";
+"FAILURE_ORIGIN_NOT_ALLOWED" = "Verbindung abgelehnt";
 "FAILURE_INVALID_TOKEN" = "Ungültiger Token";
 "FAILURE_SSH_FAILED" = "SSH-Tunnel fehlgeschlagen";
 "FAILURE_HOST_UNREACHABLE" = "Host nicht erreichbar";
@@ -475,7 +475,7 @@
 "FAILURE_UNKNOWN" = "Verbindung fehlgeschlagen";
 
 // Fehlermeldung-Details
-"FAILURE_ORIGIN_DETAIL" = "Dieses Gerät wurde vom Gateway noch nicht freigegeben. Kopiere das Prompt und schicke es deinem Agenten, um die Kopplung zu genehmigen.";
+"FAILURE_ORIGIN_DETAIL" = "Das Gateway hat die Verbindung wegen eines Origin-Header-Fehlers abgelehnt. Bei SSH-Tunnel: erneut verbinden. Andernfalls die Allowed-Origins-Konfiguration des Gateways prüfen.";
 "FAILURE_TOKEN_DETAIL" = "Der Authentifizierungs-Token wurde abgelehnt. Prüfe den Token in den Einstellungen oder verbinde das Gerät neu.";
 "FAILURE_SSH_DETAIL %@" = "SSH-Tunnel konnte nicht aufgebaut werden: %@";
 "FAILURE_UNREACHABLE_DETAIL" = "Der Gateway-Host ist nicht erreichbar. Prüfe Netzwerkverbindung und Firewall. Falls kein direkter Zugang möglich ist, kannst Du in den Einstellungen einen SSH-Tunnel konfigurieren.";

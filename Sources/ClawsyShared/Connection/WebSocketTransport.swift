@@ -35,11 +35,14 @@ public final class WebSocketTransport: NSObject, WebSocketDelegate {
     /// Open a WebSocket connection to the given URL.
     /// Only one connection at a time — calling this while connected
     /// will close the previous connection first.
-    public func connect(to url: URL, timeout: TimeInterval? = nil) {
+    public func connect(to url: URL, timeout: TimeInterval? = nil, origin: String? = nil) {
         disconnect()
 
         var request = URLRequest(url: url)
         request.timeoutInterval = timeout ?? watchdogTimeout
+        if let origin {
+            request.setValue(origin, forHTTPHeaderField: "Origin")
+        }
 
         let ws = WebSocket(request: request)
         ws.delegate = self
