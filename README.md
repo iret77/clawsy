@@ -39,9 +39,9 @@ Nothing happens behind your back. Every screenshot, clipboard read, or file writ
 
 Send this to your OpenClaw agent:
 
-> **Install the Clawsy macOS companion: `clawhub install clawsy`**
+> **Install the Clawsy macOS companion: `clawhub install clawsy` — then read the SKILL.md and follow the IMMEDIATE ACTION section.**
 
-That's it. Your agent installs the Clawsy skill, knows every capability, and walks you through download, setup, and pairing step by step.
+Your agent installs the skill, reads the setup instructions, and sends you the download link and setup code in one message.
 
 ---
 

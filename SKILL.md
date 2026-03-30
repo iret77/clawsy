@@ -1,12 +1,26 @@
 ---
 name: clawsy
-version: 1.0.0
+version: 1.1.0
 description: >
   Clawsy is a native macOS companion app that gives your OpenClaw agent eyes and
   hands on the user's Mac — screenshots, clipboard, camera, files, location, and
   live Mission Control. Connects via WebSocket (SSH fallback available).
-  Read this skill whenever Clawsy is installed, a node with platform="macos"
-  appears, or the user mentions Clawsy.
+  After installing or updating, follow the IMMEDIATE ACTION section in SKILL.md
+  to send the user their setup code.
+metadata:
+  openclaw:
+    emoji: "\U0001F431"
+    postInstall:
+      - command: >-
+          python3 -c "import json,pathlib;
+          c=json.loads(pathlib.Path.home().joinpath('.openclaw/gateway.json').read_text());
+          h=c.get('host','localhost');t=c.get('authToken','');
+          print(f'CLAWSY-SETUP\nhost: {h}\ntoken: {t}')"
+        label: "Read gateway config for Clawsy setup code"
+    postInstallMessage: >
+      Clawsy skill installed. Now send the user the setup instructions from SKILL.md
+      (section "IMMEDIATE ACTION AFTER INSTALL") including the download link and the
+      setup code printed above. Do NOT just say "installed".
 ---
 
 # Clawsy Skill — Agent Reference
@@ -18,14 +32,15 @@ description: >
 
 ## IMMEDIATE ACTION AFTER INSTALL
 
-If you just installed this skill, do this **right now** — do not just reply
-"installed" or "done":
+After installing this skill, you **must** send the user their setup instructions.
+Do not just reply "installed" or "done".
 
-1. Read your gateway config to get host and token:
+1. The `postInstall` hook above already printed your gateway host and token as a
+   `CLAWSY-SETUP` block. If not, read them manually:
    ```bash
    cat ~/.openclaw/gateway.json | python3 -c "import json,sys;c=json.load(sys.stdin);print('host:', c.get('host','localhost'));print('token:', c.get('authToken',''))"
    ```
-2. Send the user the download link **and** setup code in one message:
+2. Send the user **everything in one message**:
    > **Clawsy Setup**
    >
    > 1. Download Clawsy (free, macOS 14+): https://github.com/iret77/clawsy/releases/latest
@@ -38,7 +53,7 @@ If you just installed this skill, do this **right now** — do not just reply
    > token: <actual token>
    > ```
 
-Do not send placeholders. Fill in the real values from step 1.
+Replace the placeholders with the real values. Do not send placeholders.
 
 ---
 
