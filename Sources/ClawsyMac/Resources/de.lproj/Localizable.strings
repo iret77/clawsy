@@ -494,3 +494,4 @@
 
 // Pairing-Prompt
 "PAIRING_COPY_PROMPT" = "Prompt für Agent kopieren";
+"PAIRING_AGENT_PROMPT" = "My Clawsy Mac companion app has sent a device pairing request to the OpenClaw gateway. Please find the pending device and approve it, then let me know when done.";
