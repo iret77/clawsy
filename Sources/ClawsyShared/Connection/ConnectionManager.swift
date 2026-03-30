@@ -65,7 +65,7 @@ public final class ConnectionManager: ObservableObject {
         stateMachine.configure(config)
 
         let startDate = ISO8601DateFormatter().string(from: Date())
-        rawLog = "[LOG START] \(startDate)\n"
+        rawLog = "[LOG START] \(startDate) — Clawsy v\(SharedConfig.shortVersion) #\(SharedConfig.buildNumber)\n"
         log("Connecting to \(config.gatewayHost):\(config.gatewayPort)")
 
         let effects = stateMachine.handle(.connect)
