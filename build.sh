@@ -9,7 +9,20 @@ DERIVED_DATA="$BUILD_DIR/DerivedData"
 APP_BUNDLE="$BUILD_DIR/app/$APP_NAME.app"
 SIGN_ID="${CODESIGN_IDENTITY:--}"
 
+# Hardened Runtime requires an Apple-issued certificate (Developer ID /
+# Apple Development) — self-signed or ad-hoc identities cannot use the
+# restricted entitlements needed to bypass library validation, so dyld
+# rejects embedded frameworks ("different Team IDs").  Enable it only
+# when the identity looks like a real Apple cert.
+case "$SIGN_ID" in
+    "Developer ID"*|"Apple Development"*|"Apple Distribution"*|"3rd Party Mac"*)
+        HARDENED_RUNTIME=YES ;;
+    *)
+        HARDENED_RUNTIME=NO ;;
+esac
+
 echo "🔑 Signing identity: $SIGN_ID"
+echo "🛡️  Hardened Runtime: $HARDENED_RUNTIME"
 
 echo "🧹 Cleaning up..."
 rm -rf "$BUILD_DIR/app"
@@ -39,7 +52,7 @@ xcodebuild \
     ONLY_ACTIVE_ARCH=NO \
     CODE_SIGN_IDENTITY="$SIGN_ID" \
     CODE_SIGN_STYLE=Manual \
-    ENABLE_HARDENED_RUNTIME=YES \
+    ENABLE_HARDENED_RUNTIME=$HARDENED_RUNTIME \
     build
 
 # ── Step 4: Copy built .app to output directory ─────────────────────
@@ -69,20 +82,27 @@ fi
 # Team IDs"). --preserve-metadata keeps entitlements from xcodebuild.
 echo "🔏 Re-signing app bundle (component-level)..."
 
-PRESERVE="--preserve-metadata=entitlements,identifier,flags"
+if [ "$HARDENED_RUNTIME" = "YES" ]; then
+    # Apple cert: preserve entitlements + flags (including runtime flag)
+    CODESIGN_ARGS="--preserve-metadata=entitlements,identifier,flags"
+else
+    # Self-signed / ad-hoc: preserve entitlements but NOT flags to avoid
+    # re-introducing the hardened runtime flag that causes dyld rejection
+    CODESIGN_ARGS="--preserve-metadata=entitlements,identifier"
+fi
 
 # 6a: Frameworks
 for fw in "$APP_BUNDLE"/Contents/Frameworks/*.framework; do
-    [ -d "$fw" ] && codesign --force --sign "$SIGN_ID" $PRESERVE "$fw"
+    [ -d "$fw" ] && codesign --force --sign "$SIGN_ID" $CODESIGN_ARGS "$fw"
 done
 
 # 6b: Extensions
 for ext in "$APP_BUNDLE"/Contents/PlugIns/*.appex; do
-    [ -d "$ext" ] && codesign --force --sign "$SIGN_ID" $PRESERVE "$ext"
+    [ -d "$ext" ] && codesign --force --sign "$SIGN_ID" $CODESIGN_ARGS "$ext"
 done
 
 # 6c: Main app (outermost, signed last)
-codesign --force --sign "$SIGN_ID" $PRESERVE "$APP_BUNDLE"
+codesign --force --sign "$SIGN_ID" $CODESIGN_ARGS "$APP_BUNDLE"
 
 # ── Step 7: Verify ──────────────────────────────────────────────────
 echo "🔍 Verifying bundle structure..."
