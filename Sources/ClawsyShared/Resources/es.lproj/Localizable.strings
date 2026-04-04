@@ -46,6 +46,7 @@
 "DISCONNECT" = "Desconectar";
 "SETTINGS" = "Configuración...";
 "DEBUG_LOG" = "Registro de depuración";
+"LOG_WINDOW_TITLE" = "Registro";
 "QUIT" = "Salir";
 
 /* Status */

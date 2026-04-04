@@ -808,10 +808,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 560, height: 400),
-            styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
+            styleMask: [.titled, .closable, .resizable],
             backing: .buffered, defer: false)
-        window.titlebarAppearsTransparent = true
-        window.title = NSLocalizedString("DEBUG_LOG", bundle: .clawsy, comment: "")
+        window.title = NSLocalizedString("LOG_WINDOW_TITLE", bundle: .clawsy, comment: "")
         window.isReleasedWhenClosed = false
         window.center()
         window.setFrameAutosaveName("ai.clawsy.DebugLogWindow")

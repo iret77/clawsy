@@ -44,6 +44,7 @@
 "RECONNECT" = "Erneut verbinden";
 "SETTINGS" = "Einstellungen...";
 "DEBUG_LOG" = "Debug-Protokoll";
+"LOG_WINDOW_TITLE" = "Protokoll";
 "QUIT" = "Beenden";
 
 /* Status */
