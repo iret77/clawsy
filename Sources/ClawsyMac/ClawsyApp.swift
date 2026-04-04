@@ -242,12 +242,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             button.action = #selector(togglePopover(_:))
         }
 
-        // Create Popover
+        // Create Popover — auto-sizes to content height
         popover = NSPopover()
-        popover.contentSize = NSSize(width: 300, height: 400)
+        popover.contentSize = NSSize(width: ClawsyTheme.Spacing.popoverWidth, height: 10)
         popover.behavior = .transient
         let contentView = ContentView().environmentObject(self)
-        popover.contentViewController = NSHostingController(rootView: contentView)
+        let hostingController = NSHostingController(rootView: contentView)
+        hostingController.sizingOptions = .intrinsicContentSize
+        popover.contentViewController = hostingController
 
         // Register Global Hotkeys
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in

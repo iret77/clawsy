@@ -122,6 +122,7 @@ struct ContentView: View {
             }
         }
         .frame(width: ClawsyTheme.Spacing.popoverWidth)
+        .fixedSize(horizontal: false, vertical: true)
         .background(
             VisualEffectView(material: .popover, blendingMode: .behindWindow)
         )
