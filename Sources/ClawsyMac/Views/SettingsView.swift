@@ -97,52 +97,35 @@ struct SettingsTabView: View {
                 sectionLabel("Host", icon: "person.crop.circle")
             }
 
-            // Notifications
-            GroupBox {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "bell.badge")
-                            .foregroundColor(.accentColor)
-                            .font(.system(size: 12))
-                        Text(NSLocalizedString("SETTINGS_RESPONSE_CLAWSY", bundle: .clawsy, comment: ""))
-                            .font(ClawsyTheme.Font.formLabel)
-                    }
-                    Text(NSLocalizedString("SETTINGS_RESPONSE_CHANNEL_HINT", bundle: .clawsy, comment: ""))
-                        .font(ClawsyTheme.Font.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.vertical, 2)
-            } label: {
-                sectionLabel(NSLocalizedString("SETTINGS_SECTION_RESPONSE", bundle: .clawsy, comment: ""),
-                             icon: "arrowshape.turn.up.left.circle")
-            }
-
             Spacer()
 
-            // Footer: Version + Tools
-            HStack(spacing: 16) {
-                toolLink(icon: ClawsyTheme.Icons.debug, label: NSLocalizedString("DEBUG_LOG", bundle: .clawsy, comment: ""), color: .accentColor) {
-                    openDebugLog()
-                }
-                toolLink(icon: ClawsyTheme.Icons.update,
-                         label: updateManager.updateAvailable
-                            ? "Update: \(updateManager.updateVersion)"
-                            : NSLocalizedString("SETTINGS_CHECK_UPDATES", bundle: .clawsy, comment: ""),
-                         color: .accentColor) {
+            // Footer — version, update check, log
+            HStack {
+                Text(SharedConfig.versionDisplay)
+                    .font(ClawsyTheme.Font.caption)
+                    .foregroundColor(.secondary)
+
+                Spacer()
+
+                Button(action: {
                     if updateManager.updateAvailable {
                         updateManager.downloadAndInstall()
                     } else {
                         updateManager.checkForUpdates(silent: false)
                     }
+                }) {
+                    Text(updateManager.updateAvailable
+                         ? "Update: \(updateManager.updateVersion)"
+                         : NSLocalizedString("SETTINGS_CHECK_UPDATES", bundle: .clawsy, comment: ""))
                 }
-                toolLink(icon: ClawsyTheme.Icons.repair, label: NSLocalizedString("REPAIR_CONNECTION", bundle: .clawsy, comment: ""), color: .orange) {
-                    hostManager.repairActiveConnection()
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                Button(action: openDebugLog) {
+                    Text(NSLocalizedString("LOG_WINDOW_TITLE", bundle: .clawsy, comment: ""))
                 }
-                Spacer()
-                Text(SharedConfig.versionDisplay)
-                    .font(ClawsyTheme.Font.footer)
-                    .foregroundColor(.secondary.opacity(0.4))
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             }
         }
         .padding(20)
@@ -305,19 +288,6 @@ struct SettingsTabView: View {
                     .multilineTextAlignment(.center)
             }
         }
-    }
-
-    private func toolLink(icon: String, label: String, color: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 10))
-                Text(label)
-                    .font(ClawsyTheme.Font.caption)
-            }
-            .foregroundColor(color)
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Logic

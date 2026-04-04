@@ -46,6 +46,7 @@
 "DISCONNECT" = "Déconnecter";
 "SETTINGS" = "Paramètres...";
 "DEBUG_LOG" = "Journal de débogage";
+"LOG_WINDOW_TITLE" = "Journal";
 "QUIT" = "Quitter";
 
 /* Status */

@@ -51,6 +51,7 @@
 "RECONNECT" = "Reconnect";
 "SETTINGS" = "Settings...";
 "DEBUG_LOG" = "Debug Log";
+"LOG_WINDOW_TITLE" = "Log";
 "QUIT" = "Quit";
 
 /* Status */

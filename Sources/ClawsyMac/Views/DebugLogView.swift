@@ -57,7 +57,7 @@ struct DebugLogView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
         }
-        .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
+        .frame(minWidth: 400, minHeight: 200)
     }
 
     private func copyLog() {
