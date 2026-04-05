@@ -3,9 +3,14 @@ import AVFoundation
 import ClawsyShared
 
 /// Main action buttons: QuickSend, Screenshot, Clipboard, Camera.
+///
+/// Screenshot and Camera are never preemptively disabled in the UI.
+/// Permissions (screen recording, camera) are checked at the point of use
+/// — if missing, the system prompt is triggered or System Settings opened.
+/// This matches the Apple HIG pattern: show items as available, handle
+/// permission on demand.
 struct ActionMenuView: View {
     @ObservedObject var hostManager: HostManager
-    @ObservedObject var permissionMonitor = PermissionMonitor.shared
     @EnvironmentObject var appDelegate: AppDelegate
 
     @State private var showingScreenshotMenu = false
@@ -14,8 +19,6 @@ struct ActionMenuView: View {
     @AppStorage("activeCameraId", store: SharedConfig.sharedDefaults) private var activeCameraId = ""
 
     private var isConnected: Bool { hostManager.isConnected }
-    private var hasScreenRecording: Bool { permissionMonitor.status[.screenRecording] == true }
-    private var hasCamera: Bool { permissionMonitor.status[.camera] == true }
 
     var body: some View {
         VStack(spacing: 2) {
@@ -28,9 +31,10 @@ struct ActionMenuView: View {
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
 
-            // Screenshot
+            // Screenshot — permission checked in takeScreenshot()
             Button(action: { showingScreenshotMenu.toggle() }) {
-                MenuItemRow(icon: ClawsyTheme.Icons.screenshot, title: "SCREENSHOT", isEnabled: isConnected && hasScreenRecording, hasChevron: true)
+                MenuItemRow(icon: ClawsyTheme.Icons.screenshot, title: "SCREENSHOT",
+                            isEnabled: isConnected, hasChevron: true)
             }
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
@@ -40,7 +44,8 @@ struct ActionMenuView: View {
                         showingScreenshotMenu = false
                         takeScreenshot(interactive: false)
                     }) {
-                        MenuItemRow(icon: "rectangle.dashed", title: "FULL_SCREEN", isEnabled: isConnected && hasScreenRecording,
+                        MenuItemRow(icon: "rectangle.dashed", title: "FULL_SCREEN",
+                                    isEnabled: isConnected,
                                     shortcut: "⌘⇧\(SharedConfig.screenshotFullHotkey)")
                     }
                     .buttonStyle(.plain)
@@ -49,7 +54,8 @@ struct ActionMenuView: View {
                         showingScreenshotMenu = false
                         takeScreenshot(interactive: true)
                     }) {
-                        MenuItemRow(icon: "plus.viewfinder", title: "INTERACTIVE_AREA", isEnabled: isConnected && hasScreenRecording,
+                        MenuItemRow(icon: "plus.viewfinder", title: "INTERACTIVE_AREA",
+                                    isEnabled: isConnected,
                                     shortcut: "⌘⇧\(SharedConfig.screenshotAreaHotkey)")
                     }
                     .buttonStyle(.plain)
@@ -67,13 +73,13 @@ struct ActionMenuView: View {
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
 
-            // Camera
+            // Camera — permission checked in takePhoto()
             Button(action: {
                 ensureCameraSelected()
                 if !availableCameras.isEmpty { showingCameraMenu.toggle() }
             }) {
                 MenuItemRow(icon: ClawsyTheme.Icons.camera, title: "CAMERA",
-                            isEnabled: isConnected && hasCamera && !availableCameras.isEmpty, hasChevron: true)
+                            isEnabled: isConnected, hasChevron: true)
             }
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
@@ -96,6 +102,14 @@ struct ActionMenuView: View {
 
     private func takeScreenshot(interactive: Bool) {
         guard let poller = hostManager.activePoller else { return }
+
+        // Check screen recording permission before attempting capture.
+        // If not granted, request it (macOS shows System Settings prompt).
+        if !CGPreflightScreenCaptureAccess() {
+            CGRequestScreenCaptureAccess()
+            return
+        }
+
         DispatchQueue.global(qos: .userInitiated).async {
             guard let b64 = ScreenshotManager.takeScreenshot(interactive: interactive) else {
                 DispatchQueue.main.async { appDelegate.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "SCREENSHOT_FAILED") }
@@ -117,12 +131,20 @@ struct ActionMenuView: View {
     private func takePhoto(camId: String, camName: String) {
         guard let poller = hostManager.activePoller else { return }
 
-        // Check camera permission before attempting capture
-        let status = AVCaptureDevice.authorizationStatus(for: .video)
-        if status == .denied || status == .restricted {
+        // Check camera permission before attempting capture.
+        // .notDetermined → trigger system prompt, user retries manually.
+        // .denied/.restricted → open System Settings.
+        let authStatus = AVCaptureDevice.authorizationStatus(for: .video)
+        switch authStatus {
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { _ in }
+            return
+        case .denied, .restricted:
             appDelegate.showStatusHUD(icon: "lock.shield", title: "PERM_MISSING_CAMERA")
             PermissionMonitor.shared.openSettings(for: .camera)
             return
+        default:
+            break
         }
 
         CameraManager.takePhoto(deviceId: camId.isEmpty ? nil : camId) { b64 in
