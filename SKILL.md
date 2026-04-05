@@ -216,9 +216,9 @@ tell the user **specifically** what to enable — don't send a generic list.
 All file operations are **auto-approved** and sandboxed to the configured shared
 folder (default `~/Documents/Clawsy`). Paths are relative to the shared folder root.
 
-> **Canonical parameter name is `subPath`** (a path relative to the shared folder
-> root, e.g. `"notes/report.pdf"`). For backwards compatibility the handlers also
-> accept `path` and `name` as aliases for `subPath`. Prefer `subPath` in new code.
+> **All file paths are passed as `subPath`** — a path relative to the shared
+> folder root (e.g. `"notes/report.pdf"`). There are no aliases; `subPath` is
+> the only accepted parameter name.
 
 | Command | Params | Description |
 |---------|--------|-------------|
@@ -243,9 +243,9 @@ folder (default `~/Documents/Clawsy`). Paths are relative to the shared folder r
 ```python
 nodes(action="invoke", invokeCommand="file.batch",
   invokeParamsJson='{"ops": [
-    {"op": "mkdir", "path": "output"},
+    {"op": "mkdir", "subPath": "output"},
     {"op": "copy", "source": "template.txt", "destination": "output/report.txt"},
-    {"op": "delete", "path": "temp.log"}
+    {"op": "delete", "subPath": "temp.log"}
   ]}')
 ```
 
