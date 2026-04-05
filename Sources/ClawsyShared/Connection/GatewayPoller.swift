@@ -557,14 +557,16 @@ public final class GatewayPoller: ObservableObject {
 
     /// Block version — bump this when the clawsy memory block content changes.
     /// Clawsy will auto-replace outdated blocks in agents' memory.md files.
-    private static let clawsyBlockVersion = 3
+    private static let clawsyBlockVersion = 4
 
     /// Ensure the agent's memory.md includes a current Clawsy integration block.
     /// Reads current content, replaces outdated block or appends if missing.
+    /// Aggressively overwrites the block on every connect so the Node ID
+    /// stored in memory.md always matches the currently-connected device.
     private func ensureMemoryMdUpdated() {
         guard !memoryMdUpdated, let agentId = currentAgentId else { return }
         let inboxKey = clawsyInboxSessionKey
-        let versionTag = "clawsy:v\(Self.clawsyBlockVersion)"
+        let nodeId = DeviceIdentity.shared.deviceId
 
         sendRequest(method: "agents.files.get", params: [
             "agentId": agentId,
@@ -580,18 +582,21 @@ public final class GatewayPoller: ObservableObject {
                 existing = ""
             }
 
-            // Block exists — check if version + inbox key are current
-            if existing.contains("<!-- clawsy:start -->") {
-                if existing.contains(versionTag) && existing.contains(inboxKey) {
-                    self.memoryMdUpdated = true
-                    self.log("memory.md: clawsy block v\(Self.clawsyBlockVersion) up to date")
-                    return
-                }
-                // Outdated version or wrong inbox key — replace
-                if let startRange = existing.range(of: "<!-- clawsy:start -->"),
+            let freshBlock = self.clawsyMemoryBlock(inboxKey: inboxKey, nodeId: nodeId)
+
+            // Block exists — always overwrite (cheap, and keeps Node ID fresh)
+            if existing.contains("<!-- clawsy:start") {
+                if let startRange = existing.range(of: "<!-- clawsy:start"),
                    let endRange = existing.range(of: "<!-- clawsy:end -->") {
+                    // If the on-disk block is byte-identical to the fresh one, skip the write.
+                    let currentBlock = String(existing[startRange.lowerBound..<endRange.upperBound])
+                    if currentBlock == freshBlock {
+                        self.memoryMdUpdated = true
+                        self.log("memory.md: clawsy block v\(Self.clawsyBlockVersion) up to date")
+                        return
+                    }
                     var updated = existing
-                    updated.replaceSubrange(startRange.lowerBound..<endRange.upperBound, with: self.clawsyMemoryBlock(inboxKey: inboxKey))
+                    updated.replaceSubrange(startRange.lowerBound..<endRange.upperBound, with: freshBlock)
                     self.writeMemoryMd(agentId: agentId, content: updated)
                     return
                 }
@@ -599,17 +604,28 @@ public final class GatewayPoller: ObservableObject {
 
             // No block yet — append
             let updated = existing.trimmingCharacters(in: .whitespacesAndNewlines)
-                + "\n\n" + self.clawsyMemoryBlock(inboxKey: inboxKey) + "\n"
+                + "\n\n" + freshBlock + "\n"
             self.writeMemoryMd(agentId: agentId, content: updated)
         }
     }
 
-    private func clawsyMemoryBlock(inboxKey: String) -> String {
+    private func clawsyMemoryBlock(inboxKey: String, nodeId: String) -> String {
         """
         <!-- clawsy:start clawsy:v\(Self.clawsyBlockVersion) -->
         ## Clawsy Integration
         Clawsy is a macOS companion app that delivers screenshots, camera photos, clipboard content,
         and file events to the session `\(inboxKey)`.
+
+        **Live node identity (auto-updated on every Clawsy connect):**
+        - `node_id`: `\(nodeId)`
+        - `platform`: `macos`
+        - `inbox_session`: `\(inboxKey)`
+
+        ⚠️ **Node ID freshness:** The value above is rewritten by Clawsy on every connect.
+        Any other Node ID you find in your workspace (TOOLS.md, cheat sheets, prior notes,
+        hard-coded constants) is **presumed stale**. Before invoking a Clawsy command,
+        always verify the live state with `nodes(action="status")` — never rely on a
+        cached ID from another file.
 
         **Skill reference:** For full command reference and capabilities, load the Clawsy skill:
         `clawhub install clawsy` or `skill(name="clawsy")`.
@@ -644,21 +660,46 @@ public final class GatewayPoller: ObservableObject {
 
     // MARK: - Send: Connected Skill Hint
 
-    /// Send a one-time connected message to clawsy-inbox with SKILL.md reference.
-    /// Called after handshake completes so the agent knows Clawsy capabilities.
+    /// Send a one-time connected message to clawsy-inbox with live node
+    /// identity, capability list, and a SKILL.md reference. Called after
+    /// handshake completes so the agent has ground-truth info to prefer over
+    /// any stale cheat-sheet (TOOLS.md, prior notes, etc.) it may have cached.
     public func sendConnectedHint() {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let nodeId = DeviceIdentity.shared.deviceId
+        let deviceName = Host.current().localizedName ?? "Mac"
+
         let message = """
         [clawsy:connected] Clawsy macOS companion (v\(version)) connected.
 
-        For full capabilities, load the Clawsy skill: `clawhub install clawsy`
+        Live node identity (trust this over any cached value):
+          node_id:  \(nodeId)
+          platform: macos
+          device:   \(deviceName)
+          inbox:    \(clawsyInboxSessionKey)
+
+        Capabilities available right now:
+          • screen.capture
+          • camera.snap, camera.list
+          • clipboard.read, clipboard.write
+          • file.list, file.get, file.set (≤200 KB), file.mkdir, file.delete,
+            file.move, file.copy, file.rename, file.stat, file.exists, file.rmdir,
+            file.batch, file.checksum
+          • file.get.chunk, file.set.chunk  (use these for payloads > 200 KB)
+          • location.get
+
+        ⚠️ Always verify the live node with `nodes(action="status")` before invoking
+        a command. Any Node ID you find in TOOLS.md, AGENTS.md, or other local
+        notes is presumed stale — the value above is the only source of truth.
+
+        For full reference, load the Clawsy skill: `clawhub install clawsy`
         Or read directly: https://raw.githubusercontent.com/iret77/clawsy/main/SKILL.md
         """
 
         ensureClawsyInbox { [weak self] in
             guard let self else { return }
             self.sendChatMessage(message, sessionKey: self.clawsyInboxSessionKey, deliver: false)
-            self.log("Sent connected skill hint to clawsy-inbox")
+            self.log("Sent connected skill hint (node=\(nodeId.prefix(12))…) to clawsy-inbox")
         }
     }
 
