@@ -216,32 +216,36 @@ tell the user **specifically** what to enable — don't send a generic list.
 All file operations are **auto-approved** and sandboxed to the configured shared
 folder (default `~/Documents/Clawsy`). Paths are relative to the shared folder root.
 
+> **All file paths are passed as `subPath`** — a path relative to the shared
+> folder root (e.g. `"notes/report.pdf"`). There are no aliases; `subPath` is
+> the only accepted parameter name.
+
 | Command | Params | Description |
 |---------|--------|-------------|
 | `file.list` | `subPath?`, `recursive?` | List files. `recursive: true` walks subdirectories (max depth 5) |
-| `file.get` | `name` | Read file, returns base64 content |
-| `file.set` | `name`, `content` (base64) | Write file |
-| `file.stat` | `path` | File metadata: size, dates, type. Supports glob |
-| `file.exists` | `path` | Returns `{exists, isDirectory}` |
-| `file.mkdir` | `name` | Create directory (with intermediate parents) |
-| `file.delete` | `name` | Delete file or directory |
-| `file.rmdir` | `name` | Delete directory (alias for file.delete) |
+| `file.get` | `subPath` | Read file, returns base64 content |
+| `file.set` | `subPath`, `content` (base64) | Write file (≤ 200 KB — use `file.set.chunk` for larger) |
+| `file.stat` | `subPath` | File metadata: size, dates, type. Supports glob |
+| `file.exists` | `subPath` | Returns `{exists, isDirectory}` |
+| `file.mkdir` | `subPath` | Create directory (with intermediate parents) |
+| `file.delete` | `subPath` | Delete file or directory |
+| `file.rmdir` | `subPath` | Delete directory (alias for file.delete) |
 | `file.move` | `source`, `destination` | Move/rename file. Supports glob in source |
 | `file.copy` | `source`, `destination` | Copy file. Supports glob in source |
-| `file.rename` | `path`, `newName` | Rename file (name only, same directory) |
-| `file.checksum` | `path` | SHA256 hash of file |
+| `file.rename` | `subPath`, `newName` | Rename file (name only, same directory) |
+| `file.checksum` | `subPath` | SHA256 hash of file |
 | `file.batch` | `ops[]` | Execute multiple operations sequentially (see below) |
-| `file.get.chunk` | `name`, `index`, `chunkSize?` | Read chunk of large file (default 350KB) |
-| `file.set.chunk` | `name`, `chunk` (base64), `index`, `total` | Write chunk; assembles on final chunk |
+| `file.get.chunk` | `subPath`, `chunkIndex`, `chunkSizeBytes?` | Read chunk of large file (default 350 KB) |
+| `file.set.chunk` | `subPath`, `chunk` (base64), `chunkIndex`, `totalChunks` | Write chunk; assembles on final chunk |
 
 ### file.batch Operations
 
 ```python
 nodes(action="invoke", invokeCommand="file.batch",
   invokeParamsJson='{"ops": [
-    {"op": "mkdir", "name": "output"},
+    {"op": "mkdir", "subPath": "output"},
     {"op": "copy", "source": "template.txt", "destination": "output/report.txt"},
-    {"op": "delete", "name": "temp.log"}
+    {"op": "delete", "subPath": "temp.log"}
   ]}')
 ```
 
@@ -250,24 +254,31 @@ Returns per-operation results with `ok` status for each.
 
 ### Large File Transfers (> 200 KB)
 
-The gateway has a ~512 KB payload limit. For large files, use chunked transfer:
+The gateway has a ~512 KB payload limit. For files larger than ~200 KB of
+*base64 payload* (≈ 150 KB raw), use chunked transfer. `file.set` will reject
+single-shot writes above that limit — if in doubt, chunk.
 
 **Upload (agent to Mac):**
 ```python
-# Split file into ~150KB base64 chunks
-for i, chunk in enumerate(chunks):
+# Split raw bytes into ~150 KB pieces, base64-encode each, then send:
+for i, chunk_b64 in enumerate(chunks_b64):
     nodes(action="invoke", invokeCommand="file.set.chunk",
-      invokeParamsJson=f'{{"name":"large.pdf","chunk":"{chunk}","index":{i},"total":{len(chunks)}}}')
+      invokeParamsJson=(
+        f'{{"subPath":"large.pdf","chunk":"{chunk_b64}",'
+        f'"chunkIndex":{i},"totalChunks":{len(chunks_b64)}}}'))
+# The final chunk triggers assembly; intermediate chunks return
+# {"status":"chunk_received","chunkIndex":i}.
 ```
 
 **Download (Mac to agent):**
 ```python
 stat = nodes(action="invoke", invokeCommand="file.stat",
-  invokeParamsJson='{"path":"large.pdf"}')
-# Calculate chunk count from stat.size, then:
+  invokeParamsJson='{"subPath":"large.pdf"}')
+# Calculate chunk count from stat.size (default chunk size 358400 bytes), then:
 for i in range(chunk_count):
     chunk = nodes(action="invoke", invokeCommand="file.get.chunk",
-      invokeParamsJson=f'{{"name":"large.pdf","index":{i}}}')
+      invokeParamsJson=f'{{"subPath":"large.pdf","chunkIndex":{i}}}')
+# Each response includes base64 "content", "chunkIndex", "totalChunks", "totalBytes".
 ```
 
 ---
@@ -294,9 +305,9 @@ nodes(action="invoke", invokeCommand="file.list")
 nodes(action="invoke", invokeCommand="file.list",
   invokeParamsJson='{"subPath": "docs/", "recursive": true}')
 nodes(action="invoke", invokeCommand="file.get",
-  invokeParamsJson='{"name": "report.pdf"}')
+  invokeParamsJson='{"subPath": "report.pdf"}')
 nodes(action="invoke", invokeCommand="file.set",
-  invokeParamsJson='{"name": "output.txt", "content": "<base64>"}')
+  invokeParamsJson='{"subPath": "output.txt", "content": "<base64>"}')
 
 # Location
 nodes(action="invoke", invokeCommand="location.get")

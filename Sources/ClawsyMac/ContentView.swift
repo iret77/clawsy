@@ -428,7 +428,7 @@ struct ContentView: View {
 
         // file.get
         router.registerSync("file.get") { params in
-            guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
+            guard let subPath = params["subPath"] as? String else {
                 return .error(code: "missing_param", message: "subPath required")
             }
             switch ClawsyFileManager.readFile(baseDir: expandedBase, relativePath: subPath) {
@@ -439,8 +439,8 @@ struct ContentView: View {
 
         // file.set
         router.registerSync("file.set") { params in
-            guard let subPath = params["subPath"] as? String ?? params["path"] as? String,
-                  let content = params["content"] as? String ?? params["base64"] as? String else {
+            guard let subPath = params["subPath"] as? String,
+                  let content = params["content"] as? String else {
                 return .error(code: "missing_param", message: "subPath and content required")
             }
             switch ClawsyFileManager.writeFile(baseDir: expandedBase, relativePath: subPath, base64Content: content) {
@@ -451,7 +451,7 @@ struct ContentView: View {
 
         // file.mkdir
         router.registerSync("file.mkdir") { params in
-            guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
+            guard let subPath = params["subPath"] as? String else {
                 return .error(code: "missing_param", message: "subPath required")
             }
             switch ClawsyFileManager.createDirectory(baseDir: expandedBase, relativePath: subPath) {
@@ -462,7 +462,7 @@ struct ContentView: View {
 
         // file.delete
         router.registerSync("file.delete") { params in
-            guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
+            guard let subPath = params["subPath"] as? String else {
                 return .error(code: "missing_param", message: "subPath required")
             }
             switch ClawsyFileManager.deleteFile(baseDir: expandedBase, relativePath: subPath) {
@@ -473,8 +473,8 @@ struct ContentView: View {
 
         // file.move
         router.registerSync("file.move") { params in
-            guard let source = params["source"] as? String ?? params["from"] as? String,
-                  let dest = params["destination"] as? String ?? params["to"] as? String else {
+            guard let source = params["source"] as? String,
+                  let dest = params["destination"] as? String else {
                 return .error(code: "missing_param", message: "source and destination required")
             }
             switch ClawsyFileManager.moveFile(baseDir: expandedBase, source: source, destination: dest) {
@@ -485,8 +485,8 @@ struct ContentView: View {
 
         // file.copy
         router.registerSync("file.copy") { params in
-            guard let source = params["source"] as? String ?? params["from"] as? String,
-                  let dest = params["destination"] as? String ?? params["to"] as? String else {
+            guard let source = params["source"] as? String,
+                  let dest = params["destination"] as? String else {
                 return .error(code: "missing_param", message: "source and destination required")
             }
             switch ClawsyFileManager.copyFile(baseDir: expandedBase, source: source, destination: dest) {
@@ -497,7 +497,7 @@ struct ContentView: View {
 
         // file.stat
         router.registerSync("file.stat") { params in
-            guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
+            guard let subPath = params["subPath"] as? String else {
                 return .error(code: "missing_param", message: "subPath required")
             }
             let stat = ClawsyFileManager.statFile(baseDir: expandedBase, relativePath: subPath)
@@ -507,7 +507,7 @@ struct ContentView: View {
 
         // file.exists
         router.registerSync("file.exists") { params in
-            guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
+            guard let subPath = params["subPath"] as? String else {
                 return .error(code: "missing_param", message: "subPath required")
             }
             let result = ClawsyFileManager.existsFile(baseDir: expandedBase, relativePath: subPath)
@@ -516,13 +516,13 @@ struct ContentView: View {
 
         // file.rename — rename a file (name only, same directory)
         router.registerSync("file.rename") { params in
-            guard let path = params["path"] as? String ?? params["subPath"] as? String else {
-                return .error(code: "missing_param", message: "path required")
+            guard let subPath = params["subPath"] as? String else {
+                return .error(code: "missing_param", message: "subPath required")
             }
             guard let newName = params["newName"] as? String else {
                 return .error(code: "missing_param", message: "newName required")
             }
-            switch ClawsyFileManager.renameFile(baseDir: expandedBase, path: path, newName: newName) {
+            switch ClawsyFileManager.renameFile(baseDir: expandedBase, path: subPath, newName: newName) {
             case .success: return .success(["ok": true])
             case .failure(let err): return .error(code: "rename_failed", message: err.description)
             }
@@ -530,7 +530,7 @@ struct ContentView: View {
 
         // file.rmdir — remove a directory (delegates to deleteFile which handles both files and dirs)
         router.registerSync("file.rmdir") { params in
-            guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
+            guard let subPath = params["subPath"] as? String else {
                 return .error(code: "missing_param", message: "subPath required")
             }
             switch ClawsyFileManager.deleteFile(baseDir: expandedBase, relativePath: subPath) {
@@ -541,7 +541,7 @@ struct ContentView: View {
 
         // file.checksum — SHA256 checksum of a file
         router.registerSync("file.checksum") { params in
-            guard let subPath = params["subPath"] as? String ?? params["path"] as? String else {
+            guard let subPath = params["subPath"] as? String else {
                 return .error(code: "missing_param", message: "subPath required")
             }
             guard let fullPath = ClawsyFileManager.sandboxedPath(base: expandedBase, relativePath: subPath) else {
@@ -589,29 +589,29 @@ struct ContentView: View {
                     case .failure(let err): result = .error(code: "move_failed", message: err.description)
                     }
                 case "delete":
-                    guard let path = op["path"] as? String else {
-                        results.append(["index": index, "ok": false, "error": "delete requires path"])
+                    guard let subPath = op["subPath"] as? String else {
+                        results.append(["index": index, "ok": false, "error": "delete requires subPath"])
                         continue
                     }
-                    switch ClawsyFileManager.deleteFile(baseDir: expandedBase, relativePath: path) {
+                    switch ClawsyFileManager.deleteFile(baseDir: expandedBase, relativePath: subPath) {
                     case .success: result = .success(["ok": true])
                     case .failure(let err): result = .error(code: "delete_failed", message: err.description)
                     }
                 case "mkdir":
-                    guard let path = op["path"] as? String else {
-                        results.append(["index": index, "ok": false, "error": "mkdir requires path"])
+                    guard let subPath = op["subPath"] as? String else {
+                        results.append(["index": index, "ok": false, "error": "mkdir requires subPath"])
                         continue
                     }
-                    switch ClawsyFileManager.createDirectory(baseDir: expandedBase, relativePath: path) {
+                    switch ClawsyFileManager.createDirectory(baseDir: expandedBase, relativePath: subPath) {
                     case .success: result = .success(["ok": true])
                     case .failure(let err): result = .error(code: "mkdir_failed", message: err.description)
                     }
                 case "rename":
-                    guard let path = op["path"] as? String, let newName = op["newName"] as? String else {
-                        results.append(["index": index, "ok": false, "error": "rename requires path and newName"])
+                    guard let subPath = op["subPath"] as? String, let newName = op["newName"] as? String else {
+                        results.append(["index": index, "ok": false, "error": "rename requires subPath and newName"])
                         continue
                     }
-                    switch ClawsyFileManager.renameFile(baseDir: expandedBase, path: path, newName: newName) {
+                    switch ClawsyFileManager.renameFile(baseDir: expandedBase, path: subPath, newName: newName) {
                     case .success: result = .success(["ok": true])
                     case .failure(let err): result = .error(code: "rename_failed", message: err.description)
                     }
@@ -634,7 +634,7 @@ struct ContentView: View {
 
         // file.get.chunk — read a specific chunk of a file (for large file downloads)
         router.registerSync("file.get.chunk") { params in
-            guard let subPath = params["subPath"] as? String ?? params["name"] as? String ?? params["path"] as? String else {
+            guard let subPath = params["subPath"] as? String else {
                 return .error(code: "missing_param", message: "subPath required")
             }
             guard let chunkIndex = params["chunkIndex"] as? Int else {
@@ -672,10 +672,10 @@ struct ContentView: View {
 
         // file.set.chunk — write a chunk of a large file (assembled on last chunk)
         router.registerSync("file.set.chunk") { params in
-            guard let subPath = params["subPath"] as? String ?? params["name"] as? String ?? params["path"] as? String else {
+            guard let subPath = params["subPath"] as? String else {
                 return .error(code: "missing_param", message: "subPath required")
             }
-            guard let chunkB64 = params["chunk"] as? String ?? params["content"] as? String else {
+            guard let chunkB64 = params["chunk"] as? String else {
                 return .error(code: "missing_param", message: "chunk (base64) required")
             }
             guard let chunkIndex = params["chunkIndex"] as? Int,
