@@ -242,13 +242,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             button.action = #selector(togglePopover(_:))
         }
 
-        // Create Popover — content size is updated dynamically by ContentView
-        // via updatePopoverContentHeight() as the view hierarchy changes.
+        // Create Popover — size follows SwiftUI's ideal content size automatically
+        // via NSHostingController.sizingOptions = .preferredContentSize.
         popover = NSPopover()
         popover.contentSize = NSSize(width: ClawsyTheme.Spacing.popoverWidth, height: 420)
         popover.behavior = .transient
         let contentView = ContentView().environmentObject(self)
-        popover.contentViewController = NSHostingController(rootView: contentView)
+        let hostingController = NSHostingController(rootView: contentView)
+        hostingController.sizingOptions = [.preferredContentSize]
+        popover.contentViewController = hostingController
 
         // Register Global Hotkeys
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
@@ -894,23 +896,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
     }
 
-    /// Called by ContentView via a PreferenceKey to keep the popover sized to its content.
-    /// Animates smoothly so expanding/collapsing the agent list feels native.
-    func updatePopoverContentHeight(_ height: CGFloat) {
-        guard height > 0 else { return }
-        let clamped = max(120, min(height, 800))
-        let newSize = NSSize(width: ClawsyTheme.Spacing.popoverWidth, height: clamped)
-        if abs(popover.contentSize.height - clamped) < 0.5 { return }
-        if popover.isShown {
-            NSAnimationContext.runAnimationGroup { ctx in
-                ctx.duration = 0.18
-                ctx.allowsImplicitAnimation = true
-                popover.contentSize = newSize
-            }
-        } else {
-            popover.contentSize = newSize
-        }
-    }
 
     func applicationWillResignActive(_ notification: Notification) {
         if popover.isShown { popover.performClose(nil) }
