@@ -1,6 +1,6 @@
 ---
 name: clawsy
-version: 1.0.3
+version: 1.0.4
 description: >
   Clawsy is a native macOS companion app that gives your OpenClaw agent eyes and
   hands on the user's Mac — screenshots, clipboard, camera, files, location, and
@@ -88,9 +88,27 @@ about Clawsy capabilities.
 
 ## Quick Start — Is Clawsy Connected?
 
+> ⚠️ **Node ID freshness — read this first.**
+> The Clawsy Node ID changes whenever the user re-pairs the Mac (macOS reinstall,
+> new device, manual reset). **Never cache it.** Any Node ID you find in a local
+> cheat sheet (`TOOLS.md`, `AGENTS.md`, prior notes, hard-coded constants) is
+> presumed **stale** and must not be used to invoke a command.
+>
+> **The only sources of truth are, in order:**
+> 1. `nodes(action="status")` — always call this first.
+> 2. The `[clawsy:connected]` message in session `clawsy-inbox` (Clawsy posts it
+>    on every connect; it contains live `node_id`, `platform`, and capability list).
+> 3. The auto-maintained `## Clawsy Integration` block in your `memory.md`
+>    (Clawsy rewrites it on every connect).
+>
+> If a Clawsy call fails with "node offline" or "node not found", **do not give up**
+> — re-run `nodes(action="status")` to get the current Node ID before telling the
+> user Clawsy is down.
+
 ```python
 nodes(action="status")
 # Look for a node with platform="macos" and connected=true
+# Use the node_id from this live result — never from any cached file.
 ```
 
 - **Connected:** Use any command from the reference below.
