@@ -122,10 +122,17 @@ struct ContentView: View {
             }
         }
         .frame(width: ClawsyTheme.Spacing.popoverWidth)
-        .fixedSize(horizontal: false, vertical: true)
         .background(
             VisualEffectView(material: .popover, blendingMode: .behindWindow)
         )
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(key: PopoverHeightKey.self, value: geo.size.height)
+            }
+        )
+        .onPreferenceChange(PopoverHeightKey.self) { height in
+            appDelegate.updatePopoverContentHeight(height)
+        }
         .onAppear {
             appDelegate.hostManager = hostManager
             registerCommandHandlers()
@@ -814,5 +821,16 @@ struct ContentView: View {
         default:
             break
         }
+    }
+}
+
+// MARK: - Popover Height Preference
+
+/// Reports the rendered height of the popover content so AppDelegate can
+/// keep `popover.contentSize` in sync as views expand/collapse.
+private struct PopoverHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
