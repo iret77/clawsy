@@ -110,6 +110,7 @@ public class HostManager: ObservableObject {
     public init() {
         loadProfiles()
         migrateFromLegacyIfNeeded()
+        migrateLegacyClawsyFolderPaths()
     }
 
     // MARK: - Profile Persistence
@@ -593,33 +594,66 @@ public class HostManager: ObservableObject {
         activeConnection?.gatewayBaseURL
     }
 
-    // MARK: - Multi-Host Folder Migration
+    // MARK: - Legacy Folder Migration (~/Clawsy → ~/Documents/Clawsy)
 
-    public func checkMigrationNeeded() -> (HostProfile, String)? {
-        guard profiles.count == 1, let first = profiles.first else { return nil }
-        if !first.sharedFolderPath.hasPrefix("~/Clawsy/") {
-            return (first, first.sharedFolderPath)
-        }
-        return nil
-    }
+    /// Auto-migrate any host profile whose `sharedFolderPath` still points at the
+    /// old top-level `~/Clawsy/...` tree (pre-March-2026 default) into the
+    /// current `~/Documents/Clawsy/...` layout. Runs silently on every launch
+    /// and is idempotent — profiles already under `~/Documents/Clawsy` are
+    /// untouched. Any files found under the old path are moved across so the
+    /// user's data follows the profile.
+    private func migrateLegacyClawsyFolderPaths() {
+        var changed = false
+        let fm = FileManager.default
+        let home = NSHomeDirectory()
 
-    public func migrateFirstHostFolder(to newPath: String) {
-        guard var first = profiles.first else { return }
-        let oldResolved = first.sharedFolderPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
-        let newResolved = newPath.replacingOccurrences(of: "~", with: NSHomeDirectory())
+        for index in profiles.indices {
+            let oldPath = profiles[index].sharedFolderPath
+            guard oldPath.hasPrefix("~/Clawsy/") || oldPath == "~/Clawsy" else { continue }
 
-        try? FileManager.default.createDirectory(atPath: newResolved, withIntermediateDirectories: true)
+            // Build new path under ~/Documents/Clawsy preserving the sub-suffix.
+            let suffix = oldPath == "~/Clawsy"
+                ? ""
+                : String(oldPath.dropFirst("~/Clawsy/".count))
+            let newPath = suffix.isEmpty
+                ? "~/Documents/Clawsy"
+                : "~/Documents/Clawsy/\(suffix)"
 
-        if let contents = try? FileManager.default.contentsOfDirectory(atPath: oldResolved) {
-            for item in contents {
-                let src = (oldResolved as NSString).appendingPathComponent(item)
-                let dst = (newResolved as NSString).appendingPathComponent(item)
-                try? FileManager.default.moveItem(atPath: src, toPath: dst)
+            let oldResolved = oldPath.replacingOccurrences(of: "~", with: home)
+            let newResolved = newPath.replacingOccurrences(of: "~", with: home)
+
+            // Ensure the new parent exists before any move.
+            try? fm.createDirectory(atPath: newResolved, withIntermediateDirectories: true)
+
+            // Move the old folder's contents into the new location, if present.
+            if fm.fileExists(atPath: oldResolved),
+               let items = try? fm.contentsOfDirectory(atPath: oldResolved) {
+                for item in items {
+                    let src = (oldResolved as NSString).appendingPathComponent(item)
+                    let dst = (newResolved as NSString).appendingPathComponent(item)
+                    if fm.fileExists(atPath: dst) {
+                        // A file with the same name already exists in the new location.
+                        // Don't overwrite — keep both by appending a marker to the legacy copy.
+                        let backup = dst + ".legacy"
+                        try? fm.moveItem(atPath: src, toPath: backup)
+                    } else {
+                        try? fm.moveItem(atPath: src, toPath: dst)
+                    }
+                }
+                // Best-effort cleanup of the (now empty) legacy directory.
+                if let remaining = try? fm.contentsOfDirectory(atPath: oldResolved), remaining.isEmpty {
+                    try? fm.removeItem(atPath: oldResolved)
+                }
             }
+
+            profiles[index].sharedFolderPath = newPath
+            changed = true
+            os_log("Migrated legacy shared folder: %{public}@ → %{public}@",
+                   log: logger, type: .info, oldResolved, newResolved)
         }
 
-        first.sharedFolderPath = newPath
-        updateHost(first)
-        os_log("Migrated first host folder: %{public}@ → %{public}@", log: logger, type: .info, oldResolved, newResolved)
+        if changed {
+            saveProfiles()
+        }
     }
 }

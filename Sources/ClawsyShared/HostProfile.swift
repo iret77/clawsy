@@ -21,7 +21,7 @@ public struct HostProfile: Codable, Identifiable, Equatable {
     public var sshOnly: Bool         // skip WSS, always use SSH tunnel
     public var enableNodeConnection: Bool  // open second WS as node for Shared Folder
     public var color: String         // hex e.g. "#FF3B30"
-    public var sharedFolderPath: String  // e.g. "~/Clawsy/CyberClaw/"
+    public var sharedFolderPath: String  // e.g. "~/Documents/Clawsy/CyberClaw/"
     public var deviceToken: String?
 
     public init(

@@ -437,9 +437,12 @@ struct ContentView: View {
             }
         }
 
-        // file.set
+        // file.set — accept subPath / path / name as aliases for the target
+        //            and content / base64 as aliases for the payload.
         router.registerSync("file.set") { params in
-            guard let subPath = params["subPath"] as? String ?? params["path"] as? String,
+            guard let subPath = params["subPath"] as? String
+                    ?? params["path"] as? String
+                    ?? params["name"] as? String,
                   let content = params["content"] as? String ?? params["base64"] as? String else {
                 return .error(code: "missing_param", message: "subPath and content required")
             }
@@ -632,15 +635,16 @@ struct ContentView: View {
             return .success(["ok": allOk, "results": results])
         }
 
-        // file.get.chunk — read a specific chunk of a file (for large file downloads)
+        // file.get.chunk — read a specific chunk of a file (for large file downloads).
+        //                  Accepts subPath/name/path aliases, and chunkIndex/index aliases.
         router.registerSync("file.get.chunk") { params in
             guard let subPath = params["subPath"] as? String ?? params["name"] as? String ?? params["path"] as? String else {
                 return .error(code: "missing_param", message: "subPath required")
             }
-            guard let chunkIndex = params["chunkIndex"] as? Int else {
+            guard let chunkIndex = params["chunkIndex"] as? Int ?? params["index"] as? Int else {
                 return .error(code: "missing_param", message: "chunkIndex required")
             }
-            let chunkSize = params["chunkSizeBytes"] as? Int ?? 358400 // 350 KB default (safe under 512 KB WS limit)
+            let chunkSize = params["chunkSizeBytes"] as? Int ?? params["chunkSize"] as? Int ?? 358400 // 350 KB default (safe under 512 KB WS limit)
 
             guard let fullPath = ClawsyFileManager.sandboxedPath(base: expandedBase, relativePath: subPath) else {
                 return .error(code: "sandbox_violation", message: "Path escapes shared folder")
@@ -670,7 +674,10 @@ struct ContentView: View {
             ])
         }
 
-        // file.set.chunk — write a chunk of a large file (assembled on last chunk)
+        // file.set.chunk — write a chunk of a large file (assembled on last chunk).
+        //                  Accepts subPath/name/path, chunk/content, chunkIndex/index,
+        //                  totalChunks/total as aliases for backward compat with clients
+        //                  that follow older SKILL.md versions.
         router.registerSync("file.set.chunk") { params in
             guard let subPath = params["subPath"] as? String ?? params["name"] as? String ?? params["path"] as? String else {
                 return .error(code: "missing_param", message: "subPath required")
@@ -678,8 +685,8 @@ struct ContentView: View {
             guard let chunkB64 = params["chunk"] as? String ?? params["content"] as? String else {
                 return .error(code: "missing_param", message: "chunk (base64) required")
             }
-            guard let chunkIndex = params["chunkIndex"] as? Int,
-                  let totalChunks = params["totalChunks"] as? Int else {
+            guard let chunkIndex = params["chunkIndex"] as? Int ?? params["index"] as? Int,
+                  let totalChunks = params["totalChunks"] as? Int ?? params["total"] as? Int else {
                 return .error(code: "missing_param", message: "chunkIndex and totalChunks required")
             }
             guard let chunkData = Data(base64Encoded: chunkB64) else {
