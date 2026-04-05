@@ -242,14 +242,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             button.action = #selector(togglePopover(_:))
         }
 
-        // Create Popover — auto-sizes to content height
+        // Create Popover — content size is updated dynamically by ContentView
+        // via updatePopoverContentHeight() as the view hierarchy changes.
         popover = NSPopover()
-        popover.contentSize = NSSize(width: ClawsyTheme.Spacing.popoverWidth, height: 10)
+        popover.contentSize = NSSize(width: ClawsyTheme.Spacing.popoverWidth, height: 420)
         popover.behavior = .transient
         let contentView = ContentView().environmentObject(self)
-        let hostingController = NSHostingController(rootView: contentView)
-        hostingController.sizingOptions = .intrinsicContentSize
-        popover.contentViewController = hostingController
+        popover.contentViewController = NSHostingController(rootView: contentView)
 
         // Register Global Hotkeys
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
@@ -892,6 +891,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                 popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
                 popover.contentViewController?.view.window?.makeKey()
             }
+        }
+    }
+
+    /// Called by ContentView via a PreferenceKey to keep the popover sized to its content.
+    /// Animates smoothly so expanding/collapsing the agent list feels native.
+    func updatePopoverContentHeight(_ height: CGFloat) {
+        guard height > 0 else { return }
+        let clamped = max(120, min(height, 800))
+        let newSize = NSSize(width: ClawsyTheme.Spacing.popoverWidth, height: clamped)
+        if abs(popover.contentSize.height - clamped) < 0.5 { return }
+        if popover.isShown {
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = 0.18
+                ctx.allowsImplicitAnimation = true
+                popover.contentSize = newSize
+            }
+        } else {
+            popover.contentSize = newSize
         }
     }
 
