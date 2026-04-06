@@ -10,7 +10,11 @@ import ClawsyShared
 /// permission on demand.
 struct ActionMenuView: View {
     @ObservedObject var hostManager: HostManager
-    @EnvironmentObject var appDelegate: AppDelegate
+    // NOTE: @EnvironmentObject var appDelegate was removed deliberately.
+    // closePopover() destroys the NSPopover (and its SwiftUI environment)
+    // synchronously.  If @EnvironmentObject is declared, any pending
+    // body re-evaluation after the environment is gone causes a fatalError.
+    // All AppDelegate access now goes through the NSApp.delegate singleton.
 
     @State private var showingScreenshotMenu = false
     @State private var showingCameraMenu = false
@@ -22,7 +26,7 @@ struct ActionMenuView: View {
     var body: some View {
         VStack(spacing: 2) {
             // Quick Send
-            Button(action: { appDelegate.showQuickSend() }) {
+            Button(action: { (NSApp.delegate as? AppDelegate)?.showQuickSend() }) {
                 MenuItemRow(icon: ClawsyTheme.Icons.quickSend, title: "QUICK_SEND",
                             isEnabled: isConnected,
                             shortcut: "⌘⇧\(SharedConfig.quickSendHotkey)")
@@ -40,7 +44,10 @@ struct ActionMenuView: View {
             .popover(isPresented: $showingScreenshotMenu, arrowEdge: .trailing) {
                 VStack(spacing: 0) {
                     Button(action: {
-                        showingScreenshotMenu = false
+                        // Don't set showingScreenshotMenu = false here — closePopover()
+                        // in takeScreenshot destroys the entire hierarchy including this
+                        // inner popover.  Setting @State then immediately destroying the
+                        // view causes a SwiftUI re-render on a dead environment.
                         takeScreenshot(interactive: false)
                     }) {
                         MenuItemRow(icon: "rectangle.dashed", title: "FULL_SCREEN",
@@ -50,7 +57,6 @@ struct ActionMenuView: View {
                     .buttonStyle(.plain)
 
                     Button(action: {
-                        showingScreenshotMenu = false
                         takeScreenshot(interactive: true)
                     }) {
                         MenuItemRow(icon: "plus.viewfinder", title: "INTERACTIVE_AREA",
@@ -88,7 +94,8 @@ struct ActionMenuView: View {
                     activeCameraId: $activeCameraId,
                     isConnected: isConnected,
                     onTakePhoto: { camId, camName in
-                        showingCameraMenu = false
+                        // Don't set showingCameraMenu = false — closePopover() in
+                        // takePhoto destroys the entire hierarchy anyway.
                         takePhoto(camId: camId, camName: camName)
                     }
                 )
@@ -98,43 +105,46 @@ struct ActionMenuView: View {
     }
 
     // MARK: - Actions
-
-    /// Close the main popover before running an operation that may trigger
-    /// a system dialog (camera/screen recording permission).  macOS shows
-    /// the dialog in a new window → app resigns active → `applicationWill-
-    /// ResignActive` auto-closes the transient popover → the SwiftUI view
-    /// hierarchy is destroyed → @EnvironmentObject references become
-    /// invalid → crash in completion handlers.  Closing up-front avoids
-    /// the race entirely.
-    private func closePopover() {
-        (NSApp.delegate as? AppDelegate)?.popover?.performClose(nil)
-    }
+    //
+    // Every action that may trigger a system dialog (camera permission,
+    // screen recording Settings) MUST:
+    //   1. NOT mutate @State before closing — avoids queued re-render on
+    //      a dead SwiftUI environment.
+    //   2. Dispatch the close + operation to the next run-loop tick so the
+    //      button-action closure has returned and the current stack frame
+    //      is clean before the popover (and view hierarchy) is destroyed.
+    //   3. Resolve the poller fresh from AppDelegate at callback time —
+    //      never capture view-owned references in escaping closures.
 
     private func takeScreenshot(interactive: Bool) {
         guard hostManager.activePoller != nil else { return }
 
         // Check screen recording permission before attempting capture.
-        // If not granted, request it (macOS shows System Settings prompt).
         if !CGPreflightScreenCaptureAccess() {
-            closePopover()
-            CGRequestScreenCaptureAccess()
+            DispatchQueue.main.async {
+                (NSApp.delegate as? AppDelegate)?.popover?.performClose(nil)
+                CGRequestScreenCaptureAccess()
+            }
             return
         }
 
-        closePopover()
-        // Do NOT capture `poller` or `hostManager` — resolve fresh from
-        // the AppDelegate singleton in the completion, same as takePhoto.
-        DispatchQueue.global(qos: .userInitiated).async {
-            guard let b64 = ScreenshotManager.takeScreenshot(interactive: interactive) else {
-                DispatchQueue.main.async {
-                    (NSApp.delegate as? AppDelegate)?.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "SCREENSHOT_FAILED")
+        // Dispatch to next run-loop tick so we leave the view's call stack
+        // before the popover is destroyed.
+        DispatchQueue.main.async {
+            (NSApp.delegate as? AppDelegate)?.popover?.performClose(nil)
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                guard let b64 = ScreenshotManager.takeScreenshot(interactive: interactive) else {
+                    DispatchQueue.main.async {
+                        (NSApp.delegate as? AppDelegate)?.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "SCREENSHOT_FAILED")
+                    }
+                    return
                 }
-                return
-            }
-            DispatchQueue.main.async {
-                guard let poller = (NSApp.delegate as? AppDelegate)?.hostManager?.activePoller else { return }
-                poller.sendEnvelope(type: "screenshot", content: ["format": "jpeg", "base64": b64])
-                (NSApp.delegate as? AppDelegate)?.showStatusHUD(icon: "camera.viewfinder", title: "SCREENSHOT_SENT")
+                DispatchQueue.main.async {
+                    guard let poller = (NSApp.delegate as? AppDelegate)?.hostManager?.activePoller else { return }
+                    poller.sendEnvelope(type: "screenshot", content: ["format": "jpeg", "base64": b64])
+                    (NSApp.delegate as? AppDelegate)?.showStatusHUD(icon: "camera.viewfinder", title: "SCREENSHOT_SENT")
+                }
             }
         }
     }
@@ -150,29 +160,25 @@ struct ActionMenuView: View {
     private func takePhoto(camId: String, camName: String) {
         guard hostManager.activePoller != nil else { return }
 
-        // Close popover BEFORE CameraManager.takePhoto — the camera
-        // permission dialog (.notDetermined on ad-hoc builds with fresh
-        // TCC) would otherwise cause applicationWillResignActive to tear
-        // down the view hierarchy while our completion handler still needs
-        // to show a HUD.
-        closePopover()
+        // Dispatch to next run-loop tick: the button-action closure returns,
+        // SwiftUI finishes its current update cycle, THEN we close the
+        // popover and start the camera — no more tearing down the view
+        // hierarchy from within its own call stack.
+        DispatchQueue.main.async {
+            (NSApp.delegate as? AppDelegate)?.popover?.performClose(nil)
 
-        // Do NOT capture `poller` or `hostManager` in the closure — by the
-        // time the camera callback fires (~1.5 s later) the view hierarchy
-        // may be torn down and captured references invalid.  Instead,
-        // resolve the poller fresh from the AppDelegate singleton which is
-        // guaranteed to outlive any view.
-        CameraManager.takePhoto(deviceId: camId.isEmpty ? nil : camId) { b64 in
-            guard let b64 = b64 else {
-                DispatchQueue.main.async {
-                    (NSApp.delegate as? AppDelegate)?.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "CAPTURE_FAILED")
+            CameraManager.takePhoto(deviceId: camId.isEmpty ? nil : camId) { b64 in
+                guard let b64 = b64 else {
+                    DispatchQueue.main.async {
+                        (NSApp.delegate as? AppDelegate)?.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "CAPTURE_FAILED")
+                    }
+                    return
                 }
-                return
-            }
-            DispatchQueue.main.async {
-                guard let poller = (NSApp.delegate as? AppDelegate)?.hostManager?.activePoller else { return }
-                poller.sendEnvelope(type: "camera", content: ["format": "jpeg", "base64": b64, "device": camName])
-                (NSApp.delegate as? AppDelegate)?.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT")
+                DispatchQueue.main.async {
+                    guard let poller = (NSApp.delegate as? AppDelegate)?.hostManager?.activePoller else { return }
+                    poller.sendEnvelope(type: "camera", content: ["format": "jpeg", "base64": b64, "device": camName])
+                    (NSApp.delegate as? AppDelegate)?.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT")
+                }
             }
         }
     }
