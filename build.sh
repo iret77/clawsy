@@ -9,17 +9,14 @@ DERIVED_DATA="$BUILD_DIR/DerivedData"
 APP_BUNDLE="$BUILD_DIR/app/$APP_NAME.app"
 SIGN_ID="${CODESIGN_IDENTITY:--}"
 
-# Hardened Runtime requires an Apple-issued certificate (Developer ID /
-# Apple Development) — self-signed or ad-hoc identities cannot use the
-# restricted entitlements needed to bypass library validation, so dyld
-# rejects embedded frameworks ("different Team IDs").  Enable it only
-# when the identity looks like a real Apple cert.
-case "$SIGN_ID" in
-    "Developer ID"*|"Apple Development"*|"Apple Distribution"*|"3rd Party Mac"*)
-        HARDENED_RUNTIME=YES ;;
-    *)
-        HARDENED_RUNTIME=NO ;;
-esac
+# Always enable Hardened Runtime. Without it, macOS 14+ silently kills
+# the app when accessing TCC-protected resources (camera, screen
+# recording) — no crash report, just a SIGKILL.
+#
+# The com.apple.security.cs.disable-library-validation entitlement
+# allows loading frameworks signed with a different (or self-signed)
+# identity, so this works even with ad-hoc / self-signed certificates.
+HARDENED_RUNTIME=YES
 
 echo "🔑 Signing identity: $SIGN_ID"
 echo "🛡️  Hardened Runtime: $HARDENED_RUNTIME"
