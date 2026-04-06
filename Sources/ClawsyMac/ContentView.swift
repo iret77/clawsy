@@ -281,7 +281,13 @@ struct ContentView: View {
                         return
                     }
                     let interactive = params["interactive"] as? Bool ?? false
-                    self.appDelegate.showScreenshotRequest(
+                    // Use NSApp.delegate singleton — @EnvironmentObject `self.appDelegate`
+                    // may be invalid if the popover was closed before this handler fires.
+                    guard let ad = NSApp.delegate as? AppDelegate else {
+                        completion(.error(code: "internal", message: "AppDelegate unavailable"))
+                        return
+                    }
+                    ad.showScreenshotRequest(
                         requestedInteractive: interactive,
                         onConfirm: { userInteractive in
                             if let b64 = ScreenshotManager.takeScreenshot(interactive: userInteractive) {
@@ -301,7 +307,13 @@ struct ContentView: View {
             router.register("clipboard.read") { _, completion in
                 DispatchQueue.main.async {
                     let content = ClipboardManager.getClipboardContent() ?? ""
-                    self.appDelegate.showClipboardRequest(content: content, direction: .read,
+                    // Use NSApp.delegate singleton — @EnvironmentObject may be
+                    // invalid if the popover was closed before this handler fires.
+                    guard let ad = NSApp.delegate as? AppDelegate else {
+                        completion(.error(code: "internal", message: "AppDelegate unavailable"))
+                        return
+                    }
+                    ad.showClipboardRequest(content: content, direction: .read,
                         onConfirm: {
                             if let current = ClipboardManager.getClipboardContent() {
                                 completion(.success(["text": current]))

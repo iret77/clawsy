@@ -99,23 +99,40 @@ struct ActionMenuView: View {
 
     // MARK: - Actions
 
+    /// Close the main popover before running an operation that may trigger
+    /// a system dialog (camera/screen recording permission).  macOS shows
+    /// the dialog in a new window → app resigns active → `applicationWill-
+    /// ResignActive` auto-closes the transient popover → the SwiftUI view
+    /// hierarchy is destroyed → @EnvironmentObject references become
+    /// invalid → crash in completion handlers.  Closing up-front avoids
+    /// the race entirely.
+    private func closePopover() {
+        (NSApp.delegate as? AppDelegate)?.popover?.performClose(nil)
+    }
+
     private func takeScreenshot(interactive: Bool) {
         guard let poller = hostManager.activePoller else { return }
 
         // Check screen recording permission before attempting capture.
         // If not granted, request it (macOS shows System Settings prompt).
         if !CGPreflightScreenCaptureAccess() {
+            closePopover()
             CGRequestScreenCaptureAccess()
             return
         }
 
+        closePopover()
         DispatchQueue.global(qos: .userInitiated).async {
             guard let b64 = ScreenshotManager.takeScreenshot(interactive: interactive) else {
-                DispatchQueue.main.async { appDelegate.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "SCREENSHOT_FAILED") }
+                DispatchQueue.main.async {
+                    (NSApp.delegate as? AppDelegate)?.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "SCREENSHOT_FAILED")
+                }
                 return
             }
             poller.sendEnvelope(type: "screenshot", content: ["format": "jpeg", "base64": b64])
-            DispatchQueue.main.async { appDelegate.showStatusHUD(icon: "camera.viewfinder", title: "SCREENSHOT_SENT") }
+            DispatchQueue.main.async {
+                (NSApp.delegate as? AppDelegate)?.showStatusHUD(icon: "camera.viewfinder", title: "SCREENSHOT_SENT")
+            }
         }
     }
 
@@ -123,24 +140,31 @@ struct ActionMenuView: View {
         guard let poller = hostManager.activePoller else { return }
         if let content = ClipboardManager.getClipboardContent() {
             poller.sendEnvelope(type: "clipboard", content: content)
-            appDelegate.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
+            (NSApp.delegate as? AppDelegate)?.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
         }
     }
 
     private func takePhoto(camId: String, camName: String) {
         guard let poller = hostManager.activePoller else { return }
 
-        // CameraManager.takePhoto handles all permission states internally
-        // (.notDetermined → requestAccess, .denied → returns nil, .authorized → capture).
-        // No pre-check here — showing system dialogs while the NSPopover is
-        // active can crash on macOS.
+        // Close popover BEFORE CameraManager.takePhoto — the camera
+        // permission dialog (.notDetermined on ad-hoc builds with fresh
+        // TCC) would otherwise cause applicationWillResignActive to tear
+        // down the view hierarchy while our completion handler still needs
+        // to show a HUD.
+        closePopover()
+
         CameraManager.takePhoto(deviceId: camId.isEmpty ? nil : camId) { b64 in
             guard let b64 = b64 else {
-                DispatchQueue.main.async { appDelegate.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "CAPTURE_FAILED") }
+                DispatchQueue.main.async {
+                    (NSApp.delegate as? AppDelegate)?.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "CAPTURE_FAILED")
+                }
                 return
             }
             poller.sendEnvelope(type: "camera", content: ["format": "jpeg", "base64": b64, "device": camName])
-            DispatchQueue.main.async { appDelegate.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT") }
+            DispatchQueue.main.async {
+                (NSApp.delegate as? AppDelegate)?.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT")
+            }
         }
     }
 
