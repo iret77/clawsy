@@ -104,9 +104,9 @@ jobs:
 
         KEY_ARGS="--key ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8 --key-id $APPSTORE_KEY_ID --issuer $APPSTORE_ISSUER_ID"
 
-        # Submit to Apple and wait (20 min timeout for new accounts)
+        # Submit to Apple and wait (30 min — new accounts get slower scans)
         xcrun notarytool submit Clawsy-notarize.zip \
-          $KEY_ARGS --wait --timeout 20m 2>&1 | tee /tmp/notary.out || true
+          $KEY_ARGS --wait --timeout 30m 2>&1 | tee /tmp/notary.out || true
 
         SUB_ID=$(grep "id:" /tmp/notary.out | head -1 | awk '{print $2}')
 
