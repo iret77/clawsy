@@ -1,5 +1,4 @@
 import SwiftUI
-import AVFoundation
 import ClawsyShared
 
 /// Main action buttons: QuickSend, Screenshot, Clipboard, Camera.
@@ -131,22 +130,10 @@ struct ActionMenuView: View {
     private func takePhoto(camId: String, camName: String) {
         guard let poller = hostManager.activePoller else { return }
 
-        // Check camera permission before attempting capture.
-        // .notDetermined → trigger system prompt, user retries manually.
-        // .denied/.restricted → open System Settings.
-        let authStatus = AVCaptureDevice.authorizationStatus(for: .video)
-        switch authStatus {
-        case .notDetermined:
-            AVCaptureDevice.requestAccess(for: .video) { _ in }
-            return
-        case .denied, .restricted:
-            appDelegate.showStatusHUD(icon: "lock.shield", title: "PERM_MISSING_CAMERA")
-            PermissionMonitor.shared.openSettings(for: .camera)
-            return
-        default:
-            break
-        }
-
+        // CameraManager.takePhoto handles all permission states internally
+        // (.notDetermined → requestAccess, .denied → returns nil, .authorized → capture).
+        // No pre-check here — showing system dialogs while the NSPopover is
+        // active can crash on macOS.
         CameraManager.takePhoto(deviceId: camId.isEmpty ? nil : camId) { b64 in
             guard let b64 = b64 else {
                 DispatchQueue.main.async { appDelegate.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "CAPTURE_FAILED") }
