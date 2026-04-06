@@ -111,7 +111,7 @@ struct ActionMenuView: View {
     }
 
     private func takeScreenshot(interactive: Bool) {
-        guard let poller = hostManager.activePoller else { return }
+        guard hostManager.activePoller != nil else { return }
 
         // Check screen recording permission before attempting capture.
         // If not granted, request it (macOS shows System Settings prompt).
@@ -122,6 +122,8 @@ struct ActionMenuView: View {
         }
 
         closePopover()
+        // Do NOT capture `poller` or `hostManager` — resolve fresh from
+        // the AppDelegate singleton in the completion, same as takePhoto.
         DispatchQueue.global(qos: .userInitiated).async {
             guard let b64 = ScreenshotManager.takeScreenshot(interactive: interactive) else {
                 DispatchQueue.main.async {
@@ -129,15 +131,16 @@ struct ActionMenuView: View {
                 }
                 return
             }
-            poller.sendEnvelope(type: "screenshot", content: ["format": "jpeg", "base64": b64])
             DispatchQueue.main.async {
+                guard let poller = (NSApp.delegate as? AppDelegate)?.hostManager?.activePoller else { return }
+                poller.sendEnvelope(type: "screenshot", content: ["format": "jpeg", "base64": b64])
                 (NSApp.delegate as? AppDelegate)?.showStatusHUD(icon: "camera.viewfinder", title: "SCREENSHOT_SENT")
             }
         }
     }
 
     private func handleClipboardSend() {
-        guard let poller = hostManager.activePoller else { return }
+        guard let poller = (NSApp.delegate as? AppDelegate)?.hostManager?.activePoller else { return }
         if let content = ClipboardManager.getClipboardContent() {
             poller.sendEnvelope(type: "clipboard", content: content)
             (NSApp.delegate as? AppDelegate)?.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
@@ -145,7 +148,7 @@ struct ActionMenuView: View {
     }
 
     private func takePhoto(camId: String, camName: String) {
-        guard let poller = hostManager.activePoller else { return }
+        guard hostManager.activePoller != nil else { return }
 
         // Close popover BEFORE CameraManager.takePhoto — the camera
         // permission dialog (.notDetermined on ad-hoc builds with fresh
@@ -154,6 +157,11 @@ struct ActionMenuView: View {
         // to show a HUD.
         closePopover()
 
+        // Do NOT capture `poller` or `hostManager` in the closure — by the
+        // time the camera callback fires (~1.5 s later) the view hierarchy
+        // may be torn down and captured references invalid.  Instead,
+        // resolve the poller fresh from the AppDelegate singleton which is
+        // guaranteed to outlive any view.
         CameraManager.takePhoto(deviceId: camId.isEmpty ? nil : camId) { b64 in
             guard let b64 = b64 else {
                 DispatchQueue.main.async {
@@ -161,8 +169,9 @@ struct ActionMenuView: View {
                 }
                 return
             }
-            poller.sendEnvelope(type: "camera", content: ["format": "jpeg", "base64": b64, "device": camName])
             DispatchQueue.main.async {
+                guard let poller = (NSApp.delegate as? AppDelegate)?.hostManager?.activePoller else { return }
+                poller.sendEnvelope(type: "camera", content: ["format": "jpeg", "base64": b64, "device": camName])
                 (NSApp.delegate as? AppDelegate)?.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT")
             }
         }

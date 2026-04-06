@@ -32,7 +32,7 @@ class HUDWindow: NSWindow {
 
 class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate, ObservableObject {
     var statusBarItem: NSStatusItem!
-    var popover: NSPopover!
+    var popover: NSPopover?
     var alertWindow: NSWindow?
     var quickSendWindow: NSWindow?
     var responseWindow: NSWindow?
@@ -244,13 +244,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
         // Create Popover — size follows SwiftUI's ideal content size automatically
         // via NSHostingController.sizingOptions = .preferredContentSize.
-        popover = NSPopover()
-        popover.contentSize = NSSize(width: ClawsyTheme.Spacing.popoverWidth, height: 420)
-        popover.behavior = .transient
+        let pop = NSPopover()
+        pop.contentSize = NSSize(width: ClawsyTheme.Spacing.popoverWidth, height: 420)
+        pop.behavior = .transient
         let contentView = ContentView().environmentObject(self)
         let hostingController = NSHostingController(rootView: contentView)
         hostingController.sizingOptions = [.preferredContentSize]
-        popover.contentViewController = hostingController
+        pop.contentViewController = hostingController
+        popover = pop
 
         // Register Global Hotkeys
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
@@ -370,7 +371,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             return
         }
 
-        if popover.isShown { popover.performClose(nil) }
+        if popover?.isShown == true { popover?.performClose(nil) }
         logAction("Screenshot capturing (interactive: \(interactive))")
         DispatchQueue.global(qos: .userInitiated).async {
             Thread.sleep(forTimeInterval: 0.25)
@@ -886,19 +887,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     // MARK: - Popover Toggle
 
     @objc func togglePopover(_ sender: AnyObject?) {
-        if let button = statusBarItem.button {
-            if popover.isShown {
-                popover.performClose(sender)
-            } else {
-                popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-                popover.contentViewController?.view.window?.makeKey()
-            }
+        guard let popover = popover, let button = statusBarItem.button else { return }
+        if popover.isShown {
+            popover.performClose(sender)
+        } else {
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            popover.contentViewController?.view.window?.makeKey()
         }
     }
 
 
     func applicationWillResignActive(_ notification: Notification) {
-        if popover.isShown { popover.performClose(nil) }
+        if popover?.isShown == true { popover?.performClose(nil) }
     }
 
     // MARK: - TCC Reset on Signature Change (ad-hoc builds)
