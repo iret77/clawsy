@@ -73,33 +73,26 @@ else
 fi
 
 # ── Step 6: Re-sign bundle for consistent Team ID ─────────────────
-# Re-sign all components with the same identity (inside-out) to
-# guarantee matching Team IDs. Without this, dyld may refuse to load
-# the framework ("mapping process and mapped file have different
-# Team IDs"). --preserve-metadata keeps entitlements from xcodebuild.
+# Re-sign ALL components fresh with the SAME identity + explicit
+# --options runtime.  Never use --preserve-metadata=flags — xcodebuild
+# may sign framework/extension targets with a different identity or
+# without HR, causing a Team-ID mismatch when dyld validates at launch.
 echo "🔏 Re-signing app bundle (component-level)..."
 
-if [ "$HARDENED_RUNTIME" = "YES" ]; then
-    # Apple cert: preserve entitlements + flags (including runtime flag)
-    CODESIGN_ARGS="--preserve-metadata=entitlements,identifier,flags"
-else
-    # Self-signed / ad-hoc: preserve entitlements but NOT flags to avoid
-    # re-introducing the hardened runtime flag that causes dyld rejection
-    CODESIGN_ARGS="--preserve-metadata=entitlements,identifier"
-fi
-
-# 6a: Frameworks
+# 6a: Frameworks — no entitlements needed, just identity + HR flag
 for fw in "$APP_BUNDLE"/Contents/Frameworks/*.framework; do
-    [ -d "$fw" ] && codesign --force --sign "$SIGN_ID" $CODESIGN_ARGS "$fw"
+    [ -d "$fw" ] && codesign --force --sign "$SIGN_ID" --options runtime "$fw"
 done
 
-# 6b: Extensions
+# 6b: Extensions — preserve their specific entitlements, add HR flag
 for ext in "$APP_BUNDLE"/Contents/PlugIns/*.appex; do
-    [ -d "$ext" ] && codesign --force --sign "$SIGN_ID" $CODESIGN_ARGS "$ext"
+    [ -d "$ext" ] && codesign --force --sign "$SIGN_ID" --options runtime \
+        --preserve-metadata=entitlements,identifier "$ext"
 done
 
-# 6c: Main app (outermost, signed last)
-codesign --force --sign "$SIGN_ID" $CODESIGN_ARGS "$APP_BUNDLE"
+# 6c: Main app — use explicit entitlements file, HR flag (signed last)
+codesign --force --sign "$SIGN_ID" --options runtime \
+    --entitlements ClawsyMac.entitlements "$APP_BUNDLE"
 
 # ── Step 7: Verify ──────────────────────────────────────────────────
 echo "🔍 Verifying bundle structure..."
