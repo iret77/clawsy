@@ -99,8 +99,8 @@ jobs:
         mkdir -p ~/.private_keys
         echo "$APPSTORE_PRIVATE_KEY" > ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
 
-        # Create a zip for notarization (ditto preserves symlinks)
-        ditto -c -k --keepParent .build/app/Clawsy.app Clawsy-notarize.zip
+        # Create a zip for notarization (-y preserves framework symlinks)
+        cd .build/app && zip -yr ../../Clawsy-notarize.zip Clawsy.app && cd ../..
 
         KEY_ARGS="--key ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8 --key-id $APPSTORE_KEY_ID --issuer $APPSTORE_ISSUER_ID"
 
@@ -145,7 +145,7 @@ jobs:
       run: |
         cp CLAWSY.md .build/app/CLAWSY.md
         cd .build/app
-        ditto -c -k --keepParent Clawsy.app ../../Clawsy.app.zip
+        zip -yr ../../Clawsy.app.zip Clawsy.app CLAWSY.md
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v5
