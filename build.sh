@@ -83,14 +83,18 @@ fi
 echo "🔏 Re-signing app bundle (component-level)..."
 
 if [ "$HARDENED_RUNTIME" = "YES" ]; then
-    CODESIGN_OPTS="--options runtime"
+    CODESIGN_OPTS="--options runtime --timestamp"
 else
     CODESIGN_OPTS=""
 fi
 
-# 6a: Frameworks
+# 6a: Bundles inside frameworks (must be signed before the framework)
 for fw in "$APP_BUNDLE"/Contents/Frameworks/*.framework; do
-    [ -d "$fw" ] && codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS "$fw"
+    [ -d "$fw" ] || continue
+    for bundle in "$fw"/Versions/A/Resources/*.bundle; do
+        [ -d "$bundle" ] && codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS "$bundle"
+    done
+    codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS "$fw"
 done
 
 # 6b: Extensions — preserve their entitlements

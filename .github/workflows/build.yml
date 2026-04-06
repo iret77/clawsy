@@ -105,11 +105,27 @@ jobs:
         cd ../..
 
         # Submit to Apple and wait for result (typically 1-5 min)
-        xcrun notarytool submit Clawsy-notarize.zip \
+        NOTARY_OUT=$(xcrun notarytool submit Clawsy-notarize.zip \
           --key ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8 \
           --key-id "$APPSTORE_KEY_ID" \
           --issuer "$APPSTORE_ISSUER_ID" \
-          --wait
+          --wait 2>&1) || true
+
+        echo "$NOTARY_OUT"
+        SUB_ID=$(echo "$NOTARY_OUT" | grep "id:" | head -1 | awk '{print $2}')
+
+        # If notarization failed, fetch the detailed log from Apple
+        if echo "$NOTARY_OUT" | grep -q "status: Invalid"; then
+          echo "❌ Notarization failed — fetching Apple's rejection log:"
+          xcrun notarytool log "$SUB_ID" \
+            --key ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8 \
+            --key-id "$APPSTORE_KEY_ID" \
+            --issuer "$APPSTORE_ISSUER_ID" \
+            notary-log.json || true
+          cat notary-log.json
+          rm -f Clawsy-notarize.zip ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+          exit 1
+        fi
 
         # Staple the notarization ticket into the app bundle
         xcrun stapler staple .build/app/Clawsy.app
