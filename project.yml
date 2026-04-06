@@ -13,7 +13,8 @@ settings:
     MACOSX_DEPLOYMENT_TARGET: "14.0"
     CODE_SIGN_IDENTITY: "-"
     CODE_SIGN_STYLE: Manual
-    ENABLE_HARDENED_RUNTIME: false
+    ENABLE_HARDENED_RUNTIME: true
+    CODE_SIGN_INJECT_BASE_ENTITLEMENTS: false
 
 packages:
   Starscream:

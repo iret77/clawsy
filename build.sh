@@ -97,11 +97,13 @@ for fw in "$APP_BUNDLE"/Contents/Frameworks/*.framework; do
     codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS "$fw"
 done
 
-# 6b: Extensions — preserve their entitlements
-for ext in "$APP_BUNDLE"/Contents/PlugIns/*.appex; do
-    [ -d "$ext" ] && codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS \
-        --preserve-metadata=entitlements,identifier "$ext"
-done
+# 6b: Extensions — explicit entitlements (avoid preserving get-task-allow)
+codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS \
+    --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements \
+    "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex"
+codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS \
+    --entitlements Sources/ClawsyFinderSync/ClawsyFinderSync.entitlements \
+    "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex"
 
 # 6c: Main app (outermost, signed last) — explicit entitlements
 codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS \

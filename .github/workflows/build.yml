@@ -99,10 +99,8 @@ jobs:
         mkdir -p ~/.private_keys
         echo "$APPSTORE_PRIVATE_KEY" > ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
 
-        # Create a zip for notarization submission
-        cd .build/app
-        zip -r ../../Clawsy-notarize.zip Clawsy.app
-        cd ../..
+        # Create a zip for notarization (ditto preserves symlinks)
+        ditto -c -k --keepParent .build/app/Clawsy.app Clawsy-notarize.zip
 
         # Submit to Apple and wait for result (typically 1-5 min)
         NOTARY_OUT=$(xcrun notarytool submit Clawsy-notarize.zip \
@@ -140,7 +138,7 @@ jobs:
       run: |
         cp CLAWSY.md .build/app/CLAWSY.md
         cd .build/app
-        zip -r ../../Clawsy.app.zip Clawsy.app CLAWSY.md
+        ditto -c -k --keepParent Clawsy.app ../../Clawsy.app.zip
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v5
