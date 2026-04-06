@@ -4,7 +4,8 @@ import ClawsyShared
 /// Horizontal pill row for switching between hosts. Shows per-host connection status dots.
 struct HostSwitcherView: View {
     @ObservedObject var hostManager: HostManager
-    @EnvironmentObject var appDelegate: AppDelegate
+    // @EnvironmentObject removed — popover teardown invalidates the
+    // environment; use NSApp.delegate singleton instead.
     var onHostAdded: ((HostProfile) -> Void)? = nil
 
     var body: some View {
@@ -38,7 +39,7 @@ struct HostSwitcherView: View {
                     .buttonStyle(.plain)
                 }
 
-                Button(action: { appDelegate.openAddHostWindow() }) {
+                Button(action: { (NSApp.delegate as? AppDelegate)?.openAddHostWindow() }) {
                     Image(systemName: "plus")
                         .font(ClawsyTheme.Font.caption)
                         .foregroundColor(.secondary)
