@@ -9,14 +9,19 @@ DERIVED_DATA="$BUILD_DIR/DerivedData"
 APP_BUNDLE="$BUILD_DIR/app/$APP_NAME.app"
 SIGN_ID="${CODESIGN_IDENTITY:--}"
 
-# Always enable Hardened Runtime. Without it, macOS 14+ silently kills
-# the app when accessing TCC-protected resources (camera, screen
-# recording) — no crash report, just a SIGKILL.
+# Hardened Runtime requires an Apple-issued certificate (Developer ID /
+# Apple Development).  The `disable-library-validation` entitlement that
+# would allow loading self-signed frameworks is a *restricted* entitlement
+# — macOS silently ignores it when the cert is not Apple-issued.  Result:
+# dyld kills the app at launch ("different Team IDs").
 #
-# The com.apple.security.cs.disable-library-validation entitlement
-# allows loading frameworks signed with a different (or self-signed)
-# identity, so this works even with ad-hoc / self-signed certificates.
-HARDENED_RUNTIME=YES
+# Enable HR only when the signing identity is a real Apple cert.
+case "$SIGN_ID" in
+    "Developer ID"*|"Apple Development"*|"Apple Distribution"*|"3rd Party Mac"*)
+        HARDENED_RUNTIME=YES ;;
+    *)
+        HARDENED_RUNTIME=NO ;;
+esac
 
 echo "🔑 Signing identity: $SIGN_ID"
 echo "🛡️  Hardened Runtime: $HARDENED_RUNTIME"
@@ -73,25 +78,29 @@ else
 fi
 
 # ── Step 6: Re-sign bundle for consistent Team ID ─────────────────
-# Re-sign ALL components fresh with the SAME identity + explicit
-# --options runtime.  Never use --preserve-metadata=flags — xcodebuild
-# may sign framework/extension targets with a different identity or
-# without HR, causing a Team-ID mismatch when dyld validates at launch.
+# Re-sign all components with the same identity (inside-out) to
+# guarantee matching Team IDs.
 echo "🔏 Re-signing app bundle (component-level)..."
 
-# 6a: Frameworks — no entitlements needed, just identity + HR flag
+if [ "$HARDENED_RUNTIME" = "YES" ]; then
+    CODESIGN_OPTS="--options runtime"
+else
+    CODESIGN_OPTS=""
+fi
+
+# 6a: Frameworks
 for fw in "$APP_BUNDLE"/Contents/Frameworks/*.framework; do
-    [ -d "$fw" ] && codesign --force --sign "$SIGN_ID" --options runtime "$fw"
+    [ -d "$fw" ] && codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS "$fw"
 done
 
-# 6b: Extensions — preserve their specific entitlements, add HR flag
+# 6b: Extensions — preserve their entitlements
 for ext in "$APP_BUNDLE"/Contents/PlugIns/*.appex; do
-    [ -d "$ext" ] && codesign --force --sign "$SIGN_ID" --options runtime \
+    [ -d "$ext" ] && codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS \
         --preserve-metadata=entitlements,identifier "$ext"
 done
 
-# 6c: Main app — use explicit entitlements file, HR flag (signed last)
-codesign --force --sign "$SIGN_ID" --options runtime \
+# 6c: Main app (outermost, signed last) — explicit entitlements
+codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS \
     --entitlements ClawsyMac.entitlements "$APP_BUNDLE"
 
 # ── Step 7: Verify ──────────────────────────────────────────────────
