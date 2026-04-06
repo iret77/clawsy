@@ -89,6 +89,37 @@ jobs:
         chmod +x build.sh
         ./build.sh
 
+    - name: Notarize App
+      env:
+        APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+        APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+      run: |
+        # Write the API key to a file notarytool can read
+        mkdir -p ~/.private_keys
+        echo "$APPSTORE_PRIVATE_KEY" > ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+
+        # Create a zip for notarization submission
+        cd .build/app
+        zip -r ../../Clawsy-notarize.zip Clawsy.app
+        cd ../..
+
+        # Submit to Apple and wait for result (typically 1-5 min)
+        xcrun notarytool submit Clawsy-notarize.zip \
+          --key ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8 \
+          --key-id "$APPSTORE_KEY_ID" \
+          --issuer "$APPSTORE_ISSUER_ID" \
+          --wait
+
+        # Staple the notarization ticket into the app bundle
+        xcrun stapler staple .build/app/Clawsy.app
+
+        # Verify
+        spctl -a -vvv -t execute .build/app/Clawsy.app
+
+        # Cleanup
+        rm -f Clawsy-notarize.zip ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+
     - name: Zip App
       run: |
         cp CLAWSY.md .build/app/CLAWSY.md
