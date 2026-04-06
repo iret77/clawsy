@@ -102,18 +102,17 @@ jobs:
         # Create a zip for notarization (ditto preserves symlinks)
         ditto -c -k --keepParent .build/app/Clawsy.app Clawsy-notarize.zip
 
-        # Submit to Apple and wait for result (typically 1-5 min)
-        NOTARY_OUT=$(xcrun notarytool submit Clawsy-notarize.zip \
+        # Submit to Apple and wait (stream output live via tee, 10 min timeout)
+        xcrun notarytool submit Clawsy-notarize.zip \
           --key ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8 \
           --key-id "$APPSTORE_KEY_ID" \
           --issuer "$APPSTORE_ISSUER_ID" \
-          --wait 2>&1) || true
+          --wait --timeout 10m 2>&1 | tee /tmp/notary.out || true
 
-        echo "$NOTARY_OUT"
-        SUB_ID=$(echo "$NOTARY_OUT" | grep "id:" | head -1 | awk '{print $2}')
+        SUB_ID=$(grep "id:" /tmp/notary.out | head -1 | awk '{print $2}')
 
         # If notarization failed, fetch the detailed log from Apple
-        if echo "$NOTARY_OUT" | grep -q "status: Invalid"; then
+        if grep -q "status: Invalid" /tmp/notary.out; then
           echo "❌ Notarization failed — fetching Apple's rejection log:"
           xcrun notarytool log "$SUB_ID" \
             --key ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8 \
@@ -121,6 +120,13 @@ jobs:
             --issuer "$APPSTORE_ISSUER_ID" \
             notary-log.json || true
           cat notary-log.json
+          rm -f Clawsy-notarize.zip ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+          exit 1
+        fi
+
+        # Fail if notarization didn't succeed (timeout, network error, etc.)
+        if ! grep -q "status: Accepted" /tmp/notary.out; then
+          echo "❌ Notarization did not succeed. Check output above."
           rm -f Clawsy-notarize.zip ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
           exit 1
         fi
