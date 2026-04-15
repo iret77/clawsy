@@ -136,6 +136,19 @@ public class CameraManager: NSObject {
                 activeSessions[captureId] = (captureSession, delegate, observer)
                 sessionsLock.unlock()
 
+                // Safety timeout — if session never starts or photo never arrives,
+                // clean up after 10 seconds to avoid hanging forever.
+                sessionQueue.asyncAfter(deadline: .now() + 10.0) {
+                    sessionsLock.lock()
+                    let entry = activeSessions.removeValue(forKey: captureId)
+                    sessionsLock.unlock()
+                    if let (session, captureDelegate, obs) = entry {
+                        NotificationCenter.default.removeObserver(obs)
+                        if session.isRunning { session.stopRunning() }
+                        captureDelegate.fireTimeoutIfNeeded()
+                    }
+                }
+
                 // startRunning is blocking — that's fine on our dedicated serial queue
                 captureSession.startRunning()
 
@@ -149,18 +162,35 @@ public class CameraManager: NSObject {
 
 public class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
     private let completion: (Data?) -> Void
-    
+    private var hasCompleted = false
+    private let lock = NSLock()
+
     public init(completion: @escaping (Data?) -> Void) {
         self.completion = completion
     }
-    
+
     public func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        lock.lock()
+        guard !hasCompleted else { lock.unlock(); return }
+        hasCompleted = true
+        lock.unlock()
+
         if let error = error {
             print("Error capturing photo: \(error)")
             completion(nil)
             return
         }
-        
+
         completion(photo.fileDataRepresentation())
+    }
+
+    /// Called by the safety timeout to deliver nil if no photo arrived.
+    func fireTimeoutIfNeeded() {
+        lock.lock()
+        guard !hasCompleted else { lock.unlock(); return }
+        hasCompleted = true
+        lock.unlock()
+        print("Camera capture timed out")
+        completion(nil)
     }
 }

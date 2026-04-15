@@ -35,128 +35,47 @@ Nothing happens behind your back. Every screenshot, clipboard read, or file writ
 
 ## Getting Started
 
-The easiest way to set up Clawsy:
+### Recommended: Let Your Agent Handle It
 
-1. **Download & install** Clawsy on your Mac ([latest release](https://github.com/iret77/clawsy/releases/latest))
-2. **Remove quarantine** — run `xattr -cr /Applications/Clawsy.app` in Terminal
-3. **Tell your OpenClaw agent:**
+Send this to your OpenClaw agent:
 
-   > "Install the Clawsy skill from clawhub"
+> **Install the Clawsy macOS companion: `clawhub install clawsy` — then read the SKILL.md and follow the IMMEDIATE ACTION section.**
 
-3. Your agent will install everything automatically and send you a pairing link — just click it.
-
-**That's it.** Clawsy connects, your agent gets access to screenshots, clipboard, camera, and files.
+Your agent installs the skill, reads the setup instructions, and sends you the download link and setup code in one message.
 
 ---
 
-## Manual Setup (Advanced)
+### Already Have Clawsy Installed?
 
-If you prefer to configure everything yourself, follow the steps below.
+If you downloaded Clawsy separately:
 
-### 1. Prepare your OpenClaw Gateway
+1. Launch Clawsy and click **Add Host**
+2. A setup prompt is copied to your clipboard automatically
+3. Send the prompt to your agent via any channel (chat, Telegram, Slack, ...)
+4. Your agent responds with a setup code — paste it back into Clawsy
 
-Make sure your OpenClaw instance is running and you have the **Gateway Host**, **Port** (default: `18789`), and **Token** ready.
+Done. Clawsy connects, and the agent receives the full skill reference automatically.
 
-> 💡 For detailed server-side configuration, see [docs/SERVER_SETUP.md](docs/SERVER_SETUP.md).
+---
 
-### 2. Install Clawsy on your Mac
+### Manual Setup (Advanced)
+
+For full manual control over every setting:
 
 1. Download **Clawsy.app.zip** from the [latest release](https://github.com/iret77/clawsy/releases/latest)
-2. Unzip → drag `Clawsy.app` to `/Applications`
-3. **Remove the quarantine flag** (required for apps distributed outside the App Store):
+2. Unzip, drag to `/Applications`, remove quarantine:
    ```bash
    xattr -cr /Applications/Clawsy.app
    ```
-   Without this, macOS Gatekeeper will block the app from launching.
-4. Launch Clawsy — the onboarding assistant walks you through permissions
-
-### 3. Connect
-
-5. Open **Settings** → enter your OpenClaw **Gateway Host**, **Port**, and **Token**
-6. Clawsy connects and sends a pairing request. **Approve it on your server:**
+3. Launch Clawsy — the onboarding assistant walks you through permissions
+4. Open **Settings** → enter **Gateway Host**, **Port** (`18789`), and **Token**
+5. Approve the pairing request on your server:
    ```bash
-   # List pending pairing requests
    openclaw devices list
-
-   # Approve (use the request ID shown)
    openclaw devices approve <requestId>
    ```
 
-### 4. Tell your agent
-
-7. Copy-paste this into your chat or add it to your `AGENTS.md`:
-   ```
-   Clawsy (macOS companion app) is installed and connected.
-   Read the Clawsy skill file for full integration details.
-   Add to HEARTBEAT.md:
-   - Send agent.info to clawsy-service every heartbeat
-   - Send agent.status for active tasks
-   See: https://github.com/iret77/clawsy/blob/main/for-agents.md
-   ```
-
-8. **Done.** Your agent can now take screenshots, read your clipboard, access files, and show live task progress.
-
----
-
-## Server Setup (OpenClaw Side)
-
-Clawsy is a client — it connects to your OpenClaw Gateway. Your agent needs to know Clawsy exists and how to use it.
-
-### Event Cache (clawsy-monitor)
-
-Clawsy pushes events (clipboard, screenshots, shares) to a `clawsy-service` session. The **clawsy-monitor** watches this session and caches events into a structured `clawsy-context.json` in your workspace so agents can read them efficiently.
-
-#### Automatic Setup
-
-```bash
-cd server
-./setup.sh
-```
-
-This installs `clawsy-monitor` as a systemd service that watches for Clawsy events and caches them in `clawsy-context.json` in your workspace. The setup is fully portable — all paths are auto-detected.
-
-#### Manual Setup
-
-If you don't have systemd, run the monitor directly:
-
-```bash
-node server/monitor.mjs
-```
-
-#### Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `OPENCLAW_HOME` | `~/.openclaw` | OpenClaw home directory |
-| `OPENCLAW_AGENT` | `main` | Agent ID |
-| `OPENCLAW_WORKSPACE` | `$OPENCLAW_HOME/workspace` | Workspace directory |
-
-### What the Agent Needs
-
-After Clawsy connects, your agent should:
-
-1. **Send `agent.info`** on every heartbeat (shows model name in Clawsy header)
-2. **Send `agent.status`** during active work (shows live progress in Mission Control)
-3. **Read from `clawsy-service`** session to receive screenshots, clipboard, and camera events
-
-### HEARTBEAT.md Snippet
-
-Add this to your agent's `HEARTBEAT.md`:
-
-```markdown
-## Clawsy (every heartbeat)
-Send agent.info + agent.status to clawsy-service:
-sessions_send(sessionKey="clawsy-service", timeoutSeconds=3,
-  message='{"kind":"agent.info","payload":{"agentName":"<NAME>","model":"<MODEL>","updatedAt":"<ISO-UTC>"}}')
-sessions_send(sessionKey="clawsy-service", timeoutSeconds=3,
-  message='{"kind":"agent.status","payload":{"agentName":"<NAME>","title":"Idle","progress":0.0,"statusText":"Waiting"}}')
-```
-
-### For Agents Reading This
-
-If you are an OpenClaw agent, read [for-agents.md](for-agents.md) — it has everything you need: exact code, data formats, and integration patterns.
-
-> Full server setup guide: [docs/SERVER_SETUP.md](docs/SERVER_SETUP.md)
+The agent receives the full skill reference automatically after connection.
 
 ---
 
@@ -307,7 +226,7 @@ nodes(action="invoke", invokeCommand="file.batch",
 
 Available commands: `screen.capture`, `clipboard.read`, `clipboard.write`, `camera.list`, `camera.snap`, `file.list`, `file.get`, `file.set`, `file.get.chunk`, `file.set.chunk`, `file.move`, `file.copy`, `file.rename`, `file.stat`, `file.exists`, `file.batch`, `file.delete`, `file.rmdir`, `file.mkdir`, `location.get`
 
-> For complete agent integration docs, see [for-agents.md](for-agents.md) and [CLAWSY.md](CLAWSY.md).
+> Full command reference and agent integration: [SKILL.md](SKILL.md)
 
 ---
 

@@ -47,9 +47,16 @@ public class ActionBridge {
         return action
     }
 
-    /// Main app registers for cross-process notifications from FinderSync
+    /// Observer token — stored to prevent duplicates and allow cleanup.
+    private static var observerToken: NSObjectProtocol?
+
+    /// Main app registers for cross-process notifications from FinderSync.
+    /// Safe to call multiple times — replaces any previous observer.
     public static func observe(callback: @escaping () -> Void) {
-        DistributedNotificationCenter.default().addObserver(
+        if let token = observerToken {
+            DistributedNotificationCenter.default().removeObserver(token)
+        }
+        observerToken = DistributedNotificationCenter.default().addObserver(
             forName: notificationName, object: nil, queue: .main
         ) { _ in
             callback()

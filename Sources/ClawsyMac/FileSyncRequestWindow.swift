@@ -62,9 +62,6 @@ struct FileSyncRequestWindow: View {
 
     // Hide internal system filenames from the user
     private var displayFilename: String {
-        if filename == ".agent_status.json" {
-            return NSLocalizedString("FILENAME_AGENT_STATUS", bundle: .clawsy, comment: "")
-        }
         return filename
     }
 
@@ -107,7 +104,7 @@ struct FileSyncRequestWindow: View {
                     Text(l10n: "FILESYNC_TITLE")
                         .font(.system(size: 15, weight: .bold))
                     Text("\(operationLocalized): \(displayFilename)")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(ClawsyTheme.Font.headerHostName)
                         .foregroundColor(.secondary)
                 }
 
@@ -117,16 +114,16 @@ struct FileSyncRequestWindow: View {
             .padding(.top, 24)
             .padding(.bottom, 16)
 
-            Divider().opacity(0.3)
+            Divider().clawsy()
 
             // Content
             VStack(spacing: 12) {
                 Text(fileSyncDescription)
-                    .font(.system(size: 13))
+                    .font(ClawsyTheme.Font.menuItem)
                     .multilineTextAlignment(.center)
 
-                Text("~/Documents/Clawsy/\(filename == ".agent_status.json" ? "…" : filename)")
-                    .font(.system(size: 11, design: .monospaced))
+                Text("\(SharedConfig.sharedFolderPath.isEmpty ? "~/Documents/Clawsy" : SharedConfig.sharedFolderPath)/\(filename)")
+                    .font(ClawsyTheme.Font.code)
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
@@ -138,14 +135,14 @@ struct FileSyncRequestWindow: View {
             .padding(.vertical, 20)
             .frame(maxHeight: .infinity)
 
-            Divider().opacity(0.3)
+            Divider().clawsy()
 
             // Footer: Duration picker + action buttons
             VStack(spacing: 12) {
                 // Duration picker — full width, separate from buttons
                 HStack {
                     Text(l10n: "ALLOW_LIMITED")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(ClawsyTheme.Font.sectionHeader)
                         .foregroundColor(.secondary)
                     Spacer()
                     Picker("", selection: $selectedDuration) {
@@ -159,7 +156,7 @@ struct FileSyncRequestWindow: View {
                 }
                 .padding(.horizontal, 24)
 
-                Divider().opacity(0.2).padding(.horizontal, 16)
+                Divider().clawsy().padding(.horizontal, 16)
 
                 // Action buttons
                 HStack(spacing: 12) {
@@ -197,7 +194,7 @@ struct FileSyncRequestWindow: View {
         }
         .frame(width: 440, height: 300)
         .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+        .clipShape(RoundedRectangle(cornerRadius: ClawsyTheme.Spacing.popoverCornerRadius))
+        .overlay(RoundedRectangle(cornerRadius: ClawsyTheme.Spacing.popoverCornerRadius).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
     }
 }

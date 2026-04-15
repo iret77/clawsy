@@ -1,11 +1,11 @@
 import Foundation
 
 public class ShareHandler {
-    
+
     public enum ShareError: LocalizedError {
         case noData
         case failedToSend
-        
+
         public var errorDescription: String? {
             switch self {
             case .noData:
@@ -15,32 +15,34 @@ public class ShareHandler {
             }
         }
     }
-    
-    public static func handleSharedItems(_ items: [NSExtensionItem], network: NetworkManager, completion: @escaping (Result<Void, Error>) -> Void) {
+
+    /// Handle shared items from the Share Extension. Sends via GatewayPoller REST API.
+    public static func handleSharedItems(
+        _ items: [NSExtensionItem],
+        poller: GatewayPoller,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
         var sharedText = ""
         var sharedURLs: [URL] = []
         var sharedFiles: [[String: Any]] = []
-        
+
         let group = DispatchGroup()
-        
+
         for item in items {
             guard let attachments = item.attachments else { continue }
-            
+
             for provider in attachments {
                 if provider.hasItemConformingToTypeIdentifier("public.plain-text") {
                     group.enter()
-                    provider.loadItem(forTypeIdentifier: "public.plain-text", options: nil) { (item, error) in
-                        if let text = item as? String {
-                            sharedText += text + "\n"
-                        }
+                    provider.loadItem(forTypeIdentifier: "public.plain-text", options: nil) { (item, _) in
+                        if let text = item as? String { sharedText += text + "\n" }
                         group.leave()
                     }
                 } else if provider.hasItemConformingToTypeIdentifier("public.url") {
                     group.enter()
-                    provider.loadItem(forTypeIdentifier: "public.url", options: nil) { (item, error) in
+                    provider.loadItem(forTypeIdentifier: "public.url", options: nil) { (item, _) in
                         if let url = item as? URL {
                             if url.isFileURL {
-                                // Handle File
                                 if let data = try? Data(contentsOf: url) {
                                     sharedFiles.append([
                                         "name": url.lastPathComponent,
@@ -55,64 +57,41 @@ public class ShareHandler {
                         group.leave()
                     }
                 } else if provider.hasItemConformingToTypeIdentifier("public.item") {
-                    // Generic fallback for files that don't match public.url (like some images or PDFs)
                     group.enter()
-                    provider.loadItem(forTypeIdentifier: "public.item", options: nil) { (item, error) in
-                        if let url = item as? URL, url.isFileURL {
-                            if let data = try? Data(contentsOf: url) {
-                                sharedFiles.append([
-                                    "name": url.lastPathComponent,
-                                    "content": data.base64EncodedString(),
-                                    "type": "file"
-                                ])
-                            }
+                    provider.loadItem(forTypeIdentifier: "public.item", options: nil) { (item, _) in
+                        if let url = item as? URL, url.isFileURL,
+                           let data = try? Data(contentsOf: url) {
+                            sharedFiles.append([
+                                "name": url.lastPathComponent,
+                                "content": data.base64EncodedString(),
+                                "type": "file"
+                            ])
                         }
                         group.leave()
                     }
                 }
             }
         }
-        
+
         group.notify(queue: .main) {
             var finalContent: [String: Any] = [:]
-            
             if !sharedText.isEmpty {
                 finalContent["text"] = sharedText.trimmingCharacters(in: .whitespacesAndNewlines)
             }
-            
             if !sharedURLs.isEmpty {
                 finalContent["urls"] = sharedURLs.map { $0.absoluteString }
             }
-            
             if !sharedFiles.isEmpty {
                 finalContent["files"] = sharedFiles
             }
-            
+
             if finalContent.isEmpty {
                 completion(.failure(ShareError.noData))
                 return
             }
-            
-            // Build envelope and send via agent.deeplink → clawsy-service
-            var envelopeData: [String: Any] = [
-                "type": "share",
-                "version": SharedConfig.versionDisplay,
-                "localTime": ISO8601DateFormatter().string(from: Date()),
-                "tz": TimeZone.current.identifier,
-                "content": finalContent
-            ]
-            if SharedConfig.extendedContextEnabled {
-                envelopeData["telemetry"] = NetworkManager.getTelemetry()
-            }
-            let envelope: [String: Any] = ["clawsy_envelope": envelopeData]
-            guard let jsonData = try? JSONSerialization.data(withJSONObject: envelope),
-                  let jsonString = String(data: jsonData, encoding: .utf8) else {
-                completion(.failure(ShareError.failedToSend))
-                return
-            }
-            network.sendOneShot(message: jsonString) { success in
-                completion(success ? .success(()) : .failure(ShareError.failedToSend))
-            }
+
+            poller.sendEnvelope(type: "share", content: finalContent)
+            completion(.success(()))
         }
     }
 }

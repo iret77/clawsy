@@ -50,33 +50,16 @@ enum ScreenshotRunner {
     private static func makeOnboardingView() -> NSView {
         var completed = false
         var presented = true
-        var connected = false
-        var serverNeeded = false
         let view = OnboardingView(
             isPresented: Binding(get: { presented }, set: { presented = $0 }),
             onboardingCompleted: Binding(get: { completed }, set: { completed = $0 }),
-            isGatewayConnected: Binding(get: { connected }, set: { connected = $0 }),
-            serverSetupNeeded: Binding(get: { serverNeeded }, set: { serverNeeded = $0 }),
             onImportSetupCode: { _ in false }
         )
         return sized(host(view), 480, 460)
     }
 
     private static func makeMissionControlView() -> NSView {
-        let store = TaskStore()
-        store.tasks = [
-            ClawsyTask(agentName: "CyberClaw",
-                       title: "Clawsy bauen", progress: 0.72,
-                       statusText: "Kompiliert Sources…",
-                       model: "claude-sonnet-4-6",
-                       startedAt: Date().addingTimeInterval(-180)),
-            ClawsyTask(agentName: "CyberClaw",
-                       title: "README aktualisieren", progress: 1.0,
-                       statusText: "Fertig ✓",
-                       model: "claude-sonnet-4-6",
-                       startedAt: Date().addingTimeInterval(-60)),
-        ]
-        let view = MissionControlView(taskStore: store, networkManager: NetworkManager())
+        let view = MissionControlView(hostManager: HostManager())
         return sized(host(view), 320, 400)
     }
 

@@ -111,8 +111,14 @@ public class ClawsyFileManager {
         return results
     }
     
-    public static func readFile(at path: String) -> Result<String, FileError> {
-        let url = URL(fileURLWithPath: path)
+    /// Read a file within the shared folder. Returns base64-encoded content.
+    /// **All reads MUST go through this method** — it enforces sandbox validation.
+    public static func readFile(baseDir: String, relativePath: String) -> Result<String, FileError> {
+        let expandedBase = baseDir.replacingOccurrences(of: "~", with: NSHomeDirectory())
+        guard let fullPath = sandboxedPath(base: expandedBase, relativePath: relativePath) else {
+            return .failure(.readFailed("Path escapes shared folder"))
+        }
+        let url = URL(fileURLWithPath: fullPath)
         do {
             let data = try Data(contentsOf: url)
             return .success(data.base64EncodedString())
@@ -120,11 +126,24 @@ public class ClawsyFileManager {
             return .failure(.readFailed(error.localizedDescription))
         }
     }
-    
-    public static func writeFile(at path: String, base64Content: String) -> Result<Void, FileError> {
-        guard let data = Data(base64Encoded: base64Content) else { return .failure(.invalidBase64) }
-        let url = URL(fileURLWithPath: path)
-        
+
+    /// Write a file within the shared folder from base64-encoded content.
+    /// **All writes MUST go through this method** — it enforces sandbox validation.
+    /// Parent directories are created automatically.
+    public static func writeFile(baseDir: String, relativePath: String, base64Content: String) -> Result<Void, FileError> {
+        let expandedBase = baseDir.replacingOccurrences(of: "~", with: NSHomeDirectory())
+        guard let fullPath = sandboxedPath(base: expandedBase, relativePath: relativePath) else {
+            return .failure(.writeFailed("Path escapes shared folder"))
+        }
+        guard let data = Data(base64Encoded: base64Content) else {
+            return .failure(.invalidBase64)
+        }
+        let url = URL(fileURLWithPath: fullPath)
+
+        // Auto-create parent directories
+        let parent = url.deletingLastPathComponent()
+        try? Foundation.FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+
         do {
             try data.write(to: url)
             return .success(())
@@ -133,9 +152,15 @@ public class ClawsyFileManager {
         }
     }
 
-    public static func createDirectory(at path: String) -> Result<Void, FileError> {
+    /// Create a directory within the shared folder.
+    /// **Enforces sandbox validation** — path must stay within baseDir.
+    public static func createDirectory(baseDir: String, relativePath: String) -> Result<Void, FileError> {
+        let expandedBase = baseDir.replacingOccurrences(of: "~", with: NSHomeDirectory())
+        guard let fullPath = sandboxedPath(base: expandedBase, relativePath: relativePath) else {
+            return .failure(.createFailed("Path escapes shared folder"))
+        }
         let fileManager = Foundation.FileManager.default
-        let url = URL(fileURLWithPath: path)
+        let url = URL(fileURLWithPath: fullPath)
         do {
             try fileManager.createDirectory(at: url, withIntermediateDirectories: true, attributes: nil)
             return .success(())
@@ -143,12 +168,17 @@ public class ClawsyFileManager {
             return .failure(.createFailed(error.localizedDescription))
         }
     }
-    
-    public static func deleteFile(at path: String) -> Result<Void, FileError> {
+
+    /// Delete a file or directory within the shared folder.
+    /// **Enforces sandbox validation** — path must stay within baseDir.
+    public static func deleteFile(baseDir: String, relativePath: String) -> Result<Void, FileError> {
+        let expandedBase = baseDir.replacingOccurrences(of: "~", with: NSHomeDirectory())
+        guard let fullPath = sandboxedPath(base: expandedBase, relativePath: relativePath) else {
+            return .failure(.deleteFailed("Path escapes shared folder"))
+        }
         let fileManager = Foundation.FileManager.default
-        let url = URL(fileURLWithPath: path)
         do {
-            try fileManager.removeItem(at: url)
+            try fileManager.removeItem(atPath: fullPath)
             return .success(())
         } catch {
             return .failure(.deleteFailed(error.localizedDescription))

@@ -9,17 +9,21 @@
     <key>CFBundleIdentifier</key>
     <string>ai.clawsy</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.9.33</string>
+    <string>1.0.0</string>
     <key>CFBundleVersion</key>
-    <string>155</string>
+    <string>200</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleExecutable</key>
     <string>Clawsy</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
     <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
+    <string>14.0</string>
     <key>CFBundleURLTypes</key>
     <array>
         <dict>
@@ -37,6 +41,8 @@
     <true/>
     <key>NSCameraUsageDescription</key>
     <string>Clawsy needs camera access to send snapshots to your AI agent when requested.</string>
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>Clawsy needs screen recording access to capture screenshots for your AI agent.</string>
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleLocalizations</key>

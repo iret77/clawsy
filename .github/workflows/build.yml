@@ -1,27 +1,33 @@
-name: Build Clawsy Ecosystem
+name: Build Clawsy
 
 on:
   push:
-    branches: [ "main", "develop" ]
+    branches: [ "main" ]
     tags: [ "v*" ]
   pull_request:
-    branches: [ "main", "develop" ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 permissions:
   contents: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
-    name: Build macOS Ecosystem
+    name: Build macOS App
     runs-on: macos-latest
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up Xcode
       run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+    - name: Install XcodeGen
+      run: brew install xcodegen
 
     # Inject Version if Tagged
     - name: Set Version from Tag
@@ -29,32 +35,123 @@ jobs:
       run: |
         TAG_NAME=${GITHUB_REF#refs/tags/v}
         echo "Setting version to $TAG_NAME"
-        
-        # Update Info.plist for ClawsyMac (Repo Root)
+
+        # Update Info.plist for ClawsyMac
         /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $TAG_NAME" Info.plist
         /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" Info.plist
-        
-        # Update Info.plist for ClawsyMacShare (if needed)
-        if [ -f Sources/ClawsyMacShare/Info.plist ]; then
-           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $TAG_NAME" Sources/ClawsyMacShare/Info.plist
-           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" Sources/ClawsyMacShare/Info.plist
-        fi
+
+        # Update Info.plist for extensions
+        for plist in Sources/ClawsyMacShare/Info.plist Sources/ClawsyFinderSync/Info.plist; do
+          if [ -f "$plist" ]; then
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $TAG_NAME" "$plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" "$plist"
+          fi
+        done
+
+    - name: Import Apple Developer Certificate
+      env:
+        CERTIFICATE_BASE64: ${{ secrets.CERTIFICATE_BASE64 }}
+        CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+      run: |
+        KEYCHAIN="build.keychain"
+        KEYCHAIN_PW="$(openssl rand -hex 16)"
+
+        # Decode the p12 certificate from the GitHub secret
+        echo "$CERTIFICATE_BASE64" | base64 --decode > /tmp/certificate.p12
+
+        # Create a temporary build keychain
+        security create-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+        security default-keychain -s "$KEYCHAIN"
+        security unlock-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+        security set-keychain-settings -t 3600 "$KEYCHAIN"
+
+        # Import the Apple Developer ID Application certificate
+        security import /tmp/certificate.p12 -k "$KEYCHAIN" \
+          -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+
+        # Allow codesign to access the keychain without UI prompt
+        security set-key-partition-list -S apple-tool:,apple: \
+          -s -k "$KEYCHAIN_PW" "$KEYCHAIN"
+
+        # Add to search list so codesign can find it
+        security list-keychains -s "$KEYCHAIN" $(security list-keychains | tr -d '"')
+
+        # Verify the identity is available
+        security find-identity -v -p codesigning "$KEYCHAIN"
+
+        # Cleanup
+        rm -f /tmp/certificate.p12
 
     - name: Build and Package
+      env:
+        CODESIGN_IDENTITY: "Developer ID Application: high5 ventures GmbH (VG5X6JCLGF)"
       run: |
         chmod +x build.sh
         ./build.sh
+
+    - name: Notarize App
+      continue-on-error: true
+      env:
+        APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+        APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+      run: |
+        # Write the API key to a file notarytool can read
+        mkdir -p ~/.private_keys
+        echo "$APPSTORE_PRIVATE_KEY" > ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+
+        # Create a zip for notarization (-y preserves framework symlinks)
+        cd .build/app && zip -yr ../../Clawsy-notarize.zip Clawsy.app && cd ../..
+
+        KEY_ARGS="--key ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8 --key-id $APPSTORE_KEY_ID --issuer $APPSTORE_ISSUER_ID"
+
+        # Submit to Apple and wait (30 min — new accounts get slower scans)
+        xcrun notarytool submit Clawsy-notarize.zip \
+          $KEY_ARGS --wait --timeout 30m 2>&1 | tee /tmp/notary.out || true
+
+        SUB_ID=$(grep "id:" /tmp/notary.out | head -1 | awk '{print $2}')
+
+        # If timed out, poll status once more
+        if grep -q "Timeout" /tmp/notary.out && [ -n "$SUB_ID" ]; then
+          echo "⏳ Timeout reached — checking final status..."
+          xcrun notarytool info "$SUB_ID" $KEY_ARGS 2>&1 | tee -a /tmp/notary.out
+        fi
+
+        # If notarization failed, fetch the detailed log from Apple
+        if grep -q "status: Invalid" /tmp/notary.out; then
+          echo "❌ Notarization rejected — fetching Apple's log:"
+          xcrun notarytool log "$SUB_ID" $KEY_ARGS notary-log.json || true
+          cat notary-log.json
+          rm -f Clawsy-notarize.zip ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+          exit 1
+        fi
+
+        # Fail if notarization didn't succeed
+        if ! grep -q "status: Accepted" /tmp/notary.out; then
+          echo "❌ Notarization did not succeed. Check output above."
+          rm -f Clawsy-notarize.zip ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+          exit 1
+        fi
+
+        # Staple the notarization ticket into the app bundle
+        xcrun stapler staple .build/app/Clawsy.app
+
+        # Verify
+        spctl -a -vvv -t execute .build/app/Clawsy.app
+
+        # Cleanup
+        rm -f Clawsy-notarize.zip ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
 
     - name: Zip App
       run: |
         cp CLAWSY.md .build/app/CLAWSY.md
         cd .build/app
-        zip -r ../../Clawsy.app.zip Clawsy.app CLAWSY.md
+        zip -yr ../../Clawsy.app.zip Clawsy.app CLAWSY.md
 
     - name: Upload Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
-        name: Clawsy-Ecosystem
+        name: Clawsy
         path: Clawsy.app.zip
 
     - name: Create Release

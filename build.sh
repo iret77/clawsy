@@ -2,284 +2,153 @@
 set -e
 
 # Config
-BINARY_NAME="ClawsyMac"
 APP_NAME="Clawsy"
-BUNDLE_ID="ai.clawsy"
+SCHEME="ClawsyMac"
 BUILD_DIR=".build"
-RELEASE_DIR="$BUILD_DIR/apple/Products/Release"
+DERIVED_DATA="$BUILD_DIR/DerivedData"
 APP_BUNDLE="$BUILD_DIR/app/$APP_NAME.app"
-CONTENTS_DIR="$APP_BUNDLE/Contents"
-MACOS_DIR="$CONTENTS_DIR/MacOS"
-RESOURCES_DIR="$CONTENTS_DIR/Resources"
-PLUGINS_DIR="$CONTENTS_DIR/PlugIns"
-SHARE_EXT_BUNDLE="$PLUGINS_DIR/ClawsyShare.appex"
-FINDERSYNC_BUNDLE="$PLUGINS_DIR/ClawsyFinderSync.appex"
+SIGN_ID="${CODESIGN_IDENTITY:--}"
+
+# Hardened Runtime requires an Apple-issued certificate (Developer ID /
+# Apple Development).  The `disable-library-validation` entitlement that
+# would allow loading self-signed frameworks is a *restricted* entitlement
+# — macOS silently ignores it when the cert is not Apple-issued.  Result:
+# dyld kills the app at launch ("different Team IDs").
+#
+# Enable HR only when the signing identity is a real Apple cert.
+case "$SIGN_ID" in
+    "Developer ID"*|"Apple Development"*|"Apple Distribution"*|"3rd Party Mac"*)
+        HARDENED_RUNTIME=YES ;;
+    *)
+        HARDENED_RUNTIME=NO ;;
+esac
+
+echo "🔑 Signing identity: $SIGN_ID"
+echo "🛡️  Hardened Runtime: $HARDENED_RUNTIME"
 
 echo "🧹 Cleaning up..."
 rm -rf "$BUILD_DIR/app"
-mkdir -p "$MACOS_DIR"
-mkdir -p "$RESOURCES_DIR"
-mkdir -p "$SHARE_EXT_BUNDLE/Contents/MacOS"
-mkdir -p "$SHARE_EXT_BUNDLE/Contents/Resources"
-mkdir -p "$FINDERSYNC_BUNDLE/Contents/MacOS"
-mkdir -p "$FINDERSYNC_BUNDLE/Contents/Resources"
+mkdir -p "$BUILD_DIR/app"
 
-echo "🦞 Building Clawsy Ecosystem (Release)..."
-# Build for universal (includes arm64 and x86_64)
-swift build -c release --arch arm64 --arch x86_64
+# ── Step 1: Generate Xcode project from project.yml ─────────────────
+if ! command -v xcodegen &> /dev/null; then
+    echo "📦 Installing XcodeGen..."
+    brew install xcodegen
+fi
 
+echo "🔧 Generating Xcode project..."
+xcodegen generate --spec project.yml
+
+# ── Step 2: Generate icons from source assets ──────────────────────
+echo "🎨 Generating icons..."
+bash scripts/generate_icons.sh
+
+# ── Step 3: Build with xcodebuild ───────────────────────────────────
+echo "🦞 Building $APP_NAME (Release, Universal)..."
+xcodebuild \
+    -project Clawsy.xcodeproj \
+    -scheme "$SCHEME" \
+    -configuration Release \
+    -derivedDataPath "$DERIVED_DATA" \
+    -arch arm64 -arch x86_64 \
+    ONLY_ACTIVE_ARCH=NO \
+    CODE_SIGN_IDENTITY="$SIGN_ID" \
+    CODE_SIGN_STYLE=Manual \
+    ENABLE_HARDENED_RUNTIME=$HARDENED_RUNTIME \
+    build
+
+# ── Step 4: Copy built .app to output directory ─────────────────────
 echo "📦 Packaging $APP_NAME.app..."
+BUILT_APP=$(find "$DERIVED_DATA" -name "$APP_NAME.app" -type d -path "*/Release/*" | head -n 1)
 
-# 1. Copy Main Binary
-cp "$RELEASE_DIR/$BINARY_NAME" "$MACOS_DIR/$APP_NAME"
-chmod 755 "$MACOS_DIR/$APP_NAME"
-
-# 2. Copy Share Extension Binary
-if [ -f "$RELEASE_DIR/libClawsyMacShare.dylib" ]; then
-    cp "$RELEASE_DIR/libClawsyMacShare.dylib" "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
-elif [ -f "$RELEASE_DIR/ClawsyMacShare" ]; then
-     cp "$RELEASE_DIR/ClawsyMacShare" "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
-fi
-chmod 755 "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
-
-# 2b. Copy FinderSync Extension Binary
-if [ -f "$RELEASE_DIR/libClawsyFinderSync.dylib" ]; then
-    cp "$RELEASE_DIR/libClawsyFinderSync.dylib" "$FINDERSYNC_BUNDLE/Contents/MacOS/ClawsyFinderSync"
-elif [ -f "$RELEASE_DIR/ClawsyFinderSync" ]; then
-    cp "$RELEASE_DIR/ClawsyFinderSync" "$FINDERSYNC_BUNDLE/Contents/MacOS/ClawsyFinderSync"
-fi
-if [ -f "$FINDERSYNC_BUNDLE/Contents/MacOS/ClawsyFinderSync" ]; then
-    chmod 755 "$FINDERSYNC_BUNDLE/Contents/MacOS/ClawsyFinderSync"
-    echo "✅ FinderSync extension binary copied"
-else
-    echo "⚠️  FinderSync binary not found – extension will be missing"
-fi
-
-# 3. Handle Icons and Assets
-echo "🎨 Packaging Icons and Assets..."
-if [ -f "scripts/generate_icons.sh" ]; then
-    chmod +x scripts/generate_icons.sh
-    ./scripts/generate_icons.sh
-fi
-
-# Create a proper .iconset and then .icns for the Finder
-ICONSET_DIR="$BUILD_DIR/AppIcon.iconset"
-mkdir -p "$ICONSET_DIR"
-SRC_ICONS="Sources/ClawsyMac/Assets.xcassets/AppIcon.appiconset"
-
-# Precise mapping for iconutil - ensures NO empty files
-for size in 16 32 128 256 512; do
-    cp "$SRC_ICONS/icon_${size}x${size}.png" "$ICONSET_DIR/icon_${size}x${size}.png"
-    double=$((size * 2))
-    if [ "$size" -ne "512" ]; then
-        cp "$SRC_ICONS/icon_${double}x${double}.png" "$ICONSET_DIR/icon_${size}x${size}@2x.png"
-    else
-        cp "$SRC_ICONS/icon_1024x1024.png" "$ICONSET_DIR/icon_512x512@2x.png"
-    fi
-done
-
-if command -v iconutil &> /dev/null; then
-    echo "Generating AppIcon.icns..."
-    iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns"
-fi
-
-# Compile Assets.car
-if command -v actool &> /dev/null; then
-    actool "Sources/ClawsyMac/Assets.xcassets" \
-        --compile "$RESOURCES_DIR" \
-        --platform macosx \
-        --minimum-deployment-target 13.0 \
-        --app-icon AppIcon \
-        --output-partial-info-plist "$BUILD_DIR/partial.plist"
-fi
-
-# --- 📦 Critical Fix: Resource Bundles ---
-echo "📦 Locating and embedding Shared Resource Bundle..."
-# SPM generates a bundle for resources. We MUST include it.
-SHARED_BUNDLE=$(find "$BUILD_DIR" -name "Clawsy_ClawsyShared.bundle" -type d | head -n 1)
-if [ -d "$SHARED_BUNDLE" ]; then
-    cp -R "$SHARED_BUNDLE" "$RESOURCES_DIR/"
-    echo "✅ Embedded ClawsyShared bundle"
-else
-    echo "❌ Error: Could not find Shared Resource Bundle. App will crash at startup."
+if [ -z "$BUILT_APP" ]; then
+    echo "❌ Error: Could not find built app bundle"
     exit 1
 fi
 
-# 4. Create PkgInfo
-echo -n "APPL????" > "$CONTENTS_DIR/PkgInfo"
+cp -R "$BUILT_APP" "$APP_BUNDLE"
 
-# 5. Create Final Info.plist
-# Extract version from source Info.plist (which might have been patched by CI)
-SOURCE_PLIST="Info.plist"
-if [ -f "$SOURCE_PLIST" ]; then
-    VERSION_SHORT=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$SOURCE_PLIST" 2>/dev/null || echo "0.2.3")
-    VERSION_BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$SOURCE_PLIST" 2>/dev/null || echo "154")
+# ── Step 5: Verify CLAWSY.md ───────────────────────────────────────
+# CLAWSY.md is included via project.yml resources — no manual copy
+# needed. Copying after xcodebuild would break the code signature seal.
+if [ -f "$APP_BUNDLE/Contents/Resources/CLAWSY.md" ]; then
+    echo "✅ CLAWSY.md bundled by xcodebuild"
 else
-    VERSION_SHORT="0.2.3"
-    VERSION_BUILD="154"
+    echo "⚠️  CLAWSY.md missing from bundle resources"
 fi
 
-echo "ℹ️ Using Version: $VERSION_SHORT ($VERSION_BUILD)"
+# ── Step 6: Re-sign bundle for consistent Team ID ─────────────────
+# Re-sign all components with the same identity (inside-out) to
+# guarantee matching Team IDs.
+echo "🔏 Re-signing app bundle (component-level)..."
 
-# Removing NSPrincipalClass as it can conflict with modern @main apps
-cat <<EOF > "$CONTENTS_DIR/Info.plist"
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>$APP_NAME</string>
-    <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
-    <key>CFBundleIdentifier</key>
-    <string>$BUNDLE_ID</string>
-    <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
-    <key>CFBundleName</key>
-    <string>$APP_NAME</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleShortVersionString</key>
-    <string>$VERSION_SHORT</string>
-    <key>CFBundleSignature</key>
-    <string>????</string>
-    <key>CFBundleVersion</key>
-    <string>$VERSION_BUILD</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
-    <key>LSUIElement</key>
-    <true/>
-    <key>NSHighResolutionCapable</key>
-    <true/>
-    <key>NSCameraUsageDescription</key>
-    <string>Clawsy needs camera access to send snapshots to your AI agent when requested.</string>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>Clawsy may use the microphone when capturing video from a camera device.</string>
-    <key>NSAppTransportSecurity</key>
-    <dict>
-        <key>NSAllowsArbitraryLoads</key>
-        <true/>
-    </dict>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
-    <key>CFBundleLocalizations</key>
-    <array>
-        <string>en</string>
-        <string>de</string>
-    </array>
-</dict>
-</plist>
-EOF
-
-# Merge actool results
-if [ -f "$BUILD_DIR/partial.plist" ] && command -v /usr/libexec/PlistBuddy &> /dev/null; then
-    /usr/libexec/PlistBuddy -c "Merge $BUILD_DIR/partial.plist" "$CONTENTS_DIR/Info.plist"
+if [ "$HARDENED_RUNTIME" = "YES" ]; then
+    CODESIGN_OPTS="--options runtime --timestamp"
+else
+    CODESIGN_OPTS=""
 fi
 
-# 6. Share Extension Info.plist
-cat <<EOF > "$SHARE_EXT_BUNDLE/Contents/Info.plist"
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>ClawsyShare</string>
-    <key>CFBundleIdentifier</key>
-    <string>$BUNDLE_ID.ShareExtension</string>
-    <key>CFBundleName</key>
-    <string>Clawsy Share</string>
-    <key>CFBundlePackageType</key>
-    <string>XPC!</string>
-    <key>CFBundleShortVersionString</key>
-    <string>$VERSION_SHORT</string>
-    <key>CFBundleVersion</key>
-    <string>$VERSION_BUILD</string>
-    <key>NSExtension</key>
-    <dict>
-        <key>NSExtensionAttributes</key>
-        <dict>
-            <key>NSExtensionActivationRule</key>
-            <string>TRUEPREDICATE</string>
-        </dict>
-        <key>NSExtensionPointIdentifier</key>
-        <string>com.apple.share-services</string>
-        <key>NSExtensionPrincipalClass</key>
-        <string>ClawsyMacShare.ShareViewController</string>
-    </dict>
-</dict>
-</plist>
-EOF
+# 6a: Bundles inside frameworks (must be signed before the framework)
+for fw in "$APP_BUNDLE"/Contents/Frameworks/*.framework; do
+    [ -d "$fw" ] || continue
+    for bundle in "$fw"/Versions/A/Resources/*.bundle; do
+        [ -d "$bundle" ] && codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS "$bundle"
+    done
+    codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS "$fw"
+done
 
-# 7a. Bundle CLAWSY.md (agent documentation) into app Resources
-if [ -f "CLAWSY.md" ]; then
-    cp "CLAWSY.md" "$RESOURCES_DIR/CLAWSY.md"
-    echo "✅ Bundled CLAWSY.md into app resources"
+# 6b: Extensions — explicit entitlements (avoid preserving get-task-allow)
+codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS \
+    --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements \
+    "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex"
+codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS \
+    --entitlements Sources/ClawsyFinderSync/ClawsyFinderSync.entitlements \
+    "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex"
+
+# 6c: Main app (outermost, signed last) — explicit entitlements
+codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS \
+    --entitlements ClawsyMac.entitlements "$APP_BUNDLE"
+
+# ── Step 7: Verify ──────────────────────────────────────────────────
+echo "🔍 Verifying bundle structure..."
+
+# Check extensions are embedded
+if [ -d "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex" ]; then
+    echo "✅ Share Extension embedded"
+else
+    echo "⚠️  Share Extension missing from PlugIns/"
 fi
 
-# 0b. Sync ClawsyShared strings → ClawsyMac/Resources so SPM embeds them in Bundle.main
-mkdir -p Sources/ClawsyMac/Resources/en.lproj Sources/ClawsyMac/Resources/de.lproj
-cp Sources/ClawsyShared/Resources/en.lproj/Localizable.strings Sources/ClawsyMac/Resources/en.lproj/
-cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings Sources/ClawsyMac/Resources/de.lproj/
-
-# 7. Copy & compile Localizations (plutil converts UTF-8 text → binary plist,
-#    which is the format macOS NSBundle expects — same as Xcode's built-in step)
-mkdir -p "$RESOURCES_DIR/en.lproj"
-mkdir -p "$RESOURCES_DIR/de.lproj"
-cp Sources/ClawsyShared/Resources/en.lproj/Localizable.strings "$RESOURCES_DIR/en.lproj/"
-cp Sources/ClawsyShared/Resources/de.lproj/Localizable.strings "$RESOURCES_DIR/de.lproj/"
-echo "✅ Strings copied as UTF-8 (plutil not needed — NSBundle reads text .strings natively)"
-
-# 8. Copy Update Installer Script
-if [ -f "scripts/update_installer.sh" ]; then
-    echo "📜 Packaging Update Installer..."
-    cp "scripts/update_installer.sh" "$RESOURCES_DIR/update_installer.sh"
-    chmod 755 "$RESOURCES_DIR/update_installer.sh"
+if [ -d "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex" ]; then
+    echo "✅ FinderSync Extension embedded"
+else
+    echo "⚠️  FinderSync Extension missing from PlugIns/"
 fi
 
-# 6b. FinderSync Extension Info.plist
-cat <<EOF > "$FINDERSYNC_BUNDLE/Contents/Info.plist"
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>ClawsyFinderSync</string>
-    <key>CFBundleIdentifier</key>
-    <string>$BUNDLE_ID.FinderSync</string>
-    <key>CFBundleName</key>
-    <string>Clawsy</string>
-    <key>CFBundlePackageType</key>
-    <string>XPC!</string>
-    <key>CFBundleShortVersionString</key>
-    <string>$VERSION_SHORT</string>
-    <key>CFBundleVersion</key>
-    <string>$VERSION_BUILD</string>
-    <key>NSExtension</key>
-    <dict>
-        <key>NSExtensionPointIdentifier</key>
-        <string>com.apple.FinderSync</string>
-        <key>NSExtensionPrincipalClass</key>
-        <string>ClawsyFinderSync.FinderSyncExtension</string>
-    </dict>
-</dict>
-</plist>
-EOF
-
-echo "🛡 Signing (Ad-hoc) - Final Sequoia Integrity Scrub..."
-# Sign each component from inside out
-codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE/Contents/MacOS/ClawsyShare"
-codesign --force --options runtime --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements --sign - "$SHARE_EXT_BUNDLE"
-if [ -f "$FINDERSYNC_BUNDLE/Contents/MacOS/ClawsyFinderSync" ]; then
-    codesign --force --options runtime --entitlements Sources/ClawsyFinderSync/ClawsyFinderSync.entitlements --sign - "$FINDERSYNC_BUNDLE/Contents/MacOS/ClawsyFinderSync"
-    codesign --force --options runtime --entitlements Sources/ClawsyFinderSync/ClawsyFinderSync.entitlements --sign - "$FINDERSYNC_BUNDLE"
-fi
-codesign --force --options runtime --entitlements ClawsyMac.entitlements --sign - "$MACOS_DIR/$APP_NAME"
-# The most important step: The deep sign that creates the final CodeResources
-codesign --force --deep --options runtime --entitlements ClawsyMac.entitlements --sign - "$APP_BUNDLE"
-
-# Final verification
-echo "🔍 Verifying Signature and Bundle..."
+# Verify code signature
 codesign -vvv --deep --strict "$APP_BUNDLE"
 
+# Verify extension entitlements are preserved
+echo "🔐 Verifying extension entitlements..."
+if codesign -d --entitlements :- "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex" 2>/dev/null | grep -q "FinderSync.HostBundleIdentifier"; then
+    echo "✅ FinderSync entitlements OK"
+else
+    echo "⚠️  FinderSync missing HostBundleIdentifier entitlement!"
+fi
+if codesign -d --entitlements :- "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex" 2>/dev/null | grep -q "application-groups"; then
+    echo "✅ Share Extension entitlements OK"
+else
+    echo "⚠️  Share Extension missing app-group entitlement!"
+fi
+
+# Show signing identity & Team ID for all components
+echo "🔑 Signing details:"
+for component in "$APP_BUNDLE" "$APP_BUNDLE"/Contents/Frameworks/*.framework "$APP_BUNDLE"/Contents/PlugIns/*.appex; do
+    [ -e "$component" ] || continue
+    echo "  $(basename "$component"):"
+    codesign -dvv "$component" 2>&1 | grep -E "^(Authority|TeamIdentifier|Identifier)" | sed 's/^/    /' || true
+done
+
+echo ""
 echo "✅ Build successful!"
 echo "📂 App Bundle: $APP_BUNDLE"

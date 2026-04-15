@@ -11,6 +11,9 @@
 "NOTIFICATION_TITLE" = "Clawsy Dateisync";
 "NOTIFICATION_BODY_DOWNLOADING" = "Lade herunter: %@";
 "NOTIFICATION_BODY_UPLOADING" = "Lade hoch: %@";
+"NOTIFICATION_BODY_COPYING" = "Kopiere: %@";
+"NOTIFICATION_BODY_BATCH" = "Batch-Operation: %@ Ops";
+"NOTIFICATION_BODY_CHECKSUM" = "Prüfsumme: %@";
 "REVOKE_PERMISSION" = "Zugriff widerrufen";
 "CLIPBOARD_SYNC" = "Zwischenablage-Sync";
 "CHAR_COUNT %lld" = "%lld Zeichen";
@@ -38,14 +41,17 @@
 "LIST_CAMERAS" = "Kameras auflisten";
 "CONNECT" = "Verbinden";
 "DISCONNECT" = "Trennen";
+"RECONNECT" = "Erneut verbinden";
 "SETTINGS" = "Einstellungen...";
 "DEBUG_LOG" = "Debug-Protokoll";
+"LOG_WINDOW_TITLE" = "Protokoll";
 "QUIT" = "Beenden";
 
 /* Status */
 "STATUS_CONNECTED" = "Verbunden";
 "STATUS_DISCONNECTED" = "Getrennt";
 "STATUS_CONNECTING %lld" = "Verbinde (Versuch %lld)…";
+"STATUS_HANDSHAKING" = "Authentifizierung…";
 "STATUS_OFFLINE_REFUSED" = "Offline (Server verweigert)";
 "STATUS_OFFLINE_TIMEOUT" = "Offline (Zeitüberschreitung)";
 "STATUS_ERROR" = "Fehler";
@@ -87,6 +93,7 @@
 "NO_DATA" = "Noch keine Daten empfangen.";
 "SELECT_TEXT_COPY" = "Text zum Kopieren auswählen.";
 "COPY_ALL" = "Alles kopieren";
+"COPIED" = "Kopiert";
 
 /* Shared Folder */
 "FOLDER_MISSING_TITLE" = "Ordner nicht gefunden";
@@ -199,6 +206,7 @@
 "ONBOARDING_OPEN_SETTINGS" = "Zugriff erlauben";
 "ONBOARDING_FINDERSYNC" = "Finder-Erweiterung";
 "ONBOARDING_FINDERSYNC_DESC" = "Fügt 'An Agent senden' zum Rechtsklick-Menü im Finder hinzu. Muss in den Systemeinstellungen aktiviert werden.";
+"ONBOARDING_FINDERSYNC_OPEN_SETTINGS" = "Finder-Einstellungen öffnen";
 "ONBOARDING_ENABLE" = "Aktivieren";
 "ONBOARDING_OPTIONAL" = "optional";
 "ONBOARDING_SKIP" = "Später";
@@ -246,7 +254,9 @@
 "REPAIR_CONNECTION_HELP" = "Verwende dies, wenn die Verbindung nach einem Gateway-Neustart abgelehnt wird. Löscht den gespeicherten Geräte-Token und startet eine neue Kopplung.";
 
 // Settings tabs
+"SETTINGS_TAB_GENERAL" = "Allgemein";
 "SETTINGS_TAB_CONNECTION" = "Verbindung";
+"SETTINGS_TAB_SHORTCUTS" = "Kurzbefehle";
 "SETTINGS_TAB_FEATURES" = "Funktionen";
 "SETTINGS_TAB_UPDATES" = "Updates";
 
@@ -275,6 +285,16 @@
 "SERVER_SETUP_NEEDED_DESC" = "Verbindung zum OpenClaw Gateway fehlgeschlagen. Stelle sicher, dass OpenClaw installiert ist und das Gateway läuft.";
 "SERVER_SETUP_COPY_PROMPT" = "Installationsanweisung kopieren";
 "SERVER_SETUP_PROMPT_COPIED" = "Kopiert!";
+
+
+// SSH-Only-Modus
+"SSH_ONLY_MODE" = "Nur SSH";
+"SSH_ONLY_MODE_DESC" = "Direktverbindung überspringen, immer SSH-Tunnel verwenden";
+
+// Node-Modus (Shared Folder)
+"NODE_MODE_SECTION" = "Shared Folder";
+"NODE_MODE_LABEL" = "Node-Modus (Shared Folder)";
+"NODE_MODE_DESC" = "Zweite Verbindung, damit Agenten per Datei-Kommandos auf den Shared Folder zugreifen.";
 
 // Gateway Connection (Onboarding Step 0)
 "ONBOARDING_GATEWAY_TITLE" = "Mit Gateway verbinden";
@@ -337,8 +357,49 @@
 
 // Agent Picker
 "AGENT_PICKER_LABEL" = "Aktiver Agent";
-"AGENT_PICKER_DEFAULT" = "Standard (clawsy-service)";
-"NOTIFICATION_BODY_CHECKSUM" = "Prüfsumme: %@";
+"AGENT_PICKER_DEFAULT" = "Standard (Hauptsession)";
+
+// Settings sections
+"SETTINGS_SECTION_CONNECTION" = "Verbindung";
+"SETTINGS_SECTION_SHARED_FOLDER" = "Geteilter Ordner";
+"SETTINGS_SECTION_HOTKEYS" = "Tastenkürzel";
+"SETTINGS_SECTION_TOOLS" = "Werkzeuge";
+"SETTINGS_CHANGE_FOLDER" = "Ändern…";
+"SETTINGS_CHECK_UPDATES" = "Nach Updates suchen";
+
+// Add Host
+"ADD_HOST_SECTION_IDENTITY" = "Identität";
+"ADD_HOST_SECTION_COLOR" = "Farbe";
+"ADD_HOST_SECTION_CONNECTION" = "Verbindung";
+"ADD_HOST_SECTION_SSH" = "SSH (optional)";
+
+// Pairing
+"PAIRING_SEND_HINT" = "Sende das an deinen OpenClaw-Agent:";
+"PAIRING_TERMINAL_COMMAND" = "Terminal-Befehl";
+
+// MissionControl
+"MISSION_CONTROL_CONNECT_HINT" = "Verbinde dich, um Agent-Aktivität zu sehen";
+"MISSION_CONTROL_RECENT" = "Zuletzt";
+
+// Onboarding connect modes
+"ONBOARDING_MODE_SETUP_CODE" = "Setup-Code";
+"ONBOARDING_MODE_TAILSCALE" = "Tailscale";
+"ONBOARDING_MODE_MANUAL" = "Manuell";
+
+// Rule Editor
+"RULE_FILTER" = "Filter";
+
+// QuickSend
+"QUICK_SEND_CLEAR" = "Löschen";
+
+// Agent Response
+"RESPONSE_VIEW" = "Anzeigen";
+"RESPONSE_REPLY" = "Antworten";
+
+// Response Channel Settings
+"SETTINGS_SECTION_RESPONSE" = "Agent-Antworten";
+"SETTINGS_RESPONSE_CHANNEL_HINT" = "Antworten auf Quick Send erscheinen als macOS-Benachrichtigung und Antwortfenster.";
+"SETTINGS_RESPONSE_CLAWSY" = "Benachrichtigung + Panel";
 
 // Agent Identity (named agent dialogs)
 "GENERIC_AGENT" = "Der Agent";
@@ -349,5 +410,99 @@
 "ALERT_SCREENSHOT_NAMED_BODY" = "%@ möchte deinen Bildschirm sehen.";
 "REMOTE_NAMED_USER_ASKING" = "%@ bittet um eine Aufnahme.";
 
-"RULE_FILTER_PLACEHOLDER" = "Filter (z.B. *.pdf)";
+// Onboarding v2
+"ONBOARDING_WELCOME_TITLE" = "Gib deinem KI-Agent\nAugen und Hände auf deinem Mac";
+"ONBOARDING_WELCOME_DESC" = "Clawsy verbindet deine OpenClaw-Agents mit deinem Mac — Screenshots, Zwischenablage, Dateien und Kamera — mit voller Kontrolle über geteilte Daten.";
+"ONBOARDING_SECURITY_NOTE" = "Deine Daten bleiben zwischen deinem Mac und deinem OpenClaw-Server. Keine Cloud, kein Tracking.";
+"ONBOARDING_CONNECT_TITLE" = "Mit deinem OpenClaw-Server verbinden";
+"ONBOARDING_SETUP_CODE_HINT" = "Setup-Code von deinem OpenClaw-Agent oder Admin einfügen:";
+"ONBOARDING_SETUP_CODE_PLACEHOLDER" = "clawsy://pair?code=... oder Base64-Code";
+"ONBOARDING_SETUP_CODE_ERROR" = "Ungültiger Setup-Code. Bitte überprüfen und erneut versuchen.";
+"ONBOARDING_SETUP_CODE_BUTTON" = "Mit Setup-Code verbinden";
+"ONBOARDING_TAILSCALE_HINT" = "Tailscale-Hostname eingeben (z.B. agenthost.tailnet-name.ts.net):";
+"ONBOARDING_TAILSCALE_BUTTON" = "Über Tailscale verbinden";
+"ONBOARDING_MANUAL_HINT" = "Verbindungsdaten eingeben:";
+"ONBOARDING_MANUAL_BUTTON" = "Verbindung testen";
+"ONBOARDING_CONNECTING" = "Verbinde...";
+"ONBOARDING_CONNECTED" = "Verbunden!";
+"ONBOARDING_CONNECTION_FAILED" = "Verbindung fehlgeschlagen";
+"ONBOARDING_PERMISSIONS_TITLE" = "Berechtigungen";
+"ONBOARDING_PERMISSIONS_DESC" = "Clawsy benötigt einige macOS-Berechtigungen. Erteile sie unten — du kannst sie jederzeit in den Systemeinstellungen ändern.";
+"ONBOARDING_PERMISSIONS_ALL_GRANTED" = "Alle erforderlichen Berechtigungen erteilt!";
+"ONBOARDING_READY_TITLE" = "Alles bereit!";
+"ONBOARDING_READY_MENUBAR" = "Clawsy lebt in deiner Menüleiste — klick auf das Symbol";
+"ONBOARDING_READY_QUICKSEND" = "⌘⇧K für Quick Send von überall";
+"ONBOARDING_READY_SCREENSHOT" = "⌘⇧S für sofortigen Screenshot an den Agent";
+"ONBOARDING_READY_FOLDER" = "Dateien über den Clawsy-Ordner im Finder teilen";
+"ONBOARDING_LETS_GO" = "Los geht's";
+"ONBOARDING_FINISH" = "Fertig";
+"ONBOARDING_NEXT" = "Weiter";
+"ONBOARDING_BACK" = "Zurück";
+
+// Permissions
+"PERM_SCREEN_RECORDING" = "Bildschirmaufnahme";
+"PERM_SCREEN_RECORDING_DESC" = "Erforderlich für Screenshots an deinen Agent.";
+"PERM_CAMERA" = "Kamera";
+"PERM_CAMERA_DESC" = "Erforderlich für Fotos mit deiner Mac- oder iPhone-Kamera.";
+"PERM_ACCESSIBILITY" = "Bedienungshilfen";
+"PERM_ACCESSIBILITY_DESC" = "Erforderlich für globale Tastenkürzel (⌘⇧K, etc.).";
+"PERM_NOTIFICATIONS" = "Mitteilungen";
+"PERM_NOTIFICATIONS_DESC" = "Ermöglicht Benachrichtigungen über Agent-Aktivitäten.";
+"PERM_REQUIRED" = "Erforderlich";
+"PERM_GRANT" = "Erlauben";
+"PERM_BANNER_INTRO" = "Clawsy benötigt Berechtigungen für den vollen Funktionsumfang.";
+"PERM_BANNER_SCREEN_RECORDING_TITLE" = "Bildschirmaufnahme";
+"PERM_BANNER_SCREEN_RECORDING_DESC" = "Bildschirminhalt für Screenshots aufnehmen";
+"PERM_BANNER_CAMERA_TITLE" = "Kamera";
+"PERM_BANNER_CAMERA_DESC" = "Fotos und Videos mit der Kamera aufnehmen";
+"PERM_BANNER_ACCESSIBILITY_TITLE" = "Bedienungshilfen";
+"PERM_BANNER_ACCESSIBILITY_DESC" = "Für globale Tastenkürzel wie ⌘⇧K";
+"PERM_BANNER_NOTIFICATIONS_TITLE" = "Mitteilungen";
+"PERM_BANNER_NOTIFICATIONS_DESC" = "Hinweise bei Agent-Aktivitäten anzeigen";
+"PERM_BANNER_OPEN_SETTINGS" = "Öffnen …";
+"PERM_GRANTED" = "Erteilt";
+"PERM_REQUEST_ACCESS" = "Zugriff anfordern";
+"PERM_MISSING_SCREENSHOT" = "Bildschirmaufnahme wird benötigt — öffne Einstellungen …";
+"PERM_MISSING_HOTKEY" = "Tastaturkurzbefehle werden benötigt — öffne Einstellungen …";
+"PERM_ALERT_SCREEN_TITLE" = "Bildschirmaufnahme erforderlich";
+"PERM_ALERT_SCREEN_MESSAGE" = "Clawsy benötigt Zugriff auf die Bildschirmaufnahme für Screenshots.\n\nKlicke in den Systemeinstellungen auf \"+\" am unteren Rand der Liste und füge Clawsy hinzu.";
+"PERM_ALERT_OPEN_SETTINGS" = "Einstellungen öffnen";
+"CANCEL" = "Abbrechen";
+
+// Connection Failure Banner
+"FAILURE_RETRY" = "Erneut versuchen";
+"FAILURE_REPAIR" = "Verbindung reparieren";
+"FAILURE_ORIGIN_NOT_ALLOWED" = "Verbindung abgelehnt";
+"FAILURE_INVALID_TOKEN" = "Ungültiger Token";
+"FAILURE_SSH_FAILED" = "SSH-Tunnel fehlgeschlagen";
+"FAILURE_HOST_UNREACHABLE" = "Host nicht erreichbar";
+"FAILURE_GATEWAY_NOT_RUNNING" = "Gateway nicht aktiv";
+"FAILURE_RECONNECT_EXHAUSTED" = "Reconnect erschöpft";
+"FAILURE_SKILL_MISSING" = "Clawsy-Skill fehlt";
+"FAILURE_UNKNOWN" = "Verbindung fehlgeschlagen";
+
+// Fehlermeldung-Details
+"FAILURE_ORIGIN_DETAIL" = "Das Gateway hat die Verbindung wegen eines Origin-Header-Fehlers abgelehnt. Bei SSH-Tunnel: erneut verbinden. Andernfalls die Allowed-Origins-Konfiguration des Gateways prüfen.";
+"FAILURE_TOKEN_DETAIL" = "Der Authentifizierungs-Token wurde abgelehnt. Prüfe den Token in den Einstellungen oder verbinde das Gerät neu.";
+"FAILURE_SSH_DETAIL %@" = "SSH-Tunnel konnte nicht aufgebaut werden: %@";
+"FAILURE_UNREACHABLE_DETAIL" = "Der Gateway-Host ist nicht erreichbar. Prüfe Netzwerkverbindung und Firewall. Falls kein direkter Zugang möglich ist, kannst Du in den Einstellungen einen SSH-Tunnel konfigurieren.";
+"FAILURE_GATEWAY_DETAIL" = "Das Gateway antwortet nicht. Stelle sicher, dass OpenClaw auf dem Server läuft.";
+"FAILURE_RECONNECT_DETAIL" = "30 Minuten lang versucht, die Verbindung wiederherzustellen. Prüfe, ob der Server erreichbar ist.";
+"FAILURE_SKILL_DETAIL" = "Der Clawsy-Skill ist nicht auf dem Gateway installiert.";
+
+// Settings
+"SETTINGS_DELETE_HOST_CONFIRM" = "\"%@\" wird entfernt und die Verbindung getrennt.";
+"SETTINGS_HOTKEYS_HINT" = "Alle Tastenkürzel verwenden ⌘⇧ + Taste";
+
+// Accessibility labels
+"STATUS_CONNECTING_LABEL" = "Verbindung wird hergestellt";
+"STATUS_FAILED_LABEL" = "Verbindung fehlgeschlagen";
+"CONNECTION_FAILURE_ICON" = "Verbindungsfehler";
+
+// Pairing-Prompt
+"PAIRING_COPY_PROMPT" = "Prompt für Agent kopieren";
+"PAIRING_AGENT_PROMPT" = "My Clawsy Mac companion app has sent a device pairing request to the OpenClaw gateway. Please find the pending device and approve it, then let me know when done.";
+
 "FINDERSYNC_TOOLBAR_TOOLTIP" = "Clawsy: Ordner mit KI-Agent verbinden";
+
+"RULE_FILTER_PLACEHOLDER" = "Filter (z.B. *.pdf)";

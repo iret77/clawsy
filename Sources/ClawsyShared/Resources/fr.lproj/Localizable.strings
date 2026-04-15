@@ -46,6 +46,7 @@
 "DISCONNECT" = "Déconnecter";
 "SETTINGS" = "Paramètres...";
 "DEBUG_LOG" = "Journal de débogage";
+"LOG_WINDOW_TITLE" = "Journal";
 "QUIT" = "Quitter";
 
 /* Status */
@@ -93,6 +94,7 @@
 "NO_DATA" = "Aucune donnée reçue.";
 "SELECT_TEXT_COPY" = "Sélectionnez le texte à copier.";
 "COPY_ALL" = "Tout copier";
+"COPIED" = "Copié";
 
 /* Node Pairing */
 "STATUS_PAIRING" = "Appairage…";
@@ -136,6 +138,11 @@
 // Mode SSH uniquement
 "SSH_ONLY_MODE" = "SSH uniquement";
 "SSH_ONLY_MODE_DESC" = "Ignorer la connexion directe, toujours utiliser le tunnel SSH";
+
+// Mode Node (Dossier partagé)
+"NODE_MODE_SECTION" = "Dossier partagé";
+"NODE_MODE_LABEL" = "Mode Node (Dossier partagé)";
+"NODE_MODE_DESC" = "Ouvre une deuxième connexion pour que les agents accèdent au dossier partagé.";
 "STATUS_RECONNECT_COUNTDOWN %lld" = "Reconnexion dans %lld s…";
 
 // Onboarding UX — Skill missing after SSH (v0.9.4)
@@ -278,7 +285,9 @@
 "SEND" = "Envoyer";
 "SEND_AND_FORGET" = "Envoyer le texte à l'agent";
 "SENDING_TO_OPENCLAW" = "Envoi à OpenClaw...";
+"SETTINGS_TAB_GENERAL" = "Général";
 "SETTINGS_TAB_CONNECTION" = "Connexion";
+"SETTINGS_TAB_SHORTCUTS" = "Raccourcis";
 "SETTINGS_TAB_FEATURES" = "Fonctionnalités";
 "SETTINGS_TAB_UPDATES" = "Mises à jour";
 "SHARE_ERROR_NO_DATA" = "Aucun contenu à partager.";
@@ -309,5 +318,13 @@
 "ALERT_SCREENSHOT_NAMED_BODY" = "%@ veut voir votre écran.";
 "REMOTE_NAMED_USER_ASKING" = "%@ demande une capture.";
 
-"RULE_FILTER_PLACEHOLDER" = "Filter (e.g. *.pdf)";
-"FINDERSYNC_TOOLBAR_TOOLTIP" = "Clawsy: Connect folder with AI agent";
+// Notifications de mise à jour
+"UPDATE_AVAILABLE_TITLE" = "Mise à jour Clawsy disponible";
+"UPDATE_AVAILABLE_BODY %@" = "Version %@ prête. Ouvrir les réglages pour installer.";
+
+// Onboarding
+"ONBOARDING_WINDOW_TITLE" = "Bienvenue dans Clawsy";
+
+"RULE_FILTER_PLACEHOLDER" = "Filtre (p. ex. *.pdf)";
+
+"FINDERSYNC_TOOLBAR_TOOLTIP" = "Clawsy : Connecter le dossier à l'agent IA";

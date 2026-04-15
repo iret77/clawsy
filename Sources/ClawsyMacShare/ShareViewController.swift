@@ -1,10 +1,12 @@
 import Cocoa
-import Social
 import ClawsyShared
 
+/// Share Extension — receives shared items and passes them to the main app
+/// via App Group container. The main app picks them up and sends via WebSocket.
+///
+/// Extensions cannot maintain WebSocket connections (too short-lived).
+/// Instead we write a pending share file and notify the main app via DNC.
 class ShareViewController: NSViewController {
-
-    private let network = NetworkManager()
 
     override func loadView() {
         let view = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 200))
@@ -32,36 +34,113 @@ class ShareViewController: NSViewController {
     override func viewDidAppear() {
         super.viewDidAppear()
 
-        // Configure NetworkManager with credentials from shared App Group defaults
-        let host = SharedConfig.serverHost
-        let port = SharedConfig.serverPort
-        let token = SharedConfig.serverToken
-        let sshUser = SharedConfig.sshUser
-        let useSsh = SharedConfig.useSshFallback
-
-        guard !host.isEmpty, !token.isEmpty else {
-            completeWithError(NSError(domain: "ai.clawsy", code: -1,
-                userInfo: [NSLocalizedDescriptionKey: "Clawsy nicht konfiguriert. Bitte App öffnen und Einstellungen prüfen."]))
-            return
-        }
-
         guard let items = self.extensionContext?.inputItems as? [NSExtensionItem] else {
             cancel(nil); return
         }
 
-        network.configure(host: host, port: port, token: token, sshUser: sshUser, fallback: useSsh)
+        // Collect shared content
+        collectSharedContent(from: items) { [weak self] content in
+            guard let self = self else { return }
 
-        ShareHandler.handleSharedItems(items, network: network) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success:
-                    self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
-                case .failure(let error):
-                    self.completeWithError(error)
-                }
+            if content.isEmpty {
+                self.completeWithError(NSError(domain: "ai.clawsy", code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: NSLocalizedString("SHARE_ERROR_NO_DATA", bundle: .clawsy, comment: "")]))
+                return
+            }
+
+            // Write to App Group container for main app to pick up
+            if self.writePendingShare(content) {
+                // Notify main app via DistributedNotificationCenter
+                DistributedNotificationCenter.default().postNotificationName(
+                    Notification.Name("ai.clawsy.pendingShare"),
+                    object: nil, userInfo: nil, deliverImmediately: true
+                )
+                self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+            } else {
+                self.completeWithError(NSError(domain: "ai.clawsy", code: -2,
+                    userInfo: [NSLocalizedDescriptionKey: NSLocalizedString("SHARE_ERROR_SEND_FAILED", bundle: .clawsy, comment: "")]))
             }
         }
     }
+
+    // MARK: - Content Collection
+
+    private func collectSharedContent(from items: [NSExtensionItem], completion: @escaping ([String: Any]) -> Void) {
+        var sharedText = ""
+        var sharedURLs: [String] = []
+        var sharedFiles: [[String: String]] = []
+
+        let group = DispatchGroup()
+
+        for item in items {
+            guard let attachments = item.attachments else { continue }
+
+            for provider in attachments {
+                if provider.hasItemConformingToTypeIdentifier("public.plain-text") {
+                    group.enter()
+                    provider.loadItem(forTypeIdentifier: "public.plain-text", options: nil) { (item, _) in
+                        if let text = item as? String { sharedText += text + "\n" }
+                        group.leave()
+                    }
+                } else if provider.hasItemConformingToTypeIdentifier("public.url") {
+                    group.enter()
+                    provider.loadItem(forTypeIdentifier: "public.url", options: nil) { (item, _) in
+                        if let url = item as? URL {
+                            if url.isFileURL {
+                                if let data = try? Data(contentsOf: url) {
+                                    sharedFiles.append([
+                                        "name": url.lastPathComponent,
+                                        "content": data.base64EncodedString()
+                                    ])
+                                }
+                            } else {
+                                sharedURLs.append(url.absoluteString)
+                            }
+                        }
+                        group.leave()
+                    }
+                }
+            }
+        }
+
+        group.notify(queue: .main) {
+            var content: [String: Any] = [:]
+            if !sharedText.isEmpty {
+                content["text"] = sharedText.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            if !sharedURLs.isEmpty { content["urls"] = sharedURLs }
+            if !sharedFiles.isEmpty { content["files"] = sharedFiles }
+            completion(content)
+        }
+    }
+
+    // MARK: - App Group Handoff
+
+    private func writePendingShare(_ content: [String: Any]) -> Bool {
+        guard let container = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: SharedConfig.appGroup
+        ) else { return false }
+
+        let fileURL = container.appendingPathComponent("pending_share.json")
+
+        let envelope: [String: Any] = [
+            "type": "share",
+            "version": SharedConfig.shortVersion,
+            "localTime": ISO8601DateFormatter().string(from: Date()),
+            "content": content
+        ]
+
+        guard let data = try? JSONSerialization.data(withJSONObject: envelope, options: []) else { return false }
+
+        do {
+            try data.write(to: fileURL, options: .atomic)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    // MARK: - Error Handling
 
     private func completeWithError(_ error: Error) {
         let alert = NSAlert()

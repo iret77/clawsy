@@ -1,12 +1,13 @@
 import SwiftUI
 import AppKit
 import os
+import UserNotifications
 import ClawsyShared
 
 @main
 struct ClawsyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    
+
     var body: some Scene {
         Settings {
             VStack {
@@ -29,45 +30,59 @@ class HUDWindow: NSWindow {
     override var canBecomeMain: Bool { false }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
+class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate, ObservableObject {
     var statusBarItem: NSStatusItem!
-    var popover: NSPopover!
+    var popover: NSPopover?
     var alertWindow: NSWindow?
     var quickSendWindow: NSWindow?
+    var responseWindow: NSWindow?
     var hudWindow: NSWindow?
     var onboardingWindow: NSWindow?
-    var networkManager: NetworkManager?
-    var hostManager: HostManager?
-    
-    /// Updates the menu bar icon with a colored dot overlay for the active host
+    var addHostWindow: NSWindow?
+    var settingsWindow: NSWindow?
+    var debugLogWindow: NSWindow?
+    var hostManager: HostManager? {
+        didSet {
+            guard let hostManager else { return }
+            hostManager.onAgentResponse = { [weak self] agentName, message, sessionKey in
+                let response = AgentResponse(
+                    agentName: agentName,
+                    message: message,
+                    timestamp: Date(),
+                    sessionKey: sessionKey
+                )
+                self?.showAgentResponse(response)
+            }
+        }
+    }
+
+    /// Pending responses keyed by notification identifier — opened on notification click
+    private var pendingResponses: [String: AgentResponse] = [:]
+
+    /// Last agent response — accessible from the main menu to re-show
+    @Published var lastResponse: AgentResponse?
+
+    // MARK: - Menu Bar Icon
+
     func updateMenuBarIcon() {
         guard let button = statusBarItem?.button else { return }
         let iconName = NSImage.Name("Icon")
         guard let lobster = NSImage(named: iconName) else { return }
         lobster.isTemplate = true
-        
+
         guard let activeProfile = hostManager?.activeProfile,
-              let dotColor = NSColor(hex: activeProfile.color) else {
-            // No active profile or single host — just use template icon
+              let dotColor = NSColor(hex: activeProfile.color),
+              let manager = hostManager, manager.profiles.count > 1 else {
             button.image = lobster
             return
         }
-        
-        // Only show colored dot when there are multiple hosts
-        guard let manager = hostManager, manager.profiles.count > 1 else {
-            button.image = lobster
-            return
-        }
-        
+
         // Composite: appearance-adaptive lobster + colored dot (bottom-right)
-        // Cannot use isTemplate=true on composite (macOS would render dot monochrome),
-        // so we tint the lobster manually based on current appearance.
         let size = lobster.size
         let isDark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
         let tintColor: NSColor = isDark ? .white : .black
 
-        // Create tinted copy of lobster icon
-        let tintedLobster = lobster.copy() as! NSImage
+        guard let tintedLobster = lobster.copy() as? NSImage else { return }
         tintedLobster.isTemplate = false
         tintedLobster.lockFocus()
         tintColor.set()
@@ -76,22 +91,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
         let composite = NSImage(size: size)
         composite.lockFocus()
-
-        // Draw appearance-tinted lobster
         tintedLobster.draw(in: NSRect(origin: .zero, size: size))
 
-        // Draw colored dot (6×6pt, bottom-right corner)
         let dotSize: CGFloat = 6
-        let dotRect = NSRect(
-            x: size.width - dotSize - 1,
-            y: 1,
-            width: dotSize,
-            height: dotSize
-        )
+        let dotRect = NSRect(x: size.width - dotSize - 1, y: 1, width: dotSize, height: dotSize)
         dotColor.setFill()
         NSBezierPath(ovalIn: dotRect).fill()
-
-        // White border for visibility
         NSColor.white.withAlphaComponent(0.9).setStroke()
         let borderPath = NSBezierPath(ovalIn: dotRect.insetBy(dx: 0.5, dy: 0.5))
         borderPath.lineWidth = 1.0
@@ -101,33 +106,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         composite.isTemplate = false
         button.image = composite
     }
-    
+
     // MARK: - URL Scheme Handler (clawsy://pair?code=BASE64)
 
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls {
             guard url.scheme == "clawsy" else { continue }
-
             if url.host == "pair",
                let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
                let code = components.queryItems?.first(where: { $0.name == "code" })?.value {
-                let success = handleSetupCode(code)
-                if success {
+                if handleSetupCode(code) {
                     NSApp.activate(ignoringOtherApps: true)
                 }
             }
         }
     }
 
-    /// Decodes an OpenClaw setup code (base64 JSON: {url, token}) and configures a host profile.
-    /// Returns true on success, false if the code is invalid.
     @discardableResult
     func handleSetupCode(_ raw: String) -> Bool {
         struct SetupPayload: Decodable {
             let url: String
             let token: String
         }
-        // Fix base64 padding
         var base64 = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         let rem = base64.count % 4
         if rem != 0 { base64 += String(repeating: "=", count: 4 - rem) }
@@ -140,7 +140,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             return false
         }
 
-        // Extract host + port from the URL (e.g. "wss://agenthost.ts.net" or "ws://127.0.0.1:18789")
         let (gatewayHost, gatewayPort) = Self.parseGatewayURL(payload.url)
         let profileName = gatewayHost.components(separatedBy: ".").first ?? gatewayHost
 
@@ -149,35 +148,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             gatewayHost: gatewayHost,
             gatewayPort: gatewayPort,
             serverToken: payload.token,
-            useSshFallback: false   // setup code = direct WSS connection
+            useSshFallback: false
         )
 
-        // Bootstrap: inject pairing script + knowledge into the agent via HTTP
-        // (happens before WS pairing — only needs the master token)
-        Self.bootstrapAgentKnowledge(gatewayURL: payload.url, token: payload.token)
-
         DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            if let hm = self.hostManager {
-                // Replace an empty/unconfigured profile, or add as new
-                let hasEmpty = hm.profiles.first(where: { $0.serverToken.isEmpty }) != nil
-                if hasEmpty, let first = hm.profiles.first(where: { $0.serverToken.isEmpty }) {
-                    hm.updateHost(HostProfile(
-                        id: first.id, name: profile.name, gatewayHost: profile.gatewayHost,
-                        gatewayPort: profile.gatewayPort, serverToken: profile.serverToken,
-                        useSshFallback: false
-                    ))
-                    hm.switchActiveHost(to: first.id)
-                } else {
-                    hm.addHost(profile)
-                    hm.switchActiveHost(to: profile.id)
-                }
-                // ContentView sets up the actual callbacks via its own connectAll call
-                // We just trigger the connection; UI callbacks are handled by ContentView
-                hm.connectAll { _, _ in }
-                self.networkManager = hm.activeNetworkManager
+            guard let self, let hm = self.hostManager else { return }
+            if let first = hm.profiles.first(where: { $0.serverToken.isEmpty }) {
+                hm.updateHost(HostProfile(
+                    id: first.id, name: profile.name, gatewayHost: profile.gatewayHost,
+                    gatewayPort: profile.gatewayPort, serverToken: profile.serverToken,
+                    useSshFallback: false
+                ))
+                hm.switchActiveHost(to: first.id)
+            } else {
+                hm.addHost(profile)
+                hm.switchActiveHost(to: profile.id)
             }
-            // Notify onboarding view that a setup code was imported
+            hm.connectAll()
+
             NotificationCenter.default.post(
                 name: NSNotification.Name("ClawsySetupCodeImported"),
                 object: nil,
@@ -187,82 +175,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         return true
     }
 
-    /// Bootstraps the OpenClaw server with the full Clawsy server stack.
-    /// Called once after the setup code is decoded — needs only the master token (no WS pairing).
-    ///
-    /// What it does (all without sudo):
-    ///   1. Downloads + installs the clawsy-bridge gateway plugin via `openclaw plugins install`
-    ///   2. Downloads CLAWSY.md into the workspace (agent instructions + "pair clawsy" know-how)
-    ///   3. Writes clawsy-pair.sh helper to workspace/tools/
-    ///   4. Restarts the gateway so the plugin becomes active
-    ///   5. Notifies the running agent session mid-session (no restart needed)
-    static func bootstrapAgentKnowledge(gatewayURL: String, token: String) {
-        let httpBase: String
-        if let url = URL(string: gatewayURL) {
-            let scheme = (url.scheme == "wss") ? "https" : "http"
-            let host = url.host ?? "127.0.0.1"
-            let port = url.port.map { ":\($0)" } ?? ""
-            httpBase = "\(scheme)://\(host)\(port)"
-        } else {
-            httpBase = "http://127.0.0.1:18789"
-        }
-        guard let invokeURL = URL(string: "\(httpBase)/tools/invoke") else { return }
-        let log = OSLog(subsystem: "ai.clawsy", category: "Bootstrap")
+    // Server bootstrap removed — Clawsy 1.0 uses Protocol V3 natively,
+    // no server-side plugin installation needed.
 
-        func invoke(tool: String, args: [String: Any], label: String, completion: ((Bool) -> Void)? = nil) {
-            var req = URLRequest(url: invokeURL)
-            req.httpMethod = "POST"
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            req.timeoutInterval = 30
-            req.httpBody = try? JSONSerialization.data(withJSONObject: ["tool": tool, "args": args])
-            URLSession.shared.dataTask(with: req) { data, _, err in
-                if let err { os_log("Bootstrap %{public}@ error: %{public}@", log: log, type: .error, label, err.localizedDescription); return }
-                let ok = data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }?["ok"] as? Bool ?? false
-                os_log("Bootstrap %{public}@: %{public}@", log: log, type: .info, label, ok ? "✅ OK" : "⚠️ FAILED")
-                completion?(ok)
-            }.resume()
-        }
-
-        // ── Step 1: Install clawsy-bridge plugin + CLAWSY.md + clawsy-pair.sh ──
-        // Delegates to install.sh (single source of truth) + ClawHub skill sync.
-        let serverSetupCommand = """
-set -e
-echo "[clawsy-bootstrap] Starting server setup..."
-
-# Install/update all server components (plugin, CLAWSY.md, clawsy-pair.sh, gateway restart)
-curl -fsSL https://raw.githubusercontent.com/iret77/clawsy/main/server/install.sh | bash
-
-# Sync Clawsy skill via ClawHub (SKILL.md + docs always up to date)
-if command -v clawhub &>/dev/null; then
-  clawhub install clawsy --no-input 2>/dev/null || clawhub update clawsy --no-input 2>/dev/null || true
-  echo "[clawsy-bootstrap] ClawHub skill synced"
-fi
-
-echo "[clawsy-bootstrap] Done."
-"""
-        invoke(tool: "exec", args: ["command": serverSetupCommand], label: "server-setup") { ok in
-            guard ok else { return }
-            // ── Step 2: Mid-session agent notification ──
-            // The agent is already running — teach it about Clawsy without waiting for a restart.
-            let msg = """
-[Clawsy Bootstrap] Die macOS Companion App wurde soeben installiert. \
-Clawsy-Bridge-Plugin, CLAWSY.md und clawsy-pair.sh wurden auf diesem Server eingerichtet. \
-Wenn jemand "pair clawsy" schreibt: \
-`CODE=$(bash ~/.openclaw/workspace/tools/clawsy-pair.sh --link-only | grep ^LINK= | cut -d= -f2-)` \
-→ sende `clawsy://pair?code=$CODE` an den User \
-→ starte `bash ~/.openclaw/workspace/tools/clawsy-pair.sh &` für Auto-Approve. \
-Details in CLAWSY.md.
-"""
-            invoke(tool: "sessions_send", args: ["sessionKey": "main", "message": msg], label: "agent-notify")
-        }
-    }
-
-    /// Parses a gateway URL string into (host, port) for HostProfile.
-    /// Examples:
-    ///   "wss://agenthost.ts.net"    → ("agenthost.ts.net", "443")
-    ///   "ws://127.0.0.1:18789"      → ("127.0.0.1", "18789")
-    ///   "agenthost"                 → ("agenthost", "18789")
     static func parseGatewayURL(_ urlString: String) -> (host: String, port: String) {
         if let url = URL(string: urlString), let host = url.host {
             let port: String
@@ -273,21 +188,19 @@ Details in CLAWSY.md.
             }
             return (host, port)
         }
-        // Fallback: treat as plain hostname
         return (urlString, "18789")
     }
 
+    // MARK: - App Lifecycle
+
     func applicationWillTerminate(_ notification: Notification) {
-        // Explicitly disconnect and kill SSH tunnel process for all hosts.
-        // Without sandbox, child processes are no longer auto-killed on app exit.
-        if let hm = hostManager {
-            hm.disconnectAll()
-        } else {
-            networkManager?.disconnect()
-        }
+        hostManager?.disconnectAll()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Menu bar app — no Dock icon
+        NSApp.setActivationPolicy(.accessory)
+
         #if SCREENSHOT_MODE
         if CommandLine.arguments.contains("--screenshot") {
             ScreenshotRunner.run()
@@ -295,32 +208,22 @@ Details in CLAWSY.md.
         }
         #endif
 
-        // Install CLAWSY.md into OpenClaw workspace on first launch (or if outdated)
+        resetTCCIfSignatureChanged()
         installClawsyDocumentation()
-
-        // Resolve sandbox bookmark for Shared Folder early
         SharedConfig.resolveBookmark()
-        
-        // Kill any orphaned SSH tunnel process from a previous session holding port 18790
-        let cleanup = Process()
-        cleanup.executableURL = URL(fileURLWithPath: "/bin/sh")
-        cleanup.arguments = ["-c", "lsof -ti tcp:18790 2>/dev/null | xargs kill -9 2>/dev/null; true"]
-        cleanup.standardOutput = FileHandle.nullDevice
-        cleanup.standardError = FileHandle.nullDevice
-        try? cleanup.run()
-        cleanup.waitUntilExit()
-        
+
+        // Listen for debug log open requests from settings
+        NotificationCenter.default.addObserver(forName: .init("ai.clawsy.openDebugLog"), object: nil, queue: .main) { [weak self] _ in
+            self?.openDebugLogWindow()
+        }
+
         // Single Instance Check
         let bundleID = Bundle.main.bundleIdentifier ?? "ai.clawsy"
         let runningApps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
-        
         if runningApps.count > 1 {
-            // Already running, try to bring the existing one to the front
-            for app in runningApps {
-                if app != NSRunningApplication.current {
-                    app.activate(options: [.activateIgnoringOtherApps, .activateAllWindows])
-                    break
-                }
+            for app in runningApps where app != NSRunningApplication.current {
+                app.activate(options: [.activateIgnoringOtherApps, .activateAllWindows])
+                break
             }
             NSApp.terminate(nil)
             return
@@ -328,73 +231,98 @@ Details in CLAWSY.md.
 
         // Create Status Bar Item
         statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        
         if let button = statusBarItem.button {
             let iconName = NSImage.Name("Icon")
             if let menuIcon = NSImage(named: iconName) {
-                // Remove hardcoded 18x18 size to allow asset-defined sizes
                 menuIcon.isTemplate = true
                 button.image = menuIcon
             } else {
                 button.title = "Clawsy"
-                print("Error: Menu Bar Icon 'Icon' not found in assets.")
             }
             button.action = #selector(togglePopover(_:))
         }
-        
-        // Create Popover
-        popover = NSPopover()
-        popover.contentSize = NSSize(width: 300, height: 400)
-        popover.behavior = .transient
-        // Inject AppDelegate into ContentView
+
+        // Create Popover — size follows SwiftUI's ideal content size automatically
+        // via NSHostingController.sizingOptions = .preferredContentSize.
+        let pop = NSPopover()
+        pop.contentSize = NSSize(width: ClawsyTheme.Spacing.popoverWidth, height: 420)
+        pop.behavior = .transient
         let contentView = ContentView().environmentObject(self)
-        popover.contentViewController = NSHostingController(rootView: contentView)
-        
-        // Register Global Hotkeys (local + global monitors)
+        let hostingController = NSHostingController(rootView: contentView)
+        hostingController.sizingOptions = [.preferredContentSize]
+        pop.contentViewController = hostingController
+        popover = pop
+
+        // Register Global Hotkeys
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            if self.processHotkey(event: event) {
-                return nil
-            }
+            if self.processHotkey(event: event) { return nil }
             return event
         }
-        // Global monitor requires Accessibility permission — request it and register
-        self.registerGlobalHotkeyMonitor()
-        
-        // Auto-Check for Updates (silent = background, shows notification if update found)
+        registerGlobalHotkeyMonitor()
+
+        // Initial permission check — refreshes shared monitor so banners show immediately
+        Task { @MainActor in PermissionMonitor.shared.refreshAll() }
+
+        // Auto-Check for Updates
         UpdateManager.shared.checkForUpdates(silent: true)
         UpdateManager.shared.startPeriodicChecks()
         UpdateManager.shared.ensureNotificationPermission()
 
-        // Redraw menu bar icon when system appearance changes (Dark ↔ Light Mode)
+        // Notification categories + delegate for agent responses
+        UNUserNotificationCenter.current().delegate = self
+        setupNotificationCategories()
+
+        // Redraw icon on appearance change
         DistributedNotificationCenter.default().addObserver(
-            self,
-            selector: #selector(appearanceChanged),
+            self, selector: #selector(appearanceChanged),
             name: NSNotification.Name("AppleInterfaceThemeChangedNotification"),
             object: nil
         )
 
-        // Onboarding is no longer auto-triggered on launch.
-        // Users without hosts see an empty state in ContentView → AddHostSheet.
+        // Listen for Share Extension handoff
+        DistributedNotificationCenter.default().addObserver(
+            self, selector: #selector(handlePendingShare),
+            name: Notification.Name("ai.clawsy.pendingShare"),
+            object: nil
+        )
     }
-    
+
     @objc private func appearanceChanged(_ notification: Notification) {
-        DispatchQueue.main.async { [weak self] in
-            self?.updateMenuBarIcon()
+        DispatchQueue.main.async { [weak self] in self?.updateMenuBarIcon() }
+    }
+
+    @objc private func handlePendingShare(_ notification: Notification) {
+        guard let hm = hostManager, hm.isConnected, let poller = hm.activePoller else { return }
+        guard let container = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: SharedConfig.appGroup
+        ) else { return }
+
+        let fileURL = container.appendingPathComponent("pending_share.json")
+        guard let data = try? Data(contentsOf: fileURL),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let content = json["content"] as? [String: Any] else { return }
+
+        // Send to clawsy-inbox via chat.send
+        poller.sendEnvelope(type: "share", content: content)
+
+        // Clean up
+        try? FileManager.default.removeItem(at: fileURL)
+
+        DispatchQueue.main.async {
+            self.showStatusHUD(icon: "square.and.arrow.up", title: "SHARE_SUCCESS")
         }
     }
 
+    // MARK: - Hotkeys
+
     private func registerGlobalHotkeyMonitor() {
-        // Always register the monitor — it fires only when Accessibility is granted.
-        // Do NOT auto-prompt on startup: macOS revokes permission on every binary update,
-        // so prompting every launch is annoying. User can grant via Settings button instead.
         NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             _ = self?.processHotkey(event: event)
         }
     }
 
-    /// Call this when the user explicitly clicks "Grant Accessibility" in Settings.
     func requestAccessibilityPermission() {
-        let options = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as String: true] as CFDictionary
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         AXIsProcessTrustedWithOptions(options)
     }
 
@@ -403,97 +331,162 @@ Details in CLAWSY.md.
         let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         guard mods.contains(required) else { return false }
         let char = event.charactersIgnoringModifiers?.uppercased() ?? ""
-        if char == SharedConfig.quickSendHotkey {
-            self.showQuickSend()
-            return true
+        switch char {
+        case SharedConfig.quickSendHotkey:      showQuickSend(); return true
+        case SharedConfig.pushClipboardHotkey:  handleGlobalPushClipboard(); return true
+        case SharedConfig.cameraHotkey:         handleGlobalCamera(); return true
+        case SharedConfig.screenshotFullHotkey:  handleGlobalScreenshot(interactive: false); return true
+        case SharedConfig.screenshotAreaHotkey:  handleGlobalScreenshot(interactive: true); return true
+        default: return false
         }
-        if char == SharedConfig.pushClipboardHotkey {
-            self.handleGlobalPushClipboard()
-            return true
-        }
-        if char == SharedConfig.cameraHotkey {
-            self.handleGlobalCamera()
-            return true
-        }
-        if char == SharedConfig.screenshotFullHotkey {
-            self.handleGlobalScreenshot(interactive: false)
-            return true
-        }
-        if char == SharedConfig.screenshotAreaHotkey {
-            self.handleGlobalScreenshot(interactive: true)
-            return true
-        }
-        return false
     }
-    
+
+    // MARK: - Global Actions (via Hotkey)
+
     private func handleGlobalPushClipboard() {
-        guard let network = networkManager, network.isConnected else { return }
-        if let content = ClipboardManager.getClipboardContent(),
-           let jsonString = ClawsyEnvelopeBuilder.build(
-                type: "clipboard",
-                content: content,
-                includeTelemetry: network.extendedContextEnabled) {
-            network.sendEvent(kind: "agent.request", payload: [
-                "message": jsonString,
-                "sessionKey": network.targetSessionKey,
-                "deliver": false
-            ])
-            self.showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
+        guard let hm = hostManager, hm.isConnected, let poller = hm.activePoller else {
+            logAction("Clipboard push skipped — not connected")
+            return
+        }
+        if let content = ClipboardManager.getClipboardContent() {
+            poller.sendEnvelope(type: "clipboard", content: content)
+            logAction("Clipboard pushed (\(content.count) chars)")
+            showStatusHUD(icon: "doc.on.clipboard.fill", title: "CLIPBOARD_SENT")
         }
     }
-    
+
     private func handleGlobalScreenshot(interactive: Bool) {
-        guard let network = networkManager, network.isConnected else { return }
-        // Close popover if open so it doesn't appear in the screenshot
-        if popover.isShown { popover.performClose(nil) }
+        guard let hm = hostManager, hm.isConnected, let poller = hm.activePoller else {
+            logAction("Screenshot skipped — not connected")
+            return
+        }
+
+        // Check Screen Recording permission inline (no @MainActor dependency)
+        if !Self.checkScreenRecordingPermission() {
+            logAction("Screenshot skipped — Screen Recording permission missing")
+            showStatusHUD(icon: "lock.shield", title: "PERM_MISSING_SCREENSHOT")
+            DispatchQueue.main.async {
+                PermissionMonitor.shared.openSettings(for: .screenRecording)
+            }
+            return
+        }
+
+        if popover?.isShown == true { popover?.performClose(nil) }
+        logAction("Screenshot capturing (interactive: \(interactive))")
         DispatchQueue.global(qos: .userInitiated).async {
-            // Small delay to let the popover animation finish
             Thread.sleep(forTimeInterval: 0.25)
             guard let b64 = ScreenshotManager.takeScreenshot(interactive: interactive) else {
-                DispatchQueue.main.async { self.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "SCREENSHOT_FAILED") }
+                DispatchQueue.main.async {
+                    self.logAction("Screenshot capture failed")
+                    self.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "SCREENSHOT_FAILED")
+                }
                 return
             }
-            network.sendScreenshot(base64: b64)
-            DispatchQueue.main.async { self.showStatusHUD(icon: "camera.viewfinder", title: "SCREENSHOT_SENT") }
+            poller.sendEnvelope(type: "screenshot", content: ["format": "jpeg", "base64": b64])
+            DispatchQueue.main.async {
+                self.logAction("Screenshot sent (\(b64.count / 1024)KB)")
+                self.showStatusHUD(icon: "camera.viewfinder", title: "SCREENSHOT_SENT")
+            }
         }
     }
 
     private func handleGlobalCamera() {
-        guard let network = networkManager, network.isConnected else { return }
+        guard let hm = hostManager, hm.isConnected, let poller = hm.activePoller else {
+            logAction("Camera skipped — not connected")
+            return
+        }
         let camId   = SharedConfig.sharedDefaults.string(forKey: "activeCameraId") ?? ""
-        let camName = SharedConfig.sharedDefaults.string(forKey: "activeCameraName") ?? "Kamera"
+        let camName = SharedConfig.sharedDefaults.string(forKey: "activeCameraName") ?? "Camera"
+        logAction("Camera capturing (\(camName))")
         CameraManager.takePhoto(deviceId: camId.isEmpty ? nil : camId) { b64 in
             guard let b64 = b64 else {
-                DispatchQueue.main.async { self.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "CAPTURE_FAILED") }
+                DispatchQueue.main.async {
+                    self.logAction("Camera capture failed")
+                    self.showStatusHUD(icon: "exclamationmark.triangle.fill", title: "CAPTURE_FAILED")
+                }
                 return
             }
-            network.sendPhoto(base64: b64, deviceName: camName)
-            DispatchQueue.main.async { self.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT") }
+            poller.sendEnvelope(type: "camera", content: ["format": "jpeg", "base64": b64, "device": camName])
+            DispatchQueue.main.async {
+                self.logAction("Photo sent from \(camName) (\(b64.count / 1024)KB)")
+                self.showStatusHUD(icon: "camera.fill", title: "PHOTO_SENT")
+            }
         }
     }
+
+    // MARK: - Permission Check (nonisolated)
+
+    /// Check Screen Recording without requiring @MainActor context.
+    private static func checkScreenRecordingPermission() -> Bool {
+        return CGPreflightScreenCaptureAccess()
+    }
+
+    // MARK: - Debug Action Logging
+
+    private func logAction(_ message: String) {
+        guard let conn = hostManager?.activeConnection else { return }
+        DispatchQueue.main.async {
+            conn.rawLog += "\n[ACTION] \(message)"
+        }
+    }
+
+    // MARK: - QuickSend
+
+    func showQuickSend() {
+        guard let hm = hostManager, hm.isConnected, let poller = hm.activePoller else { return }
+
+        DispatchQueue.main.async {
+            if self.quickSendWindow == nil {
+                let window = QuickSendWindow(
+                    contentRect: NSRect(x: 0, y: 0, width: 600, height: 120),
+                    styleMask: [.borderless, .fullSizeContentView],
+                    backing: .buffered, defer: false)
+                window.center()
+                window.isReleasedWhenClosed = false
+                window.isMovableByWindowBackground = true
+                window.level = .floating
+                window.backgroundColor = .clear
+                window.isOpaque = false
+                window.hasShadow = true
+
+                let quickSendView = QuickSendView(onSend: { text in
+                    self.logAction("QuickSend → \(poller.targetSessionKey): \(text.prefix(60))")
+                    poller.sendChatMessage(text, sessionKey: poller.targetSessionKey)
+                    self.hideQuickSend()
+                }, onCancel: {
+                    self.hideQuickSend()
+                })
+
+                window.contentView = NSHostingView(rootView: quickSendView)
+                self.quickSendWindow = window
+            }
+            self.quickSendWindow?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
+    }
+
+    func hideQuickSend() {
+        quickSendWindow?.orderOut(nil)
+    }
+
+    // MARK: - HUD
 
     func showStatusHUD(icon: String, title: String) {
         DispatchQueue.main.async {
             self.hudWindow?.close()
-            
             let window = HUDWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 200, height: 120),
                 styleMask: [.borderless, .fullSizeContentView],
                 backing: .buffered, defer: false)
-            
             window.center()
             window.isReleasedWhenClosed = false
             window.level = .floating
             window.backgroundColor = .clear
             window.hasShadow = true
-            
-            let hudView = StatusHUDView(icon: icon, title: title)
-            window.contentView = NSHostingView(rootView: hudView)
+            window.contentView = NSHostingView(rootView: StatusHUDView(icon: icon, title: title))
             self.hudWindow = window
-            
             window.orderFrontRegardless()
-            
-            // Auto-fade out
+
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = 0.5
@@ -505,150 +498,242 @@ Details in CLAWSY.md.
             }
         }
     }
-    
-    func showQuickSend() {
-        guard let network = networkManager, network.isConnected else { return }
-        
+
+    // MARK: - Agent Response Toast
+
+    func showAgentResponse(_ response: AgentResponse) {
         DispatchQueue.main.async {
-            if self.quickSendWindow == nil {
-                let window = QuickSendWindow(
-                    contentRect: NSRect(x: 0, y: 0, width: 600, height: 120),
-                    styleMask: [.borderless, .fullSizeContentView],
-                    backing: .buffered, defer: false)
-                
-                window.center()
-                window.isReleasedWhenClosed = false
-                window.isMovableByWindowBackground = true
-                window.level = .floating
-                window.backgroundColor = .clear
-                window.isOpaque = false
-                window.hasShadow = true
-                
-                let quickSendView = QuickSendView(onSend: { text in
-                    if let jsonString = ClawsyEnvelopeBuilder.build(
-                        type: "quick_send",
-                        content: text,
-                        includeTelemetry: network.extendedContextEnabled) {
-                        // Full envelope → target session (context storage)
-                        network.sendDeeplink(message: jsonString, sessionKey: network.targetSessionKey)
-                        // Trigger → main session (agent responds, quoting the message)
-                        let trigger: [String: Any] = ["clawsy_envelope": [
-                            "type": "quick_send_trigger",
-                            "message": text
-                        ]]
-                        if let triggerData = try? JSONSerialization.data(withJSONObject: trigger),
-                           let triggerString = String(data: triggerData, encoding: .utf8) {
-                            network.sendDeeplink(message: triggerString, sessionKey: "main", deliver: true)
-                        }
-                    }
-                    self.hideQuickSend()
-                }, onCancel: {
-                    self.hideQuickSend()
-                })
-                
-                window.contentView = NSHostingView(rootView: quickSendView)
-                self.quickSendWindow = window
-            }
-            
-            self.quickSendWindow?.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            self.pendingResponses[response.id.uuidString] = response
+            self.lastResponse = response
+            self.showResponseToast(response)
+            self.showResponseNotification(response)
+            self.logAction("Agent response: \(response.agentName) (\(response.message.count) chars)")
         }
     }
-    
-    func hideQuickSend() {
-        quickSendWindow?.orderOut(nil)
+
+    /// Shows a Clawsy-native response toast anchored to the menu bar status item.
+    /// Styled like the main popover — vibrancy, ClawsyTheme, non-intrusive.
+    func showResponseToast(_ response: AgentResponse) {
+        responseWindow?.close()
+        responseWindow = nil
+
+        guard let button = statusBarItem?.button else { return }
+
+        let toastView = ResponseToastView(
+            response: response,
+            onDismiss: { [weak self] in
+                self?.dismissResponseToast()
+            },
+            onReply: { [weak self] replyText in
+                guard let hm = self?.hostManager, let poller = hm.activePoller else { return }
+                poller.sendChatMessage(replyText, sessionKey: response.sessionKey)
+                self?.dismissResponseToast()
+            },
+            onCopy: {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(response.message, forType: .string)
+            }
+        )
+
+        let hostView = NSHostingView(rootView: toastView)
+        hostView.setFrameSize(hostView.fittingSize)
+
+        // Position below the status bar item (like the main popover)
+        let window = NSWindow(
+            contentRect: NSRect(origin: .zero, size: hostView.fittingSize),
+            styleMask: [.borderless, .fullSizeContentView],
+            backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.level = .statusBar
+        window.backgroundColor = .clear
+        window.isOpaque = false
+        window.hasShadow = false  // Toast view has its own shadow
+        window.contentView = hostView
+
+        // Position in the notification area (top-right), below the menu bar
+        if let screen = NSScreen.main {
+            let padding: CGFloat = 12
+            // visibleFrame excludes menu bar and dock — its maxY is the bottom of the menu bar
+            let x = screen.frame.maxX - hostView.fittingSize.width - padding
+            let y = screen.visibleFrame.maxY - hostView.fittingSize.height - padding
+            window.setFrameOrigin(NSPoint(x: x, y: y))
+        } else if let buttonWindow = button.window {
+            let buttonFrame = button.convert(button.bounds, to: nil)
+            let screenFrame = buttonWindow.convertToScreen(buttonFrame)
+            let x = screenFrame.midX - hostView.fittingSize.width / 2
+            let y = screenFrame.minY - hostView.fittingSize.height - 4
+            window.setFrameOrigin(NSPoint(x: x, y: y))
+        } else {
+            window.center()
+        }
+
+        // Fade in
+        window.alphaValue = 0
+        self.responseWindow = window
+        window.orderFrontRegardless()
+
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.2
+            window.animator().alphaValue = 1
+        }
+
+        // Auto-dismiss after 12 seconds (enough time to read)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 12) { [weak self] in
+            // Only auto-dismiss if still showing the same response
+            guard self?.responseWindow === window else { return }
+            self?.dismissResponseToast()
+        }
     }
-    
+
+    private func dismissResponseToast() {
+        guard let window = responseWindow else { return }
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.3
+            window.animator().alphaValue = 0
+        } completionHandler: { [weak self] in
+            window.close()
+            if self?.responseWindow === window {
+                self?.responseWindow = nil
+            }
+        }
+    }
+
+    private func showResponseNotification(_ response: AgentResponse) {
+        let content = UNMutableNotificationContent()
+        content.title = response.agentName
+        content.body = response.message.count > 200
+            ? String(response.message.prefix(197)) + "…"
+            : response.message
+        // No sound — toast is the primary feedback; notification is silent history in Notification Center
+        content.categoryIdentifier = "AGENT_RESPONSE"
+        content.userInfo = [
+            "agentName": response.agentName,
+            "message": response.message,
+            "sessionKey": response.sessionKey
+        ]
+
+        let request = UNNotificationRequest(
+            identifier: response.id.uuidString,
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    // MARK: - UNUserNotificationCenterDelegate
+
+    /// Notification goes to Notification Center only — no banner (toast is the primary UI).
+    /// The entry stays in Notification Center so the user can find it later.
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.list])
+    }
+
+    /// User clicked a notification — open the response panel
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        let notificationId = response.notification.request.identifier
+        let userInfo = response.notification.request.content.userInfo
+
+        // Try stored response first, fall back to userInfo
+        if let agentResponse = pendingResponses.removeValue(forKey: notificationId) {
+            showResponseToast(agentResponse)
+        } else if let agentName = userInfo["agentName"] as? String,
+                  let message = userInfo["message"] as? String,
+                  let sessionKey = userInfo["sessionKey"] as? String {
+            let agentResponse = AgentResponse(
+                agentName: agentName,
+                message: message,
+                timestamp: Date(),
+                sessionKey: sessionKey
+            )
+            showResponseToast(agentResponse)
+        }
+
+        completionHandler()
+    }
+
+    func setupNotificationCategories() {
+        let viewAction = UNNotificationAction(
+            identifier: "VIEW_RESPONSE",
+            title: NSLocalizedString("RESPONSE_VIEW", bundle: .clawsy, comment: ""),
+            options: [.foreground]
+        )
+        let category = UNNotificationCategory(
+            identifier: "AGENT_RESPONSE",
+            actions: [viewAction],
+            intentIdentifiers: []
+        )
+        UNUserNotificationCenter.current().setNotificationCategories([category])
+    }
+
+    // MARK: - Permission Dialog Windows
+
     private func showFloatingWindow<V: View>(view: V, title: String, autosaveName: String) {
         DispatchQueue.main.async {
             self.alertWindow?.close()
-            
             let window = NSWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 480, height: 360),
                 styleMask: [.titled, .closable, .fullSizeContentView],
                 backing: .buffered, defer: false)
-            
             window.center()
             window.setFrameAutosaveName(autosaveName)
             window.isReleasedWhenClosed = false
             window.titlebarAppearsTransparent = true
             window.title = title
-            window.level = .floating 
-            
+            window.level = .floating
             window.contentView = NSHostingView(rootView: view)
             self.alertWindow = window
-            
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
         }
     }
-    
+
     func showClipboardRequest(content: String, direction: ClipboardDirection = .write, agentName: String? = nil, onConfirm: @escaping () -> Void, onCancel: @escaping () -> Void) {
-        let view = ClipboardPreviewWindow(
-            content: content,
-            direction: direction,
-            agentName: agentName,
+        let view = ClipboardPreviewWindow(content: content, direction: direction, agentName: agentName,
             onConfirm: { onConfirm(); self.alertWindow?.close() },
-            onCancel: { onCancel(); self.alertWindow?.close() }
-        )
+            onCancel: { onCancel(); self.alertWindow?.close() })
         showFloatingWindow(view: view, title: "Clipboard Sync", autosaveName: "ai.clawsy.ClipboardWindow")
     }
-    
+
     func showFileSyncRequest(filename: String, operation: String, agentName: String? = nil, onConfirm: @escaping (TimeInterval?) -> Void, onCancel: @escaping () -> Void) {
-        let view = FileSyncRequestWindow(
-            filename: filename,
-            operation: operation,
-            agentName: agentName,
+        let view = FileSyncRequestWindow(filename: filename, operation: operation, agentName: agentName,
             onConfirm: { duration in onConfirm(duration); self.alertWindow?.close() },
-            onCancel: { onCancel(); self.alertWindow?.close() }
-        )
+            onCancel: { onCancel(); self.alertWindow?.close() })
         showFloatingWindow(view: view, title: NSLocalizedString("FILESYNC_WINDOW_TITLE", bundle: .clawsy, comment: ""), autosaveName: "ai.clawsy.FileWindow")
     }
 
     func showScreenshotRequest(requestedInteractive: Bool, agentName: String? = nil, onConfirm: @escaping (Bool) -> Void, onCancel: @escaping () -> Void) {
-        let view = ScreenshotRequestWindow(
-            requestedInteractive: requestedInteractive,
-            agentName: agentName,
-            onConfirm: { interactive in
-                onConfirm(interactive)
-                self.alertWindow?.close()
-            },
-            onCancel: {
-                onCancel()
-                self.alertWindow?.close()
-            }
-        )
+        let view = ScreenshotRequestWindow(requestedInteractive: requestedInteractive, agentName: agentName,
+            onConfirm: { interactive in onConfirm(interactive); self.alertWindow?.close() },
+            onCancel: { onCancel(); self.alertWindow?.close() })
         showFloatingWindow(view: view, title: "Screenshot Request", autosaveName: "ai.clawsy.ScreenshotWindow")
     }
 
     func showCameraPreview(image: NSImage, agentName: String? = nil, onConfirm: @escaping () -> Void, onCancel: @escaping () -> Void) {
-        let view = CameraPreviewView(
-            image: image,
-            agentName: agentName,
+        let view = CameraPreviewView(image: image, agentName: agentName,
             onConfirm: { onConfirm(); self.alertWindow?.close() },
-            onCancel: { onCancel(); self.alertWindow?.close() }
-        )
+            onCancel: { onCancel(); self.alertWindow?.close() })
         showFloatingWindow(view: view, title: "Camera Preview", autosaveName: "ai.clawsy.CameraWindow")
     }
-    
-    /// Returns true if onboarding should be shown.
-    /// Only shows when no hosts with a token are configured yet.
+
+    // MARK: - Onboarding
+
     func shouldShowOnboarding() -> Bool {
         let hasConfiguredHosts = hostManager?.profiles.contains(where: { !$0.serverToken.isEmpty }) ?? false
         if hasConfiguredHosts {
-            // Mark as completed so we never ask again
             UserDefaults.standard.set(true, forKey: "onboardingCompleted")
             return false
         }
         return !UserDefaults.standard.bool(forKey: "onboardingCompleted")
     }
 
-    /// Called from ContentView (has SwiftUI binding)
     func openOnboardingWindow(onboardingCompleted: Binding<Bool>) {
         openOnboardingWindowInternal(onComplete: { onboardingCompleted.wrappedValue = true })
     }
 
-    /// Called from AppDelegate on first launch (no SwiftUI binding available)
     func openOnboardingWindowDirect() {
         openOnboardingWindowInternal(onComplete: {
             UserDefaults.standard.set(true, forKey: "onboardingCompleted")
@@ -662,46 +747,21 @@ Details in CLAWSY.md.
         }
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 460, height: 540),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Willkommen bei Clawsy"
+            styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        window.title = NSLocalizedString("ONBOARDING_WINDOW_TITLE", bundle: .clawsy, comment: "")
         window.isReleasedWhenClosed = false
         window.center()
 
         let isPresented = Binding<Bool>(
             get: { window.isVisible },
-            set: { newVal in
-                if !newVal {
-                    window.close()
-                    self.onboardingWindow = nil
-                }
-            }
-        )
-        let onboardingCompleted = Binding<Bool>(
+            set: { if !$0 { window.close(); self.onboardingWindow = nil } })
+        let onboardingBinding = Binding<Bool>(
             get: { UserDefaults.standard.bool(forKey: "onboardingCompleted") },
-            set: { newVal in
-                if newVal { onComplete() }
-            }
-        )
-        let isGatewayConnected = Binding<Bool>(
-            get: { self.hostManager?.isConnected ?? false },
-            set: { _ in }
-        )
-        let onImportSetupCode: (String) -> Bool = { [weak self] code in
-            self?.handleSetupCode(code) ?? false
-        }
-        let serverSetupNeeded = Binding<Bool>(
-            get: { self.networkManager?.serverSetupNeeded ?? false },
-            set: { _ in }
-        )
+            set: { if $0 { onComplete() } })
         let view = OnboardingView(
             isPresented: isPresented,
-            onboardingCompleted: onboardingCompleted,
-            isGatewayConnected: isGatewayConnected,
-            serverSetupNeeded: serverSetupNeeded,
-            onImportSetupCode: onImportSetupCode
+            onboardingCompleted: onboardingBinding,
+            onImportSetupCode: { [weak self] code in self?.handleSetupCode(code) ?? false }
         )
         window.contentView = NSHostingView(rootView: view)
         window.makeKeyAndOrderFront(nil)
@@ -709,53 +769,182 @@ Details in CLAWSY.md.
         onboardingWindow = window
     }
 
+    // MARK: - Settings Window
+
+    func openSettingsWindow() {
+        if let existing = settingsWindow, existing.isVisible {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        guard let hm = hostManager else { return }
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 400),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered, defer: false)
+        window.titlebarAppearsTransparent = true
+        window.title = NSLocalizedString("SETTINGS_TITLE", bundle: .clawsy, comment: "")
+        window.isReleasedWhenClosed = false
+        window.center()
+        window.setFrameAutosaveName("ai.clawsy.SettingsWindow")
+
+        let isPresented = Binding<Bool>(
+            get: { window.isVisible },
+            set: { if !$0 { window.close(); self.settingsWindow = nil } })
+
+        let view = SettingsTabView(hostManager: hm, isPresented: isPresented)
+        window.contentView = NSHostingView(rootView: view)
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        settingsWindow = window
+    }
+
+    func openDebugLogWindow() {
+        if let existing = debugLogWindow, existing.isVisible {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        guard let hm = hostManager else { return }
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 400),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered, defer: false)
+        window.title = NSLocalizedString("LOG_WINDOW_TITLE", bundle: .clawsy, comment: "")
+        window.isReleasedWhenClosed = false
+        window.center()
+        window.setFrameAutosaveName("ai.clawsy.DebugLogWindow")
+        window.minSize = NSSize(width: 400, height: 250)
+
+        let view = DebugLogView(logText: hm.rawLog)
+        window.contentView = NSHostingView(rootView: view)
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        debugLogWindow = window
+    }
+
+    // MARK: - Add Host Window
+
+    func openAddHostWindow() {
+        if let existing = addHostWindow, existing.isVisible {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        guard let hm = hostManager else { return }
+        showAgentSetup(hostManager: hm)
+    }
+
+    private func showAgentSetup(hostManager hm: HostManager) {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 440),
+            styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
+        window.titlebarAppearsTransparent = true
+        window.title = NSLocalizedString("ADD_HOST_TITLE", bundle: .clawsy, comment: "")
+        window.isReleasedWhenClosed = false
+        window.center()
+
+        let isPresented = Binding<Bool>(
+            get: { window.isVisible },
+            set: { if !$0 { window.close(); self.addHostWindow = nil } })
+
+        let view = AgentSetupView(hostManager: hm, isPresented: isPresented, onShowManual: { [weak self] in
+            window.close()
+            self?.addHostWindow = nil
+            self?.showManualAddHost(hostManager: hm)
+        })
+        window.contentView = NSHostingView(rootView: view)
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        addHostWindow = window
+    }
+
+    private func showManualAddHost(hostManager hm: HostManager) {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 640),
+            styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
+        window.titlebarAppearsTransparent = true
+        window.title = NSLocalizedString("ADD_HOST_TITLE", bundle: .clawsy, comment: "")
+        window.isReleasedWhenClosed = false
+        window.center()
+
+        let isPresented = Binding<Bool>(
+            get: { window.isVisible },
+            set: { if !$0 { window.close(); self.addHostWindow = nil } })
+
+        let view = AddHostSheet(hostManager: hm, isPresented: isPresented, onHostAdded: { profile in
+            hm.addHost(profile)
+            hm.connectHost(profile.id)
+        })
+        window.contentView = NSHostingView(rootView: view)
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        addHostWindow = window
+    }
+
+    // MARK: - Popover Toggle
+
     @objc func togglePopover(_ sender: AnyObject?) {
-        if let button = statusBarItem.button {
-            if popover.isShown {
-                popover.performClose(sender)
-            } else {
-                // Ensure popover behaves like a standard menu (closes on outside clicks)
-                popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-                
-                // standard macOS behavior: popover should resign when other app/menu is clicked
-                // .transient behavior usually handles this, aber explicit activation helps
-                popover.contentViewController?.view.window?.makeKey()
-            }
+        guard let popover = popover, let button = statusBarItem.button else { return }
+        if popover.isShown {
+            popover.performClose(sender)
+        } else {
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            popover.contentViewController?.view.window?.makeKey()
         }
     }
+
 
     func applicationWillResignActive(_ notification: Notification) {
-        // Close popover when user clicks away or switches apps
-        if popover.isShown {
-            popover.performClose(nil)
-        }
+        if popover?.isShown == true { popover?.performClose(nil) }
     }
 
-    /// Copies CLAWSY.md from app bundle into the OpenClaw workspace so agents
-    /// automatically have access to the documentation on first launch.
+    // MARK: - TCC Reset on Signature Change (ad-hoc builds)
+
+    /// Each ad-hoc build gets a new code signature. TCC binds permissions to
+    /// signature+bundleID, so old entries become stale and `AXIsProcessTrusted()`
+    /// returns false even though System Settings shows the toggle ON.
+    /// Detect binary change via modification date and reset stale TCC entries.
+    private func resetTCCIfSignatureChanged() {
+        guard let executableURL = Bundle.main.executableURL,
+              let attrs = try? FileManager.default.attributesOfItem(atPath: executableURL.path),
+              let modDate = attrs[.modificationDate] as? Date else { return }
+
+        let currentStamp = String(Int(modDate.timeIntervalSince1970))
+        let storedStamp = UserDefaults.standard.string(forKey: "lastBinaryStamp") ?? ""
+
+        if !storedStamp.isEmpty && storedStamp != currentStamp {
+            let bundleID = Bundle.main.bundleIdentifier ?? "ai.clawsy"
+            for service in ["Accessibility", "ScreenCapture"] {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+                process.arguments = ["reset", service, bundleID]
+                try? process.run()
+                process.waitUntilExit()
+            }
+        }
+
+        UserDefaults.standard.set(currentStamp, forKey: "lastBinaryStamp")
+    }
+
+    // MARK: - Documentation Install
+
     private func installClawsyDocumentation() {
         guard let bundledDoc = Bundle.main.url(forResource: "CLAWSY", withExtension: "md") else { return }
-
-        // Find OpenClaw workspace: ~/.openclaw/workspace/
         let home = FileManager.default.homeDirectoryForCurrentUser
         let workspace = home.appendingPathComponent(".openclaw/workspace")
         let destination = workspace.appendingPathComponent("CLAWSY.md")
-
-        // Only copy if workspace exists
         guard FileManager.default.fileExists(atPath: workspace.path) else { return }
 
-        // Copy if missing or if bundled version is newer (check by app version)
         let versionKey = "clawsy_doc_version_installed"
         let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
         let installedVersion = UserDefaults.standard.string(forKey: versionKey) ?? ""
 
         if !FileManager.default.fileExists(atPath: destination.path) || installedVersion != currentVersion {
+            try? FileManager.default.removeItem(at: destination)
             try? FileManager.default.copyItem(at: bundledDoc, to: destination)
-            // Overwrite if exists
-            if FileManager.default.fileExists(atPath: destination.path) && installedVersion != currentVersion {
-                try? FileManager.default.removeItem(at: destination)
-                try? FileManager.default.copyItem(at: bundledDoc, to: destination)
-            }
             UserDefaults.standard.set(currentVersion, forKey: versionKey)
         }
     }

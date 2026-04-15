@@ -3,9 +3,9 @@ import Foundation
 public struct SharedConfig {
     public static let appGroup = "group.ai.openclaw.clawsy"
     
-    public static var sharedDefaults: UserDefaults {
+    public static let sharedDefaults: UserDefaults = {
         let groupDefaults = UserDefaults(suiteName: appGroup) ?? .standard
-        
+
         // --- BUILT-IN MIGRATION LOGIC (v0.4.5) ---
         // If the new group defaults are empty but old data exists, migrate it once.
         if !groupDefaults.bool(forKey: "migrationV1Done") {
@@ -13,23 +13,28 @@ public struct SharedConfig {
             if let oldHost = standard.string(forKey: "serverHost") { groupDefaults.set(oldHost, forKey: "serverHost") }
             if let oldPort = standard.string(forKey: "serverPort") { groupDefaults.set(oldPort, forKey: "serverPort") }
             if let oldToken = standard.string(forKey: "serverToken") { groupDefaults.set(oldToken, forKey: "serverToken") }
-            groupDefaults.set(standard.bool(forKey: "extendedContextEnabled"), forKey: "extendedContextEnabled")
             if let oldUser = standard.string(forKey: "sshUser") { groupDefaults.set(oldUser, forKey: "sshUser") }
             groupDefaults.set(standard.bool(forKey: "useSshFallback"), forKey: "useSshFallback")
             if let oldPath = standard.string(forKey: "sharedFolderPath") { groupDefaults.set(oldPath, forKey: "sharedFolderPath") }
             if let oldBookmark = standard.data(forKey: "sharedFolderBookmark") { groupDefaults.set(oldBookmark, forKey: "sharedFolderBookmark") }
             if let oldQuick = standard.string(forKey: "quickSendHotkey") { groupDefaults.set(oldQuick, forKey: "quickSendHotkey") }
             if let oldPush = standard.string(forKey: "pushClipboardHotkey") { groupDefaults.set(oldPush, forKey: "pushClipboardHotkey") }
-            
-            // New v0.4.5 members initialization
-            groupDefaults.set("{}", forKey: "activityProfile")
-            groupDefaults.set("", forKey: "lastEnvelopeJSON")
 
             groupDefaults.set(true, forKey: "migrationV1Done")
             groupDefaults.synchronize()
         }
+
+        // --- V2 MIGRATION (v1.0): clawsy-service → main ---
+        if !groupDefaults.bool(forKey: "migrationV2Done") {
+            if groupDefaults.string(forKey: "targetSessionKey") == "clawsy-service" {
+                groupDefaults.removeObject(forKey: "targetSessionKey")
+            }
+            groupDefaults.set(true, forKey: "migrationV2Done")
+            groupDefaults.synchronize()
+        }
+
         return groupDefaults
-    }
+    }()
     
     public static var serverHost: String { sharedDefaults.string(forKey: "serverHost") ?? "" }
     public static var serverPort: String { sharedDefaults.string(forKey: "serverPort") ?? "18789" }
@@ -37,16 +42,6 @@ public struct SharedConfig {
     public static var sshUser: String { sharedDefaults.string(forKey: "sshUser") ?? "" }
     public static var useSshFallback: Bool { sharedDefaults.bool(forKey: "useSshFallback") }
     
-    public static var activityProfile: String {
-        get { sharedDefaults.string(forKey: "activityProfile") ?? "{}" }
-        set { sharedDefaults.set(newValue, forKey: "activityProfile") }
-    }
-    
-    public static var lastEnvelopeJSON: String {
-        get { sharedDefaults.string(forKey: "lastEnvelopeJSON") ?? "" }
-        set { sharedDefaults.set(newValue, forKey: "lastEnvelopeJSON") }
-    }
-
     public static var sharedFolderPath: String {
         get { sharedDefaults.string(forKey: "sharedFolderPath") ?? "" }
         set { sharedDefaults.set(newValue, forKey: "sharedFolderPath") }
@@ -57,11 +52,9 @@ public struct SharedConfig {
         set { sharedDefaults.set(newValue, forKey: "sharedFolderBookmark") }
     }
     
-    public static var extendedContextEnabled: Bool { sharedDefaults.bool(forKey: "extendedContextEnabled") }
-    
     /// The session key that events are routed to (persisted for Share Extension access).
     public static var targetSessionKey: String {
-        get { sharedDefaults.string(forKey: "targetSessionKey") ?? "clawsy-service" }
+        get { sharedDefaults.string(forKey: "targetSessionKey") ?? "main" }
         set { sharedDefaults.set(newValue, forKey: "targetSessionKey"); sharedDefaults.synchronize() }
     }
     
@@ -73,7 +66,7 @@ public struct SharedConfig {
     
     public static var shortVersion: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.6.0" }
     public static var buildNumber: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1" }
-    public static var versionDisplay: String { "v\(shortVersion) #\(buildNumber)" }
+    public static var versionDisplay: String { "v\(shortVersion)" }
     
     public static func save(host: String, port: String, token: String) {
         let defaults = sharedDefaults

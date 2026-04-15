@@ -64,7 +64,7 @@ struct ClipboardPreviewWindow: View {
                             .font(.system(size: 15, weight: .semibold))
                         
                         Text("CHAR_COUNT \(charCount)")
-                            .font(.system(size: 11))
+                            .font(ClawsyTheme.Font.bannerBody)
                             .foregroundColor(.secondary)
                             .monospacedDigit()
                     }
@@ -74,12 +74,12 @@ struct ClipboardPreviewWindow: View {
                 .padding(.horizontal, 24)
                 .padding(.vertical, 20)
                 
-                Divider().opacity(0.3)
-                
+                Divider().clawsy()
+
                 // Content Area
                 ScrollView {
                     Text(content)
-                        .font(.system(size: 12, design: .monospaced))
+                        .font(ClawsyTheme.Font.code)
                         .lineSpacing(4)
                         .foregroundColor(.primary)
                         .padding(20)
@@ -88,8 +88,8 @@ struct ClipboardPreviewWindow: View {
                 .background(Color.black.opacity(0.1))
                 .frame(maxHeight: .infinity)
                 
-                Divider().opacity(0.3)
-                
+                Divider().clawsy()
+
                 // Action Bar
                 HStack(spacing: 12) {
                     Button(action: {
@@ -98,7 +98,7 @@ struct ClipboardPreviewWindow: View {
                         Label("COPY_LOCAL", systemImage: "doc.on.doc")
                     }
                     .buttonStyle(.plain)
-                    .font(.system(size: 12))
+                    .font(ClawsyTheme.Font.formLabel)
                     .foregroundColor(.secondary)
                     
                     Spacer()

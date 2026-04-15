@@ -48,14 +48,17 @@
 "LIST_CAMERAS" = "List Cameras";
 "CONNECT" = "Connect";
 "DISCONNECT" = "Disconnect";
+"RECONNECT" = "Reconnect";
 "SETTINGS" = "Settings...";
 "DEBUG_LOG" = "Debug Log";
+"LOG_WINDOW_TITLE" = "Log";
 "QUIT" = "Quit";
 
 /* Status */
 "STATUS_CONNECTED" = "Connected";
 "STATUS_DISCONNECTED" = "Disconnected";
 "STATUS_CONNECTING %lld" = "Connecting (Attempt %lld)...";
+"STATUS_HANDSHAKING" = "Authenticating...";
 "STATUS_OFFLINE_REFUSED" = "Offline (Server Refused)";
 "STATUS_OFFLINE_TIMEOUT" = "Offline (Timeout)";
 "STATUS_ERROR" = "Error";
@@ -97,6 +100,7 @@
 "NO_DATA" = "No data received yet.";
 "SELECT_TEXT_COPY" = "Select text to copy.";
 "COPY_ALL" = "Copy All";
+"COPIED" = "Copied";
 
 /* Shared Folder */
 "FOLDER_MISSING_TITLE" = "Folder Not Found";
@@ -249,7 +253,9 @@
 "REPAIR_CONNECTION_HELP" = "Use if the connection is rejected after a gateway restart. Clears the stored device token and initiates fresh pairing.";
 
 // Settings tabs
+"SETTINGS_TAB_GENERAL" = "General";
 "SETTINGS_TAB_CONNECTION" = "Connection";
+"SETTINGS_TAB_SHORTCUTS" = "Shortcuts";
 "SETTINGS_TAB_FEATURES" = "Features";
 "SETTINGS_TAB_UPDATES" = "Updates";
 
@@ -283,6 +289,11 @@
 // SSH-Only Mode
 "SSH_ONLY_MODE" = "SSH Only";
 "SSH_ONLY_MODE_DESC" = "Skip direct connection, always use SSH tunnel";
+
+// Node Mode (Shared Folder)
+"NODE_MODE_SECTION" = "Shared Folder";
+"NODE_MODE_LABEL" = "Node Mode (Shared Folder)";
+"NODE_MODE_DESC" = "Opens a second connection so agents can access your Shared Folder via file commands.";
 
 // Gateway Connection (Onboarding Step 0)
 "ONBOARDING_GATEWAY_TITLE" = "Connect to Gateway";
@@ -345,7 +356,49 @@
 
 // Agent Picker
 "AGENT_PICKER_LABEL" = "Active Agent";
-"AGENT_PICKER_DEFAULT" = "Default (clawsy-service)";
+"AGENT_PICKER_DEFAULT" = "Default (main session)";
+
+// Settings sections
+"SETTINGS_SECTION_CONNECTION" = "Connection";
+"SETTINGS_SECTION_SHARED_FOLDER" = "Shared Folder";
+"SETTINGS_SECTION_HOTKEYS" = "Hotkeys";
+"SETTINGS_SECTION_TOOLS" = "Tools";
+"SETTINGS_CHANGE_FOLDER" = "Change…";
+"SETTINGS_CHECK_UPDATES" = "Check for Updates";
+
+// Add Host
+"ADD_HOST_SECTION_IDENTITY" = "Identity";
+"ADD_HOST_SECTION_COLOR" = "Color";
+"ADD_HOST_SECTION_CONNECTION" = "Connection";
+"ADD_HOST_SECTION_SSH" = "SSH (optional)";
+
+// Pairing
+"PAIRING_SEND_HINT" = "Send this to your OpenClaw agent:";
+"PAIRING_TERMINAL_COMMAND" = "Terminal command";
+
+// MissionControl
+"MISSION_CONTROL_CONNECT_HINT" = "Connect to see agent activity";
+"MISSION_CONTROL_RECENT" = "Recent";
+
+// Onboarding connect modes
+"ONBOARDING_MODE_SETUP_CODE" = "Setup Code";
+"ONBOARDING_MODE_TAILSCALE" = "Tailscale";
+"ONBOARDING_MODE_MANUAL" = "Manual";
+
+// Rule Editor
+"RULE_FILTER" = "Filter";
+
+// QuickSend
+"QUICK_SEND_CLEAR" = "Clear";
+
+// Agent Response
+"RESPONSE_VIEW" = "View";
+"RESPONSE_REPLY" = "Reply";
+
+// Response Channel Settings
+"SETTINGS_SECTION_RESPONSE" = "Agent Replies";
+"SETTINGS_RESPONSE_CHANNEL_HINT" = "Replies from Quick Send appear as macOS notification and response panel.";
+"SETTINGS_RESPONSE_CLAWSY" = "Notification + Panel";
 
 // Agent Identity (named agent dialogs)
 "GENERIC_AGENT" = "The agent";
@@ -356,5 +409,114 @@
 "ALERT_SCREENSHOT_NAMED_BODY" = "%@ wants to see your screen.";
 "REMOTE_NAMED_USER_ASKING" = "%@ is requesting a capture.";
 
-"RULE_FILTER_PLACEHOLDER" = "Filter (e.g. *.pdf)";
+// Onboarding v2
+"ONBOARDING_WELCOME_TITLE" = "Give your AI agent\neyes and hands on your Mac";
+"ONBOARDING_WELCOME_DESC" = "Clawsy connects your OpenClaw agents to your Mac — screenshots, clipboard, files, and camera — with full control over what's shared.";
+"ONBOARDING_SECURITY_NOTE" = "Your data stays between your Mac and your OpenClaw server. No cloud, no tracking.";
+"ONBOARDING_CONNECT_TITLE" = "Connect to your OpenClaw server";
+"ONBOARDING_SETUP_CODE_HINT" = "Paste the setup code from your OpenClaw agent or admin:";
+"ONBOARDING_SETUP_CODE_PLACEHOLDER" = "clawsy://pair?code=... or base64 code";
+"ONBOARDING_SETUP_CODE_ERROR" = "Invalid setup code. Please check and try again.";
+"ONBOARDING_SETUP_CODE_BUTTON" = "Connect with Setup Code";
+"ONBOARDING_TAILSCALE_HINT" = "Enter your Tailscale hostname (e.g. agenthost.tailnet-name.ts.net):";
+"ONBOARDING_TAILSCALE_BUTTON" = "Connect via Tailscale";
+"ONBOARDING_MANUAL_HINT" = "Enter your gateway connection details:";
+"ONBOARDING_MANUAL_BUTTON" = "Test Connection";
+"ONBOARDING_CONNECTING" = "Connecting...";
+"ONBOARDING_CONNECTED" = "Connected!";
+"ONBOARDING_CONNECTION_FAILED" = "Connection failed";
+"ONBOARDING_PERMISSIONS_TITLE" = "Permissions";
+"ONBOARDING_PERMISSIONS_DESC" = "Clawsy needs a few macOS permissions to work. Grant them below — you can change these anytime in System Settings.";
+"ONBOARDING_PERMISSIONS_ALL_GRANTED" = "All required permissions granted!";
+"ONBOARDING_READY_TITLE" = "You're all set!";
+"ONBOARDING_READY_MENUBAR" = "Clawsy lives in your menu bar — click the icon anytime";
+"ONBOARDING_READY_QUICKSEND" = "Use ⌘⇧K for Quick Send from anywhere";
+"ONBOARDING_READY_SCREENSHOT" = "Use ⌘⇧S for instant screenshot to agent";
+"ONBOARDING_READY_FOLDER" = "Share files via the Clawsy folder in Finder";
+"ONBOARDING_LETS_GO" = "Let's go";
+"ONBOARDING_FINISH" = "Finish";
+"ONBOARDING_NEXT" = "Next";
+"ONBOARDING_BACK" = "Back";
+
+// Permissions
+"PERM_SCREEN_RECORDING" = "Screen Recording";
+"PERM_SCREEN_RECORDING_DESC" = "Required for capturing screenshots to share with your agent.";
+"PERM_CAMERA" = "Camera";
+"PERM_CAMERA_DESC" = "Required for taking photos with your Mac or iPhone camera.";
+"PERM_ACCESSIBILITY" = "Accessibility";
+"PERM_ACCESSIBILITY_DESC" = "Required for global keyboard shortcuts (⌘⇧K, etc.).";
+"PERM_NOTIFICATIONS" = "Notifications";
+"PERM_NOTIFICATIONS_DESC" = "Allows Clawsy to notify you about agent activity.";
+"PERM_REQUIRED" = "Required";
+"PERM_GRANT" = "Grant";
+"PERM_BANNER_INTRO" = "Clawsy needs a few permissions to work. Grant them below.";
+"PERM_BANNER_SCREEN_RECORDING_TITLE" = "Screen Recording";
+"PERM_BANNER_SCREEN_RECORDING_DESC" = "Capture the screen for context or screenshots";
+"PERM_BANNER_CAMERA_TITLE" = "Camera";
+"PERM_BANNER_CAMERA_DESC" = "Capture photos and video from the camera";
+"PERM_BANNER_ACCESSIBILITY_TITLE" = "Accessibility";
+"PERM_BANNER_ACCESSIBILITY_DESC" = "Required for global shortcuts like ⌘⇧K";
+"PERM_BANNER_NOTIFICATIONS_TITLE" = "Notifications";
+"PERM_BANNER_NOTIFICATIONS_DESC" = "Show desktop alerts for agent activity";
+"PERM_BANNER_OPEN_SETTINGS" = "Open";
+"PERM_GRANTED" = "Granted";
+"PERM_REQUEST_ACCESS" = "Request access";
+"PERM_MISSING_SCREENSHOT" = "Screen Recording access needed — opening Settings…";
+"PERM_MISSING_HOTKEY" = "Keyboard Shortcut access needed — opening Settings…";
+
+// Connection Failure Banner
+"FAILURE_RETRY" = "Retry";
+"FAILURE_REPAIR" = "Repair Connection";
+"FAILURE_ORIGIN_NOT_ALLOWED" = "Connection Rejected";
+"FAILURE_INVALID_TOKEN" = "Invalid Token";
+"FAILURE_SSH_FAILED" = "SSH Tunnel Failed";
+"FAILURE_HOST_UNREACHABLE" = "Host Unreachable";
+"FAILURE_GATEWAY_NOT_RUNNING" = "Gateway Not Running";
+"FAILURE_RECONNECT_EXHAUSTED" = "Reconnect Exhausted";
+"FAILURE_SKILL_MISSING" = "Clawsy Skill Missing";
+"FAILURE_UNKNOWN" = "Connection Failed";
+
+// Failure detail texts
+"FAILURE_ORIGIN_DETAIL" = "The gateway rejected the connection due to an Origin header mismatch. If using an SSH tunnel, try reconnecting. Otherwise check the gateway's allowed-origins configuration.";
+"FAILURE_TOKEN_DETAIL" = "The authentication token was rejected. Check the token in Settings or re-pair the device.";
+"FAILURE_SSH_DETAIL %@" = "SSH tunnel could not be established: %@";
+"FAILURE_UNREACHABLE_DETAIL" = "Cannot reach the gateway host. Check your network connection and firewall settings. If direct access isn't possible, try configuring an SSH tunnel in Settings.";
+"FAILURE_GATEWAY_DETAIL" = "The gateway is not responding. Make sure OpenClaw is running on the server.";
+"FAILURE_RECONNECT_DETAIL" = "Tried reconnecting for 30 minutes without success. Check that the server is online and try again.";
+"FAILURE_SKILL_DETAIL" = "The Clawsy skill is not installed on the gateway.";
+
+// Settings
+"SETTINGS_DELETE_HOST_CONFIRM" = "This will remove \"%@\" and disconnect.";
+"SETTINGS_HOTKEYS_HINT" = "All hotkeys use ⌘⇧ + key";
+
+// Accessibility labels
+"STATUS_CONNECTING_LABEL" = "Connecting";
+"STATUS_FAILED_LABEL" = "Connection failed";
+"CONNECTION_FAILURE_ICON" = "Connection error";
+
+// Update notifications
+"UPDATE_AVAILABLE_TITLE" = "Clawsy Update Available";
+"UPDATE_AVAILABLE_BODY %@" = "Version %@ is ready. Open Settings to install.";
+
+// Agent Setup Flow
+"AGENT_SETUP_STEP1_TITLE" = "Copy the prompt";
+"AGENT_SETUP_STEP1_DESC" = "The prompt has been copied to your clipboard. Send it to your agent via Telegram, Slack, or any other channel.";
+"AGENT_SETUP_STEP2_TITLE" = "Paste the response";
+"AGENT_SETUP_STEP2_DESC" = "Your agent will reply with a setup code. Paste the complete response here:";
+"AGENT_SETUP_COPY_PROMPT" = "Copy prompt again";
+"AGENT_SETUP_COPIED" = "Copied!";
+"AGENT_SETUP_CONNECT" = "Connect";
+"AGENT_SETUP_MANUAL" = "Configure manually";
+"AGENT_SETUP_SUCCESS" = "Connected! Host added.";
+"AGENT_SETUP_ERROR" = "Could not find host and token in the response. Make sure the agent replied in the correct format.";
+
+// Onboarding
+"ONBOARDING_WINDOW_TITLE" = "Welcome to Clawsy";
+
+// Pairing prompt
+"PAIRING_COPY_PROMPT" = "Copy Prompt for Agent";
+"PAIRING_AGENT_PROMPT" = "My Clawsy Mac companion app has sent a device pairing request to the OpenClaw gateway. Please find the pending device and approve it, then let me know when done.";
+
 "FINDERSYNC_TOOLBAR_TOOLTIP" = "Clawsy: Connect folder with AI agent";
+
+"RULE_FILTER_PLACEHOLDER" = "Filter (e.g. *.pdf)";

@@ -61,7 +61,7 @@ class UpdateManager: ObservableObject {
     
     // MARK: - Notification Permission
     
-    /// Request notification permission independently (may run before NetworkManager).
+    /// Request notification permission independently (may run before connection).
     func ensureNotificationPermission() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
             if let error = error {
@@ -131,8 +131,8 @@ class UpdateManager: ObservableObject {
         ensureNotificationPermission()
         
         let content = UNMutableNotificationContent()
-        content.title = "Clawsy Update verfügbar"
-        content.body = "Version \(version) ist bereit. Einstellungen öffnen zum Installieren."
+        content.title = NSLocalizedString("UPDATE_AVAILABLE_TITLE", bundle: .clawsy, comment: "")
+        content.body = String(format: NSLocalizedString("UPDATE_AVAILABLE_BODY %@", bundle: .clawsy, comment: ""), version)
         content.sound = .default
         
         let request = UNNotificationRequest(
@@ -266,6 +266,11 @@ class UpdateManager: ObservableObject {
         }
     }
 
+    /// Escape a string for safe interpolation into a single-quoted shell argument.
+    private func shellEscape(_ s: String) -> String {
+        "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'"
+    }
+
     func installUpdate(at newAppPath: String) {
         let targetPath = Bundle.main.bundlePath
         let scriptPath = "/tmp/clawsy_updater.sh"
@@ -276,14 +281,21 @@ class UpdateManager: ObservableObject {
         // The child bash process is started before NSApp.terminate — when the
         // parent app exits its sandbox is torn down, allowing the orphaned bash
         // process to replace the app bundle and relaunch cleanly.
+        let bundleId = Bundle.main.bundleIdentifier ?? "ai.clawsy"
+        let safeTarget = shellEscape(targetPath)
+        let safeNew = shellEscape(newAppPath)
+        let safeBundleId = shellEscape(bundleId)
+        let safeScript = shellEscape(scriptPath)
         let script = """
         #!/bin/sh
         sleep 2
-        rm -rf "\(targetPath)"
-        mv "\(newAppPath)" "\(targetPath)"
-        xattr -cr "\(targetPath)"
-        open "\(targetPath)"
-        rm -f \(scriptPath)
+        rm -rf \(safeTarget)
+        mv \(safeNew) \(safeTarget)
+        xattr -cr \(safeTarget)
+        tccutil reset Accessibility \(safeBundleId) 2>/dev/null || true
+        tccutil reset ScreenCapture \(safeBundleId) 2>/dev/null || true
+        open \(safeTarget)
+        rm -f \(safeScript)
         """
 
         do {
