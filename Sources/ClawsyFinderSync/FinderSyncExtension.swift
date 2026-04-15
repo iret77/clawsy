@@ -46,7 +46,7 @@ class FinderSyncExtension: FIFinderSync {
     // MARK: - Toolbar
 
     override var toolbarItemName: String { "Clawsy" }
-    override var toolbarItemToolTip: String { "Clawsy: Ordner mit KI-Agent verbinden" }
+    override var toolbarItemToolTip: String { NSLocalizedString("FINDERSYNC_TOOLBAR_TOOLTIP", bundle: .clawsy, comment: "") }
     override var toolbarItemImage: NSImage {
         NSImage(systemSymbolName: "bolt.circle.fill", accessibilityDescription: "Clawsy") ?? NSImage()
     }

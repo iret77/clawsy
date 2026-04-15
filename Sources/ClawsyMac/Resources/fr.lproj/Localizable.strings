@@ -346,3 +346,6 @@
 "CLIPBOARD_NAMED_WANTS_READ" = "%@ veut lire votre presse-papiers.";
 "ALERT_SCREENSHOT_NAMED_BODY" = "%@ veut voir votre écran.";
 "REMOTE_NAMED_USER_ASKING" = "%@ demande une capture.";
+
+"RULE_FILTER_PLACEHOLDER" = "Filter (e.g. *.pdf)";
+"FINDERSYNC_TOOLBAR_TOOLTIP" = "Clawsy: Connect folder with AI agent";

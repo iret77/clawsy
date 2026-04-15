@@ -355,3 +355,6 @@
 "CLIPBOARD_NAMED_WANTS_READ" = "%@ wants to read your clipboard.";
 "ALERT_SCREENSHOT_NAMED_BODY" = "%@ wants to see your screen.";
 "REMOTE_NAMED_USER_ASKING" = "%@ is requesting a capture.";
+
+"RULE_FILTER_PLACEHOLDER" = "Filter (e.g. *.pdf)";
+"FINDERSYNC_TOOLBAR_TOOLTIP" = "Clawsy: Connect folder with AI agent";

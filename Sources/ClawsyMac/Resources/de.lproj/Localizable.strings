@@ -348,3 +348,6 @@
 "CLIPBOARD_NAMED_WANTS_READ" = "%@ möchte deine Zwischenablage lesen.";
 "ALERT_SCREENSHOT_NAMED_BODY" = "%@ möchte deinen Bildschirm sehen.";
 "REMOTE_NAMED_USER_ASKING" = "%@ bittet um eine Aufnahme.";
+
+"RULE_FILTER_PLACEHOLDER" = "Filter (z.B. *.pdf)";
+"FINDERSYNC_TOOLBAR_TOOLTIP" = "Clawsy: Ordner mit KI-Agent verbinden";

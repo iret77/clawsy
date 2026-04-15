@@ -203,7 +203,7 @@ struct RuleEditSheet: View {
                     Text(l10n: "RULE_TRIGGER_MANUAL").tag("manual")
                 }
 
-                TextField("Filter (z.B. *.pdf)", text: $rule.filter)
+                TextField(String(localized: "RULE_FILTER_PLACEHOLDER", bundle: .clawsy), text: $rule.filter)
                     .font(.system(.body, design: .monospaced))
 
                 Picker(String(localized: "RULE_ACTION", bundle: .clawsy), selection: $rule.action) {
