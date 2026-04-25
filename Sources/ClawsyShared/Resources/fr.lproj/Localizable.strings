@@ -324,3 +324,7 @@
 
 // Onboarding
 "ONBOARDING_WINDOW_TITLE" = "Bienvenue dans Clawsy";
+
+"RULE_FILTER_PLACEHOLDER" = "Filtre (p. ex. *.pdf)";
+
+"FINDERSYNC_TOOLBAR_TOOLTIP" = "Clawsy : Connecter le dossier à l'agent IA";

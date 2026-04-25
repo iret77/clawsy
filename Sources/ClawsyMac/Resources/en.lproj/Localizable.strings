@@ -387,7 +387,6 @@
 
 // Rule Editor
 "RULE_FILTER" = "Filter";
-"RULE_FILTER_PLACEHOLDER" = "e.g. *.pdf";
 
 // QuickSend
 "QUICK_SEND_CLEAR" = "Clear";
@@ -502,3 +501,7 @@
 // Pairing prompt
 "PAIRING_COPY_PROMPT" = "Copy Prompt for Agent";
 "PAIRING_AGENT_PROMPT" = "My Clawsy Mac companion app has sent a device pairing request to the OpenClaw gateway. Please find the pending device and approve it, then let me know when done.";
+
+"FINDERSYNC_TOOLBAR_TOOLTIP" = "Clawsy: Connect folder with AI agent";
+
+"RULE_FILTER_PLACEHOLDER" = "Filter (e.g. *.pdf)";
