@@ -90,7 +90,6 @@ jobs:
         ./build.sh
 
     - name: Notarize App
-      continue-on-error: true
       env:
         APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
         APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
@@ -98,49 +97,59 @@ jobs:
       run: |
         # Write the API key to a file notarytool can read
         mkdir -p ~/.private_keys
-        echo "$APPSTORE_PRIVATE_KEY" > ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+        KEY_FILE=~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+        echo "$APPSTORE_PRIVATE_KEY" > "$KEY_FILE"
+        trap 'rm -f Clawsy-notarize.zip "$KEY_FILE"' EXIT
 
         # Create a zip for notarization (-y preserves framework symlinks)
         cd .build/app && zip -yr ../../Clawsy-notarize.zip Clawsy.app && cd ../..
 
-        KEY_ARGS="--key ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8 --key-id $APPSTORE_KEY_ID --issuer $APPSTORE_ISSUER_ID"
+        KEY_ARGS="--key $KEY_FILE --key-id $APPSTORE_KEY_ID --issuer $APPSTORE_ISSUER_ID"
 
-        # Submit to Apple and wait (30 min — new accounts get slower scans)
-        xcrun notarytool submit Clawsy-notarize.zip \
-          $KEY_ARGS --wait --timeout 30m 2>&1 | tee /tmp/notary.out || true
-
-        SUB_ID=$(grep "id:" /tmp/notary.out | head -1 | awk '{print $2}')
-
-        # If timed out, poll status once more
-        if grep -q "Timeout" /tmp/notary.out && [ -n "$SUB_ID" ]; then
-          echo "⏳ Timeout reached — checking final status..."
-          xcrun notarytool info "$SUB_ID" $KEY_ARGS 2>&1 | tee -a /tmp/notary.out
+        # Async submit — get a submission ID we can poll independently
+        set -o pipefail
+        xcrun notarytool submit Clawsy-notarize.zip $KEY_ARGS --output-format json \
+          | tee /tmp/notary-submit.json
+        SUB_ID=$(python3 -c "import json,sys; print(json.load(open('/tmp/notary-submit.json')).get('id',''))")
+        if [ -z "$SUB_ID" ]; then
+          echo "❌ Submission failed — no submission ID returned"
+          exit 1
         fi
+        echo "Submission ID: $SUB_ID"
 
-        # If notarization failed, fetch the detailed log from Apple
-        if grep -q "status: Invalid" /tmp/notary.out; then
-          echo "❌ Notarization rejected — fetching Apple's log:"
+        # Poll for up to 90 minutes (Apple usually < 5 min, can spike to 30+)
+        STATUS=""
+        DEADLINE=$(( $(date +%s) + 5400 ))
+        while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+          INFO=$(xcrun notarytool info "$SUB_ID" $KEY_ARGS --output-format json 2>&1)
+          STATUS=$(echo "$INFO" | python3 -c "import json,sys; print(json.load(sys.stdin).get('status',''))" 2>/dev/null || echo "")
+          echo "[$(date -u +%H:%M:%S)] notarization status: $STATUS"
+          case "$STATUS" in
+            Accepted|Invalid|Rejected) break ;;
+          esac
+          sleep 30
+        done
+
+        # On Invalid/Rejected, dump Apple's developer log before failing
+        if [ "$STATUS" = "Invalid" ] || [ "$STATUS" = "Rejected" ]; then
+          echo "❌ Notarization $STATUS — Apple developer log:"
           xcrun notarytool log "$SUB_ID" $KEY_ARGS notary-log.json || true
-          cat notary-log.json
-          rm -f Clawsy-notarize.zip ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+          cat notary-log.json || true
           exit 1
         fi
 
-        # Fail if notarization didn't succeed
-        if ! grep -q "status: Accepted" /tmp/notary.out; then
-          echo "❌ Notarization did not succeed. Check output above."
-          rm -f Clawsy-notarize.zip ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+        # Anything other than Accepted = fail
+        if [ "$STATUS" != "Accepted" ]; then
+          echo "❌ Notarization did not complete in 90 min — final status: '$STATUS'"
+          echo "Submission ID for manual follow-up: $SUB_ID"
           exit 1
         fi
 
-        # Staple the notarization ticket into the app bundle
+        # Staple ticket into the app bundle so Gatekeeper works offline
         xcrun stapler staple .build/app/Clawsy.app
 
-        # Verify
+        # Verify Gatekeeper acceptance
         spctl -a -vvv -t execute .build/app/Clawsy.app
-
-        # Cleanup
-        rm -f Clawsy-notarize.zip ~/.private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
 
     - name: Zip App
       run: |
