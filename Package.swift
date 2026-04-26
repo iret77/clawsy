@@ -14,13 +14,14 @@ let package = Package(
         .executable(name: "ScreenshotCLI", targets: ["ScreenshotCLI"])
     ],
     dependencies: [
-        .package(url: "https://github.com/daltoniam/Starscream.git", from: "4.0.0")
+        .package(url: "https://github.com/daltoniam/Starscream.git", from: "4.0.0"),
+        .package(url: "https://github.com/kishikawakatsumi/KeychainAccess.git", from: "4.0.0")
     ],
     targets: [
         // Shared logic (macOS)
         .target(
             name: "ClawsyShared",
-            dependencies: ["Starscream"],
+            dependencies: ["Starscream", "KeychainAccess"],
             path: "Sources/ClawsyShared",
             resources: [
                 .process("Resources/de.lproj"),

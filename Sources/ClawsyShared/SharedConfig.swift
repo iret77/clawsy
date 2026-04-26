@@ -1,7 +1,10 @@
 import Foundation
+import KeychainAccess
 
 public struct SharedConfig {
     public static let appGroup = "group.ai.openclaw.clawsy"
+    private static let keychain = Keychain(service: "com.openclaw.clawsy", accessGroup: appGroup)
+        .synchronizable(true) // Allow sharing via iCloud Keychain
     
     public static let sharedDefaults: UserDefaults = {
         let groupDefaults = UserDefaults(suiteName: appGroup) ?? .standard
@@ -12,7 +15,7 @@ public struct SharedConfig {
             let standard = UserDefaults.standard
             if let oldHost = standard.string(forKey: "serverHost") { groupDefaults.set(oldHost, forKey: "serverHost") }
             if let oldPort = standard.string(forKey: "serverPort") { groupDefaults.set(oldPort, forKey: "serverPort") }
-            if let oldToken = standard.string(forKey: "serverToken") { groupDefaults.set(oldToken, forKey: "serverToken") }
+            // Token is migrated separately below
             if let oldUser = standard.string(forKey: "sshUser") { groupDefaults.set(oldUser, forKey: "sshUser") }
             groupDefaults.set(standard.bool(forKey: "useSshFallback"), forKey: "useSshFallback")
             if let oldPath = standard.string(forKey: "sharedFolderPath") { groupDefaults.set(oldPath, forKey: "sharedFolderPath") }
@@ -21,6 +24,22 @@ public struct SharedConfig {
             if let oldPush = standard.string(forKey: "pushClipboardHotkey") { groupDefaults.set(oldPush, forKey: "pushClipboardHotkey") }
 
             groupDefaults.set(true, forKey: "migrationV1Done")
+            groupDefaults.synchronize()
+        }
+        
+        // --- KEYCHAIN MIGRATION ---
+        if !groupDefaults.bool(forKey: "migrationKeychainDone") {
+            // Migrate from group defaults
+            if let oldToken = groupDefaults.string(forKey: "serverToken") {
+                try? keychain.set(oldToken, key: "serverToken")
+                groupDefaults.removeObject(forKey: "serverToken")
+            }
+            // Also check standard defaults (from very old versions)
+            else if let oldToken = UserDefaults.standard.string(forKey: "serverToken") {
+                try? keychain.set(oldToken, key: "serverToken")
+                UserDefaults.standard.removeObject(forKey: "serverToken")
+            }
+            groupDefaults.set(true, forKey: "migrationKeychainDone")
             groupDefaults.synchronize()
         }
 
@@ -38,7 +57,16 @@ public struct SharedConfig {
     
     public static var serverHost: String { sharedDefaults.string(forKey: "serverHost") ?? "" }
     public static var serverPort: String { sharedDefaults.string(forKey: "serverPort") ?? "18789" }
-    public static var serverToken: String { sharedDefaults.string(forKey: "serverToken") ?? "" }
+    public static var serverToken: String {
+        get { (try? keychain.get("serverToken")) ?? "" }
+        set {
+            if newValue.isEmpty {
+                try? keychain.remove("serverToken")
+            } else {
+                try? keychain.set(newValue, key: "serverToken")
+            }
+        }
+    }
     public static var sshUser: String { sharedDefaults.string(forKey: "sshUser") ?? "" }
     public static var useSshFallback: Bool { sharedDefaults.bool(forKey: "useSshFallback") }
     
@@ -72,7 +100,7 @@ public struct SharedConfig {
         let defaults = sharedDefaults
         defaults.set(host, forKey: "serverHost")
         defaults.set(port, forKey: "serverPort")
-        defaults.set(token, forKey: "serverToken")
+        serverToken = token // Use the new keychain-backed property
         defaults.synchronize()
     }
     
@@ -99,3 +127,4 @@ public struct SharedConfig {
         }
     }
 }
+
