@@ -18,5 +18,9 @@
 	<true/>
 	<key>com.apple.security.files.user-selected.read-write</key>
 	<true/>
+	<key>com.apple.security.keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)group.ai.openclaw.clawsy</string>
+	</array>
 </dict>
 </plist>
