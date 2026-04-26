@@ -52,7 +52,7 @@ struct SettingsTabView: View {
         .frame(width: 480, height: 370)
         .onAppear { loadActiveProfile() }
         .onChange(of: hostManager.activeHostId) { _ in loadActiveProfile() }
-        .onDisappear { saveProfile() }
+        .onChange(of: editedProfile) { _ in saveProfile() }
         .alert("Delete Host?", isPresented: $showDeleteConfirm) {
             Button(NSLocalizedString("CANCEL", bundle: .clawsy, comment: ""), role: .cancel) { hostToDelete = nil }
             Button(NSLocalizedString("DELETE_HOST_CONFIRM", bundle: .clawsy, comment: ""), role: .destructive) {
