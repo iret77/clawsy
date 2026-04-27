@@ -13,7 +13,7 @@ struct OnboardingView: View {
 
     @State private var currentPage: OnboardingPage = .welcome
     @ObservedObject private var permissionMonitor = PermissionMonitor.shared
-    @StateObject private var hostManager = HostManager()
+    @EnvironmentObject private var hostManager: HostManager
 
     // Connection fields
     @State private var setupCode = ""
