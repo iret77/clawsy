@@ -11,10 +11,24 @@ settings:
   base:
     SWIFT_VERSION: "5.9"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
+    # Defaults for version variables. CI's "Set Version from Tag" step overrides
+    # these for tag builds; without defaults, extension Info.plists expand
+    # `$(CURRENT_PROJECT_VERSION)` to null and macOS rejects them with
+    # "CFBundleVersion of an app extension (null) must match parent app".
+    MARKETING_VERSION: "0.9.33"
+    CURRENT_PROJECT_VERSION: "1"
     CODE_SIGN_IDENTITY: "-"
     CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: "VG5X6JCLGF"
     ENABLE_HARDENED_RUNTIME: true
-    CODE_SIGN_INJECT_BASE_ENTITLEMENTS: false
+    # CODE_SIGN_INJECT_BASE_ENTITLEMENTS deliberately NOT set (default = YES).
+    # Setting it to NO causes xcodebuild to skip the profile-merge step in
+    # builtin-productPackagingUtility, which means codesign signs without
+    # the profile's restricted-entitlement allowlist. Result: App Groups,
+    # FinderSync.HostBundleIdentifier and keychain-access-groups all get
+    # silently stripped — only the two profile defaults (application-identifier
+    # and team-identifier) survive. Was diagnosed empirically by inspecting
+    # signed bundles from rounds 1-3.
 
 packages:
   Starscream:
@@ -78,6 +92,11 @@ targets:
         LD_RUNPATH_SEARCH_PATHS:
           - "@executable_path/../Frameworks"
         COMBINE_HIDPI_IMAGES: true
+        # Profile-aware signing — Apple's codesign drops restricted entitlements
+        # (App Groups, FinderSync.HostBundleIdentifier) under Developer ID cert
+        # unless xcodebuild signs via PROVISIONING_PROFILE_SPECIFIER. CI installs
+        # the named profile into ~/Library/MobileDevice/Provisioning Profiles/.
+        PROVISIONING_PROFILE_SPECIFIER: "Clawsy Direct"
 
   # ── Share Extension ───────────────────────────────────────────────
   ClawsyShare:
@@ -115,6 +134,7 @@ targets:
         LD_RUNPATH_SEARCH_PATHS:
           - "@executable_path/../Frameworks"
           - "@executable_path/../../../../Frameworks"
+        PROVISIONING_PROFILE_SPECIFIER: "Clawsy Share Direct"
 
   # ── FinderSync Extension ──────────────────────────────────────────
   ClawsyFinderSync:
@@ -147,3 +167,4 @@ targets:
         LD_RUNPATH_SEARCH_PATHS:
           - "@executable_path/../Frameworks"
           - "@executable_path/../../../../Frameworks"
+        PROVISIONING_PROFILE_SPECIFIER: "Clawsy FinderSync Direct"
