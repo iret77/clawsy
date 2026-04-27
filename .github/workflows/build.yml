@@ -82,9 +82,31 @@ jobs:
         # Cleanup
         rm -f /tmp/certificate.p12
 
+    - name: Decode Provisioning Profiles
+      env:
+        PROFILE_HOST_BASE64: ${{ secrets.PROFILE_HOST_BASE64 }}
+        PROFILE_SHARE_BASE64: ${{ secrets.PROFILE_SHARE_BASE64 }}
+        PROFILE_FINDERSYNC_BASE64: ${{ secrets.PROFILE_FINDERSYNC_BASE64 }}
+      run: |
+        # Mac Direct Distribution profiles for each bundle. Without these,
+        # codesign silently strips App Group + HostBundleIdentifier entitlements
+        # because they're "restricted" and require a profile to whitelist them.
+        mkdir -p profiles
+        echo "$PROFILE_HOST_BASE64"       | base64 --decode > profiles/host.mobileprovision
+        echo "$PROFILE_SHARE_BASE64"      | base64 --decode > profiles/share.mobileprovision
+        echo "$PROFILE_FINDERSYNC_BASE64" | base64 --decode > profiles/findersync.mobileprovision
+        # Sanity check — bail if a secret was empty
+        for f in profiles/host.mobileprovision profiles/share.mobileprovision profiles/findersync.mobileprovision; do
+          if [ ! -s "$f" ]; then
+            echo "❌ $f is empty — corresponding GitHub secret missing or empty"
+            exit 1
+          fi
+        done
+
     - name: Build and Package
       env:
         CODESIGN_IDENTITY: "Developer ID Application: high5 ventures GmbH (VG5X6JCLGF)"
+        PROFILES_DIR: ./profiles
       run: |
         chmod +x build.sh
         ./build.sh
