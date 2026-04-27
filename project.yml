@@ -21,7 +21,14 @@ settings:
     CODE_SIGN_STYLE: Manual
     DEVELOPMENT_TEAM: "VG5X6JCLGF"
     ENABLE_HARDENED_RUNTIME: true
-    CODE_SIGN_INJECT_BASE_ENTITLEMENTS: false
+    # CODE_SIGN_INJECT_BASE_ENTITLEMENTS deliberately NOT set (default = YES).
+    # Setting it to NO causes xcodebuild to skip the profile-merge step in
+    # builtin-productPackagingUtility, which means codesign signs without
+    # the profile's restricted-entitlement allowlist. Result: App Groups,
+    # FinderSync.HostBundleIdentifier and keychain-access-groups all get
+    # silently stripped — only the two profile defaults (application-identifier
+    # and team-identifier) survive. Was diagnosed empirically by inspecting
+    # signed bundles from rounds 1-3.
 
 packages:
   Starscream:
