@@ -108,9 +108,14 @@ embed_profile "$PROFILES_DIR/findersync.mobileprovision" "$APP_BUNDLE/Contents/P
 echo "🔏 Re-signing app bundle (component-level)..."
 
 if [ "$HARDENED_RUNTIME" = "YES" ]; then
-    CODESIGN_OPTS="--options runtime --timestamp"
+    # --generate-entitlement-der is required on macOS 13+ to write the DER-format
+    # entitlement blob alongside the legacy plist blob. Without it, codesign on
+    # an Apple-issued cert drops the plist blob entirely when reconciling against
+    # the embedded provisioning profile — that's the silent-strip mode that
+    # made all extensions ship with empty entitlements before.
+    CODESIGN_OPTS="--options runtime --timestamp --generate-entitlement-der"
 else
-    CODESIGN_OPTS=""
+    CODESIGN_OPTS="--generate-entitlement-der"
 fi
 
 # 6a: Bundles inside frameworks (must be signed before the framework)
@@ -133,6 +138,23 @@ codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS \
 # 6c: Main app (outermost, signed last) — explicit entitlements
 codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS \
     --entitlements ClawsyMac.entitlements "$APP_BUNDLE"
+
+# ── Step 6d: Diagnostic dump after re-sign ─────────────────────────
+# Surface what's actually in each bundle's signature so future failures
+# don't require pulling the artifact + manual codesign -d to debug.
+echo ""
+echo "🔬 Diagnostic — codesign details after re-sign:"
+for component in "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex" \
+                 "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex" \
+                 "$APP_BUNDLE"; do
+    echo "  --- $(basename "$component") ---"
+    codesign -dvv "$component" 2>&1 | grep -E "^(Identifier|TeamIdentifier|Authority|Runtime Version|Provisioning Profile)" | sed 's/^/    /' || true
+    # Show entitlement dict (truncated to keys for sanity)
+    echo "    entitlement keys:"
+    codesign -d --entitlements :- "$component" 2>/dev/null \
+      | python3 -c "import sys,plistlib; d=plistlib.loads(sys.stdin.buffer.read() or b'<plist><dict/></plist>'); print('\n'.join('      '+k for k in d.keys()) if d else '      (empty)')"
+done
+echo ""
 
 # ── Step 7: Verify ──────────────────────────────────────────────────
 echo "🔍 Verifying bundle structure..."

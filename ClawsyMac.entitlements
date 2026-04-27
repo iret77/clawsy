@@ -4,8 +4,6 @@
 <dict>
 	<key>com.apple.security.app-sandbox</key>
 	<false/>
-	<key>com.apple.security.cs.disable-library-validation</key>
-	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.ai.openclaw.clawsy</string>
@@ -18,9 +16,12 @@
 	<true/>
 	<key>com.apple.security.files.user-selected.read-write</key>
 	<true/>
-	<key>com.apple.security.keychain-access-groups</key>
+	<!-- Keychain-Access-Group: Team-ID-prefixed literal (codesign expands no
+	     $(AppIdentifierPrefix) when invoked outside Xcode's auto-signing). The
+	     embedded provisioning profile whitelists VG5X6JCLGF.* for keychain. -->
+	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)group.ai.openclaw.clawsy</string>
+		<string>VG5X6JCLGF.ai.clawsy</string>
 	</array>
 </dict>
 </plist>
