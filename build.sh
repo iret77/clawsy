@@ -77,48 +77,20 @@ else
     echo "⚠️  CLAWSY.md missing from bundle resources"
 fi
 
-# ── Step 5b: Embed provisioning profiles ───────────────────────────
-# Mac Direct Distribution profiles (one per bundle) are required for
-# codesign to retain restricted entitlements (App Groups, etc.) when
-# signing with a real Apple Developer ID cert. Without them, codesign
-# silently drops those entitlements — extensions then can't access
-# the shared App Group container at runtime.
-#
-# Profiles are passed in via PROFILES_DIR (default: ./profiles for
-# local builds, set by CI). Each file is copied to the matching
-# bundle's Contents/embedded.provisionprofile BEFORE re-signing.
-PROFILES_DIR="${PROFILES_DIR:-./profiles}"
-embed_profile() {
-    local src="$1" dest="$2" label="$3"
-    if [ -f "$src" ]; then
-        cp "$src" "$dest"
-        echo "✅ $label profile embedded ($(stat -f%z "$src") bytes)"
-    else
-        echo "⚠️  $label profile not found at $src — entitlements will be stripped"
-    fi
-}
-echo "📜 Embedding provisioning profiles..."
-embed_profile "$PROFILES_DIR/host.mobileprovision"       "$APP_BUNDLE/Contents/embedded.provisionprofile"                                  "Host"
-embed_profile "$PROFILES_DIR/share.mobileprovision"      "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex/Contents/embedded.provisionprofile"      "Share Extension"
-embed_profile "$PROFILES_DIR/findersync.mobileprovision" "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex/Contents/embedded.provisionprofile" "FinderSync Extension"
-
-# ── Step 6: Re-sign bundle for consistent Team ID ─────────────────
-# Re-sign all components with the same identity (inside-out) to
-# guarantee matching Team IDs.
-echo "🔏 Re-signing app bundle (component-level)..."
+# ── Step 6: Re-sign frameworks for consistent Team ID ──────────────
+# xcodebuild already signed Host + both Extensions correctly via
+# PROVISIONING_PROFILE_SPECIFIER (Profile-aware path that retains
+# restricted entitlements). We only re-sign Swift Package framework
+# products here, because xcodebuild signs those with a build-internal
+# identity that doesn't carry our Team ID.
+echo "🔏 Re-signing third-party frameworks for Team-ID consistency..."
 
 if [ "$HARDENED_RUNTIME" = "YES" ]; then
-    # --generate-entitlement-der is required on macOS 13+ to write the DER-format
-    # entitlement blob alongside the legacy plist blob. Without it, codesign on
-    # an Apple-issued cert drops the plist blob entirely when reconciling against
-    # the embedded provisioning profile — that's the silent-strip mode that
-    # made all extensions ship with empty entitlements before.
     CODESIGN_OPTS="--options runtime --timestamp --generate-entitlement-der"
 else
     CODESIGN_OPTS="--generate-entitlement-der"
 fi
 
-# 6a: Bundles inside frameworks (must be signed before the framework)
 for fw in "$APP_BUNDLE"/Contents/Frameworks/*.framework; do
     [ -d "$fw" ] || continue
     for bundle in "$fw"/Versions/A/Resources/*.bundle; do
@@ -127,29 +99,21 @@ for fw in "$APP_BUNDLE"/Contents/Frameworks/*.framework; do
     codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS "$fw"
 done
 
-# 6b: Extensions — explicit entitlements (avoid preserving get-task-allow)
-codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS \
-    --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements \
-    "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex"
-codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS \
-    --entitlements Sources/ClawsyFinderSync/ClawsyFinderSync.entitlements \
-    "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex"
-
-# 6c: Main app (outermost, signed last) — explicit entitlements
-codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS \
-    --entitlements ClawsyMac.entitlements "$APP_BUNDLE"
-
-# ── Step 6d: Diagnostic dump after re-sign ─────────────────────────
+# ── Step 6d: Diagnostic dump ───────────────────────────────────────
 # Surface what's actually in each bundle's signature so future failures
 # don't require pulling the artifact + manual codesign -d to debug.
 echo ""
-echo "🔬 Diagnostic — codesign details after re-sign:"
+echo "🔬 Diagnostic — codesign details:"
 for component in "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex" \
                  "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex" \
                  "$APP_BUNDLE"; do
     echo "  --- $(basename "$component") ---"
-    codesign -dvv "$component" 2>&1 | grep -E "^(Identifier|TeamIdentifier|Authority|Runtime Version|Provisioning Profile)" | sed 's/^/    /' || true
-    # Show entitlement dict (truncated to keys for sanity)
+    codesign -dvv "$component" 2>&1 | grep -E "^(Identifier|TeamIdentifier|Authority|Runtime Version)" | sed 's/^/    /' || true
+    if [ -f "$component/Contents/embedded.provisionprofile" ]; then
+        echo "    Embedded Profile: yes ($(stat -f%z "$component/Contents/embedded.provisionprofile") bytes)"
+    else
+        echo "    Embedded Profile: NO"
+    fi
     echo "    entitlement keys:"
     codesign -d --entitlements :- "$component" 2>/dev/null \
       | python3 -c "import sys,plistlib; d=plistlib.loads(sys.stdin.buffer.read() or b'<plist><dict/></plist>'); print('\n'.join('      '+k for k in d.keys()) if d else '      (empty)')"

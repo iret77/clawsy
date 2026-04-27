@@ -82,31 +82,45 @@ jobs:
         # Cleanup
         rm -f /tmp/certificate.p12
 
-    - name: Decode Provisioning Profiles
+    - name: Install Provisioning Profiles
       env:
         PROFILE_HOST_BASE64: ${{ secrets.PROFILE_HOST_BASE64 }}
         PROFILE_SHARE_BASE64: ${{ secrets.PROFILE_SHARE_BASE64 }}
         PROFILE_FINDERSYNC_BASE64: ${{ secrets.PROFILE_FINDERSYNC_BASE64 }}
       run: |
-        # Mac Direct Distribution profiles for each bundle. Without these,
-        # codesign silently strips App Group + HostBundleIdentifier entitlements
-        # because they're "restricted" and require a profile to whitelist them.
-        mkdir -p profiles
-        echo "$PROFILE_HOST_BASE64"       | base64 --decode > profiles/host.mobileprovision
-        echo "$PROFILE_SHARE_BASE64"      | base64 --decode > profiles/share.mobileprovision
-        echo "$PROFILE_FINDERSYNC_BASE64" | base64 --decode > profiles/findersync.mobileprovision
-        # Sanity check — bail if a secret was empty
-        for f in profiles/host.mobileprovision profiles/share.mobileprovision profiles/findersync.mobileprovision; do
-          if [ ! -s "$f" ]; then
-            echo "❌ $f is empty — corresponding GitHub secret missing or empty"
-            exit 1
+        # xcodebuild looks up profiles by UUID in this directory. Each file's
+        # UUID is read from its plist payload and used as the filename — that's
+        # what xcodebuild's PROVISIONING_PROFILE_SPECIFIER resolves against.
+        PP_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+        mkdir -p "$PP_DIR"
+
+        install_profile() {
+          local var_name="$1" label="$2"
+          local payload
+          payload=$(eval "printf '%s' \"\$$var_name\"")
+          if [ -z "$payload" ]; then
+            echo "❌ $var_name is empty — corresponding GitHub secret missing"
+            return 1
           fi
-        done
+          local tmp uuid
+          tmp=$(mktemp)
+          printf '%s' "$payload" | base64 --decode > "$tmp"
+          uuid=$(security cms -D -i "$tmp" 2>/dev/null | python3 -c "import sys,plistlib; print(plistlib.loads(sys.stdin.buffer.read())['UUID'])")
+          if [ -z "$uuid" ]; then
+            echo "❌ Could not extract UUID from $label profile"
+            return 1
+          fi
+          mv "$tmp" "$PP_DIR/$uuid.provisionprofile"
+          echo "  ✓ $label profile installed: $uuid.provisionprofile"
+        }
+
+        install_profile PROFILE_HOST_BASE64       "Host"
+        install_profile PROFILE_SHARE_BASE64      "Share Extension"
+        install_profile PROFILE_FINDERSYNC_BASE64 "FinderSync Extension"
 
     - name: Build and Package
       env:
         CODESIGN_IDENTITY: "Developer ID Application: high5 ventures GmbH (VG5X6JCLGF)"
-        PROFILES_DIR: ./profiles
       run: |
         chmod +x build.sh
         ./build.sh

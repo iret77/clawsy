@@ -19,6 +19,7 @@ settings:
     CURRENT_PROJECT_VERSION: "1"
     CODE_SIGN_IDENTITY: "-"
     CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: "VG5X6JCLGF"
     ENABLE_HARDENED_RUNTIME: true
     CODE_SIGN_INJECT_BASE_ENTITLEMENTS: false
 
@@ -84,6 +85,11 @@ targets:
         LD_RUNPATH_SEARCH_PATHS:
           - "@executable_path/../Frameworks"
         COMBINE_HIDPI_IMAGES: true
+        # Profile-aware signing — Apple's codesign drops restricted entitlements
+        # (App Groups, FinderSync.HostBundleIdentifier) under Developer ID cert
+        # unless xcodebuild signs via PROVISIONING_PROFILE_SPECIFIER. CI installs
+        # the named profile into ~/Library/MobileDevice/Provisioning Profiles/.
+        PROVISIONING_PROFILE_SPECIFIER: "Clawsy Direct"
 
   # ── Share Extension ───────────────────────────────────────────────
   ClawsyShare:
@@ -121,6 +127,7 @@ targets:
         LD_RUNPATH_SEARCH_PATHS:
           - "@executable_path/../Frameworks"
           - "@executable_path/../../../../Frameworks"
+        PROVISIONING_PROFILE_SPECIFIER: "Clawsy Share Direct"
 
   # ── FinderSync Extension ──────────────────────────────────────────
   ClawsyFinderSync:
@@ -153,3 +160,4 @@ targets:
         LD_RUNPATH_SEARCH_PATHS:
           - "@executable_path/../Frameworks"
           - "@executable_path/../../../../Frameworks"
+        PROVISIONING_PROFILE_SPECIFIER: "Clawsy FinderSync Direct"
