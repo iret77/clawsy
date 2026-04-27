@@ -745,6 +745,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             existing.makeKeyAndOrderFront(nil)
             return
         }
+
+        guard let hostManager = self.hostManager else {
+            os_log("Onboarding skipped: hostManager not initialized", log: OSLog.default, type: .error)
+            return
+        }
+
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 460, height: 540),
             styleMask: [.titled, .closable], backing: .buffered, defer: false)
@@ -763,6 +769,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             onboardingCompleted: onboardingBinding,
             onImportSetupCode: { [weak self] code in self?.handleSetupCode(code) ?? false }
         )
+        .environmentObject(hostManager)
+
         window.contentView = NSHostingView(rootView: view)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
