@@ -68,6 +68,24 @@ fi
 
 cp -R "$BUILT_APP" "$APP_BUNDLE"
 
+# ── Step 4b: Dump xcent files xcodebuild handed to codesign ────────
+# These are the merged entitlements (`.entitlements` + profile defaults
+# via productPackagingUtility) that get fed to codesign --entitlements.
+# If application-groups is missing here, it's a profile-merge filter
+# problem; if it's present, codesign is the one stripping it.
+echo ""
+echo "🔬 xcent files (productPackagingUtility output, fed to codesign):"
+for xcent in "$DERIVED_DATA"/Build/Intermediates.noindex/Clawsy.build/Release/*.build/*.xcent; do
+    [ -f "$xcent" ] || continue
+    echo "  --- $(basename "$xcent") ---"
+    cat "$xcent" | python3 -c "
+import sys, plistlib
+d = plistlib.loads(sys.stdin.buffer.read() or b'<plist><dict/></plist>')
+for k,v in (d or {}).items():
+    print(f'    {k} = {v}')"
+done
+echo ""
+
 # ── Step 5: Verify CLAWSY.md ───────────────────────────────────────
 # CLAWSY.md is included via project.yml resources — no manual copy
 # needed. Copying after xcodebuild would break the code signature seal.
