@@ -8,17 +8,6 @@
 	<array>
 		<string>group.ai.openclaw.clawsy</string>
 	</array>
-	<key>com.apple.security.network.client</key>
-	<true/>
-	<key>com.apple.security.network.server</key>
-	<true/>
-	<key>com.apple.security.device.camera</key>
-	<true/>
-	<key>com.apple.security.files.user-selected.read-write</key>
-	<true/>
-	<!-- Keychain-Access-Group: Team-ID-prefixed literal (codesign expands no
-	     $(AppIdentifierPrefix) when invoked outside Xcode's auto-signing). The
-	     embedded provisioning profile whitelists VG5X6JCLGF.* for keychain. -->
 	<key>keychain-access-groups</key>
 	<array>
 		<string>VG5X6JCLGF.ai.clawsy</string>
