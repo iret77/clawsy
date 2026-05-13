@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>developer-id</string>
+    <key>teamID</key>
+    <string>VG5X6JCLGF</string>
+    <key>signingStyle</key>
+    <string>manual</string>
+    <key>signingCertificate</key>
+    <string>Developer ID Application</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>ai.clawsy</key>
+        <string>Clawsy Direct</string>
+        <key>ai.clawsy.ShareExtension</key>
+        <string>Clawsy Share Direct</string>
+        <key>ai.clawsy.FinderSync</key>
+        <string>Clawsy FinderSync Direct</string>
+    </dict>
+</dict>
+</plist>

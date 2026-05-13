@@ -4,23 +4,13 @@
 <dict>
 	<key>com.apple.security.app-sandbox</key>
 	<false/>
-	<key>com.apple.security.cs.disable-library-validation</key>
-	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.ai.openclaw.clawsy</string>
 	</array>
-	<key>com.apple.security.network.client</key>
-	<true/>
-	<key>com.apple.security.network.server</key>
-	<true/>
-	<key>com.apple.security.device.camera</key>
-	<true/>
-	<key>com.apple.security.files.user-selected.read-write</key>
-	<true/>
-	<key>com.apple.security.keychain-access-groups</key>
+	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)group.ai.openclaw.clawsy</string>
+		<string>VG5X6JCLGF.ai.clawsy</string>
 	</array>
 </dict>
 </plist>
