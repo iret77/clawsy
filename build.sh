@@ -210,9 +210,11 @@ for component in "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex" \
     else
         echo "    Embedded Profile: NO"
     fi
-    echo "    entitlement keys:"
-    codesign -d --entitlements :- "$component" 2>/dev/null \
-      | python3 -c "import sys,plistlib; d=plistlib.loads(sys.stdin.buffer.read() or b'<plist><dict/></plist>'); print('\n'.join('      '+k for k in d.keys()) if d else '      (empty)')"
+    echo "    --- entitlements (XML form, codesign -d --entitlements :-): ---"
+    codesign -d --entitlements :- "$component" 2>&1 | sed 's/^/      /' || true
+    echo "    --- entitlements (DER form, codesign -d --entitlements-der :-): ---"
+    codesign -d --entitlements-der :- "$component" 2>&1 | head -30 | sed 's/^/      /' || true
+    echo ""
 done
 echo ""
 
