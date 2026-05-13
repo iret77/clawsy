@@ -107,6 +107,42 @@ else
     cp -R "$BUILT_APP" "$APP_BUNDLE"
 fi
 
+# ── Step 3b: Dump intermediate xcent files (productPackagingUtility output) ─
+# These are the entitlements xcodebuild fed to codesign during archive.
+# If application-groups is missing here, productPackagingUtility stripped it
+# (entitlements file or build-mode problem). If it's present here but absent
+# from the final bundle, codesign stripped it (cert/profile/entitlement
+# mismatch problem). The archive intermediate path differs from plain build.
+echo ""
+echo "🔬 xcent files (input to codesign during archive):"
+for xcent in "$DERIVED_DATA"/Build/Intermediates.noindex/ArchiveIntermediates/ClawsyMac/IntermediateBuildFilesPath/Clawsy.build/Release/*.build/*.xcent; do
+    [ -f "$xcent" ] || continue
+    echo "  --- $(basename "$xcent") ---"
+    cat "$xcent" | python3 -c "
+import sys, plistlib
+d = plistlib.loads(sys.stdin.buffer.read() or b'<plist><dict/></plist>')
+for k,v in (d or {}).items():
+    print(f'    {k} = {v}')"
+done
+echo ""
+
+# Also dump the entitlements on the ARCHIVE-internal bundle (pre-export) to
+# distinguish whether archive signed correctly and exportArchive stripped, or
+# whether archive itself never had them.
+ARCHIVE_APP="$ARCHIVE_PATH/Products/Applications/$APP_NAME.app"
+if [ -d "$ARCHIVE_APP" ]; then
+    echo "🔬 Entitlements on archive-internal bundle (before exportArchive):"
+    for component in "$ARCHIVE_APP/Contents/PlugIns/ClawsyShare.appex" \
+                     "$ARCHIVE_APP/Contents/PlugIns/ClawsyFinderSync.appex" \
+                     "$ARCHIVE_APP"; do
+        [ -d "$component" ] || continue
+        echo "  --- $(basename "$component") ---"
+        codesign -d --entitlements :- "$component" 2>/dev/null \
+          | python3 -c "import sys,plistlib; d=plistlib.loads(sys.stdin.buffer.read() or b'<plist><dict/></plist>'); print('\n'.join('    '+k for k in d.keys()) if d else '    (empty)')"
+    done
+    echo ""
+fi
+
 # ── Step 4: Verify CLAWSY.md ───────────────────────────────────────
 if [ -f "$APP_BUNDLE/Contents/Resources/CLAWSY.md" ]; then
     echo "✅ CLAWSY.md bundled by xcodebuild"
