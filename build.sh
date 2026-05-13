@@ -160,52 +160,6 @@ if [ -d "$ARCHIVE_APP" ]; then
     echo ""
 fi
 
-# ── Step 3c: Manual re-sign with explicit entitlements ─────────────
-# Workaround for Apple's productPackagingUtility bug: in distribution mode it
-# emits xcent files containing only application-identifier + team-identifier,
-# silently dropping all .entitlements file contents (app-sandbox,
-# application-groups, FinderSync.HostBundleIdentifier).  codesign then signs
-# bundles with the (empty) xcent.  Re-sign each component pointing codesign
-# directly at the .entitlements file.  This works only because the bundle now
-# has a correct embedded.provisionprofile that allowlists those entitlements;
-# without a profile, Apple-issued cert would strip them.
-#
-# Sign order: innermost first (frameworks → extensions → host).
-if [ "$DISTRIBUTION_BUILD" = "YES" ]; then
-    echo ""
-    echo "🔏 Re-signing components with explicit entitlements..."
-    CS_OPTS="--force --options runtime --timestamp --generate-entitlement-der"
-
-    # Frameworks (no entitlements file, just propagate cert/runtime)
-    for fw in "$APP_BUNDLE"/Contents/Frameworks/*.framework; do
-        [ -d "$fw" ] || continue
-        echo "  → $(basename "$fw")"
-        codesign $CS_OPTS --sign "$SIGN_ID" "$fw"
-    done
-
-    # Share Extension
-    echo "  → ClawsyShare.appex (with ClawsyMacShare.entitlements)"
-    codesign $CS_OPTS \
-        --entitlements Sources/ClawsyMacShare/ClawsyMacShare.entitlements \
-        --sign "$SIGN_ID" \
-        "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex"
-
-    # FinderSync Extension
-    echo "  → ClawsyFinderSync.appex (with ClawsyFinderSync.entitlements)"
-    codesign $CS_OPTS \
-        --entitlements Sources/ClawsyFinderSync/ClawsyFinderSync.entitlements \
-        --sign "$SIGN_ID" \
-        "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex"
-
-    # Host (last, so it seals over the now-correctly-signed extensions)
-    echo "  → Clawsy.app (with ClawsyMac.entitlements)"
-    codesign $CS_OPTS \
-        --entitlements ClawsyMac.entitlements \
-        --sign "$SIGN_ID" \
-        "$APP_BUNDLE"
-    echo ""
-fi
-
 # ── Step 4: Verify CLAWSY.md ───────────────────────────────────────
 if [ -f "$APP_BUNDLE/Contents/Resources/CLAWSY.md" ]; then
     echo "✅ CLAWSY.md bundled by xcodebuild"

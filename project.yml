@@ -82,6 +82,12 @@ targets:
       - package: Starscream
     entitlements:
       path: ClawsyMac.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+        com.apple.security.application-groups:
+          - group.ai.openclaw.clawsy
+        keychain-access-groups:
+          - VG5X6JCLGF.ai.clawsy
     info:
       path: Info.plist
     settings:
@@ -112,6 +118,10 @@ targets:
         embed: false
     entitlements:
       path: Sources/ClawsyMacShare/ClawsyMacShare.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups:
+          - group.ai.openclaw.clawsy
     info:
       path: Sources/ClawsyMacShare/Info.plist
       properties:
@@ -151,6 +161,11 @@ targets:
       - sdk: FinderSync.framework
     entitlements:
       path: Sources/ClawsyFinderSync/ClawsyFinderSync.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups:
+          - group.ai.openclaw.clawsy
+        com.apple.FinderSync.HostBundleIdentifier: ai.clawsy
     info:
       path: Sources/ClawsyFinderSync/Info.plist
       properties:
