@@ -39,6 +39,23 @@ fi
 echo "🔧 Generating Xcode project..."
 xcodegen generate --spec project.yml
 
+# ── Step 1b: Dump entitlements files as CI actually sees them ──────
+# Confirms the checkout state — separates "CI saw wrong files" from
+# "CI saw right files but xcodebuild stripped them anyway".
+echo ""
+echo "🔬 Entitlements files at build time (CI's view):"
+for ent in ClawsyMac.entitlements \
+           Sources/ClawsyMacShare/ClawsyMacShare.entitlements \
+           Sources/ClawsyFinderSync/ClawsyFinderSync.entitlements; do
+    if [ -f "$ent" ]; then
+        echo "  --- $ent ($(wc -c < "$ent" | tr -d ' ') bytes) ---"
+        sed 's/^/    /' "$ent"
+    else
+        echo "  ❌ MISSING: $ent"
+    fi
+done
+echo ""
+
 # ── Step 2: Generate icons from source assets ──────────────────────
 echo "🎨 Generating icons..."
 bash scripts/generate_icons.sh
