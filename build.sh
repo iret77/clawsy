@@ -226,7 +226,6 @@ if [ "$DISTRIBUTION_BUILD" = "YES" ]; then
         fi
     }
 
-    verify_ent "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex" "FinderSync.HostBundleIdentifier" "FinderSync"
     verify_ent "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex" "application-groups"             "FinderSync"
     verify_ent "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex"      "application-groups"             "Share Extension"
     verify_ent "$APP_BUNDLE"                                         "application-groups"             "Host"

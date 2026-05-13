@@ -165,7 +165,12 @@ targets:
         com.apple.security.app-sandbox: true
         com.apple.security.application-groups:
           - group.ai.openclaw.clawsy
-        com.apple.FinderSync.HostBundleIdentifier: ai.clawsy
+        # com.apple.FinderSync.HostBundleIdentifier removed: Apple rejected it
+        # ("profile doesn't include this entitlement"). The Direct Distribution
+        # profile's allowlist does not contain it because there is no Apple
+        # Portal capability that grants it. Modern macOS (Catalina+) discovers
+        # FinderSync extensions via NSExtensionPointIdentifier in Info.plist,
+        # so the entitlement is not required at runtime.
     info:
       path: Sources/ClawsyFinderSync/Info.plist
       properties:
