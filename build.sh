@@ -39,23 +39,6 @@ fi
 echo "🔧 Generating Xcode project..."
 xcodegen generate --spec project.yml
 
-# ── Step 1b: Dump entitlements files as CI actually sees them ──────
-# Confirms the checkout state — separates "CI saw wrong files" from
-# "CI saw right files but xcodebuild stripped them anyway".
-echo ""
-echo "🔬 Entitlements files at build time (CI's view):"
-for ent in ClawsyMac.entitlements \
-           Sources/ClawsyMacShare/ClawsyMacShare.entitlements \
-           Sources/ClawsyFinderSync/ClawsyFinderSync.entitlements; do
-    if [ -f "$ent" ]; then
-        echo "  --- $ent ($(wc -c < "$ent" | tr -d ' ') bytes) ---"
-        sed 's/^/    /' "$ent"
-    else
-        echo "  ❌ MISSING: $ent"
-    fi
-done
-echo ""
-
 # ── Step 2: Generate icons from source assets ──────────────────────
 echo "🎨 Generating icons..."
 bash scripts/generate_icons.sh
@@ -124,42 +107,6 @@ else
     cp -R "$BUILT_APP" "$APP_BUNDLE"
 fi
 
-# ── Step 3b: Dump intermediate xcent files (productPackagingUtility output) ─
-# These are the entitlements xcodebuild fed to codesign during archive.
-# If application-groups is missing here, productPackagingUtility stripped it
-# (entitlements file or build-mode problem). If it's present here but absent
-# from the final bundle, codesign stripped it (cert/profile/entitlement
-# mismatch problem). The archive intermediate path differs from plain build.
-echo ""
-echo "🔬 xcent files (input to codesign during archive):"
-for xcent in "$DERIVED_DATA"/Build/Intermediates.noindex/ArchiveIntermediates/ClawsyMac/IntermediateBuildFilesPath/Clawsy.build/Release/*.build/*.xcent; do
-    [ -f "$xcent" ] || continue
-    echo "  --- $(basename "$xcent") ---"
-    cat "$xcent" | python3 -c "
-import sys, plistlib
-d = plistlib.loads(sys.stdin.buffer.read() or b'<plist><dict/></plist>')
-for k,v in (d or {}).items():
-    print(f'    {k} = {v}')"
-done
-echo ""
-
-# Also dump the entitlements on the ARCHIVE-internal bundle (pre-export) to
-# distinguish whether archive signed correctly and exportArchive stripped, or
-# whether archive itself never had them.
-ARCHIVE_APP="$ARCHIVE_PATH/Products/Applications/$APP_NAME.app"
-if [ -d "$ARCHIVE_APP" ]; then
-    echo "🔬 Entitlements on archive-internal bundle (before exportArchive):"
-    for component in "$ARCHIVE_APP/Contents/PlugIns/ClawsyShare.appex" \
-                     "$ARCHIVE_APP/Contents/PlugIns/ClawsyFinderSync.appex" \
-                     "$ARCHIVE_APP"; do
-        [ -d "$component" ] || continue
-        echo "  --- $(basename "$component") ---"
-        codesign -d --entitlements :- "$component" 2>/dev/null \
-          | python3 -c "import sys,plistlib; d=plistlib.loads(sys.stdin.buffer.read() or b'<plist><dict/></plist>'); print('\n'.join('    '+k for k in d.keys()) if d else '    (empty)')"
-    done
-    echo ""
-fi
-
 # ── Step 4: Verify CLAWSY.md ───────────────────────────────────────
 if [ -f "$APP_BUNDLE/Contents/Resources/CLAWSY.md" ]; then
     echo "✅ CLAWSY.md bundled by xcodebuild"
@@ -167,29 +114,7 @@ else
     echo "⚠️  CLAWSY.md missing from bundle resources"
 fi
 
-# ── Step 5: Diagnostic dump ────────────────────────────────────────
-echo ""
-echo "🔬 Diagnostic — codesign details:"
-for component in "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex" \
-                 "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex" \
-                 "$APP_BUNDLE"; do
-    [ -d "$component" ] || continue
-    echo "  --- $(basename "$component") ---"
-    codesign -dvv "$component" 2>&1 | grep -E "^(Identifier|TeamIdentifier|Authority|Runtime Version)" | sed 's/^/    /' || true
-    if [ -f "$component/Contents/embedded.provisionprofile" ]; then
-        echo "    Embedded Profile: yes ($(stat -f%z "$component/Contents/embedded.provisionprofile") bytes)"
-    else
-        echo "    Embedded Profile: NO"
-    fi
-    echo "    --- entitlements (XML form, codesign -d --entitlements :-): ---"
-    codesign -d --entitlements :- "$component" 2>&1 | sed 's/^/      /' || true
-    echo "    --- entitlements (DER form, codesign -d --entitlements-der :-): ---"
-    codesign -d --entitlements-der :- "$component" 2>&1 | head -30 | sed 's/^/      /' || true
-    echo ""
-done
-echo ""
-
-# ── Step 6: Verify ──────────────────────────────────────────────────
+# ── Step 5: Verify ──────────────────────────────────────────────────
 echo "🔍 Verifying bundle structure..."
 
 if [ -d "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex" ]; then
