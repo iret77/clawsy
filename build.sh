@@ -6,28 +6,28 @@ APP_NAME="Clawsy"
 SCHEME="ClawsyMac"
 BUILD_DIR=".build"
 DERIVED_DATA="$BUILD_DIR/DerivedData"
+ARCHIVE_PATH="$BUILD_DIR/$APP_NAME.xcarchive"
+EXPORT_PATH="$BUILD_DIR/export"
 APP_BUNDLE="$BUILD_DIR/app/$APP_NAME.app"
+EXPORT_OPTIONS="ExportOptions.plist"
 SIGN_ID="${CODESIGN_IDENTITY:--}"
 
-# Hardened Runtime requires an Apple-issued certificate (Developer ID /
-# Apple Development).  The `disable-library-validation` entitlement that
-# would allow loading self-signed frameworks is a *restricted* entitlement
-# — macOS silently ignores it when the cert is not Apple-issued.  Result:
-# dyld kills the app at launch ("different Team IDs").
-#
-# Enable HR only when the signing identity is a real Apple cert.
+# Distribution build = archive + exportArchive (Apple's required path for
+# Developer ID Direct Distribution).  Local/dev builds with ad-hoc cert use
+# plain `xcodebuild build` because archive requires a real cert in the keychain
+# and the productPackagingUtility distribution-mode would reject ad-hoc anyway.
 case "$SIGN_ID" in
     "Developer ID"*|"Apple Development"*|"Apple Distribution"*|"3rd Party Mac"*)
-        HARDENED_RUNTIME=YES ;;
+        DISTRIBUTION_BUILD=YES ;;
     *)
-        HARDENED_RUNTIME=NO ;;
+        DISTRIBUTION_BUILD=NO ;;
 esac
 
 echo "🔑 Signing identity: $SIGN_ID"
-echo "🛡️  Hardened Runtime: $HARDENED_RUNTIME"
+echo "📦 Distribution build: $DISTRIBUTION_BUILD"
 
 echo "🧹 Cleaning up..."
-rm -rf "$BUILD_DIR/app"
+rm -rf "$BUILD_DIR/app" "$ARCHIVE_PATH" "$EXPORT_PATH"
 mkdir -p "$BUILD_DIR/app"
 
 # ── Step 1: Generate Xcode project from project.yml ─────────────────
@@ -43,88 +43,84 @@ xcodegen generate --spec project.yml
 echo "🎨 Generating icons..."
 bash scripts/generate_icons.sh
 
-# ── Step 3: Build with xcodebuild ───────────────────────────────────
-echo "🦞 Building $APP_NAME (Release, Universal)..."
-xcodebuild \
-    -project Clawsy.xcodeproj \
-    -scheme "$SCHEME" \
-    -configuration Release \
-    -derivedDataPath "$DERIVED_DATA" \
-    -arch arm64 -arch x86_64 \
-    ONLY_ACTIVE_ARCH=NO \
-    CODE_SIGN_IDENTITY="$SIGN_ID" \
-    CODE_SIGN_STYLE=Manual \
-    ENABLE_HARDENED_RUNTIME=$HARDENED_RUNTIME \
-    build
+# ── Step 3: Build ───────────────────────────────────────────────────
+if [ "$DISTRIBUTION_BUILD" = "YES" ]; then
+    # Apple Developer ID Direct Distribution path: archive then exportArchive.
+    # Plain `xcodebuild build` produces .xcent files that contain ONLY profile
+    # defaults (application-identifier, team-identifier, get-task-allow=YES)
+    # because Xcode treats it as a development build — restricted entitlements
+    # (application-groups, FinderSync.HostBundleIdentifier) get silently
+    # stripped before codesign even runs.  Archive sets ENTITLEMENTS_REQUIRED
+    # and PROVISIONING_PROFILE_REQUIRED to YES, switching productPackagingUtility
+    # into distribution mode, which honors the full .entitlements files.
+    echo "🦞 Archiving $APP_NAME (Release, Universal)..."
+    xcodebuild \
+        -project Clawsy.xcodeproj \
+        -scheme "$SCHEME" \
+        -configuration Release \
+        -derivedDataPath "$DERIVED_DATA" \
+        -archivePath "$ARCHIVE_PATH" \
+        -arch arm64 -arch x86_64 \
+        ONLY_ACTIVE_ARCH=NO \
+        CODE_SIGN_IDENTITY="$SIGN_ID" \
+        CODE_SIGN_STYLE=Manual \
+        archive
 
-# ── Step 4: Copy built .app to output directory ─────────────────────
-echo "📦 Packaging $APP_NAME.app..."
-BUILT_APP=$(find "$DERIVED_DATA" -name "$APP_NAME.app" -type d -path "*/Release/*" | head -n 1)
+    echo "📤 Exporting archive with developer-id method..."
+    xcodebuild \
+        -archivePath "$ARCHIVE_PATH" \
+        -exportArchive \
+        -exportPath "$EXPORT_PATH" \
+        -exportOptionsPlist "$EXPORT_OPTIONS"
 
-if [ -z "$BUILT_APP" ]; then
-    echo "❌ Error: Could not find built app bundle"
-    exit 1
+    if [ ! -d "$EXPORT_PATH/$APP_NAME.app" ]; then
+        echo "❌ Error: exportArchive did not produce $APP_NAME.app"
+        ls -la "$EXPORT_PATH" || true
+        exit 1
+    fi
+
+    cp -R "$EXPORT_PATH/$APP_NAME.app" "$APP_BUNDLE"
+else
+    # Local/dev ad-hoc path — no distribution semantics, just produce a runnable
+    # bundle. Restricted entitlements will be stripped by codesign, but for
+    # local dev that's fine; macOS treats ad-hoc-signed unsandboxed apps
+    # leniently.
+    echo "🦞 Building $APP_NAME (Release, Universal, ad-hoc)..."
+    xcodebuild \
+        -project Clawsy.xcodeproj \
+        -scheme "$SCHEME" \
+        -configuration Release \
+        -derivedDataPath "$DERIVED_DATA" \
+        -arch arm64 -arch x86_64 \
+        ONLY_ACTIVE_ARCH=NO \
+        CODE_SIGN_IDENTITY="$SIGN_ID" \
+        CODE_SIGN_STYLE=Manual \
+        ENABLE_HARDENED_RUNTIME=NO \
+        PROVISIONING_PROFILE_SPECIFIER="" \
+        build
+
+    BUILT_APP=$(find "$DERIVED_DATA" -name "$APP_NAME.app" -type d -path "*/Release/*" | head -n 1)
+    if [ -z "$BUILT_APP" ]; then
+        echo "❌ Error: Could not find built app bundle"
+        exit 1
+    fi
+    cp -R "$BUILT_APP" "$APP_BUNDLE"
 fi
 
-cp -R "$BUILT_APP" "$APP_BUNDLE"
-
-# ── Step 4b: Dump xcent files xcodebuild handed to codesign ────────
-# These are the merged entitlements (`.entitlements` + profile defaults
-# via productPackagingUtility) that get fed to codesign --entitlements.
-# If application-groups is missing here, it's a profile-merge filter
-# problem; if it's present, codesign is the one stripping it.
-echo ""
-echo "🔬 xcent files (productPackagingUtility output, fed to codesign):"
-for xcent in "$DERIVED_DATA"/Build/Intermediates.noindex/Clawsy.build/Release/*.build/*.xcent; do
-    [ -f "$xcent" ] || continue
-    echo "  --- $(basename "$xcent") ---"
-    cat "$xcent" | python3 -c "
-import sys, plistlib
-d = plistlib.loads(sys.stdin.buffer.read() or b'<plist><dict/></plist>')
-for k,v in (d or {}).items():
-    print(f'    {k} = {v}')"
-done
-echo ""
-
-# ── Step 5: Verify CLAWSY.md ───────────────────────────────────────
-# CLAWSY.md is included via project.yml resources — no manual copy
-# needed. Copying after xcodebuild would break the code signature seal.
+# ── Step 4: Verify CLAWSY.md ───────────────────────────────────────
 if [ -f "$APP_BUNDLE/Contents/Resources/CLAWSY.md" ]; then
     echo "✅ CLAWSY.md bundled by xcodebuild"
 else
     echo "⚠️  CLAWSY.md missing from bundle resources"
 fi
 
-# ── Step 6: Re-sign frameworks for consistent Team ID ──────────────
-# xcodebuild already signed Host + both Extensions correctly via
-# PROVISIONING_PROFILE_SPECIFIER (Profile-aware path that retains
-# restricted entitlements). We only re-sign Swift Package framework
-# products here, because xcodebuild signs those with a build-internal
-# identity that doesn't carry our Team ID.
-echo "🔏 Re-signing third-party frameworks for Team-ID consistency..."
-
-if [ "$HARDENED_RUNTIME" = "YES" ]; then
-    CODESIGN_OPTS="--options runtime --timestamp --generate-entitlement-der"
-else
-    CODESIGN_OPTS="--generate-entitlement-der"
-fi
-
-for fw in "$APP_BUNDLE"/Contents/Frameworks/*.framework; do
-    [ -d "$fw" ] || continue
-    for bundle in "$fw"/Versions/A/Resources/*.bundle; do
-        [ -d "$bundle" ] && codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS "$bundle"
-    done
-    codesign --force --sign "$SIGN_ID" $CODESIGN_OPTS "$fw"
-done
-
-# ── Step 6d: Diagnostic dump ───────────────────────────────────────
-# Surface what's actually in each bundle's signature so future failures
-# don't require pulling the artifact + manual codesign -d to debug.
+# ── Step 5: Diagnostic dump ────────────────────────────────────────
 echo ""
 echo "🔬 Diagnostic — codesign details:"
 for component in "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex" \
                  "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex" \
                  "$APP_BUNDLE"; do
+    [ -d "$component" ] || continue
     echo "  --- $(basename "$component") ---"
     codesign -dvv "$component" 2>&1 | grep -E "^(Identifier|TeamIdentifier|Authority|Runtime Version)" | sed 's/^/    /' || true
     if [ -f "$component/Contents/embedded.provisionprofile" ]; then
@@ -138,10 +134,9 @@ for component in "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex" \
 done
 echo ""
 
-# ── Step 7: Verify ──────────────────────────────────────────────────
+# ── Step 6: Verify ──────────────────────────────────────────────────
 echo "🔍 Verifying bundle structure..."
 
-# Check extensions are embedded
 if [ -d "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex" ]; then
     echo "✅ Share Extension embedded"
 else
@@ -157,33 +152,34 @@ fi
 # Verify code signature
 codesign -vvv --deep --strict "$APP_BUNDLE"
 
-# Verify entitlements survived signing — these are HARD failures.
-# An empty <dict/> at this point means codesign dropped restricted
-# entitlements (no provisioning profile embedded, or wrong cert).
-echo "🔐 Verifying entitlements survived re-sign..."
-ENT_FAIL=0
+# Verify restricted entitlements survived signing — these are HARD failures
+# for distribution builds.  In ad-hoc local builds we skip these because
+# codesign strips them by design.
+if [ "$DISTRIBUTION_BUILD" = "YES" ]; then
+    echo "🔐 Verifying entitlements survived signing..."
+    ENT_FAIL=0
 
-verify_ent() {
-    local bundle="$1" needle="$2" label="$3"
-    local ent
-    ent=$(codesign -d --entitlements :- "$bundle" 2>/dev/null)
-    if echo "$ent" | grep -q "$needle"; then
-        echo "  ✅ $label has $needle"
-    else
-        echo "  ❌ $label is MISSING $needle"
-        ENT_FAIL=1
+    verify_ent() {
+        local bundle="$1" needle="$2" label="$3"
+        local ent
+        ent=$(codesign -d --entitlements :- "$bundle" 2>/dev/null)
+        if echo "$ent" | grep -q "$needle"; then
+            echo "  ✅ $label has $needle"
+        else
+            echo "  ❌ $label is MISSING $needle"
+            ENT_FAIL=1
+        fi
+    }
+
+    verify_ent "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex" "FinderSync.HostBundleIdentifier" "FinderSync"
+    verify_ent "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex" "application-groups"             "FinderSync"
+    verify_ent "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex"      "application-groups"             "Share Extension"
+    verify_ent "$APP_BUNDLE"                                         "application-groups"             "Host"
+
+    if [ "$ENT_FAIL" != "0" ]; then
+        echo "❌ One or more components are missing required entitlements."
+        exit 1
     fi
-}
-
-verify_ent "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex" "FinderSync.HostBundleIdentifier" "FinderSync"
-verify_ent "$APP_BUNDLE/Contents/PlugIns/ClawsyFinderSync.appex" "application-groups"             "FinderSync"
-verify_ent "$APP_BUNDLE/Contents/PlugIns/ClawsyShare.appex"      "application-groups"             "Share Extension"
-verify_ent "$APP_BUNDLE"                                         "application-groups"             "Host"
-
-if [ "$ENT_FAIL" != "0" ]; then
-    echo "❌ One or more components are missing required entitlements after re-sign."
-    echo "   This is the silent-fail mode (Apple cert + missing/invalid provisioning profile)."
-    exit 1
 fi
 
 # Show signing identity & Team ID for all components
